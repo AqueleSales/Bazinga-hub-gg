@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Bazinga Hub{% endblock %}
+{% block content %}
+<section class="lobby">
+  <p class="eyebrow">Bazinga · Central</p>
+  <h1>{% if user %}Fala, {{ user.name.split(' ')[0] }}.{% else %}Bem-vindo à Bazinga.{% endif %}</h1>
+  <p class="subtitle">O ponto de partida do grupo. Premiação, chat e o campeonato, tudo daqui.</p>
+
+  <div class="cards">
+    <a class="card card--awards" href="{{ bazinga_awards_url }}">
+      <div class="card-head">
+        <h2>Bazinga Awards</h2>
+        <span class="pill">Ativo</span>
+      </div>
+      <p>Vote e acompanhe a premiação oficial do grupo.</p>
+    </a>
+
+    <div class="card card--soon">
+      <div class="card-head">
+        <h2>Chat</h2>
+        <span class="pill soon">Em breve</span>
+      </div>
+      <p>Central de comunicação da Bazinga.</p>
+    </div>
+
+    <div class="card card--soon">
+      <div class="card-head">
+        <h2>Ultimate Bazinga Championship</h2>
+        <span class="pill soon">Em breve</span>
+      </div>
+      <p>O torneio de fim de ano do grupo.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

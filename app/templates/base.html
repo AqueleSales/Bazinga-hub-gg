@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Bazinga Hub{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="aura"></div>
+
+  <nav class="navbar">
+    <a class="brand" href="{{ url_for('main.index') }}">
+      <span class="dot"></span> Bazinga Hub
+    </a>
+    <div class="nav-links">
+      <a href="{{ url_for('main.index') }}">Início</a>
+      <a href="{{ bazinga_awards_url }}">Bazinga Awards</a>
+      <a href="#" class="soon" title="Em breve">Chat</a>
+      <a href="#" class="soon" title="Em breve">Ultimate Bazinga</a>
+    </div>
+    <div class="nav-auth">
+      {% if user %}
+        <img class="avatar" src="{{ user.photo_url }}" alt="{{ user.name }}">
+        <span>{{ user.name }}</span>
+        <a class="btn-ghost" href="{{ url_for('auth.logout') }}">Sair</a>
+      {% else %}
+        <a class="btn-ghost" href="{{ url_for('auth.login', provider='google') }}">Entrar com Google</a>
+        <a class="btn-ghost" href="{{ url_for('auth.login', provider='discord') }}">Entrar com Discord</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
