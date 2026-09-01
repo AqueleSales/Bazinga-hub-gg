@@ -1,48 +1,31 @@
 from flask import Flask
-from werkzeug.middleware.proxy_fix import ProxyFix
-
-from .auth import auth_bp, oauth
-from .config import Config
+from flask_socketio import SocketIO
 from .models import db
-from .main.routes import main_bp
+from config import Config
 
+# 1. Instancia o socketio AQUI, quebrando o ciclo do erro!
+socketio = SocketIO()
 
-def create_app(config_class=Config):
+def create_app():
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    app.config.from_object(Config)
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-
+    # Inicializa os plugins
     db.init_app(app)
-    oauth.init_app(app)
-    _register_oauth_providers(app)
+    socketio.init_app(app, cors_allowed_origins="*")
 
-    app.register_blueprint(auth_bp)
+    # Importa e registra as rotas
+    from .main.routes import main_bp
     app.register_blueprint(main_bp)
 
+    # 2. IMPORTANTE: Importa os eventos SÓ AGORA, depois do socketio já estar criado
+    from . import events
+    # Criação das tabelas blindada contra o "Sono do Neon"
     with app.app_context():
-        db.create_all()  # "person" já existe (criada pelo bazingawards) -> vira no-op
+        try:
+            db.create_all()
+            print("[BAZINGA INFO] Banco de dados conectado com sucesso!")
+        except Exception as e:
+            print(f"[BAZINGA AVISO] Banco de dados Neon dormindo no boot. O site vai ligar mesmo assim! Detalhe: {e}")
 
     return app
-
-
-def _register_oauth_providers(app):
-    if app.config.get("GOOGLE_CLIENT_ID") and app.config.get("GOOGLE_CLIENT_SECRET"):
-        oauth.register(
-            name="google",
-            client_id=app.config["GOOGLE_CLIENT_ID"],
-            client_secret=app.config["GOOGLE_CLIENT_SECRET"],
-            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-            client_kwargs={"scope": "openid email profile"},
-        )
-
-    if app.config.get("DISCORD_CLIENT_ID") and app.config.get("DISCORD_CLIENT_SECRET"):
-        oauth.register(
-            name="discord",
-            client_id=app.config["DISCORD_CLIENT_ID"],
-            client_secret=app.config["DISCORD_CLIENT_SECRET"],
-            access_token_url="https://discord.com/api/oauth2/token",
-            authorize_url="https://discord.com/api/oauth2/authorize",
-            api_base_url="https://discord.com/api/",
-            client_kwargs={"scope": "identify email"},
-        )
