@@ -3,8 +3,9 @@ from flask_socketio import SocketIO
 from .models import db
 from config import Config
 
-# 1. Instancia o socketio AQUI, quebrando o ciclo do erro!
+# Instancia o socketio AQUI, quebrando o ciclo do erro!
 socketio = SocketIO()
+
 
 def create_app():
     app = Flask(__name__)
@@ -18,8 +19,9 @@ def create_app():
     from .main.routes import main_bp
     app.register_blueprint(main_bp)
 
-    # 2. IMPORTANTE: Importa os eventos SÓ AGORA, depois do socketio já estar criado
+    # Importa os eventos SÓ AGORA, depois do socketio já estar criado
     from . import events
+
     # Criação das tabelas blindada contra o "Sono do Neon"
     with app.app_context():
         try:

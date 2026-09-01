@@ -50,6 +50,7 @@
         .username { font-weight: 600; font-size: 14px; color: #f2f3f5; text-overflow: ellipsis; overflow: hidden;}
         .status-text { color: #949ba4; }
 
+        /* Divisória de Hardware Idêntica ao Discord */
         .hardware-controls { display: flex; gap: 2px; }
         .hw-group { display: flex; align-items: center; border-radius: 4px; transition: 0.2s; }
         .hw-group:hover { background-color: #35373c; }
@@ -69,9 +70,17 @@
         .popout-role { display: inline-flex; align-items: center; gap: 4px; background-color: #2b2d31; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: #dbdee1; }
         .popout-role-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #23a559; }
 
+        .audio-settings-popup { display: none; position: absolute; bottom: 60px; left: 70px; width: 300px; background-color: #111214; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 2000; flex-direction: column; padding: 12px; }
+        .audio-settings-popup h4 { font-size: 12px; color: #b5bac1; text-transform: uppercase; margin-bottom: 8px; }
+        .audio-settings-popup .setting-row { padding: 8px; color: #dbdee1; font-size: 14px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .audio-settings-popup .setting-row:hover { background-color: #35373c; }
+        .audio-settings-popup .active-row { background-color: #404249; }
+        .audio-settings-popup .divider { height: 1px; background-color: #1f2023; margin: 8px 0; }
+
         .chat-area { flex-grow: 1; display: flex; flex-direction: column; background-color: #313338; position: relative; overflow: hidden;}
         .chat-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2023; background-color: #313338; z-index: 5; flex-shrink: 0;}
 
+        /* Flexbox vital para deixar Vídeo na esquerda e Texto na direita */
         .chat-area-main { display: flex; flex-grow: 1; height: calc(100vh - 48px); overflow: hidden; }
 
         .chat-view { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; background-color: #313338; transition: width 0.2s;}
@@ -88,6 +97,7 @@
         .video-avatar { width: 80px; height: 80px; border-radius: 50%; background-color: #23a559; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; transition: 0.3s; }
         .video-label { position: absolute; bottom: 16px; left: 16px; background-color: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; color: white; pointer-events: none;}
 
+        /* A Barra de Controles Invisível da Call */
         .call-controls-bar { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(50px); opacity: 0; background-color: rgba(17, 18, 20, 0.9); padding: 8px; border-radius: 8px; display: flex; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 10; align-items: center; transition: all 0.3s ease; pointer-events: none; }
         .video-view:hover .call-controls-bar { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
 
@@ -113,13 +123,6 @@
         .chat-input { flex-grow: 1; background: transparent; border: none; color: #dbdee1; font-size: 16px; outline: none; }
 
         .members-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; padding: 16px 8px; flex-shrink: 0;}
-
-        .audio-settings-popup { display: none; position: absolute; bottom: 60px; left: 70px; width: 300px; background-color: #111214; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 2000; flex-direction: column; padding: 12px; }
-        .audio-settings-popup h4 { font-size: 12px; color: #b5bac1; text-transform: uppercase; margin-bottom: 8px; }
-        .audio-settings-popup .setting-row { padding: 8px; color: #dbdee1; font-size: 14px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .audio-settings-popup .setting-row:hover { background-color: #35373c; }
-        .audio-settings-popup .active-row { background-color: #404249; }
-        .audio-settings-popup .divider { height: 1px; background-color: #1f2023; margin: 8px 0; }
 
         .context-menu { display: none; position: fixed; background-color: #111214; border-radius: 4px; padding: 8px; min-width: 220px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 3000; flex-direction: column; }
         .context-menu-item { padding: 8px; color: #b5bac1; font-size: 14px; cursor: pointer; border-radius: 2px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
@@ -160,6 +163,7 @@
 </head>
 <body>
     <div class="discord-app">
+        <!-- Barra Lateral -->
         <nav class="servers-sidebar">
             <div class="server-wrapper">
                 <a href="{{ url_for('main.index') }}" style="text-decoration: none;">
@@ -169,15 +173,12 @@
                 </a>
             </div>
             <div class="server-separator"></div>
-            <div class="server-wrapper">
-                <div class="server-icon add-server"><i class="fa-solid fa-plus"></i></div>
-            </div>
+            <div class="server-wrapper"><div class="server-icon add-server"><i class="fa-solid fa-plus"></i></div></div>
         </nav>
 
+        <!-- Menu de Canais -->
         <aside class="channels-sidebar">
-            <header class="channels-header">
-                <h3>Bazinga Hub <i class="fa-solid fa-chevron-down"></i></h3>
-            </header>
+            <header class="channels-header"><h3>Bazinga Hub <i class="fa-solid fa-chevron-down"></i></h3></header>
 
             <div class="channels-list">
                 <div class="channel-category"><i class="fa-solid fa-chevron-down"></i> CANAIS DE TEXTO</div>
@@ -201,6 +202,7 @@
                 {% endfor %}
             </div>
 
+            <!-- Rodapé Perfeito com HW Controls Divididos -->
             <div class="user-controls">
                 <div id="voice-panel" class="voice-connection-panel">
                     <div class="voice-info-row">
@@ -231,6 +233,7 @@
                             <span class="status-text">Online</span>
                         </div>
                     </div>
+                    <!-- A Mágica dos Grupos Divididos do Hardware -->
                     <div class="hardware-controls">
                         <div class="hw-group" id="mic-group">
                             <button class="hw-btn" id="btn-mic" title="Desativar microfone"><i class="fa-solid fa-microphone"></i></button>
@@ -290,6 +293,7 @@
 
             <div class="chat-area-main">
 
+                <!-- AREA DE VÍDEO COM CONTROLES FANTASMAS -->
                 <div id="video-view" class="video-view">
                     <div class="video-grid" id="video-grid">
                         <div class="video-card" id="my-video-card">
@@ -310,6 +314,7 @@
                     </div>
                 </div>
 
+                <!-- AREA DE TEXTO (Pode virar barra lateral!) -->
                 <div id="text-view" class="chat-view">
                     <div class="chat-messages" id="messages-container">
                         {% for msg in messages %}
@@ -346,6 +351,7 @@
         </aside>
     </div>
 
+    <!-- Menus Dinâmicos Escuros -->
     <div id="msg-context-menu" class="context-menu">
         <div class="context-menu-item" id="ctx-copy">Copiar Texto <i class="fa-solid fa-copy"></i></div>
         <div class="context-menu-separator"></div>
@@ -422,8 +428,12 @@
         let currentChannelId = {{ default_channel.id if default_channel else 1 }};
         const currentUserName = "{{ usuario_atual.name }}";
 
+        // Avisa pro servidor qual sala estamos ao logar
         socket.emit('entrar_canal', { canal_id: currentChannelId });
 
+        // ==========================================
+        // TEXTO E ROTEAMENTO
+        // ==========================================
         document.querySelectorAll('.text-channel').forEach(btn => {
             btn.addEventListener('click', async () => {
                 document.querySelectorAll('.text-channel').forEach(b => b.classList.remove('active'));
@@ -484,6 +494,9 @@
             container.scrollTop = container.scrollHeight;
         }
 
+        // ==========================================
+        // POPOUTS DE HARDWARE, MOUSE E PERFIL
+        // ==========================================
         const msgMenu = document.getElementById('msg-context-menu');
         const videoMenu = document.getElementById('video-context-menu');
         const micPopup = document.getElementById('mic-settings-popup');
@@ -504,10 +517,12 @@
             e.stopPropagation();
             const isOpen = micPopup.style.display === 'flex';
             micPopup.style.display = isOpen ? 'none' : 'flex';
+            // Vira a setinha de ponta cabeça
             btnMicSettings.querySelector('i').style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
             profilePopup.style.display = 'none';
         });
 
+        // Anti-Corte: Mostra o menu direito longe do final da tela
         function showMenu(menu, e) {
             e.preventDefault();
             menu.style.display = 'flex';
@@ -554,6 +569,7 @@
             }
         });
 
+        // Exclui real pra todo mundo via Socket
         document.getElementById('ctx-delete').addEventListener('click', () => {
             if(targetMsgId) {
                 socket.emit('apagar_mensagem', { msg_id: targetMsgId });
@@ -567,6 +583,9 @@
             if(msgEl) msgEl.remove();
         });
 
+        // ==========================================
+        // LÓGICA DE CHAMADA & CHAT LATERAL
+        // ==========================================
         let inCall = false;
         let isCallChatOpen = false;
         let myMicStream = null;
@@ -619,6 +638,7 @@
             });
         });
 
+        // Botão CHAT DA CALL divide a tela!
         btnMainChat.addEventListener('click', () => {
             isCallChatOpen = !isCallChatOpen;
             btnMainChat.classList.toggle('active', isCallChatOpen);
@@ -637,6 +657,7 @@
             if(card) card.classList.toggle('fullscreen');
         });
 
+        // Sincronizando Mutes
         let micMuted = false;
         function toggleMic() {
             micMuted = !micMuted;
@@ -651,6 +672,7 @@
         btnSideMic.addEventListener('click', toggleMic);
         btnMainMic.addEventListener('click', toggleMic);
 
+        // Sincronizando Cameras
         async function toggleCamera() {
             if(!inCall) return;
             const videoCardAvatar = document.getElementById('my-avatar-placeholder');
@@ -677,6 +699,9 @@
         btnMainCam.addEventListener('click', toggleCamera);
         btnSideCam.addEventListener('click', toggleCamera);
 
+        // ==========================================
+        // MULTI-STREAM
+        // ==========================================
         const qualityModal = document.getElementById('quality-modal-overlay');
         const streamActionModal = document.getElementById('stream-action-modal');
         let selectedRes = 720; let selectedFps = 30;

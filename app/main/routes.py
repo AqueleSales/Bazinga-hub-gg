@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, jsonify, redirect, url_for
+from flask import Blueprint, render_template, session, jsonify
 from sqlalchemy.exc import OperationalError, PendingRollbackError
 from datetime import datetime
 from ..models import Person, Channel, Message, db
@@ -11,6 +11,7 @@ def formatar_data(ts):
     hoje = datetime.now().date()
     data_msg = ts.date()
     hora_str = ts.strftime('%H:%M')
+
     if data_msg == hoje:
         return f"Hoje às {hora_str}"
     elif (hoje - data_msg).days == 1:
@@ -21,7 +22,6 @@ def formatar_data(ts):
 
 @main_bp.route("/")
 def index():
-    # Retorna o seu Hub original
     return render_template("index.html")
 
 
@@ -54,15 +54,11 @@ def chat():
 
     except (OperationalError, PendingRollbackError):
         db.session.rollback()
-        # Tenta de novo caso a conexão com o Neon tenha caído
         usuario_atual = Person.query.get(session['person_id'])
         text_channels = Channel.query.filter_by(channel_type="text").all()
         voice_channels = Channel.query.filter_by(channel_type="voice").all()
         default_channel = Channel.query.filter_by(name="geral").first()
-        messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(
-            50).all() if default_channel else []
-        for m in messages:
-            m.formatada = formatar_data(m.timestamp)
+        messages = []
 
     return render_template(
         "chat.html",
