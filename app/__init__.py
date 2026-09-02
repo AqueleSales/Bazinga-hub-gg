@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_socketio import SocketIO
 from .models import db
-from config import Config
+from .config import Config  # ou simplesmente importe de app se preferir
 
 # Instancia o socketio AQUI, quebrando o ciclo do erro!
 socketio = SocketIO()

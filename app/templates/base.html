@@ -17,22 +17,13 @@
     </a>
     <div class="nav-links">
       <a href="{{ url_for('main.index') }}">Início</a>
-      <a href="{{ bazinga_awards_url }}">Bazinga Awards</a>
-
-      <!-- Link do Chat Ativado! -->
+      <a href="#" class="soon">Bazinga Awards</a>
       <a href="{{ url_for('main.chat') }}">Chat</a>
-
       <a href="#" class="soon" title="Em breve">Ultimate Bazinga</a>
     </div>
     <div class="nav-auth">
-      {% if user %}
-        <img class="avatar" src="{{ user.photo_url }}" alt="{{ user.name }}">
-        <span>{{ user.name }}</span>
-        <a class="btn-ghost" href="{{ url_for('auth.logout') }}">Sair</a>
-      {% else %}
-        <a class="btn-ghost" href="{{ url_for('auth.login', provider='google') }}">Entrar com Google</a>
-        <a class="btn-ghost" href="{{ url_for('auth.login', provider='discord') }}">Entrar com Discord</a>
-      {% endif %}
+        <!-- Atalho direto para o chat enquanto o auth não é linkado -->
+        <a class="btn-ghost" href="{{ url_for('main.chat') }}">Acessar o BazingaCord</a>
     </div>
   </nav>
 
