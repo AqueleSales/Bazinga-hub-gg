@@ -1,51 +1,52 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-# Importa o timezone para lidar melhor com o horário do Brasil (opcional, mas recomendado)
-from pytz import timezone
 
+# Inicializa o banco de dados
 db = SQLAlchemy()
 
 
-# 1. Tabela de Cargos (Roles)
 class Role(db.Model):
-    __tablename__ = 'roles'
+    __tablename__ = 'role'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)  # Ex: "MODERADORES"
-    color = db.Column(db.String(10), default="#949ba4")  # Cor do cargo em Hex
+    name = db.Column(db.String(50), nullable=False)
+    color = db.Column(db.String(20), nullable=True, default="#23a559")
+
+    # Relacionamento: Um cargo pode ter várias pessoas
+    users = db.relationship('Person', backref='role', lazy=True)
 
 
-# 2. Tabela de Usuários (Person) - Mantendo o nome que você usava no Bazingawards
 class Person(db.Model):
     __tablename__ = 'person'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+
+    # NOVOS CAMPOS PARA O LOGIN OAUTH (GOOGLE/DISCORD)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    avatar = db.Column(db.String(255), nullable=True)  # URL da foto do Google/Discord
+    avatar = db.Column(db.String(255), nullable=True)  # URL da foto de perfil
+    provider_id = db.Column(db.String(100), nullable=True)  # ID único devolvido pelo Google
 
-    # Chave estrangeira ligando o usuário a um cargo
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=True)
-    role = db.relationship('Role', backref='members')
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=True)
 
-    # Relação com as mensagens
+    # Relacionamento: Uma pessoa tem várias mensagens
     messages = db.relationship('Message', backref='author', lazy=True)
 
 
-# 3. Tabela de Canais
 class Channel(db.Model):
-    __tablename__ = 'channels'
+    __tablename__ = 'channel'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)  # Ex: "geral"
-    channel_type = db.Column(db.String(20), default="text")  # "text" ou "voice"
+    name = db.Column(db.String(100), nullable=False)
+    channel_type = db.Column(db.String(20), default='text')  # Pode ser 'text' ou 'voice'
 
+    # Relacionamento: Um canal tem várias mensagens
     messages = db.relationship('Message', backref='channel', lazy=True)
 
 
-# 4. Tabela de Mensagens
 class Message(db.Model):
-    __tablename__ = 'messages'
+    __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Chaves Estrangeiras (Quem mandou e onde)
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    channel_id = db.Column(db.Integer, db.ForeignKey('channels.id'), nullable=False)
+    channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'), nullable=False)

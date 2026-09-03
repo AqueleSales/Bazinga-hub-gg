@@ -14,15 +14,12 @@
         body { background-color: #1e1f22; color: #dbdee1; height: 100vh; overflow: hidden; display: flex; }
         .discord-app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
-        /* Classes mágicas do Scroll Invisível */
         .scroll-invisivel { overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
         .scroll-invisivel::-webkit-scrollbar { display: none; }
 
-        /* NOVO LAYOUT ESTENDIDO */
         .left-sidebar-wrapper { width: 312px; display: flex; flex-direction: column; flex-shrink: 0; background-color: #1e1f22; border-right: 1px solid #1f2023;}
         .left-top-section { display: flex; flex-grow: 1; overflow: hidden; }
 
-        /* Servidores */
         .servers-sidebar { width: 72px; background-color: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; }
         .server-wrapper { position: relative; width: 100%; display: flex; justify-content: center; }
         .server-icon { width: 48px; height: 48px; border-radius: 50%; background-color: #313338; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; color: #dbdee1; font-weight: bold; overflow: hidden; }
@@ -30,7 +27,6 @@
         .server-icon img { width: 100%; height: 100%; object-fit: cover; }
         .server-separator { height: 2px; width: 32px; background-color: #3f4147; margin: 8px 0; }
 
-        /* Canais */
         .channels-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; flex-shrink: 0; border-top-left-radius: 8px;}
         .channels-header { height: 48px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid #1f2023; font-weight: 700; cursor: pointer; flex-shrink: 0; }
         .channels-header:hover { background-color: #35373c; }
@@ -41,7 +37,6 @@
         .channel-item:hover { background-color: #35373c; color: #dbdee1; }
         .channel-item.active { background-color: #404249; color: #fff; }
 
-        /* A BASE ESTENDIDA (Controles de Usuário) */
         .user-controls { background-color: #232428; padding: 8px; flex-shrink: 0; display: flex; flex-direction: column; width: 100%; z-index: 20; }
 
         .voice-connection-panel { display: none; background-color: #232428; padding: 8px; border-bottom: 1px solid #3f4147; flex-direction: column; }
@@ -65,7 +60,6 @@
         .username { font-weight: 600; font-size: 14px; color: #f2f3f5; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
         .status-text { color: #949ba4; }
 
-        /* HARDWARE CONTROLS COM DIVISÓRIAS */
         .hardware-controls { display: flex; align-items: center; gap: 4px; }
         .hw-group { display: flex; align-items: center; border-radius: 4px; transition: background-color 0.2s; background-color: transparent; position: relative; }
         .hw-group:hover { background-color: #35373c; }
@@ -79,7 +73,6 @@
         .hw-arrow-btn:hover { background-color: rgba(255,255,255,0.08); color: #dbdee1; }
         .hw-arrow-btn i { transition: transform 0.2s ease; }
 
-        /* ESTADO MUTADO MÁGICO */
         .hw-group.muted { background-color: rgba(242, 63, 66, 0.15); }
         .hw-group.muted:hover { background-color: rgba(242, 63, 66, 0.25); }
         .hw-group.muted .hw-btn, .hw-group.muted .hw-arrow-btn { color: #f23f42; }
@@ -93,7 +86,6 @@
         }
         .hw-group.muted:hover .hw-btn::after { box-shadow: 0 0 0 2px rgba(242, 63, 66, 0.25); }
 
-        /* MENUS ANINHADOS */
         .hardware-menu {
             position: absolute; bottom: calc(100% + 8px); left: 0;
             background-color: #111214; border-radius: 8px; padding: 8px; min-width: 260px;
@@ -133,7 +125,6 @@
         .mic-bar-bg { height: 6px; background-color: #2b2d31; border-radius: 3px; overflow: hidden; margin-top: 8px; }
         .mic-bar-fill { height: 100%; background-color: #23a559; width: 0%; transition: width 0.1s linear; }
 
-        /* AREA DE CHAT E VIDEO */
         .chat-area { flex-grow: 1; display: flex; flex-direction: column; background-color: #313338; position: relative; overflow: hidden;}
         .chat-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2023; background-color: #313338; z-index: 5; flex-shrink: 0;}
 
@@ -146,9 +137,17 @@
         .video-view { display: none; flex-direction: column; flex-grow: 1; background-color: #000; position: relative; overflow: hidden; }
         .video-view.active { display: flex; }
 
+        /* MODO FOCO GRID */
         .video-grid { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-content: center; align-items: center; padding: 24px; padding-bottom: 100px; height: 100%; overflow-y: auto; width: 100%; }
+        .video-grid.focused-mode { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); grid-auto-rows: min-content; align-content: end; align-items: center; gap: 16px; }
+
         .video-card { background-color: #1e1f22; border-radius: 8px; flex: 1 1 400px; max-width: 100%; aspect-ratio: 16/9; max-height: calc(100vh - 200px); position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px solid transparent; transition: 0.2s; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .video-card:hover { border-color: #b5bac1; }
+        .video-card.focused { grid-column: 1 / -1; height: 60vh; max-height: none; width: 100%; order: -10; }
+        .video-grid.focused-mode .video-card:not(.focused) { height: 140px; flex: none; aspect-ratio: 16/9; }
+        .video-card.is-speaking { box-shadow: 0 0 0 3px #23a559 !important; order: -1; }
+        .video-card.is-speaking.focused { order: -10; }
+
         .video-card video { width: 100%; height: 100%; object-fit: contain; background-color: #000; }
         .video-avatar { width: 80px; height: 80px; border-radius: 50%; background-color: #23a559; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; transition: 0.3s; }
         .video-label { position: absolute; bottom: 16px; left: 16px; background-color: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; color: white; pointer-events: none;}
@@ -186,31 +185,11 @@
 
         .members-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; padding: 16px 8px; flex-shrink: 0;}
 
-        /* POPUPS CLÁSSICOS (O RETORNO!) */
-        .user-profile-popout { display: none; position: absolute; bottom: 60px; left: 16px; width: 340px; background-color: #111214; border-radius: 8px; overflow: hidden; z-index: 2000; box-shadow: 0 8px 16px rgba(0,0,0,0.5); flex-direction: column; border: 1px solid #1f2023; }
-        .popout-banner { height: 120px; background: linear-gradient(135deg, #23a559, #111214); position: relative; }
-        .popout-avatar-wrapper { position: absolute; bottom: -30px; left: 16px; width: 90px; height: 90px; border-radius: 50%; border: 6px solid #111214; background-color: #23a559; display: flex; justify-content: center; align-items: center; font-size: 36px; font-weight: bold; color: white; }
-        .popout-content { padding: 40px 16px 16px 16px; background-color: #111214; }
-        .popout-username { font-size: 20px; font-weight: 700; color: #f2f3f5; }
-        .popout-roles-title { font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase; margin-top: 16px; margin-bottom: 8px; }
-        .popout-role { display: inline-flex; align-items: center; gap: 4px; background-color: #2b2d31; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: #dbdee1; }
-
-        .audio-settings-popup { display: none; position: absolute; bottom: 60px; left: 70px; width: 300px; background-color: #111214; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 2000; flex-direction: column; padding: 12px; border: 1px solid #1f2023;}
-        .audio-settings-popup h4 { font-size: 12px; color: #b5bac1; text-transform: uppercase; margin-bottom: 8px; }
-        .audio-settings-popup .setting-row { padding: 8px; color: #dbdee1; font-size: 14px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .audio-settings-popup .setting-row:hover { background-color: #35373c; }
-        .audio-settings-popup .active-row { background-color: #404249; }
-        .audio-settings-popup .divider { height: 1px; background-color: #1f2023; margin: 8px 0; }
-
-        /* CSS DOS MENUS DE CONTEXTO E MODAIS (SCREEN SHARE) */
         .context-menu { display: none; position: fixed; background-color: #111214; border-radius: 4px; padding: 8px; min-width: 220px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); z-index: 3000; flex-direction: column; border: 1px solid #1e1f22;}
         .context-menu-item { padding: 10px 8px; color: #b5bac1; font-size: 14px; cursor: pointer; border-radius: 4px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;}
         .context-menu-item:hover { background-color: #4752c4; color: white; }
         .context-menu-item.danger:hover { background-color: #da373c; color: white; }
         .context-menu-separator { height: 1px; background-color: #2b2d31; margin: 4px 0; }
-        .volume-slider-container { display: flex; flex-direction: column; gap: 8px; padding: 8px; color: #b5bac1; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        .volume-slider { -webkit-appearance: none; width: 100%; height: 4px; background: #3f4147; border-radius: 2px; outline: none; }
-        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.7); z-index: 5000; justify-content: center; align-items: center; }
         .stream-quality-modal { background-color: #313338; border-radius: 8px; width: 440px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid #1f2023;}
@@ -233,6 +212,124 @@
         .action-btn-large.primary { background-color: #5865F2; }
         .action-btn-large.primary:hover { background-color: #4752c4; }
         .action-btn-large.danger { background-color: #da373c; }
+
+        /* =========================================
+           UI SUPREMA DE CONFIGURAÇÕES (MODAL DISCORD)
+        ========================================= */
+        .settings-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(0, 0, 0, 0.7); z-index: 9999; display: none;
+            justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.2s ease;
+        }
+        .settings-overlay.active { display: flex; opacity: 1; }
+
+        .settings-modal {
+            width: 90%; max-width: 1000px; height: 85vh; min-height: 500px;
+            background-color: #313338; border-radius: 8px; display: flex; overflow: hidden;
+            transform: scale(0.95); transition: transform 0.2s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .settings-overlay.active .settings-modal { transform: scale(1); }
+
+        .settings-sidebar {
+            width: 30%; max-width: 260px; background-color: #2b2d31;
+            display: flex; flex-direction: column; align-items: flex-end; padding: 40px 10px 40px 0;
+            overflow-y: auto;
+        }
+        .settings-sidebar::-webkit-scrollbar { display: none; }
+
+        .settings-content { flex-grow: 1; background-color: #313338; padding: 40px; overflow-y: auto; position: relative; }
+        .settings-content::-webkit-scrollbar { width: 8px; }
+        .settings-content::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 4px; }
+
+        .settings-close-wrap { position: absolute; top: 40px; right: 40px; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 10; }
+        .settings-close-btn {
+            width: 36px; height: 36px; border-radius: 50%; border: 2px solid #b5bac1;
+            color: #b5bac1; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; font-size: 18px; transition: 0.2s; background: transparent;
+        }
+        .settings-close-btn:hover { background-color: rgba(181, 186, 193, 0.1); color: #dbdee1; }
+        .esc-hint { color: #b5bac1; font-size: 12px; font-weight: 600; }
+
+        .set-tab-group { width: 100%; max-width: 220px; display: flex; flex-direction: column; gap: 2px; }
+        .set-tab-header { font-size: 12px; font-weight: 800; color: #949ba4; padding: 6px 10px; margin-top: 12px; text-transform: uppercase; }
+        .set-tab { padding: 8px 10px; border-radius: 4px; color: #b5bac1; font-size: 15px; font-weight: 500; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
+        .set-tab:hover { background-color: rgba(71, 82, 196, 0.4); color: #dbdee1; }
+        .set-tab.active { background-color: #4752c4; color: #fff; }
+
+        .set-section { display: none; animation: fadeIn 0.3s ease; max-width: 650px;}
+        .set-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .set-title { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 24px; }
+        .set-subtitle { color: #f2f3f5; font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+        .set-desc { color: #b5bac1; font-size: 14px; margin-bottom: 16px; line-height: 1.4; }
+
+        /* Controles de UI Estilo Discord */
+        .discord-select {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; padding: 10px 12px; background-color: #1e1f22; color: #dbdee1;
+            border: 1px solid #1e1f22; border-radius: 4px; outline: none; font-size: 14px; font-weight: 500;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23b5bac1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto; cursor: pointer;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 30px; /* Consertado texto vazando! */
+        }
+        .discord-select:hover { border-color: #111214; }
+        .discord-select:focus { border-color: #5865F2; }
+
+        .discord-slider {
+            -webkit-appearance: none; width: 100%; height: 8px; background: #4e5058;
+            border-radius: 4px; outline: none; margin-top: 8px; cursor: pointer;
+        }
+        .discord-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px; border-radius: 50%; background: #fff; cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .discord-toggle { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px;}
+        .toggle-switch {
+            position: relative; width: 40px; height: 24px; background-color: #80848e;
+            border-radius: 12px; cursor: pointer; transition: 0.2s; flex-shrink: 0;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+            background-color: white; border-radius: 50%; transition: 0.2s;
+        }
+        .toggle-switch.active { background-color: #23a559; }
+        .toggle-switch.active::after { transform: translateX(16px); }
+
+        .radio-card {
+            background-color: #1e1f22; border-radius: 8px; padding: 16px; margin-bottom: 8px;
+            cursor: pointer; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 12px;
+        }
+        .radio-card:hover { background-color: #2b2d31; }
+        .radio-card.active { border-color: #5865F2; background-color: rgba(88, 101, 242, 0.05); }
+        .radio-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #b5bac1; display: flex; justify-content: center; align-items: center; flex-shrink: 0;}
+        .radio-card.active .radio-circle { border-color: #5865F2; }
+        .radio-card.active .radio-circle::after { content: ''; width: 10px; height: 10px; background-color: #5865F2; border-radius: 50%; }
+        .radio-text h4 { color: #dbdee1; font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+        .radio-text p { color: #b5bac1; font-size: 14px; }
+
+        .btn-blurple { background-color: #5865F2; color: white; border: none; border-radius: 4px; padding: 10px 16px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 14px;}
+        .btn-blurple:hover { background-color: #4752c4; }
+
+        /* ABA MINHA CONTA UI */
+        .account-card { background-color: #1e1f22; border-radius: 8px; overflow: hidden; margin-top: 16px; border: 1px solid #111214;}
+        .account-banner { height: 100px; background: linear-gradient(135deg, #23a559, #111214); }
+        .account-info-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 16px 16px 16px; position: relative;}
+        .account-avatar-large { width: 80px; height: 80px; border-radius: 50%; background-color: #23a559; border: 6px solid #1e1f22; margin-top: -40px; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white;}
+        .account-details-box { background-color: #2b2d31; border-radius: 8px; margin: 16px; padding: 16px; display: flex; flex-direction: column; gap: 16px;}
+        .acc-data-row { display: flex; justify-content: space-between; align-items: center; }
+        .acc-label { font-size: 12px; font-weight: 800; color: #b5bac1; text-transform: uppercase; margin-bottom: 4px;}
+        .acc-value { font-size: 16px; color: #f2f3f5; font-weight: 500;}
+        .btn-edit-gray { background-color: #4e5058; color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; transition: 0.2s;}
+        .btn-edit-gray:hover { background-color: #6d6f78; }
+
+        /* Barrinhas do teste do Mic */
+        .meter-bar { flex: 1; height: 8px; background-color: #4e5058; border-radius: 2px; transition: 0.1s ease; }
+        .meter-bar.active { background-color: #23a559; height: 16px; }
 
     </style>
 </head>
@@ -268,22 +365,19 @@
                         {% endfor %}
 
                         <div class="channel-category" style="margin-top: 16px;"><i class="fa-solid fa-chevron-down"></i> CANAIS DE VOZ</div>
-                        {% for channel in voice_channels %}
-                        <div class="channel-item voice-channel" data-id="{{ channel.id }}" data-name="{{ channel.name }}">
-                            <i class="fa-solid fa-volume-high channel-icon"></i> {{ channel.name }}
-                        </div>
-                        <div id="voice-users-{{ channel.id }}" style="padding-left: 24px; display: none; margin-bottom: 8px;">
-                            <div class="channel-item active" style="font-size: 13px;" id="vu-me">
-                                <img src="{{ usuario_atual.avatar if usuario_atual.avatar else '' }}" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background: #23a559;" alt="" onerror="this.style.display='none'">
-                                {{ usuario_atual.name }}
-                            </div>
-                        </div>
-                        {% endfor %}
+                    {% for channel in voice_channels %}
+                    <div class="channel-item voice-channel" data-id="{{ channel.id }}" data-name="{{ channel.name }}">
+                        <i class="fa-solid fa-volume-high channel-icon"></i> {{ channel.name }}
                     </div>
-                </aside>
-            </div>
+                    <div id="voice-users-{{ channel.id }}" style="padding-left: 24px; display: none; margin-bottom: 8px;">
+                        <!-- O fantasma foi exorcizado! O JS vai colocar os membros conectados aqui automaticamente. -->
+                    </div>
+                    {% endfor %}
+                </div>
+            </aside>
+        </div>
 
-            <!-- CONTROLES DO USUÁRIO EXPANDIDOS -->
+        <!-- CONTROLES DO USUÁRIO EXPANDIDOS (Ocupam os 312px) -->
             <div class="user-controls">
                 <div id="voice-panel" class="voice-connection-panel">
                     <div class="voice-info-row">
@@ -374,9 +468,10 @@
                             </div>
                         </div>
 
-                        <!-- O BOTÃO DA ENGRENAGEM ESTÁ AQUI -->
+                        <!-- BOTÃO DE CONFIGURAÇÕES -->
                         <div class="hw-group">
-                            <button class="hw-btn" id="btn-gear-settings" title="Configurações" style="border-radius: 4px; padding: 8px;"><i class="fa-solid fa-gear"></i></button>
+                            <!-- CIRURGIA: id="btn-open-settings" adicionado de volta! -->
+                            <button class="hw-btn" id="btn-open-settings" title="Configurações" style="border-radius: 4px; padding: 8px;"><i class="fa-solid fa-gear"></i></button>
                         </div>
                     </div>
                 </div>
@@ -430,41 +525,7 @@
         </aside>
     </div>
 
-    <!-- POP-UP DO PERFIL -->
-    <div id="user-profile-popup" class="user-profile-popout">
-        <div class="popout-banner">
-            <div class="popout-avatar-wrapper">
-                {% if usuario_atual.avatar %}
-                    <img src="{{ usuario_atual.avatar }}" style="width: 100%; height: 100%; border-radius: 50%;" alt="S">
-                {% else %}
-                    {{ usuario_atual.name[0]|upper }}
-                {% endif %}
-            </div>
-        </div>
-        <div class="popout-content">
-            <div class="popout-username">{{ usuario_atual.name }}</div>
-            <div style="font-size: 14px; color: #dbdee1;">bazinga.gg</div>
-
-            <div class="popout-roles-title">Cargos</div>
-            <div class="popout-role">
-                <div style="width: 10px; height: 10px; border-radius: 50%; background-color: {{ usuario_atual.role.color if usuario_atual.role else '#23a559' }}; margin-right: 4px;"></div>
-                {{ usuario_atual.role.name if usuario_atual.role else 'Membro' }}
-            </div>
-        </div>
-    </div>
-
-    <!-- POP-UP CLÁSSICO DA ENGRENAGEM -->
-    <div id="mic-settings-popup" class="audio-settings-popup">
-        <h4>Dispositivo de entrada</h4>
-        <div class="setting-row active-row">Padrão do Windows (Microfone) <i class="fa-solid fa-check" style="color: #23a559;"></i></div>
-        <div class="divider"></div>
-        <h4>Volume de entrada</h4>
-        <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="1" style="margin-bottom: 8px;">
-        <div class="divider"></div>
-        <div class="setting-row"><i class="fa-solid fa-gear"></i> Configurações de voz</div>
-    </div>
-
-    <!-- MENUS DE CONTEXTO (Eles Voltaram!) -->
+    <!-- MENUS DE CONTEXTO E MODAIS ANTIGOS AQUI (Ocultados por CSS) -->
     <div id="msg-context-menu" class="context-menu">
         <div class="context-menu-item" id="ctx-copy">Copiar Texto <i class="fa-solid fa-copy"></i></div>
         <div class="context-menu-separator"></div>
@@ -532,6 +593,173 @@
         </div>
     </div>
 
+
+    <!-- TELA CHEIA DE CONFIGURAÇÕES (MODAL DISCORD) -->
+    <div class="settings-overlay" id="settings-modal">
+        <div class="settings-modal">
+            <!-- Barra Lateral Esquerda -->
+            <div class="settings-sidebar">
+                <div class="set-tab-group">
+                    <div class="set-tab-header">Configurações de Usuário</div>
+                    <div class="set-tab" data-target="set-conta">Minha Conta</div>
+                    <div class="set-tab">Perfis</div>
+                    <div style="height: 1px; background: #3f4147; margin: 8px 10px;"></div>
+                    <div class="set-tab-header">Configurações do App</div>
+                    <div class="set-tab active" data-target="set-voz">Voz e Vídeo</div>
+                    <div class="set-tab" data-target="set-aparencia">Aparência <span style="background: #5865F2; color: white; font-size: 10px; padding: 2px 4px; border-radius: 4px; margin-left: 4px;">NOVO</span></div>
+                    <div style="height: 1px; background: #3f4147; margin: 8px 10px;"></div>
+                    <div class="set-tab" style="color: #f23f42;">Sair</div>
+                </div>
+            </div>
+
+            <!-- Conteúdo Central -->
+            <div class="settings-content">
+                <div class="settings-close-wrap">
+                    <button class="settings-close-btn" id="btn-close-settings"><i class="fa-solid fa-xmark"></i></button>
+                    <span class="esc-hint">ESC</span>
+                </div>
+
+                <!-- ABA: MINHA CONTA -->
+                <div class="set-section" id="set-conta">
+                    <h2 class="set-title">Minha Conta</h2>
+
+                    <div class="account-card">
+                        <div class="account-banner"></div>
+                        <div class="account-info-row">
+                            <div class="account-avatar-large">
+                                {% if usuario_atual.avatar %}<img src="{{ usuario_atual.avatar }}" style="width: 100%; height: 100%; border-radius: 50%;">{% else %}{{ usuario_atual.name[0]|upper }}{% endif %}
+                            </div>
+                            <button class="btn-blurple">Editar perfil de usuário</button>
+                        </div>
+                        <div class="account-details-box">
+                            <div class="acc-data-row">
+                                <div><div class="acc-label">Nome de usuário</div><div class="acc-value">{{ usuario_atual.name }}</div></div>
+                                <button class="btn-edit-gray">Editar</button>
+                            </div>
+                            <div class="acc-data-row">
+                                <div><div class="acc-label">E-mail</div><div class="acc-value">*********@gmail.com <span style="color: #00a8fc; font-size: 12px; cursor: pointer;">Mostrar</span></div></div>
+                                <button class="btn-edit-gray">Editar</button>
+                            </div>
+                            <div class="acc-data-row">
+                                <div><div class="acc-label">Telefone</div><div class="acc-value">*********1835 <span style="color: #00a8fc; font-size: 12px; cursor: pointer;">Mostrar</span></div></div>
+                                <button class="btn-edit-gray">Editar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="set-title" style="margin-top: 40px; margin-bottom: 16px;">Senha e segurança</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <span style="color: #dbdee1; font-size: 16px;">Senha</span>
+                        <button class="btn-edit-gray">Editar</button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #dbdee1; font-size: 16px;">Autenticação Multifatorial</span>
+                        <span style="color: #b5bac1; cursor: pointer;">Definir <i class="fa-solid fa-chevron-right" style="margin-left: 8px;"></i></span>
+                    </div>
+                </div>
+
+                <!-- ABA: VOZ E VÍDEO -->
+                <div class="set-section active" id="set-voz">
+                    <h2 class="set-title">Voz e vídeo</h2>
+
+                    <div style="display: flex; gap: 24px; margin-bottom: 24px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Microfone</div>
+                            <select id="modal-mic-select" class="discord-select"></select>
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Microfone</div>
+                            <input type="range" class="discord-slider" min="0" max="100" value="100">
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Alto-falante</div>
+                            <select id="modal-speaker-select" class="discord-select"></select>
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Alto-falante</div>
+                            <input type="range" class="discord-slider" min="0" max="100" value="100">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 32px;">
+                        <button class="btn-blurple" id="btn-modal-mic-test">Teste do microfone</button>
+                        <!-- A barra de teste imitando o Discord (várias barrinhas) -->
+                        <div style="flex: 1; height: 16px; background-color: #1e1f22; border-radius: 4px; overflow: hidden; display: flex;" id="modal-mic-meter-segmented">
+                            <!-- Barras criadas pelo JS -->
+                        </div>
+                    </div>
+
+                    <div style="height: 1px; background: #3f4147; margin: 32px 0;"></div>
+
+                    <h3 class="set-title" style="margin-bottom: 16px;">Perfil de entrada</h3>
+
+                    <div class="radio-card" data-profile="isolamento">
+                        <div class="radio-circle"></div>
+                        <div class="radio-text">
+                            <h4>Isolamento de Voz</h4>
+                            <p>Só a sua linda voz: deixe o Bazinga equalizar o ruído.</p>
+                        </div>
+                    </div>
+                    <div class="radio-card" data-profile="estudio">
+                        <div class="radio-circle"></div>
+                        <div class="radio-text">
+                            <h4>Estúdio</h4>
+                            <p>Áudio puro: microfone aberto e sem processamento.</p>
+                        </div>
+                    </div>
+                    <div class="radio-card active" data-profile="personalizado">
+                        <div class="radio-circle"></div>
+                        <div class="radio-text">
+                            <h4>Personalizado</h4>
+                            <p>Modo avançado: me dê todos os botões e mostradores!</p>
+                        </div>
+                    </div>
+
+                    <div id="custom-audio-settings" style="margin-top: 32px;">
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Ajustar Automaticamente a Sensibilidade</h4>
+                                <p style="color: #b5bac1; font-size: 14px;">Controla quanto som o Bazinga transmite do seu microfone.</p>
+                            </div>
+                            <div class="toggle-switch active" id="toggle-sensitivity"></div>
+                        </div>
+                        <!-- Barra de Sensibilidade (Aparece quando o Auto é desligado) -->
+                        <div id="sensitivity-slider-box" style="display: none; height: 8px; background: linear-gradient(90deg, #f23f42 30%, #23a559 30%); border-radius: 4px; position: relative; margin-bottom: 32px;">
+                            <input type="range" class="discord-slider" style="position: absolute; top: -8px; background: transparent; height: 24px;" min="0" max="100" value="30">
+                        </div>
+
+                        <div class="discord-toggle" style="margin-top: 24px;">
+                            <div>
+                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Supressão de ruído (Krisp Virtual)</h4>
+                                <p style="color: #b5bac1; font-size: 14px;">Reduz ruído de fundo. Fornecido pelo WebRTC.</p>
+                            </div>
+                            <div class="toggle-switch active" id="toggle-noise"></div>
+                        </div>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Cancelamento de eco</h4>
+                            </div>
+                            <div class="toggle-switch active" id="toggle-echo"></div>
+                        </div>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Apertar para Falar</h4>
+                            </div>
+                            <div class="toggle-switch" id="toggle-ptt"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA: APARÊNCIA -->
+                <div class="set-section" id="set-aparencia">
+                    <h2 class="set-title">Aparência</h2>
+                    <p class="set-desc">Em breve: Temas escuro, claro e modo AMOLED.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- SCRIPTS (Lógica e Integração do Bazinga)   -->
+    <!-- ========================================== -->
     <script>
         const socket = io();
         let currentChannelId = {{ default_channel.id if default_channel else 1 }};
@@ -541,7 +769,7 @@
         socket.emit('entrar_canal', { canal_id: currentChannelId });
         carregarMensagensIniciais();
 
-        // ---- CHAT DE TEXTO (AJAX e Socket.IO) ----
+        // ---- CHAT DE TEXTO ----
         document.querySelectorAll('.text-channel').forEach(btn => {
             btn.addEventListener('click', async () => {
                 document.querySelectorAll('.text-channel').forEach(b => b.classList.remove('active'));
@@ -597,7 +825,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // ---- MENUS DE CONTEXTO (Eles Voltaram!) ----
+        // ---- MENUS DE CONTEXTO ----
         let targetMsgId = null;
         let targetMsgElement = null;
         let targetVideoElement = null;
@@ -605,19 +833,16 @@
         function showMenu(menu, e) {
             e.preventDefault();
             menu.style.display = 'flex';
-            let top = e.clientY;
-            let left = e.clientX;
+            let top = e.clientY; let left = e.clientX;
             if(top + menu.offsetHeight > window.innerHeight) top -= menu.offsetHeight;
             if(left + menu.offsetWidth > window.innerWidth) left -= menu.offsetWidth;
-            menu.style.top = `${top}px`;
-            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`; menu.style.left = `${left}px`;
         }
 
         document.getElementById('messages-container').addEventListener('contextmenu', (e) => {
             const msgElement = e.target.closest('.message');
             if(msgElement) {
-                targetMsgId = msgElement.getAttribute('data-msg-id');
-                targetMsgElement = msgElement;
+                targetMsgId = msgElement.getAttribute('data-msg-id'); targetMsgElement = msgElement;
                 document.getElementById('video-context-menu').style.display = 'none';
                 showMenu(document.getElementById('msg-context-menu'), e);
             }
@@ -637,18 +862,13 @@
 
         document.getElementById('ctx-copy').addEventListener('click', () => {
             if(targetMsgElement) {
-                const txt = targetMsgElement.querySelector('.message-text').innerText;
-                navigator.clipboard.writeText(txt);
+                navigator.clipboard.writeText(targetMsgElement.querySelector('.message-text').innerText);
                 document.getElementById('msg-context-menu').style.display = 'none';
             }
         });
 
         document.getElementById('ctx-delete').addEventListener('click', () => {
-            if(targetMsgId) {
-                socket.emit('apagar_mensagem', { msg_id: targetMsgId });
-                targetMsgElement.remove();
-                document.getElementById('msg-context-menu').style.display = 'none';
-            }
+            if(targetMsgId) { socket.emit('apagar_mensagem', { msg_id: targetMsgId }); targetMsgElement.remove(); document.getElementById('msg-context-menu').style.display = 'none'; }
         });
 
         socket.on('mensagem_apagada', function(dados) {
@@ -657,27 +877,47 @@
         });
 
 
-        // ---- UI DE HARDWARE E POP-UPS CLÁSSICOS ----
-        const profilePopup = document.getElementById('user-profile-popup');
-        const micPopup = document.getElementById('mic-settings-popup');
+        // ---- FUNÇÕES NOVAS P2P: REPLACE TRACK E VAD ----
+        function atualizarMidiaparaAmigos(novaTrack) {
+            if(!novaTrack) return;
+            Object.values(peers).forEach(call => {
+                if(call.peerConnection) {
+                    const senders = call.peerConnection.getSenders();
+                    const sender = senders.find(s => s.track && s.track.kind === novaTrack.kind);
+                    if(sender) sender.replaceTrack(novaTrack);
+                }
+            });
+        }
 
-        // Abre o pop-up do Perfil clicando no Nome
-        document.getElementById('my-profile-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            profilePopup.style.display = profilePopup.style.display === 'flex' ? 'none' : 'flex';
-            if(micPopup) micPopup.style.display = 'none';
-            document.querySelectorAll('.hardware-menu').forEach(m => m.classList.remove('active'));
-        });
+        function monitorarVolume(stream, cardId) {
+            if(stream.getAudioTracks().length === 0) return;
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-        // Abre o pop-up da Engrenagem clicando nela
-        document.getElementById('btn-gear-settings').addEventListener('click', (e) => {
-            e.stopPropagation();
-            micPopup.style.display = micPopup.style.display === 'flex' ? 'none' : 'flex';
-            if(profilePopup) profilePopup.style.display = 'none';
-            document.querySelectorAll('.hardware-menu').forEach(m => m.classList.remove('active'));
-        });
+                const check = () => {
+                    if(!document.getElementById(cardId)) return;
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                    let avg = sum / dataArray.length;
+
+                    const card = document.getElementById(cardId);
+                    if(card) {
+                        if(avg > 15) card.classList.add('is-speaking');
+                        else card.classList.remove('is-speaking');
+                    }
+                    requestAnimationFrame(check);
+                };
+                check();
+            } catch(e) {}
+        }
 
 
+        // ---- UI DE HARDWARE (Microfone e Fone) ----
         let currentMicId = 'default';
         let currentSpeakerId = 'default';
 
@@ -690,13 +930,10 @@
             document.querySelectorAll('.hw-arrow-btn i').forEach(i => i.style.transform = 'rotate(0deg)');
 
             if(!isActive) {
-                menu.classList.add('active');
-                icon.style.transform = 'rotate(180deg)';
+                menu.classList.add('active'); icon.style.transform = 'rotate(180deg)';
                 enumerarDispositivos();
                 if(menuId === 'menu-mic') iniciarTesteMic();
-            } else {
-                pararTesteMic();
-            }
+            } else { pararTesteMic(); }
         }
 
         document.getElementById('btn-mic-settings').addEventListener('click', (e) => { e.stopPropagation(); toggleMenu('menu-mic', 'btn-mic-settings'); });
@@ -707,14 +944,11 @@
                 document.getElementById('msg-context-menu').style.display = 'none';
                 document.getElementById('video-context-menu').style.display = 'none';
             }
-            if(!e.target.closest('.hardware-controls')) {
+            // Não fecha se clicar no botão de gear
+            if(!e.target.closest('.hardware-controls') && !e.target.closest('#btn-open-settings')) {
                 document.querySelectorAll('.hardware-menu').forEach(m => m.classList.remove('active'));
                 document.querySelectorAll('.hw-arrow-btn i').forEach(i => i.style.transform = 'rotate(0deg)');
                 pararTesteMic();
-                if(micPopup) micPopup.style.display = 'none';
-            }
-            if(!e.target.closest('.user-profile-section') && !e.target.closest('#user-profile-popup')) {
-                if(profilePopup) profilePopup.style.display = 'none';
             }
         });
 
@@ -735,34 +969,82 @@
             try {
                 await navigator.mediaDevices.getUserMedia({ audio: true });
                 const dispositivos = await navigator.mediaDevices.enumerateDevices();
+
                 const micList = document.getElementById('mic-list');
                 const speakerList = document.getElementById('speaker-list');
+                const modalMic = document.getElementById('modal-mic-select');
+                const modalSpeaker = document.getElementById('modal-speaker-select');
 
-                micList.innerHTML = '<div class="submenu-title">Dispositivos Encontrados</div>';
-                speakerList.innerHTML = '<div class="submenu-title">Dispositivos Encontrados</div>';
+                if(micList) micList.innerHTML = '<div class="submenu-title">Dispositivos Encontrados</div>';
+                if(speakerList) speakerList.innerHTML = '<div class="submenu-title">Dispositivos Encontrados</div>';
+                if(modalMic) modalMic.innerHTML = '';
+                if(modalSpeaker) modalSpeaker.innerHTML = '';
 
                 dispositivos.forEach(device => {
                     if (device.kind === 'audioinput') {
                         const isSelected = (device.deviceId === currentMicId) || (currentMicId === 'default' && device.deviceId === 'default');
-                        const opt = document.createElement('div');
-                        opt.className = `device-option ${isSelected ? 'selected' : ''}`;
-                        opt.innerHTML = `<div class="device-option-label"><i class="${device.deviceId==='default' ? 'fa-solid fa-laptop' : 'fa-solid fa-microphone-lines'}"></i> ${device.label || 'Microfone Padrão'}</div> ${isSelected ? '<i class="fa-solid fa-circle-check"></i>' : ''}`;
-                        opt.onclick = (e) => { e.stopPropagation(); currentMicId = device.deviceId; document.getElementById('current-mic-name').innerText = device.label || 'Padrão do Windows'; enumerarDispositivos(); };
-                        micList.appendChild(opt);
+
+                        // Menu Rápido
+                        if(micList) {
+                            const opt = document.createElement('div');
+                            opt.className = `device-option ${isSelected ? 'selected' : ''}`;
+                            opt.innerHTML = `<div class="device-option-label"><i class="${device.deviceId==='default' ? 'fa-solid fa-laptop' : 'fa-solid fa-microphone-lines'}"></i> ${device.label || 'Microfone Padrão'}</div> ${isSelected ? '<i class="fa-solid fa-circle-check"></i>' : ''}`;
+                            opt.onclick = async (e) => { e.stopPropagation(); await mudarMicrofone(device); };
+                            micList.appendChild(opt);
+                        }
+
+                        // Modal Settings
+                        if(modalMic) {
+                            const selectOpt = document.createElement('option');
+                            selectOpt.value = device.deviceId; selectOpt.text = device.label || 'Padrão do Windows';
+                            if(isSelected) selectOpt.selected = true;
+                            modalMic.appendChild(selectOpt);
+                        }
                     }
                     else if (device.kind === 'audiooutput') {
                         const isSelected = (device.deviceId === currentSpeakerId) || (currentSpeakerId === 'default' && device.deviceId === 'default');
-                        const opt = document.createElement('div');
-                        opt.className = `device-option ${isSelected ? 'selected' : ''}`;
-                        opt.innerHTML = `<div class="device-option-label"><i class="${device.deviceId==='default' ? 'fa-solid fa-laptop' : 'fa-solid fa-volume-high'}"></i> ${device.label || 'Alto-falante Padrão'}</div> ${isSelected ? '<i class="fa-solid fa-circle-check"></i>' : ''}`;
-                        opt.onclick = (e) => { e.stopPropagation(); currentSpeakerId = device.deviceId; document.getElementById('current-speaker-name').innerText = device.label || 'Padrão do Windows'; enumerarDispositivos(); };
-                        speakerList.appendChild(opt);
+
+                        if(speakerList) {
+                            const opt = document.createElement('div');
+                            opt.className = `device-option ${isSelected ? 'selected' : ''}`;
+                            opt.innerHTML = `<div class="device-option-label"><i class="${device.deviceId==='default' ? 'fa-solid fa-laptop' : 'fa-solid fa-volume-high'}"></i> ${device.label || 'Alto-falante Padrão'}</div> ${isSelected ? '<i class="fa-solid fa-circle-check"></i>' : ''}`;
+                            opt.onclick = (e) => { e.stopPropagation(); currentSpeakerId = device.deviceId; document.getElementById('current-speaker-name').innerText = device.label || 'Padrão do Windows'; enumerarDispositivos(); };
+                            speakerList.appendChild(opt);
+                        }
+
+                        if(modalSpeaker) {
+                            const selectOpt = document.createElement('option');
+                            selectOpt.value = device.deviceId; selectOpt.text = device.label || 'Padrão do Windows';
+                            if(isSelected) selectOpt.selected = true;
+                            modalSpeaker.appendChild(selectOpt);
+                        }
                     }
                 });
-            } catch (e) { console.warn("Dê permissão ao microfone para listar o hardware.") }
+            } catch (e) { console.warn("Permissão de mic necessária.") }
         }
 
+        // Função global de mudar microfone para ser usada pelo Modal e pelo Menu Rápido
+        async function mudarMicrofone(device) {
+            currentMicId = device.deviceId;
+            document.getElementById('current-mic-name').innerText = device.label || 'Padrão do Windows';
+            enumerarDispositivos();
+
+            if (inCall && myMicStream) {
+                try {
+                    const novoStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: currentMicId } } });
+                    const novaTrack = novoStream.getAudioTracks()[0];
+                    myMicStream.removeTrack(myMicStream.getAudioTracks()[0]);
+                    myMicStream.addTrack(novaTrack);
+                    novaTrack.enabled = !micMuted;
+                    atualizarMidiaparaAmigos(novaTrack);
+                } catch(err) {}
+            }
+        }
+
+        // --- SISTEMA DE ÁUDIO E TESTE ---
         let audioCtx, analyser, micSource, scriptNode;
+        let isTestingModal = false;
+
         async function iniciarTesteMic() {
             if(audioCtx) return;
             try {
@@ -773,14 +1055,23 @@
                 scriptNode = audioCtx.createScriptProcessor(2048, 1, 1);
                 analyser.smoothingTimeConstant = 0.8; analyser.fftSize = 1024;
                 micSource.connect(analyser); analyser.connect(scriptNode); scriptNode.connect(audioCtx.destination);
+
                 scriptNode.onaudioprocess = function() {
                     const array = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(array);
                     let values = 0; for (let i = 0; i < array.length; i++) values += array[i];
-                    document.getElementById('mic-meter').style.width = Math.min(100, (values / array.length) * 2) + '%';
+                    let pct = Math.min(100, (values / array.length) * 2);
+
+                    const meter1 = document.getElementById('mic-meter');
+                    if(meter1) meter1.style.width = pct + '%';
                 }
             } catch(e) {}
         }
-        function pararTesteMic() { if(audioCtx) { audioCtx.close(); audioCtx = null; } document.getElementById('mic-meter').style.width = '0%'; }
+
+        function pararTesteMic() {
+            if(audioCtx) { audioCtx.close(); audioCtx = null; }
+            const meter1 = document.getElementById('mic-meter');
+            if(meter1) meter1.style.width = '0%';
+        }
 
         let micMuted = false;
         let deafened = false;
@@ -801,19 +1092,18 @@
             const iconHtml = micMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
             btnMic.innerHTML = iconHtml; btnMainMic.innerHTML = iconHtml;
 
-            if(myMicStream) myMicStream.getAudioTracks()[0].enabled = !micMuted;
+            if(myMicStream) {
+                myMicStream.getAudioTracks()[0].enabled = !micMuted;
+                const myCard = document.getElementById('my-video-card');
+                if(micMuted && myCard) myCard.classList.remove('is-speaking');
+            }
         }
 
         function toggleDeafen(forceState) {
             deafened = forceState !== undefined ? forceState : !deafened;
             deafenGroup.classList.toggle('muted', deafened);
-
-            if(deafened) {
-                micMutedBeforeDeafen = micMuted;
-                toggleMic(true);
-            } else {
-                toggleMic(micMutedBeforeDeafen);
-            }
+            if(deafened) { micMutedBeforeDeafen = micMuted; toggleMic(true); }
+            else { toggleMic(micMutedBeforeDeafen); }
         }
 
         btnMic.addEventListener('click', () => toggleMic());
@@ -821,7 +1111,141 @@
         btnDeafen.addEventListener('click', () => toggleDeafen());
 
 
-        // ---- LÓGICA DE CALL MULTIPLAYER COM PEERJS E SCREEN SHARE ----
+        // ==============================================
+        // LÓGICA DO MODAL DE CONFIGURAÇÕES (NOVO)
+        // ==============================================
+        const settingsModal = document.getElementById('settings-modal');
+
+        // Gera as barrinhas segmentadas do teste de microfone
+        const segmentedMeter = document.getElementById('modal-mic-meter-segmented');
+        for(let i=0; i<45; i++) {
+            let bar = document.createElement('div');
+            bar.className = 'meter-bar';
+            segmentedMeter.appendChild(bar);
+        }
+
+        document.getElementById('btn-open-settings').addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsModal.classList.add('active');
+            enumerarDispositivos();
+        });
+
+        document.getElementById('btn-close-settings').addEventListener('click', () => { settingsModal.classList.remove('active'); pararTesteModal(); });
+        document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && settingsModal.classList.contains('active')) { settingsModal.classList.remove('active'); pararTesteModal(); } });
+
+        document.querySelectorAll('.set-tab[data-target]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.set-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.set-section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+            });
+        });
+
+        // Teste de Mic no Modal (COM RETORNO DE ÁUDIO REAL)
+        let testAudioElement = null;
+        let testAudioCtx, testAnalyser, testMicSource, testScriptNode;
+
+        document.getElementById('btn-modal-mic-test').addEventListener('click', async (e) => {
+            isTestingModal = !isTestingModal;
+            if(isTestingModal) {
+                e.target.innerText = "Parar de testar";
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: currentMicId !== 'default' ? { exact: currentMicId } : undefined } });
+
+                    // Retorno no fone
+                    testAudioElement = new Audio();
+                    testAudioElement.srcObject = stream;
+                    testAudioElement.play();
+
+                    // Gráfico Segmentado
+                    testAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    testAnalyser = testAudioCtx.createAnalyser();
+                    testMicSource = testAudioCtx.createMediaStreamSource(stream);
+                    testScriptNode = testAudioCtx.createScriptProcessor(2048, 1, 1);
+                    testAnalyser.smoothingTimeConstant = 0.8; testAnalyser.fftSize = 1024;
+                    testMicSource.connect(testAnalyser); testAnalyser.connect(testScriptNode); testScriptNode.connect(testAudioCtx.destination);
+
+                    testScriptNode.onaudioprocess = function() {
+                        const array = new Uint8Array(testAnalyser.frequencyBinCount); testAnalyser.getByteFrequencyData(array);
+                        let values = 0; for (let i = 0; i < array.length; i++) values += array[i];
+                        let pct = (values / array.length) * 2;
+
+                        let activeBars = Math.floor((pct / 100) * 45);
+                        let bars = segmentedMeter.children;
+                        for(let i=0; i<45; i++) {
+                            if(i < activeBars) bars[i].classList.add('active');
+                            else bars[i].classList.remove('active');
+                        }
+                    }
+                } catch(err) {}
+            } else {
+                e.target.innerText = "Teste do microfone";
+                pararTesteModal();
+            }
+        });
+
+        function pararTesteModal() {
+            if(testAudioCtx) { testAudioCtx.close(); testAudioCtx = null; }
+            if(testAudioElement) { testAudioElement.pause(); testAudioElement.srcObject = null; testAudioElement = null; }
+            let bars = segmentedMeter.children;
+            for(let i=0; i<45; i++) bars[i].classList.remove('active');
+            isTestingModal = false;
+        }
+
+        // Animação Sliders de Volume (Azul na esquerda, cinza na direita)
+        document.querySelectorAll('.discord-slider').forEach(slider => {
+            const updateSlider = (sl) => {
+                const val = sl.value;
+                sl.style.background = `linear-gradient(to right, #5865F2 ${val}%, #4e5058 ${val}%)`;
+            };
+            updateSlider(slider);
+            slider.addEventListener('input', function() { updateSlider(this); });
+        });
+
+        document.getElementById('modal-mic-select').addEventListener('change', async (e) => {
+            await mudarMicrofone({ deviceId: e.target.value, label: e.target.options[e.target.selectedIndex].text });
+        });
+
+        // 6. Toggles e Perfis de Entrada
+        const toggleNoise = document.getElementById('toggle-noise');
+        const toggleEcho = document.getElementById('toggle-echo');
+        const toggleSensitivity = document.getElementById('toggle-sensitivity');
+        const togglePtt = document.getElementById('toggle-ptt');
+        const customSettings = document.getElementById('custom-audio-settings');
+
+        document.querySelectorAll('.radio-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                const perfil = card.getAttribute('data-profile');
+
+                if(perfil === 'estudio') {
+                    customSettings.style.opacity = '0.5'; customSettings.style.pointerEvents = 'none';
+                    toggleNoise.classList.remove('active'); toggleEcho.classList.remove('active');
+                } else if(perfil === 'isolamento') {
+                    customSettings.style.opacity = '0.5'; customSettings.style.pointerEvents = 'none';
+                    toggleNoise.classList.add('active'); toggleEcho.classList.add('active');
+                } else {
+                    customSettings.style.opacity = '1'; customSettings.style.pointerEvents = 'auto';
+                }
+            });
+        });
+
+        [toggleNoise, toggleEcho, toggleSensitivity, togglePtt].forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                toggle.classList.toggle('active');
+                if(toggle.id === 'toggle-sensitivity') {
+                    document.getElementById('sensitivity-slider-box').style.display = toggle.classList.contains('active') ? 'none' : 'block';
+                }
+                if(toggle.id === 'toggle-ptt') {
+                    document.getElementById('ptt-extra-settings').style.display = toggle.classList.contains('active') ? 'block' : 'none';
+                }
+            });
+        });
+
+
+        // ---- LÓGICA DE CALL MULTIPLAYER ----
         let inCall = false;
         let isCallChatOpen = false;
         let myMicStream = null;
@@ -829,12 +1253,25 @@
         let activeScreenStreams = [];
         let mePeer = null;
         let myPeerId = null;
-        const peers = {}; // Armazena as chamadas ativas P2P
+        const peers = {};
 
         const voicePanel = document.getElementById('voice-panel');
         const textView = document.getElementById('text-view');
         const videoView = document.getElementById('video-view');
         const videoGrid = document.getElementById('video-grid');
+
+        // MODO FOCO GRID
+        videoGrid.addEventListener('click', (e) => {
+            const card = e.target.closest('.video-card');
+            if(card) {
+                if(card.classList.contains('focused')) {
+                    card.classList.remove('focused'); videoGrid.classList.remove('focused-mode');
+                } else {
+                    document.querySelectorAll('.video-card').forEach(c => c.classList.remove('focused'));
+                    card.classList.add('focused'); videoGrid.classList.add('focused-mode');
+                }
+            }
+        });
 
         document.querySelectorAll('.voice-channel').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -843,76 +1280,91 @@
                 currentVoiceChannelId = voiceId;
 
                 try {
-                    myMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    myMicStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: currentMicId !== 'default' ? { exact: currentMicId } : undefined }, video: false });
                     inCall = true;
 
                     voicePanel.classList.add('active');
                     document.getElementById('connected-voice-name').innerText = `${voiceName} / Bazinga Hub`;
                     document.getElementById(`voice-users-${voiceId}`).style.display = 'block';
 
+                    const myPresence = document.createElement('div');
+                    myPresence.className = 'channel-item active'; myPresence.id = `vu-me`; myPresence.style.fontSize = '13px';
+                    myPresence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background: #23a559;">${currentUserName[0].toUpperCase()}</div> ${currentUserName}`;
+                    document.getElementById(`voice-users-${voiceId}`).appendChild(myPresence);
+
                     textView.classList.add('hidden'); textView.classList.remove('sidebar-mode');
                     videoView.classList.add('active');
                     document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high"></i> ${voiceName}`;
 
-                    // PeerJS Multiplayer
                     mePeer = new Peer(undefined, { host: '0.peerjs.com', port: 443, secure: true });
                     mePeer.on('open', id => {
                         myPeerId = id;
                         socket.emit('entrar_call', { canal_id: voiceId, peer_id: id, usuario: currentUserName });
                     });
 
-                    // Quando ALGUÉM LIGA PARA VOCÊ (Atendendo chamadas)
                     mePeer.on('call', call => {
-                        // Se a chamada for uma Tela Compartilhada (Screen Share)
                         if (call.metadata && call.metadata.type === 'screen') {
-                            call.answer(); // Não envia microfone de volta para a tela
+                            call.answer();
                             call.on('stream', remoteStream => {
                                 if(!document.getElementById(`vc-${call.peer}-screen`)) {
                                     adicionarVideoCard(`${call.peer}-screen`, remoteStream, `Tela de ${call.metadata.userName}`);
+                                    monitorarVolume(remoteStream, `vc-${call.peer}-screen`);
                                 }
                             });
                         } else {
-                            // Se for uma chamada normal de Mic/Câmera
                             call.answer(myMicStream);
                             call.on('stream', remoteStream => {
                                 if(!document.getElementById(`vc-${call.peer}`)) {
                                     adicionarVideoCard(call.peer, remoteStream, "Membro");
+                                    monitorarVolume(remoteStream, `vc-${call.peer}`);
                                 }
                             });
                             peers[call.peer] = call;
                         }
                     });
 
+                    monitorarVolume(myMicStream, 'my-video-card');
+
                 } catch(e) { alert("Permita o microfone para entrar na call!"); }
             });
         });
 
-        // Quando o Servidor avisa que tem NOVO USUÁRIO na sala
         socket.on('novo_usuario_call', (dados) => {
+            const voiceUsersDiv = document.getElementById(`voice-users-${dados.canal_id}`);
+            if(voiceUsersDiv && !document.getElementById(`vu-${dados.peer_id}`)) {
+                const presence = document.createElement('div');
+                presence.className = 'channel-item'; presence.id = `vu-${dados.peer_id}`; presence.style.fontSize = '13px';
+                presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background: #23a559;">${dados.usuario[0].toUpperCase()}</div> ${dados.usuario}`;
+                voiceUsersDiv.appendChild(presence);
+            }
+
             if(!inCall || !mePeer) return;
-            // 1. Liga pro cara enviando o seu microfone
             const call = mePeer.call(dados.peer_id, myMicStream);
             call.on('stream', remoteStream => {
                 if(!document.getElementById(`vc-${dados.peer_id}`)) {
                     adicionarVideoCard(dados.peer_id, remoteStream, dados.usuario);
+                    monitorarVolume(remoteStream, `vc-${dados.peer_id}`);
                 }
             });
             peers[dados.peer_id] = call;
 
-            // 2. Se você estiver compartilhando tela, envia ela pra ele também!
             activeScreenStreams.forEach(screenObj => {
                 mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName } });
             });
         });
 
-        // Quando alguém SAIR da sala
         socket.on('usuario_saiu_call', (dados) => {
+            const vuEl = document.getElementById(`vu-${dados.peer_id}`);
+            if(vuEl) vuEl.remove();
+
             if(peers[dados.peer_id]) {
                 peers[dados.peer_id].close();
                 delete peers[dados.peer_id];
             }
-            // Remove o vídeo dele e a tela se ele tava compartilhando
-            document.querySelectorAll(`[id^="vc-${dados.peer_id}"]`).forEach(c => c.remove());
+            document.querySelectorAll(`[id^="vc-${dados.peer_id}"]`).forEach(c => {
+                if(c.classList.contains('focused')) videoGrid.classList.remove('focused-mode');
+                c.remove();
+            });
         });
 
         function adicionarVideoCard(peerId, stream, nome) {
@@ -940,6 +1392,7 @@
                     myCamStream = await navigator.mediaDevices.getUserMedia({ video: true });
                     videoCardVideo.srcObject = myCamStream; videoCardVideo.style.display = 'block'; videoCardAvatar.style.display = 'none';
                     document.getElementById('btn-main-camera').classList.add('active'); document.getElementById('btn-side-camera').classList.add('active-stream');
+                    atualizarMidiaparaAmigos(myCamStream.getVideoTracks()[0]);
                 } catch(e) {}
             }
         }
@@ -979,13 +1432,12 @@
 
         document.getElementById('btn-confirm-share').addEventListener('click', async () => {
             qualityModal.style.display = 'none';
-            const constraints = { video: { height: { ideal: selectedRes }, frameRate: { ideal: selectedFps } } };
+            const constraints = { video: { height: { ideal: selectedRes }, frameRate: { ideal: selectedFps } }, audio: true };
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
                 const streamId = Date.now();
                 activeScreenStreams.push({ id: streamId, stream: newStream });
 
-                // UI Local
                 const screenCard = document.createElement('div');
                 screenCard.className = 'video-card';
                 screenCard.id = `screen-card-${streamId}`;
@@ -996,7 +1448,6 @@
                 document.getElementById('btn-main-screen').classList.add('active-green');
                 document.getElementById('btn-side-screen').classList.add('active-stream');
 
-                // MULTIPLAYER: Envia a tela pra quem já tá na call
                 Object.keys(peers).forEach(peerId => {
                     mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName } });
                 });
@@ -1009,7 +1460,10 @@
             const index = activeScreenStreams.findIndex(s => s.id === id);
             if(index !== -1) { activeScreenStreams[index].stream.getTracks().forEach(t => t.stop()); activeScreenStreams.splice(index, 1); }
             const card = document.getElementById(`screen-card-${id}`);
-            if(card) card.remove();
+            if(card) {
+                if(card.classList.contains('focused')) videoGrid.classList.remove('focused-mode');
+                card.remove();
+            }
             if(activeScreenStreams.length === 0) { document.getElementById('btn-main-screen').classList.remove('active-green'); document.getElementById('btn-side-screen').classList.remove('active-stream'); }
         }
 
@@ -1024,20 +1478,16 @@
             voicePanel.classList.remove('active');
             videoView.classList.remove('active');
             textView.classList.remove('hidden'); textView.classList.remove('sidebar-mode');
+            videoGrid.classList.remove('focused-mode');
 
-            // ESCONDE O USUÁRIO DA LISTA DA ESQUERDA (FIM DO BUG DO FANTASMA)
-            document.querySelectorAll('[id^="voice-users-"]').forEach(el => el.style.display = 'none');
+            document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');
+            document.getElementById('my-video').style.display = 'none'; document.getElementById('my-avatar-placeholder').style.display = 'flex';
+
+            document.querySelectorAll('[id^="voice-users-"]').forEach(el => el.innerHTML = '');
 
             if(myMicStream) myMicStream.getTracks().forEach(t => t.stop());
             if(myCamStream) myCamStream.getTracks().forEach(t => t.stop());
             pararTodosCompartilhamentos();
-
-            // RESETA A CÂMERA LOCAL NO GRID
-            document.getElementById('my-video').style.display = 'none';
-            document.getElementById('my-avatar-placeholder').style.display = 'flex';
-            document.getElementById('btn-main-camera').classList.remove('active');
-            document.getElementById('btn-side-camera').classList.remove('active-stream');
-            myCamStream = null;
 
             if(mePeer && currentVoiceChannelId) {
                 socket.emit('sair_call', { canal_id: currentVoiceChannelId, peer_id: myPeerId });
@@ -1046,13 +1496,11 @@
             }
             currentVoiceChannelId = null;
 
-            // REMOVE TODOS OS VIDEOS DOS OUTROS
             document.querySelectorAll('.video-card:not(#my-video-card)').forEach(c => c.remove());
         }
         document.getElementById('btn-main-disconnect').addEventListener('click', disconnectCall);
         document.getElementById('btn-side-disconnect').addEventListener('click', disconnectCall);
 
-        // Trava final pro Bug do Fantasma: Se fechar a aba, derruba a call.
         window.addEventListener("beforeunload", function (e) {
             disconnectCall();
         });

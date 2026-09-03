@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <div class="aura"></div>
@@ -21,9 +22,26 @@
       <a href="{{ url_for('main.chat') }}">Chat</a>
       <a href="#" class="soon" title="Em breve">Ultimate Bazinga</a>
     </div>
-    <div class="nav-auth">
-        <!-- Atalho direto para o chat enquanto o auth não é linkado -->
-        <a class="btn-ghost" href="{{ url_for('main.chat') }}">Acessar o BazingaCord</a>
+
+    <!-- ÁREA DE AUTENTICAÇÃO DINÂMICA -->
+    <div class="nav-auth" style="display: flex; align-items: center; gap: 16px;">
+      {% if user %}
+        <!-- Quando o usuário ESTÁ logado -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+            {% if user.avatar %}
+                <img src="{{ user.avatar }}" alt="{{ user.name }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #23a559;">
+            {% else %}
+                <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #23a559; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                    {{ user.name[0]|upper }}
+                </div>
+            {% endif %}
+            <span style="color: #dbdee1; font-weight: 500; font-family: 'Inter', sans-serif;">{{ user.name }}</span>
+        </div>
+        <a class="btn-ghost" href="{{ url_for('auth.logout') }}" style="border-color: #f23f42; color: #f23f42;">Sair</a>
+      {% else %}
+        <!-- Quando o usuário NÃO ESTÁ logado -->
+        <a class="btn-ghost" href="{{ url_for('auth.login', provider='google') }}"><i class="fa-brands fa-google" style="margin-right: 8px;"></i>Entrar com Google</a>
+      {% endif %}
     </div>
   </nav>
 

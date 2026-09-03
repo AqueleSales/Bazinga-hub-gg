@@ -1,109 +1,76 @@
-import requests
-from flask import current_app, redirect, session, url_for
+import os
+from flask import Blueprint, redirect, url_for, session
+from authlib.integrations.flask_client import OAuth
+from app.models import db, Person
 
-from ..models import Person, db
-from . import auth_bp, oauth
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+oauth = OAuth()
 
 
-@auth_bp.route("/login/<provider>")
+# Essa função será chamada lá no __init__.py principal para ligar o OAuth ao Flask
+def init_oauth(app):
+    oauth.init_app(app)
+
+    # Configurando o Google
+    oauth.register(
+        name='google',
+        client_id=os.getenv('GOOGLE_CLIENT_ID'),
+        client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={
+            'scope': 'openid email profile'  # Pedimos apenas o e-mail e dados de perfil públicos
+        }
+    )
+
+
+@auth_bp.route('/login/<provider>')
 def login(provider):
-    if provider not in ("google", "discord"):
-        return redirect(url_for("main.index"))
-
+    # Cria o cliente (Google, Discord, etc)
     client = oauth.create_client(provider)
-    if client is None:
-        return (
-            f"Provedor '{provider}' ainda não configurado "
-            f"(faltam as credenciais no .env — veja o README).",
-            400,
-        )
+    if not client:
+        return "Provedor de login não configurado", 404
 
-    redirect_uri = url_for("auth.callback", provider=provider, _external=True)
+    # Diz pro Google para onde ele deve devolver o usuário depois de logar
+    redirect_uri = url_for('auth.callback', provider=provider, _external=True)
     return client.authorize_redirect(redirect_uri)
 
 
-@auth_bp.route("/callback/<provider>")
+@auth_bp.route('/callback/<provider>')
 def callback(provider):
     client = oauth.create_client(provider)
-    if client is None:
-        return redirect(url_for("main.index"))
+    token = client.authorize_access_token()
 
-    try:
-        token = client.authorize_access_token()
-    except Exception as e:
-        print(f"Erro ao autorizar token (possível F5 ou CSRF expirado): {e}")
-        return redirect(url_for("main.index"))
+    # Pega as informações do usuário devolvidas pelo Google
+    user_info = token.get('userinfo')
 
-    if not token:
-        print("Token não recebido.")
-        return redirect(url_for("main.index"))
+    email = user_info.get('email')
+    name = user_info.get('name')
+    avatar = user_info.get('picture')
+    provider_id = user_info.get('sub')
 
-    if provider == "google":
-        userinfo = token.get("userinfo") or {}
-        provider_id = str(userinfo.get("sub", ""))
-        email = userinfo.get("email")
-        name = userinfo.get("name") or email or "Sem nome"
-        photo = userinfo.get("picture")
+    # Verifica se o usuário já existe no nosso banco (Neon)
+    user = Person.query.filter_by(email=email).first()
 
-    else:  # discord
-        access_token = token.get("access_token")
-
-        if not access_token:
-            print(f"ERRO CRÍTICO - Token veio sem access_token. Payload: {token}")
-            return redirect(url_for("main.index"))
-
-        resp = requests.get(
-            "https://discord.com/api/users/@me",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
-        )
-
-        if not resp.ok:
-            print(f"Erro na API do Discord: {resp.status_code} - {resp.text}")
-            return redirect(url_for("main.index"))
-
-        profile = resp.json()
-
-        provider_id = str(profile.get("id", ""))
-        email = profile.get("email")
-        name = profile.get("global_name") or profile.get("username") or "Sem nome"
-        avatar = profile.get("avatar")
-        photo = (
-            f"https://cdn.discordapp.com/avatars/{provider_id}/{avatar}.png"
-            if avatar
-            else "https://cdn.discordapp.com/embed/avatars/0.png"
-        )
-
-    if not provider_id:
-        print("Provedor não retornou um ID válido.")
-        return redirect(url_for("main.index"))
-
-    person = Person.query.filter_by(auth_provider=provider, provider_user_id=provider_id).first()
-
-    if person is None:
-        person = Person(
-            auth_provider=provider,
-            provider_user_id=provider_id,
-            name=name,
-            photo_url=photo,
-            email=email,
-        )
-        db.session.add(person)
+    if not user:
+        # Se for a primeira vez acessando, cadastra ele!
+        user = Person(name=name, email=email, avatar=avatar, provider_id=provider_id)
+        db.session.add(user)
+        db.session.commit()
     else:
-        person.email = email or person.email
+        # Se já existir, só atualiza a foto caso ele tenha mudado no Google
+        if user.avatar != avatar:
+            user.avatar = avatar
+            db.session.commit()
 
-    is_admin_email = bool(email) and email.lower() in current_app.config.get("ADMIN_EMAILS", [])
-    is_admin_discord = provider == "discord" and provider_id in current_app.config.get("ADMIN_DISCORD_IDS", [])
+    # O momento mágico: Criando a Sessão (Crachá) do Bazinga Hub
+    session['person_id'] = user.id
 
-    if is_admin_email or is_admin_discord:
-        person.is_admin = True
-
-    db.session.commit()
-    session["person_id"] = person.id
-    return redirect(url_for("main.index"))
+    # Volta pra tela inicial logado
+    return redirect(url_for('main.index'))
 
 
-@auth_bp.route("/logout")
+@auth_bp.route('/logout')
 def logout():
-    session.pop("person_id", None)
-    return redirect(url_for("main.index"))
+    # Destrói o "crachá" da pessoa
+    session.pop('person_id', None)
+    return redirect(url_for('main.index'))
