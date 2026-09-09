@@ -1,8 +1,9 @@
+from flask import session
 from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.exc import OperationalError, PendingRollbackError
+from datetime import timedelta
 from . import socketio
 from .models import db, Message, Person
-from datetime import datetime
 
 
 @socketio.on('entrar_canal')
@@ -19,15 +20,16 @@ def handle_leave(dados):
 
 @socketio.on('enviar_mensagem')
 def lidar_com_mensagem(dados):
-    # Pega o usuário que veio do JS
-    nome_usuario = dados.get('usuario', 'Desconhecido')
+    # A MÁGICA DA SEGURANÇA: Buscamos o ID pela sessão segura do Flask!
+    # O JavaScript não pode mais forjar quem está mandando a mensagem.
+    user_id = session.get('user_id')
+    if not user_id:
+        return
 
     try:
-        usuario = Person.query.filter_by(name=nome_usuario).first()
+        usuario = Person.query.get(user_id)
         if not usuario:
-            usuario = Person(name=nome_usuario, email=f"{nome_usuario}@teste.com")
-            db.session.add(usuario)
-            db.session.commit()
+            return
 
         canal_id = str(dados['canal_id'])
 
@@ -40,32 +42,24 @@ def lidar_com_mensagem(dados):
         db.session.commit()
 
     except (OperationalError, PendingRollbackError):
-
         db.session.rollback()
-
         return  # Falha silenciosa para não crachar o servidor
 
     cor = usuario.role.color if usuario.role else '#23a559'
 
-    # IMPORTANTE: Converte o horário do banco (UTC) para Brasília (UTC-3)
-
-    from datetime import timedelta
-
+    # Converte o horário do banco (UTC) para Brasília (UTC-3)
     hora_br = nova_msg.timestamp - timedelta(hours=3)
+    hora_formatada = f"Hoje às {hora_br.strftime('%H:%M')}"
 
     emit('receber_mensagem', {
-
         'id': nova_msg.id,
-
         'usuario': usuario.name,
-
+        'avatar': usuario.avatar,  # <-- Agora enviamos a foto real que veio do Google!
         'texto': nova_msg.text,
-
-        'hora': f"Hoje às {hora_br.strftime('%H:%M')}",
-
+        'hora': hora_formatada,
         'cor': cor
-
     }, to=canal_id)
+
 
 @socketio.on('apagar_mensagem')
 def lidar_com_exclusao(dados):
@@ -91,8 +85,24 @@ def lidar_entrar_call(dados):
     sala_call = f"voz_{canal_id}"
     join_room(sala_call)
 
-    # Avisa todos na sala de voz (menos o recém-chegado) para ligarem pra ele
-    emit('novo_usuario_call', {'peer_id': peer_id, 'usuario': nome_usuario}, to=sala_call, include_self=False)
+    # Busca a foto no banco usando a Sessão segura para mostrar na tela da Call
+    user_id = session.get('user_id')
+    avatar = None
+    if user_id:
+        try:
+            usuario = Person.query.get(user_id)
+            if usuario:
+                avatar = usuario.avatar
+        except (OperationalError, PendingRollbackError):
+            db.session.rollback()
+
+    # Avisa todos na sala de voz enviando o peer_id, nome e o AVATAR
+    emit('novo_usuario_call', {
+        'peer_id': peer_id,
+        'usuario': nome_usuario,
+        'avatar': avatar,
+        'canal_id': canal_id
+    }, to=sala_call, include_self=False)
 
 
 @socketio.on('sair_call')

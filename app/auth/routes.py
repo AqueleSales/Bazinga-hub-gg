@@ -6,7 +6,7 @@ import os
 import time
 from sqlalchemy.exc import OperationalError
 
-auth_bp = Blueprint('auth', __name__)
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 oauth = OAuth()
 
@@ -22,6 +22,19 @@ def init_oauth(app):
             'scope': 'openid email profile'
         }
     )
+
+
+def com_retry(fn, tentativas=4, espera=1.5):
+    """Roda fn() e tenta de novo se o Neon estiver 'acordando' de um cold start.
+    3 tentativas de 1s não é suficiente às vezes - isso aqui espera mais a cada vez."""
+    for tentativa in range(tentativas):
+        try:
+            return fn()
+        except OperationalError:
+            db.session.rollback()
+            if tentativa == tentativas - 1:
+                raise
+            time.sleep(espera * (tentativa + 1))  # 1.5s, 3s, 4.5s...
 
 
 @auth_bp.route('/login')
@@ -40,46 +53,21 @@ def callback():
     avatar = user_info.get('picture')
     provider_id = user_info.get('sub')
 
-    # MÁGICA ANTI-QUEDA AQUI:
-    # Se o banco estiver dormindo, ele tenta, falha, rola pra trás e tenta de novo.
-    try:
-        user = Person.query.filter_by(email=email).first()
-    except OperationalError:
-        db.session.rollback()
-        time.sleep(1)  # Dá 1 segundo pro banco terminar de acordar
-        user = Person.query.filter_by(email=email).first()
+    user = com_retry(lambda: Person.query.filter_by(email=email).first())
 
     if not user:
-        # Se for um usuário novo, cria e salva no banco
-        user = Person(
-            name=name,
-            email=email,
-            avatar=avatar,
-            provider_id=provider_id,
-            role_id=1
-        )
-        try:
-            db.session.add(user)
-            db.session.commit()
-        except OperationalError:
-            db.session.rollback()
-            time.sleep(1)
-            db.session.add(user)
-            db.session.commit()
-    else:
-        # Se já existir, só atualiza a fotinha caso ele tenha mudado no Google
-        if user.avatar != avatar:
-            user.avatar = avatar
-            try:
-                db.session.commit()
-            except OperationalError:
-                db.session.rollback()
-                time.sleep(1)
-                db.session.commit()
+        user = Person(name=name, email=email, avatar=avatar, provider_id=provider_id, role_id=1)
 
-    # Cria a sessão oficial do Flask
+        def salvar():
+            db.session.add(user)
+            db.session.commit()
+
+        com_retry(salvar)
+    elif user.avatar != avatar:
+        user.avatar = avatar
+        com_retry(db.session.commit)
+
     session['user_id'] = user.id
-
     return redirect(url_for('main.index'))
 
 

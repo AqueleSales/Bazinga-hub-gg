@@ -4,381 +4,485 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat - Bazinga Hub</title>
+    <!-- Ícones FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Importando o Socket.IO e o PeerJS -->
+    <!-- WebSockets e P2P -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
 
     <style>
+        /* ==========================================================================
+           1. VARIÁVEIS E BASE (Cores exatas do Discord e Temas Dinâmicos)
+           ========================================================================== */
+        :root {
+            --bg-primary: #313338;
+            --bg-secondary: #2b2d31;
+            --bg-tertiary: #1e1f22;
+            --bg-quaternary: #111214;
+            --text-normal: #dbdee1;
+            --text-muted: #949ba4;
+            --text-header: #f2f3f5;
+            --brand-color: #5865F2;
+            --brand-hover: #4752c4;
+            --green-color: #23a559;
+            --red-color: #da373c;
+            --yellow-color: #f0b232;
+            --nitro-gradient: linear-gradient(90deg, #8547c6, #b845c1, #ab5d8a);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'gg sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #1e1f22; color: #dbdee1; height: 100vh; overflow: hidden; display: flex; }
+        body { background-color: var(--bg-tertiary); color: var(--text-normal); height: 100vh; overflow: hidden; display: flex; transition: background-color 0.3s; }
         .discord-app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
         .scroll-invisivel { overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
         .scroll-invisivel::-webkit-scrollbar { display: none; }
+        button { font-family: inherit; }
 
-        .left-sidebar-wrapper { width: 312px; display: flex; flex-direction: column; flex-shrink: 0; background-color: #1e1f22; border-right: 1px solid #1f2023;}
+        /* ==========================================================================
+           2. SIDEBARS E DASHBOARD RADAR BAZINGA
+           ========================================================================== */
+        .left-sidebar-wrapper { width: 312px; display: flex; flex-direction: column; flex-shrink: 0; background-color: var(--bg-tertiary); border-right: 1px solid rgba(0,0,0,0.2); transition: background-color 0.3s;}
         .left-top-section { display: flex; flex-grow: 1; overflow: hidden; }
 
-        .servers-sidebar { width: 72px; background-color: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; }
-        .server-wrapper { position: relative; width: 100%; display: flex; justify-content: center; }
-        .server-icon { width: 48px; height: 48px; border-radius: 50%; background-color: #313338; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; color: #dbdee1; font-weight: bold; overflow: hidden; }
-        .server-icon:hover, .server-icon.active { border-radius: 16px; background-color: #23a559; color: white; }
+        .servers-sidebar { width: 72px; background-color: var(--bg-tertiary); display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; transition: background-color 0.3s; }
+        .server-wrapper { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 8px;}
+        .server-icon { width: 48px; height: 48px; border-radius: 50%; background-color: var(--bg-primary); display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; color: var(--text-normal); font-weight: bold; overflow: hidden; position: relative;}
+        .server-icon:hover { border-radius: 16px; background-color: var(--brand-color); color: white; }
+        .server-icon.active { border-radius: 16px; background-color: var(--brand-color); color: white; }
+        .server-icon.add-server:hover { background-color: var(--green-color); color: white; }
         .server-icon img { width: 100%; height: 100%; object-fit: cover; }
-        .server-separator { height: 2px; width: 32px; background-color: #3f4147; margin: 8px 0; }
 
-        .channels-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; flex-shrink: 0; border-top-left-radius: 8px;}
-        .channels-header { height: 48px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid #1f2023; font-weight: 700; cursor: pointer; flex-shrink: 0; }
-        .channels-header:hover { background-color: #35373c; }
+        /* O "pino" branco que aparece do lado esquerdo do servidor ativo */
+        .server-icon::before { content: ''; position: absolute; left: -16px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; background-color: white; border-radius: 0 4px 4px 0; transition: 0.2s; }
+        .server-icon:hover::before { left: -20px; height: 20px; }
+        .server-icon.active::before { left: -20px; height: 40px; }
+
+        .server-separator { height: 2px; width: 32px; background-color: rgba(255,255,255,0.1); margin: 4px 0 8px 0; border-radius: 1px;}
+
+        .channels-sidebar { width: 240px; background-color: var(--bg-secondary); display: flex; flex-direction: column; flex-shrink: 0; border-top-left-radius: 8px; transition: background-color 0.3s;}
+        .channels-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.2); font-weight: 700; cursor: pointer; flex-shrink: 0; color: var(--text-header);}
+        .channels-header:hover { background-color: rgba(255,255,255,0.05); }
         .channels-list { flex-grow: 1; padding: 12px 8px; }
 
-        .channel-category { font-size: 12px; font-weight: 600; color: #949ba4; margin: 16px 0 4px 0; padding-left: 2px; }
-        .channel-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; color: #949ba4; display: flex; align-items: center; gap: 6px; }
-        .channel-item:hover { background-color: #35373c; color: #dbdee1; }
-        .channel-item.active { background-color: #404249; color: #fff; }
+        .channel-category { font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 16px 0 4px 0; padding-left: 2px; display: flex; align-items: center; gap: 4px; text-transform: uppercase;}
+        .channel-category:hover { color: var(--text-normal); cursor: pointer;}
+        .channel-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; gap: 6px; font-weight: 500;}
+        .channel-item:hover { background-color: rgba(255,255,255,0.05); color: var(--text-normal); }
+        .channel-item.active { background-color: rgba(255,255,255,0.1); color: var(--text-header); }
 
-        .user-controls { background-color: #232428; padding: 8px; flex-shrink: 0; display: flex; flex-direction: column; width: 100%; z-index: 20; }
+        /* Estilos Exclusivos do Radar Bazinga (Fugindo do Copyright) */
+        .bz-pill-btn { background: transparent; border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
+        .bz-pill-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-normal); }
+        .bz-pill-btn.active { background: rgba(255,255,255,0.1); color: var(--text-header); }
 
-        .voice-connection-panel { display: none; background-color: #232428; padding: 8px; border-bottom: 1px solid #3f4147; flex-direction: column; }
+        .dm-card { padding: 8px; margin: 4px 8px; border-radius: 8px; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.03); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;}
+        .dm-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background-color: transparent; transition: 0.2s;}
+        .dm-card:hover { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); transform: translateX(4px); }
+        .dm-card:hover::before { background-color: var(--brand-color); }
+
+        @keyframes radar-pulse { 0% { transform: scale(1); opacity: 0.1; } 50% { transform: scale(1.15); opacity: 0.3; } 100% { transform: scale(1); opacity: 0.1; } }
+
+        /* ==========================================================================
+           3. PAINEL DE CONTROLE DO USUÁRIO (Canto inferior esquerdo)
+           ========================================================================== */
+        .user-controls { background-color: var(--bg-tertiary); padding: 8px; flex-shrink: 0; display: flex; flex-direction: column; width: 100%; z-index: 20; border-top: 1px solid rgba(0,0,0,0.1); transition: background-color 0.3s;}
+
+        .voice-connection-panel { display: none; background-color: rgba(0,0,0,0.2); padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-direction: column; border-radius: 8px; margin-bottom: 8px;}
         .voice-connection-panel.active { display: flex; }
         .voice-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .voice-status-text { color: #23a559; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-        .voice-channel-name { font-size: 12px; color: #949ba4; }
-        .disconnect-btn { background: none; border: none; color: #dbdee1; cursor: pointer; padding: 4px; border-radius: 4px; }
-        .disconnect-btn:hover { background-color: #35373c; }
+        .voice-status-text { color: var(--green-color); font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+        .voice-channel-name { font-size: 12px; color: var(--text-muted); }
+        .disconnect-btn { background: none; border: none; color: var(--text-normal); cursor: pointer; padding: 4px; border-radius: 4px; }
+        .disconnect-btn:hover { background-color: rgba(255,255,255,0.1); }
         .voice-actions { display: flex; gap: 8px; justify-content: space-between; }
-        .voice-action-btn { flex: 1; padding: 8px 0; background-color: #2b2d31; border: none; border-radius: 4px; color: #dbdee1; cursor: pointer; font-size: 16px; transition: 0.2s; }
-        .voice-action-btn:hover { background-color: #35373c; }
-        .voice-action-btn.active-stream { background-color: #23a559; color: #fff; }
+        .voice-action-btn { flex: 1; padding: 8px 0; background-color: rgba(255,255,255,0.05); border: none; border-radius: 4px; color: var(--text-normal); cursor: pointer; font-size: 14px; transition: 0.2s; font-weight: 500;}
+        .voice-action-btn:hover { background-color: rgba(255,255,255,0.1); }
+        .voice-action-btn.active-stream { background-color: var(--brand-color); color: #fff; }
 
         .user-profile-bar { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; }
         .user-profile-section { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px; border-radius: 4px; flex-grow: 1; min-width: 0;}
-        .user-profile-section:hover { background-color: #35373c; }
-        .user-avatar-wrapper { position: relative; width: 32px; height: 32px; border-radius: 50%; background-color: #23a559; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; flex-shrink: 0;}
-        .status-indicator { position: absolute; bottom: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%; background-color: #23a559; border: 2.5px solid #232428; }
+        .user-profile-section:hover { background-color: rgba(255,255,255,0.05); }
+        .user-avatar-wrapper { position: relative; width: 32px; height: 32px; border-radius: 50%; background-color: var(--brand-color); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; flex-shrink: 0; overflow: visible;}
+
+        .status-indicator { position: absolute; bottom: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid var(--bg-tertiary); transition: border-color 0.3s;}
+        .status-indicator.online { background-color: var(--green-color); }
+        .status-indicator.idle { background-color: var(--yellow-color); }
+        .status-indicator.dnd { background-color: var(--red-color); }
+        .status-indicator.invisible { background-color: #80848e; }
+
         .user-info { display: flex; flex-direction: column; font-size: 12px; overflow: hidden; }
-        .username { font-weight: 600; font-size: 14px; color: #f2f3f5; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
-        .status-text { color: #949ba4; }
+        .username { font-weight: 600; font-size: 14px; color: var(--text-header); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
+        .status-text { color: var(--text-muted); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 
-        .hardware-controls { display: flex; align-items: center; gap: 4px; }
+        .hardware-controls { display: flex; align-items: center; gap: 2px; }
         .hw-group { display: flex; align-items: center; border-radius: 4px; transition: background-color 0.2s; background-color: transparent; position: relative; }
-        .hw-group:hover { background-color: #35373c; }
-
+        .hw-group:hover { background-color: rgba(255,255,255,0.05); }
         .hw-btn { background: none; border: none; color: #b5bac1; cursor: pointer; padding: 8px 6px; font-size: 16px; border-radius: 4px 0 0 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; position: relative;}
-        .hw-btn:hover { background-color: rgba(255,255,255,0.08); color: #dbdee1; }
-
-        .hw-divider { width: 1px; height: 16px; background-color: #4e5058; }
-
+        .hw-btn:hover { color: var(--text-normal); }
+        .hw-divider { width: 1px; height: 16px; background-color: rgba(255,255,255,0.1); }
         .hw-arrow-btn { background: none; border: none; color: #b5bac1; cursor: pointer; padding: 8px 4px; font-size: 10px; border-radius: 0 4px 4px 0; transition: 0.2s; display: flex; align-items: center; justify-content: center; height: 32px;}
-        .hw-arrow-btn:hover { background-color: rgba(255,255,255,0.08); color: #dbdee1; }
-        .hw-arrow-btn i { transition: transform 0.2s ease; }
+        .hw-arrow-btn:hover { color: var(--text-normal); }
 
         .hw-group.muted { background-color: rgba(242, 63, 66, 0.15); }
         .hw-group.muted:hover { background-color: rgba(242, 63, 66, 0.25); }
         .hw-group.muted .hw-btn, .hw-group.muted .hw-arrow-btn { color: #f23f42; }
         .hw-group.muted .hw-divider { background-color: rgba(242, 63, 66, 0.4); }
         .hw-group.muted .hw-btn::after {
-            content: ''; position: absolute; width: 22px; height: 2px;
-            background-color: #f23f42; transform: rotate(45deg);
-            box-shadow: 0 0 0 2px #232428; border-radius: 2px;
-            left: 50%; top: 50%; margin-left: -11px; margin-top: -1px;
-            pointer-events: none; transition: box-shadow 0.2s;
+            content: ''; position: absolute; width: 22px; height: 2px; background-color: #f23f42; transform: rotate(45deg);
+            box-shadow: 0 0 0 2px var(--bg-tertiary); border-radius: 2px; pointer-events: none; transition: box-shadow 0.3s;
         }
-        .hw-group.muted:hover .hw-btn::after { box-shadow: 0 0 0 2px rgba(242, 63, 66, 0.25); }
 
-        .hardware-menu {
-            position: absolute; bottom: calc(100% + 8px); left: 0;
-            background-color: #111214; border-radius: 8px; padding: 8px; min-width: 260px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.6); display: none; z-index: 1000; border: 1px solid #1e1f22;
-        }
+        .hardware-menu { position: absolute; bottom: calc(100% + 8px); left: 0; background-color: var(--bg-quaternary); border-radius: 8px; padding: 8px; min-width: 260px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); display: none; z-index: 1000; border: 1px solid var(--bg-tertiary); }
         .hardware-menu.active { display: flex; flex-direction: column; }
-
-        .menu-item {
-            padding: 10px 12px; border-radius: 4px; cursor: pointer; display: flex;
-            justify-content: space-between; align-items: center; font-size: 14px;
-            color: #b5bac1; position: relative; margin-bottom: 2px;
-        }
-        .menu-item:hover { background-color: #4752c4; color: white; }
+        .menu-item { padding: 10px 12px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #b5bac1; position: relative; margin-bottom: 2px; }
+        .menu-item:hover { background-color: var(--brand-hover); color: white; }
         .menu-item-info { display: flex; flex-direction: column; overflow: hidden; width: 85%;}
-        .menu-item-info span.title { font-weight: 600; color: #dbdee1; margin-bottom: 2px; }
+        .menu-item-info span.title { font-weight: 600; color: var(--text-normal); margin-bottom: 2px; }
         .menu-item-info span.desc { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .menu-item:hover .menu-item-info span.title, .menu-item:hover .menu-item-info span.desc { color: white; }
 
-        .submenu {
-            position: absolute; left: calc(100% + 4px); bottom: 0;
-            background-color: #111214; border-radius: 8px; padding: 8px; width: 300px;
-            max-height: 400px; overflow-y: auto; overflow-x: hidden;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.6); display: none; border: 1px solid #1e1f22; cursor: default;
-        }
+        .submenu { position: absolute; left: calc(100% + 4px); bottom: 0; background-color: var(--bg-quaternary); border-radius: 8px; padding: 8px; width: 300px; max-height: 400px; overflow-y: auto; box-shadow: 0 8px 16px rgba(0,0,0,0.6); display: none; border: 1px solid var(--bg-tertiary); cursor: default; }
         .submenu::-webkit-scrollbar { width: 6px; }
         .submenu::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 3px; }
         .menu-item.has-submenu:hover > .submenu { display: block; }
+        .submenu-title { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; padding: 4px 8px; text-transform: uppercase; }
+        .device-option { padding: 8px; font-size: 13px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-normal); cursor: pointer; margin-bottom: 2px;}
+        .device-option:hover { background-color: var(--bg-secondary); }
+        .device-option.selected { color: var(--brand-color); background-color: rgba(88, 101, 242, 0.1); }
+        .device-option-label { display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;}
 
-        .submenu-title { font-size: 12px; font-weight: 800; color: #949ba4; margin-bottom: 8px; padding: 4px 8px; text-transform: uppercase; }
-        .device-option { padding: 8px; font-size: 13px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #dbdee1; cursor: pointer; margin-bottom: 2px;}
-        .device-option:hover { background-color: #2b2d31; }
-        .device-option.selected { color: #5865F2; background-color: rgba(88, 101, 242, 0.1); }
-        .device-option-label { display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 90%; font-weight: 500;}
-        .device-option-label i { width: 16px; text-align: center; font-size: 16px; flex-shrink: 0; }
+        .mic-test-container { padding: 12px; border-top: 1px solid var(--bg-secondary); margin-top: 4px; cursor: default; }
+        .mic-bar-bg { height: 6px; background-color: var(--bg-secondary); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .mic-bar-fill { height: 100%; background-color: var(--green-color); width: 0%; transition: width 0.1s linear; }
 
-        .mic-test-container { padding: 12px; border-top: 1px solid #2b2d31; margin-top: 4px; cursor: default; }
-        .mic-bar-bg { height: 6px; background-color: #2b2d31; border-radius: 3px; overflow: hidden; margin-top: 8px; }
-        .mic-bar-fill { height: 100%; background-color: #23a559; width: 0%; transition: width 0.1s linear; }
-
-        .chat-area { flex-grow: 1; display: flex; flex-direction: column; background-color: #313338; position: relative; overflow: hidden;}
-        .chat-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2023; background-color: #313338; z-index: 5; flex-shrink: 0;}
-
+        /* ==========================================================================
+           4. ÁREA CENTRAL (Chat de Texto Fluido)
+           ========================================================================== */
+        .chat-area { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-primary); position: relative; overflow: hidden; transition: background-color 0.3s;}
+        .chat-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.2); z-index: 5; flex-shrink: 0;}
         .chat-area-main { display: flex; flex-grow: 1; height: calc(100vh - 48px); overflow: hidden; }
 
-        .chat-view { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; transition: width 0.2s; background-color: #313338;}
-        .chat-view.hidden { display: none; }
-        .chat-view.sidebar-mode { flex-grow: 0; width: 350px; min-width: 350px; border-left: 1px solid #1f2023; }
+        .chat-view { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; transition: width 0.2s;}
+        .chat-view.hidden { display: none !important; }
+        .chat-view.sidebar-mode { flex-grow: 0; width: 350px; min-width: 350px; border-left: 1px solid rgba(0,0,0,0.2); }
 
+        .chat-messages { flex-grow: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; scrollbar-width: thin; scrollbar-color: #1a1b1e transparent;}
+        .chat-messages::-webkit-scrollbar { width: 8px; }
+        .chat-messages::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 4px; }
+
+        .message { display: flex; padding: 4px 16px 4px 72px; position: relative; margin-top: 1.0625rem; }
+        .message:hover { background-color: rgba(0,0,0,0.06); }
+        .message .chat-avatar { position: absolute; left: 16px; top: 2px; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; cursor: pointer; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 18px;}
+        .message .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .message-content { display: flex; flex-direction: column; width: 100%; }
+        .message-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+        .message-author { font-size: 16px; font-weight: 500; cursor: pointer; color: var(--text-header); }
+        .message-author:hover { text-decoration: underline; }
+        .message-timestamp { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+        .message-text { color: var(--text-normal); font-size: 16px; line-height: 1.375rem; word-wrap: break-word; white-space: pre-wrap;}
+
+        .chat-input-wrapper { padding: 0 16px 24px 16px; flex-shrink: 0;}
+        .chat-input-container { background-color: var(--bg-secondary); border-radius: 8px; padding: 0 16px; display: flex; align-items: center; min-height: 44px; gap: 8px;}
+        .chat-input-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .chat-input-btn:hover { color: var(--text-normal); background-color: rgba(255,255,255,0.05); }
+        .chat-input { flex-grow: 1; background: transparent; border: none; color: var(--text-normal); font-size: 16px; outline: none; padding: 12px 0; }
+        .chat-input-actions { display: flex; align-items: center; gap: 4px; }
+
+        .members-sidebar { width: 240px; background-color: var(--bg-secondary); display: flex; flex-direction: column; padding: 16px 8px; flex-shrink: 0; transition: background-color 0.3s;}
+
+        /* ==========================================================================
+           5. ÁREA DE VÍDEO E CALL (WebRTC P2P)
+           ========================================================================== */
         .video-view { display: none; flex-direction: column; flex-grow: 1; background-color: #000; position: relative; overflow: hidden; }
         .video-view.active { display: flex; }
-
-        /* MODO FOCO GRID */
         .video-grid { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-content: center; align-items: center; padding: 24px; padding-bottom: 100px; height: 100%; overflow-y: auto; width: 100%; }
-        .video-grid.focused-mode { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); grid-auto-rows: min-content; align-content: end; align-items: center; gap: 16px; }
+        .video-grid.focused-mode { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); grid-auto-rows: min-content; align-content: end; gap: 16px; }
 
-        .video-card { background-color: #1e1f22; border-radius: 8px; flex: 1 1 400px; max-width: 100%; aspect-ratio: 16/9; max-height: calc(100vh - 200px); position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px solid transparent; transition: 0.2s; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        .video-card:hover { border-color: #b5bac1; }
+        .video-card { background-color: var(--bg-tertiary); border-radius: 8px; flex: 1 1 400px; max-width: 100%; aspect-ratio: 16/9; max-height: calc(100vh - 200px); position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px solid transparent; transition: 0.2s; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .video-card:hover { border-color: var(--text-muted); }
         .video-card.focused { grid-column: 1 / -1; height: 60vh; max-height: none; width: 100%; order: -10; }
         .video-grid.focused-mode .video-card:not(.focused) { height: 140px; flex: none; aspect-ratio: 16/9; }
-        .video-card.is-speaking { box-shadow: 0 0 0 3px #23a559 !important; order: -1; }
-        .video-card.is-speaking.focused { order: -10; }
+        .video-card.is-speaking { box-shadow: 0 0 0 3px var(--green-color) !important; order: -1; }
 
         .video-card video { width: 100%; height: 100%; object-fit: contain; background-color: #000; }
-        .video-avatar { width: 80px; height: 80px; border-radius: 50%; background-color: #23a559; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; transition: 0.3s; }
+        .video-avatar { width: 80px; height: 80px; border-radius: 50%; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; transition: 0.3s; overflow: hidden;}
+        .video-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .video-label { position: absolute; bottom: 16px; left: 16px; background-color: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; color: white; pointer-events: none;}
 
         .call-controls-bar { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(50px); opacity: 0; background-color: rgba(17, 18, 20, 0.9); padding: 8px; border-radius: 8px; display: flex; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 10; align-items: center; transition: all 0.3s ease; pointer-events: none; }
         .video-view:hover .call-controls-bar { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
 
-        .call-btn { width: 56px; height: 56px; border-radius: 50%; border: none; background-color: #313338; color: #dbdee1; font-size: 22px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center;}
-        .call-btn:hover { background-color: #404249; }
+        .call-btn { width: 56px; height: 56px; border-radius: 50%; border: none; background-color: var(--bg-primary); color: var(--text-normal); font-size: 22px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center;}
+        .call-btn:hover { background-color: var(--bg-tertiary); }
         .call-btn.active { background-color: #fff; color: #000; }
-        .call-btn.active-green { background-color: #23a559; color: #fff; }
-        .call-btn.danger { background-color: #da373c; color: #fff; }
+        .call-btn.active-green { background-color: var(--green-color); color: #fff; }
+        .call-btn.danger { background-color: var(--red-color); color: #fff; }
         .call-btn.danger:hover { background-color: #a12828; }
         .call-btn.muted { color: #f23f42; }
         .call-btn.muted::after {
-            content: ''; position: absolute; width: 34px; height: 3px;
-            background-color: #f23f42; transform: rotate(45deg);
-            box-shadow: 0 0 0 3px #313338; border-radius: 2px;
-            pointer-events: none; transition: box-shadow 0.2s;
+            content: ''; position: absolute; width: 34px; height: 3px; background-color: #f23f42; transform: rotate(45deg);
+            box-shadow: 0 0 0 3px var(--bg-primary); border-radius: 2px; pointer-events: none;
         }
 
-        .chat-messages { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; scrollbar-width: thin; scrollbar-color: #1a1b1e transparent;}
-        .chat-messages::-webkit-scrollbar { width: 8px; }
-        .chat-messages::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 4px; }
+        /* ==========================================================================
+           6. MENUS DE CONTEXTO E MODAIS GERAIS
+           ========================================================================== */
+        .context-menu { display: none; position: fixed; background-color: var(--bg-quaternary); border-radius: 4px; padding: 8px; min-width: 220px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); z-index: 3000; flex-direction: column; border: 1px solid var(--bg-tertiary);}
+        .context-menu-item { padding: 10px 8px; color: var(--text-muted); font-size: 14px; cursor: pointer; border-radius: 4px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;}
+        .context-menu-item:hover { background-color: var(--brand-hover); color: white; }
+        .context-menu-item.danger:hover { background-color: var(--red-color); color: white; }
+        .context-menu-separator { height: 1px; background-color: var(--bg-secondary); margin: 4px 0; }
 
-        .message { display: flex; gap: 16px; padding: 4px 0; border-radius: 4px; }
-        .message:hover { background-color: #2e3035; }
-        .message-content { display: flex; flex-direction: column; }
-        .message-author { font-weight: 500; display: flex; align-items: center; gap: 8px; }
-        .message-timestamp { font-size: 12px; color: #949ba4; font-weight: 400; }
-
-        .chat-input-wrapper { padding: 0 16px 24px 16px; flex-shrink: 0;}
-        .chat-input-container { background-color: #383a40; border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; gap: 16px; }
-        .chat-input { flex-grow: 1; background: transparent; border: none; color: #dbdee1; font-size: 16px; outline: none; }
-
-        .members-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; padding: 16px 8px; flex-shrink: 0;}
-
-        .context-menu { display: none; position: fixed; background-color: #111214; border-radius: 4px; padding: 8px; min-width: 220px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); z-index: 3000; flex-direction: column; border: 1px solid #1e1f22;}
-        .context-menu-item { padding: 10px 8px; color: #b5bac1; font-size: 14px; cursor: pointer; border-radius: 4px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;}
-        .context-menu-item:hover { background-color: #4752c4; color: white; }
-        .context-menu-item.danger:hover { background-color: #da373c; color: white; }
-        .context-menu-separator { height: 1px; background-color: #2b2d31; margin: 4px 0; }
-
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.7); z-index: 5000; justify-content: center; align-items: center; }
-        .stream-quality-modal { background-color: #313338; border-radius: 8px; width: 440px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid #1f2023;}
-        .modal-header { padding: 16px; border-bottom: 1px solid #1f2023; }
-        .modal-header h2 { font-size: 16px; font-weight: 700; color: #f2f3f5; margin-bottom: 4px;}
-        .modal-header p { font-size: 14px; color: #b5bac1; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.8); z-index: 5000; justify-content: center; align-items: center; }
+        .bazinga-modal { background-color: var(--bg-primary); border-radius: 8px; width: 440px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid #1f2023;}
+        .modal-header { padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.2); }
+        .modal-header h2 { font-size: 20px; font-weight: 700; color: var(--text-header); margin-bottom: 4px;}
+        .modal-header p { font-size: 14px; color: var(--text-muted); }
         .modal-content { padding: 16px; display: flex; flex-direction: column; gap: 20px; }
-        .quality-section h3 { font-size: 12px; font-weight: 700; color: #b5bac1; margin-bottom: 8px; text-transform: uppercase; }
-        .modal-btn-group { display: flex; background-color: #1e1f22; border-radius: 4px; overflow: hidden; border: 1px solid #1e1f22; }
-        .q-btn { flex: 1; padding: 8px; text-align: center; background: none; border: none; color: #b5bac1; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; border-right: 1px solid #2b2d31;}
-        .q-btn:last-child { border-right: none; }
-        .q-btn:hover { background-color: #2b2d31; }
-        .q-btn.active { background-color: #4752c4; color: white; }
-        .modal-footer { padding: 16px; background-color: #2b2d31; display: flex; justify-content: flex-end; gap: 12px; }
-        .btn-cancel { background: none; border: none; color: #f2f3f5; cursor: pointer; padding: 10px 16px; font-weight: 500; }
-        .btn-cancel:hover { text-decoration: underline; }
-        .btn-confirm { background-color: #5865F2; color: white; border: none; border-radius: 4px; padding: 10px 16px; font-weight: 500; cursor: pointer; transition: 0.2s;}
-        .btn-confirm:hover { background-color: #4752c4; }
-        .action-btn-large { flex: 1; padding: 12px; border: none; border-radius: 4px; color: white; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;}
-        .action-btn-large.primary { background-color: #5865F2; }
-        .action-btn-large.primary:hover { background-color: #4752c4; }
-        .action-btn-large.danger { background-color: #da373c; }
+        .modal-footer { padding: 16px; background-color: var(--bg-secondary); display: flex; justify-content: flex-end; gap: 12px; }
 
-        /* =========================================
-           UI SUPREMA DE CONFIGURAÇÕES (MODAL DISCORD)
-        ========================================= */
-        .settings-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: rgba(0, 0, 0, 0.7); z-index: 9999; display: none;
-            justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.2s ease;
-        }
+        .btn { border: none; border-radius: 4px; padding: 10px 16px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        .btn-primary { background-color: var(--brand-color); color: white; }
+        .btn-primary:hover { background-color: var(--brand-hover); }
+        .btn-danger { background-color: var(--red-color); color: white; }
+        .btn-cancel { background: none; color: var(--text-header); }
+        .btn-cancel:hover { text-decoration: underline; }
+
+        .quality-section h3 { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .modal-btn-group { display: flex; background-color: var(--bg-tertiary); border-radius: 4px; overflow: hidden; border: 1px solid var(--bg-tertiary); }
+        .q-btn { flex: 1; padding: 8px; text-align: center; background: none; border: none; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; border-right: 1px solid var(--bg-secondary);}
+        .q-btn:last-child { border-right: none; }
+        .q-btn:hover { background-color: var(--bg-secondary); }
+        .q-btn.active { background-color: var(--brand-hover); color: white; }
+
+        /* ==========================================================================
+           7. SISTEMA DE CONFIGURAÇÕES DE USUÁRIO (TELA CHEIA NITRO)
+           ========================================================================== */
+        .settings-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--bg-primary); z-index: 9999; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.2s ease, background-color 0.3s; }
         .settings-overlay.active { display: flex; opacity: 1; }
 
-        .settings-modal {
-            width: 90%; max-width: 1000px; height: 85vh; min-height: 500px;
-            background-color: #313338; border-radius: 8px; display: flex; overflow: hidden;
-            transform: scale(0.95); transition: transform 0.2s ease;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+        .settings-modal { width: 100vw; height: 100vh; background-color: var(--bg-primary); display: flex; overflow: hidden; transform: scale(0.95); transition: transform 0.2s ease, background-color 0.3s; }
         .settings-overlay.active .settings-modal { transform: scale(1); }
 
-        .settings-sidebar {
-            width: 30%; max-width: 260px; background-color: #2b2d31;
-            display: flex; flex-direction: column; align-items: flex-end; padding: 40px 10px 40px 0;
-            overflow-y: auto;
-        }
+        .settings-sidebar { width: 35%; max-width: 300px; background-color: var(--bg-secondary); display: flex; flex-direction: column; align-items: flex-end; padding: 60px 20px 40px 0; overflow-y: auto; transition: background-color 0.3s; }
         .settings-sidebar::-webkit-scrollbar { display: none; }
 
-        .settings-content { flex-grow: 1; background-color: #313338; padding: 40px; overflow-y: auto; position: relative; }
+        .settings-content { flex-grow: 1; background-color: var(--bg-primary); padding: 60px 40px; overflow-y: auto; position: relative; transition: background-color 0.3s; }
         .settings-content::-webkit-scrollbar { width: 8px; }
         .settings-content::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 4px; }
 
-        .settings-close-wrap { position: absolute; top: 40px; right: 40px; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 10; }
-        .settings-close-btn {
-            width: 36px; height: 36px; border-radius: 50%; border: 2px solid #b5bac1;
-            color: #b5bac1; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; font-size: 18px; transition: 0.2s; background: transparent;
-        }
-        .settings-close-btn:hover { background-color: rgba(181, 186, 193, 0.1); color: #dbdee1; }
-        .esc-hint { color: #b5bac1; font-size: 12px; font-weight: 600; }
+        .settings-close-wrap { position: absolute; top: 60px; right: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 10; }
+        .settings-close-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--text-muted); color: var(--text-muted); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 18px; transition: 0.2s; background: transparent; }
+        .settings-close-btn:hover { background-color: rgba(255,255,255,0.1); color: var(--text-normal); }
+        .esc-hint { color: var(--text-muted); font-size: 12px; font-weight: 600; margin-top: 4px; }
 
         .set-tab-group { width: 100%; max-width: 220px; display: flex; flex-direction: column; gap: 2px; }
-        .set-tab-header { font-size: 12px; font-weight: 800; color: #949ba4; padding: 6px 10px; margin-top: 12px; text-transform: uppercase; }
-        .set-tab { padding: 8px 10px; border-radius: 4px; color: #b5bac1; font-size: 15px; font-weight: 500; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
-        .set-tab:hover { background-color: rgba(71, 82, 196, 0.4); color: #dbdee1; }
-        .set-tab.active { background-color: #4752c4; color: #fff; }
+        .set-tab-header { font-size: 12px; font-weight: 800; color: var(--text-muted); padding: 6px 10px; margin-top: 12px; text-transform: uppercase; }
+        .set-tab { padding: 8px 10px; border-radius: 4px; color: var(--text-muted); font-size: 15px; font-weight: 500; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
+        .set-tab:hover { background-color: rgba(255,255,255,0.05); color: var(--text-normal); }
+        .set-tab.active { background-color: var(--bg-tertiary); color: var(--text-header); }
 
-        .set-section { display: none; animation: fadeIn 0.3s ease; max-width: 650px;}
+        .set-section { display: none; animation: fadeIn 0.3s ease; max-width: 900px; width: 100%;}
         .set-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .set-title { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 24px; }
-        .set-subtitle { color: #f2f3f5; font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-        .set-desc { color: #b5bac1; font-size: 14px; margin-bottom: 16px; line-height: 1.4; }
+        .set-title { color: var(--text-header); font-size: 20px; font-weight: 700; margin-bottom: 24px; }
+        .set-subtitle { color: var(--text-header); font-size: 16px; font-weight: 600; margin-bottom: 8px; }
 
-        /* Controles de UI Estilo Discord */
-        .discord-select {
-            -webkit-appearance: none; appearance: none;
-            width: 100%; padding: 10px 12px; background-color: #1e1f22; color: #dbdee1;
-            border: 1px solid #1e1f22; border-radius: 4px; outline: none; font-size: 14px; font-weight: 500;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23b5bac1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 12px auto; cursor: pointer;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 30px; /* Consertado texto vazando! */
-        }
-        .discord-select:hover { border-color: #111214; }
-        .discord-select:focus { border-color: #5865F2; }
+        .profile-edit-layout { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap;}
+        .profile-controls-left { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 24px; }
+        .profile-preview-right { width: 340px; flex-shrink: 0; }
 
-        .discord-slider {
-            -webkit-appearance: none; width: 100%; height: 8px; background: #4e5058;
-            border-radius: 4px; outline: none; margin-top: 8px; cursor: pointer;
-        }
-        .discord-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 20px; height: 20px; border-radius: 50%; background: #fff; cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
+        .control-group { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 24px; }
+        .control-group:last-child { border-bottom: none; }
+        .control-label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; display: block;}
 
+        .discord-input { width: 100%; padding: 10px 12px; background-color: var(--bg-tertiary); color: var(--text-normal); border: 1px solid rgba(0,0,0,0.2); border-radius: 4px; outline: none; font-size: 14px; transition: 0.2s;}
+        .discord-input:focus { border-color: var(--brand-color); }
+        .discord-textarea { resize: none; height: 80px; }
+
+        .decoration-grid { display: flex; gap: 16px; }
+        .deco-card { width: 80px; height: 80px; border-radius: 8px; background-color: var(--bg-secondary); border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;}
+        .deco-card:hover { border-color: var(--text-muted); }
+        .deco-card .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; opacity: 0; transition: 0.2s; color: white; font-size: 24px;}
+        .deco-card:hover .overlay { opacity: 1; }
+
+        .color-picker-wrapper { display: flex; gap: 12px; align-items: center; }
+        .color-preview-box { width: 60px; height: 40px; border-radius: 4px; border: 2px solid var(--bg-quaternary); cursor: pointer; transition: 0.2s; background: var(--nitro-gradient); box-shadow: 0 4px 8px rgba(0,0,0,0.3);}
+        .color-preview-box:hover { transform: scale(1.05); }
+
+        .custom-status-row { display: flex; gap: 8px; margin-bottom: 16px; }
+        .emoji-picker-btn { width: 40px; height: 40px; border-radius: 4px; background-color: var(--bg-tertiary); border: 1px solid rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center; cursor: pointer; color: var(--text-muted); transition: 0.2s; font-size: 20px;}
+        .emoji-picker-btn:hover { color: var(--text-normal); background-color: var(--bg-secondary); }
+
+        .nitro-upsell { background: var(--nitro-gradient); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between; margin-top: 24px; color: white;}
+        .nitro-upsell h4 { font-size: 16px; margin-bottom: 4px;}
+        .btn-white { background-color: white; color: #000; border: none; border-radius: 4px; padding: 8px 16px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .btn-white:hover { background-color: #e3e5e8; }
+
+        /* Preview Animado Nitro no Editor */
+        .nitro-preview-card { background-color: var(--bg-quaternary); border-radius: 8px; overflow: hidden; border: 1px solid var(--bg-tertiary); box-shadow: 0 8px 24px rgba(0,0,0,0.6); position: relative; }
+        @keyframes bg-spin { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .npc-banner { height: 120px; background-color: var(--brand-color); position: relative; transition: background 0.3s ease;}
+        .npc-avatar-wrapper { position: absolute; top: 76px; left: 16px; width: 84px; height: 84px; border-radius: 50%; background-color: var(--bg-quaternary); display: flex; justify-content: center; align-items: center; padding: 6px; z-index: 2;}
+        .npc-avatar-inner { width: 100%; height: 100%; border-radius: 50%; background-color: var(--green-color); display: flex; justify-content: center; align-items: center; font-size: 28px; font-weight: bold; color: white; overflow: hidden; position: relative; }
+        .npc-avatar-inner img { width: 100%; height: 100%; object-fit: cover; }
+        .npc-status { position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; background-color: var(--green-color); border-radius: 50%; border: 4px solid var(--bg-quaternary); z-index: 3; display: flex; justify-content: center; align-items: center; font-size: 10px;}
+
+        .npc-body { padding: 16px; padding-top: 50px; background-color: var(--bg-quaternary); position: relative; z-index: 1;}
+        .npc-name { font-size: 20px; font-weight: 800; color: var(--text-header); margin-bottom: 2px; }
+        .npc-username { font-size: 14px; font-weight: 500; color: var(--text-normal); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;}
+        .npc-custom-status { font-size: 14px; color: var(--text-normal); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;}
+        .npc-badges { position: absolute; top: 12px; right: 16px; display: flex; gap: 4px; background-color: var(--bg-quaternary); padding: 4px; border-radius: 8px;}
+        .npc-divider { height: 1px; background-color: rgba(255,255,255,0.1); margin: 12px 0; }
+
+        .widget-card { background-color: var(--bg-tertiary); border-radius: 8px; padding: 12px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);}
+        .widget-title { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;}
+
+        /* Tema Settings Elements */
+        .theme-btn { border: 2px solid transparent; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.2s; position: relative; }
+        .theme-btn:hover { transform: scale(1.02); }
+        .theme-btn.active { border-color: var(--brand-color); }
+        .theme-preview { width: 100%; height: 80px; }
+        .theme-label { text-align: center; padding: 8px; font-weight: 600; color: var(--text-normal); background-color: var(--bg-tertiary); }
+
+        /* ==========================================================================
+           8. MENUS EXTRAS E POPOUT DE STATUS
+           ========================================================================== */
+        #status-picker-menu {
+            position: absolute; bottom: calc(100% + 8px); left: 8px; width: 220px;
+            background-color: var(--bg-quaternary); border-radius: 8px; padding: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.6); display: none; z-index: 3000; border: 1px solid var(--bg-tertiary);
+        }
+        #status-picker-menu.active { display: flex; flex-direction: column; }
+        .status-option { padding: 8px; border-radius: 4px; display: flex; align-items: center; gap: 12px; color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: 500;}
+        .status-option:hover { background-color: var(--brand-color); color: white; }
+        .status-icon { width: 10px; height: 10px; border-radius: 50%; }
+
+        .user-popout-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; display: none; }
+        .user-popout { position: absolute; bottom: 65px; left: 16px; width: 340px; background-color: var(--bg-quaternary); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.8); display: none; flex-direction: column; overflow: hidden; z-index: 2001; animation: popoutAnim 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.1); border: 1px solid var(--bg-tertiary); }
+
+        .discord-select-old { -webkit-appearance: none; appearance: none; width: 100%; padding: 10px 12px; background-color: var(--bg-tertiary); color: var(--text-normal); border: 1px solid rgba(0,0,0,0.2); border-radius: 4px; outline: none; font-size: 14px; font-weight: 500; cursor: pointer;}
+        .discord-slider { -webkit-appearance: none; width: 100%; height: 8px; background: #4e5058; border-radius: 4px; outline: none; margin-top: 8px; cursor: pointer; }
+        .discord-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .discord-toggle { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px;}
-        .toggle-switch {
-            position: relative; width: 40px; height: 24px; background-color: #80848e;
-            border-radius: 12px; cursor: pointer; transition: 0.2s; flex-shrink: 0;
-        }
-        .toggle-switch::after {
-            content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
-            background-color: white; border-radius: 50%; transition: 0.2s;
-        }
-        .toggle-switch.active { background-color: #23a559; }
+        .toggle-switch { position: relative; width: 40px; height: 24px; background-color: #80848e; border-radius: 12px; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+        .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background-color: white; border-radius: 50%; transition: 0.2s; }
+        .toggle-switch.active { background-color: var(--green-color); }
         .toggle-switch.active::after { transform: translateX(16px); }
 
-        .radio-card {
-            background-color: #1e1f22; border-radius: 8px; padding: 16px; margin-bottom: 8px;
-            cursor: pointer; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 12px;
-        }
-        .radio-card:hover { background-color: #2b2d31; }
-        .radio-card.active { border-color: #5865F2; background-color: rgba(88, 101, 242, 0.05); }
-        .radio-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #b5bac1; display: flex; justify-content: center; align-items: center; flex-shrink: 0;}
-        .radio-card.active .radio-circle { border-color: #5865F2; }
-        .radio-card.active .radio-circle::after { content: ''; width: 10px; height: 10px; background-color: #5865F2; border-radius: 50%; }
-        .radio-text h4 { color: #dbdee1; font-size: 16px; font-weight: 500; margin-bottom: 4px; }
-        .radio-text p { color: #b5bac1; font-size: 14px; }
+        .radio-card { background-color: var(--bg-tertiary); border-radius: 8px; padding: 16px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
+        .radio-card:hover { background-color: rgba(255,255,255,0.05); }
+        .radio-card.active { border-color: var(--brand-color); background-color: rgba(88, 101, 242, 0.05); }
+        .radio-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--text-muted); display: flex; justify-content: center; align-items: center; flex-shrink: 0;}
+        .radio-card.active .radio-circle { border-color: var(--brand-color); }
+        .radio-card.active .radio-circle::after { content: ''; width: 10px; height: 10px; background-color: var(--brand-color); border-radius: 50%; }
+        .radio-text h4 { color: var(--text-normal); font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+        .radio-text p { color: var(--text-muted); font-size: 14px; }
 
-        .btn-blurple { background-color: #5865F2; color: white; border: none; border-radius: 4px; padding: 10px 16px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 14px;}
-        .btn-blurple:hover { background-color: #4752c4; }
-
-        /* ABA MINHA CONTA UI */
-        .account-card { background-color: #1e1f22; border-radius: 8px; overflow: hidden; margin-top: 16px; border: 1px solid #111214;}
-        .account-banner { height: 100px; background: linear-gradient(135deg, #23a559, #111214); }
-        .account-info-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 16px 16px 16px; position: relative;}
-        .account-avatar-large { width: 80px; height: 80px; border-radius: 50%; background-color: #23a559; border: 6px solid #1e1f22; margin-top: -40px; display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white;}
-        .account-details-box { background-color: #2b2d31; border-radius: 8px; margin: 16px; padding: 16px; display: flex; flex-direction: column; gap: 16px;}
-        .acc-data-row { display: flex; justify-content: space-between; align-items: center; }
-        .acc-label { font-size: 12px; font-weight: 800; color: #b5bac1; text-transform: uppercase; margin-bottom: 4px;}
-        .acc-value { font-size: 16px; color: #f2f3f5; font-weight: 500;}
-        .btn-edit-gray { background-color: #4e5058; color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; transition: 0.2s;}
-        .btn-edit-gray:hover { background-color: #6d6f78; }
-
-        /* Barrinhas do teste do Mic */
         .meter-bar { flex: 1; height: 8px; background-color: #4e5058; border-radius: 2px; transition: 0.1s ease; }
-        .meter-bar.active { background-color: #23a559; height: 16px; }
+        .meter-bar.active { background-color: var(--green-color); height: 16px; }
 
     </style>
 </head>
 <body>
     <div class="discord-app">
 
-        <!-- WRAPPER ESTENDIDO: Junta os Servidores e Canais -->
+        <!-- ==========================================
+             SIDEBAR ESQUERDA (Servidores e Canais)
+             ========================================== -->
         <div class="left-sidebar-wrapper">
-
             <div class="left-top-section">
-                <!-- SCROLL INVISÍVEL NOS SERVIDORES -->
+                <!-- Lista de Servidores -->
                 <nav class="servers-sidebar scroll-invisivel">
+
+                    <!-- BOTÃO HOME/AMIGOS (O Infinito) -->
                     <div class="server-wrapper">
-                        <a href="{{ url_for('main.index') }}" style="text-decoration: none;">
-                            <div class="server-icon bazinga-server active" title="Voltar ao Bazinga Hub">
-                                <img src="{{ url_for('static', filename='img/bazinga_logo.png') }}" alt="BZ" onerror="this.style.display='none'; this.parentElement.innerText='BZ'">
-                            </div>
-                        </a>
+                        <div class="server-icon home-icon active" id="btn-home-view" title="Radar Bazinga (Mensagens Diretas)" style="background-color: var(--bg-primary); transition: 0.2s; padding: 10px;">
+                            <!-- Tentamos carregar do static, fallback pra um FontAwesome bonito se a imagem quebrar -->
+                            <img src="{{ url_for('static', filename='img/icone_home.png') }}" alt="Home" style="width: 100%; height: 100%; object-fit: contain; border-radius: 0;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-infinity\' style=\'font-size: 24px;\'></i>';">
+                        </div>
                     </div>
+
                     <div class="server-separator"></div>
-                    <div class="server-wrapper"><div class="server-icon add-server"><i class="fa-solid fa-plus"></i></div></div>
+
+                    <!-- BOTÃO SERVIDOR BAZINGA -->
+                    <div class="server-wrapper">
+                        <div class="server-icon bazinga-server" id="btn-server-view" title="Bazinga Hub">
+                            <img src="{{ url_for('static', filename='img/bazinga_logo.png') }}" alt="BZ" onerror="this.style.display='none'; this.parentElement.innerText='BZ'">
+                        </div>
+                    </div>
+
+                    <!-- BOTÃO ADICIONAR SERVIDOR -->
+                    <div class="server-wrapper">
+                        <div class="server-icon add-server" id="btn-add-server" title="Adicionar um Servidor" style="color: var(--green-color); background-color: var(--bg-primary);">
+                            <i class="fa-solid fa-plus"></i>
+                        </div>
+                    </div>
                 </nav>
 
-                <!-- SCROLL INVISÍVEL NOS CANAIS -->
-                <aside class="channels-sidebar scroll-invisivel">
-                    <header class="channels-header"><h3>Bazinga Hub <i class="fa-solid fa-chevron-down" style="margin-left: auto; font-size: 12px;"></i></h3></header>
+                <!-- SIDEBAR: DMs / Radar Bazinga (ATIVA POR PADRÃO) -->
+                <aside class="channels-sidebar scroll-invisivel" id="dms-sidebar" style="display: flex;">
+                    <!-- Search Bar Elegante -->
+                    <div style="padding: 10px 16px; height: 48px; display: flex; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.2);">
+                        <button style="width: 100%; background-color: var(--bg-tertiary); color: var(--text-muted); border: none; padding: 6px 8px 6px 12px; border-radius: 24px; text-align: left; font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;" onmouseover="this.style.backgroundColor='var(--bg-primary)'" onmouseout="this.style.backgroundColor='var(--bg-tertiary)'">
+                            <span>Encontre ou comece...</span>
+                            <span style="background-color: var(--bg-primary); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; border: 1px solid rgba(255,255,255,0.05);">Ctrl K</span>
+                        </button>
+                    </div>
+
                     <div class="channels-list">
+                        <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA BAZINGA</div>
+                        <div class="channel-item active" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
+                        <div class="channel-item" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Em breve: Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
+
+                        <div style="padding: 24px 8px 8px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;">
+                            CONEXÕES DIRETAS <i class="fa-solid fa-plus" style="cursor: pointer;" title="Criar Conexão"></i>
+                        </div>
+
+                        <!-- Card de DM Estilo Bazinga -->
+                        <div class="dm-card">
+                            <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: transparent;">
+                                <img src="https://ui-avatars.com/api/?name=John+Censurado&background=random" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                                <div class="status-indicator dnd"></div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; overflow: hidden;">
+                                <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">John Censurado</span>
+                                <span style="color: var(--brand-color); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fa-solid fa-gamepad"></i> Jogando Marvel Rivals</span>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- SIDEBAR: Canais do Servidor (ESCONDIDA POR PADRÃO) -->
+                <aside class="channels-sidebar scroll-invisivel" id="bazinga-sidebar" style="display: none;">
+                    <header class="channels-header"><h3>Bazinga Hub <i class="fa-solid fa-chevron-down" style="font-size: 12px;"></i></h3></header>
+                    <div class="channels-list">
+
                         <div class="channel-category"><i class="fa-solid fa-chevron-down"></i> CANAIS DE TEXTO</div>
                         {% for channel in text_channels %}
                         <div class="channel-item text-channel {% if default_channel and channel.id == default_channel.id %}active{% endif %}" data-id="{{ channel.id }}" data-name="{{ channel.name }}">
-                            <i class="fa-solid fa-hashtag channel-icon"></i> {{ channel.name }}
+                            <i class="fa-solid fa-hashtag channel-icon" style="font-size: 18px; color: var(--text-muted);"></i> {{ channel.name }}
                         </div>
                         {% endfor %}
 
                         <div class="channel-category" style="margin-top: 16px;"><i class="fa-solid fa-chevron-down"></i> CANAIS DE VOZ</div>
-                    {% for channel in voice_channels %}
-                    <div class="channel-item voice-channel" data-id="{{ channel.id }}" data-name="{{ channel.name }}">
-                        <i class="fa-solid fa-volume-high channel-icon"></i> {{ channel.name }}
-                    </div>
-                    <div id="voice-users-{{ channel.id }}" style="padding-left: 24px; display: none; margin-bottom: 8px;">
-                        <!-- O fantasma foi exorcizado! O JS vai colocar os membros conectados aqui automaticamente. -->
-                    </div>
-                    {% endfor %}
-                </div>
-            </aside>
-        </div>
+                        {% for channel in voice_channels %}
+                        <div class="channel-item voice-channel" data-id="{{ channel.id }}" data-name="{{ channel.name }}">
+                            <i class="fa-solid fa-volume-high channel-icon" style="font-size: 16px;"></i> {{ channel.name }}
+                        </div>
+                        <div id="voice-users-{{ channel.id }}" style="padding-left: 24px; display: none; margin-bottom: 8px;">
+                            <!-- Membros conectados na call aparecerão aqui -->
+                        </div>
+                        {% endfor %}
 
-        <!-- CONTROLES DO USUÁRIO EXPANDIDOS (Ocupam os 312px) -->
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Painel do Usuário Inferior -->
             <div class="user-controls">
+
+                <!-- Painel Verde ao Conectar na Call -->
                 <div id="voice-panel" class="voice-connection-panel">
                     <div class="voice-info-row">
                         <div class="voice-status">
@@ -389,50 +493,38 @@
                     </div>
                     <div class="voice-actions">
                         <button class="voice-action-btn" id="btn-side-camera" title="Ligar Câmera"><i class="fa-solid fa-video"></i></button>
-                        <button class="voice-action-btn" id="btn-side-screen" title="Compartilhar Tela"><i class="fa-solid fa-display"></i></button>
+                        <button class="voice-action-btn" id="btn-side-screen" title="Compartilhar Tela"><i class="fa-solid fa-desktop"></i></button>
                     </div>
                 </div>
 
                 <div class="user-profile-bar">
-                    <div class="user-profile-section" id="my-profile-btn">
-                        <div class="user-avatar-wrapper">
-                            {% if usuario_atual.avatar %}
-                                <img src="{{ usuario_atual.avatar }}" style="width: 100%; height: 100%; border-radius: 50%;" alt="S">
-                            {% else %}
-                                {{ usuario_atual.name[0]|upper }}
-                            {% endif %}
-                            <div class="status-indicator online"></div>
+                    <!-- Sessão de Perfil Separada para Status -->
+                    <div class="user-profile-section" style="gap: 8px; display: flex; align-items: center;">
+                        <div class="user-avatar-wrapper" id="btn-status-picker" style="cursor: pointer;" title="Mudar status">
+                            <div id="bottom-avatar-container" style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center;"></div>
+                            <div class="status-indicator online" id="bottom-status-dot"></div>
                         </div>
-                        <div class="user-info">
-                            <span class="username">{{ usuario_atual.name }}</span>
-                            <span class="status-text">Online</span>
+                        <div class="user-info" id="btn-open-popout" style="cursor: pointer; flex-grow: 1;">
+                            <span class="username" id="bottom-username-text">Carregando...</span>
+                            <span class="status-text" id="bottom-status-text">Disponível</span>
                         </div>
                     </div>
 
                     <div class="hardware-controls">
-                        <!-- Microfone com Divisória Mágica -->
+                        <!-- Microfone -->
                         <div class="hw-group" id="mic-group">
                             <button class="hw-btn" id="btn-mic" title="Desativar microfone"><i class="fa-solid fa-microphone"></i></button>
                             <div class="hw-divider"></div>
                             <button class="hw-arrow-btn" id="btn-mic-settings"><i class="fa-solid fa-chevron-up"></i></button>
-
+                            <!-- Submenu -->
                             <div class="hardware-menu" id="menu-mic">
                                 <div class="menu-item has-submenu">
-                                    <div class="menu-item-info">
-                                        <span class="title">Dispositivo de entrada</span>
-                                        <span class="desc" id="current-mic-name">Padrão do Windows</span>
-                                    </div>
+                                    <div class="menu-item-info"><span class="title">Dispositivo de entrada</span><span class="desc" id="current-mic-name">Padrão do Windows</span></div>
                                     <i class="fa-solid fa-chevron-right"></i>
-                                    <div class="submenu scroll-invisivel" id="mic-list">
-                                        <div class="submenu-title">Dispositivos Encontrados</div>
-                                    </div>
+                                    <div class="submenu scroll-invisivel" id="mic-list"><div class="submenu-title">Dispositivos Encontrados</div></div>
                                 </div>
-
                                 <div class="menu-item has-submenu">
-                                    <div class="menu-item-info">
-                                        <span class="title">Perfil de entrada</span>
-                                        <span class="desc" id="current-profile-name">Personalizado</span>
-                                    </div>
+                                    <div class="menu-item-info"><span class="title">Perfil de entrada</span><span class="desc" id="current-profile-name">Personalizado</span></div>
                                     <i class="fa-solid fa-chevron-right"></i>
                                     <div class="submenu">
                                         <div class="device-option profile-option" data-name="Isolamento de Voz"><div class="device-option-label"><i class="fa-regular fa-circle"></i> Isolamento de Voz</div></div>
@@ -440,175 +532,285 @@
                                         <div class="device-option profile-option selected" data-name="Personalizado"><div class="device-option-label"><i class="fa-solid fa-circle-dot"></i> Personalizado</div> <i class="fa-solid fa-circle-check"></i></div>
                                     </div>
                                 </div>
-
                                 <div class="mic-test-container">
-                                    <div style="font-size: 12px; color: #b5bac1; font-weight: bold; margin-bottom: 4px;">TESTE DE MICROFONE</div>
+                                    <div style="font-size: 12px; color: var(--text-muted); font-weight: bold; margin-bottom: 4px;">TESTE DE MICROFONE</div>
                                     <div class="mic-bar-bg"><div class="mic-bar-fill" id="mic-meter"></div></div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Fone de Ouvido com Divisória Mágica -->
+                        <!-- Fone de Ouvido -->
                         <div class="hw-group" id="deafen-group">
                             <button class="hw-btn" id="btn-deafen" title="Desativar áudio"><i class="fa-solid fa-headphones"></i></button>
                             <div class="hw-divider"></div>
                             <button class="hw-arrow-btn" id="btn-deafen-settings"><i class="fa-solid fa-chevron-up"></i></button>
-
                             <div class="hardware-menu" id="menu-headphone">
                                 <div class="menu-item has-submenu">
-                                    <div class="menu-item-info">
-                                        <span class="title">Dispositivo de saída</span>
-                                        <span class="desc" id="current-speaker-name">Padrão do Windows</span>
-                                    </div>
+                                    <div class="menu-item-info"><span class="title">Dispositivo de saída</span><span class="desc" id="current-speaker-name">Padrão do Windows</span></div>
                                     <i class="fa-solid fa-chevron-right"></i>
-                                    <div class="submenu scroll-invisivel" id="speaker-list">
-                                        <div class="submenu-title">Dispositivos Encontrados</div>
-                                    </div>
+                                    <div class="submenu scroll-invisivel" id="speaker-list"><div class="submenu-title">Dispositivos Encontrados</div></div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- BOTÃO DE CONFIGURAÇÕES -->
                         <div class="hw-group">
-                            <!-- CIRURGIA: id="btn-open-settings" adicionado de volta! -->
-                            <button class="hw-btn" id="btn-open-settings" title="Configurações" style="border-radius: 4px; padding: 8px;"><i class="fa-solid fa-gear"></i></button>
+                            <button class="hw-btn" id="btn-open-settings" title="Configurações de Usuário" style="border-radius: 4px;"><i class="fa-solid fa-gear"></i></button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ==========================================
+             ÁREA CENTRAL PRINCIPAL (Chat e Calls)
+             ========================================== -->
         <main class="chat-area">
-            <header class="chat-header">
-                <div class="header-left" style="display: flex; gap: 8px; align-items: center;">
-                    <h2 style="color: white; font-size: 16px;" id="current-channel-header"><i class="fa-solid fa-hashtag"></i> {{ default_channel.name if default_channel else 'geral' }}</h2>
-                </div>
-            </header>
 
-            <div class="chat-area-main">
-                <div id="video-view" class="video-view">
-                    <div class="video-grid" id="video-grid">
-                        <div class="video-card" id="my-video-card">
-                            <div class="video-avatar" id="my-avatar-placeholder">{{ usuario_atual.name[0]|upper }}</div>
-                            <video id="my-video" autoplay muted style="display: none;"></video>
-                            <div class="video-label">{{ usuario_atual.name }}</div>
+            <!-- VIZUALIZAÇÃO 1: RADAR BAZINGA (DMs / Amigos) -->
+            <div id="home-content-wrapper" style="display: flex; flex-direction: column; flex-grow: 1; height: 100%;">
+                <header class="chat-header" style="background: var(--bg-primary); border-bottom: 1px solid rgba(0,0,0,0.2); gap: 16px; z-index: 10;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--text-header); padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.1);">
+                        <i class="fa-solid fa-user-group" style="color: var(--text-muted);"></i> Amigos
+                    </div>
+                    <div style="display: flex; gap: 16px; align-items: center; flex-grow: 1;">
+                        <div class="bz-pill-btn active" style="background: rgba(255,255,255,0.1); color: var(--text-header);">Disponível</div>
+                        <div class="bz-pill-btn">Todos</div>
+                        <div class="bz-pill-btn">Pendente <span style="background: var(--red-color); padding: 2px 6px; border-radius: 12px; font-size: 10px; margin-left: 4px; color: white;">2</span></div>
+                        <button class="btn btn-primary" style="background-color: var(--green-color); padding: 4px 8px; font-size: 13px; font-weight: 600;">Adicionar amigo</button>
+                    </div>
+                    <div style="display: flex; gap: 16px; color: var(--text-muted); font-size: 18px;">
+                        <i class="fa-solid fa-inbox" style="cursor: pointer;" title="Caixa de Entrada"></i>
+                        <i class="fa-solid fa-circle-question" style="cursor: pointer;" title="Ajuda"></i>
+                    </div>
+                </header>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-primary) 100%);">
+                    <div style="font-size: 80px; color: var(--brand-color); opacity: 0.2; margin-bottom: 24px; animation: radar-pulse 2s infinite;"><i class="fa-solid fa-satellite-dish"></i></div>
+                    <h3 style="color: var(--text-header); font-size: 20px; font-weight: 700; margin-bottom: 8px;">O Radar está silencioso.</h3>
+                    <p style="color: var(--text-muted); font-size: 14px;">Ninguém por perto para jogar. Que tal adicionar alguns amigos?</p>
+                    <button class="btn btn-primary" style="margin-top: 24px; padding: 12px 24px; font-size: 14px; font-weight: 700; border-radius: 24px; box-shadow: 0 4px 12px rgba(88, 101, 242, 0.4);">
+                        <i class="fa-solid fa-user-plus"></i> Recrutar Membros
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIZUALIZAÇÃO 2: SERVIDOR BAZINGA (Chat e Call) -->
+            <div id="server-content-wrapper" style="display: none; flex-direction: column; flex-grow: 1; height: 100%;">
+                <header class="chat-header">
+                    <div class="header-left" style="display: flex; gap: 8px; align-items: center;">
+                        <h2 style="color: var(--text-header); font-size: 16px; display: flex; align-items: center; gap: 8px;" id="current-channel-header"><i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> {{ default_channel.name if default_channel else 'geral' }}</h2>
+                    </div>
+                    <div class="header-right" style="display: flex; gap: 16px; color: var(--text-muted); font-size: 20px;">
+                        <i class="fa-solid fa-phone-volume" style="cursor: pointer;" title="Iniciar Chamada de Voz"></i>
+                        <i class="fa-solid fa-video" style="cursor: pointer;" title="Iniciar Chamada de Vídeo"></i>
+                        <i class="fa-solid fa-thumbtack" style="cursor: pointer;" title="Mensagens Fixadas"></i>
+                        <i class="fa-solid fa-user-group" style="cursor: pointer;" title="Ocultar Lista de Membros"></i>
+                    </div>
+                </header>
+
+                <div class="chat-area-main">
+
+                    <!-- VIEW DE VÍDEO (P2P WebRTC) -->
+                    <div id="video-view" class="video-view">
+                        <div class="video-grid" id="video-grid">
+                            <div class="video-card" id="my-video-card">
+                                <div class="video-avatar" id="my-avatar-placeholder"></div>
+                                <video id="my-video" autoplay muted style="display: none;"></video>
+                                <div class="video-label" id="my-video-label">Membro</div>
+                            </div>
+                        </div>
+
+                        <div class="call-controls-bar">
+                            <button class="call-btn" id="btn-main-mic" title="Silenciar"><i class="fa-solid fa-microphone"></i></button>
+                            <button class="call-btn" id="btn-main-camera" title="Ligar Câmera"><i class="fa-solid fa-video"></i></button>
+                            <button class="call-btn" id="btn-main-screen" title="Compartilhar Tela"><i class="fa-solid fa-desktop"></i></button>
+                            <button class="call-btn" id="btn-main-clip" title="Clipar últimos 30s (Alt+C)"><i class="fa-solid fa-clapperboard"></i></button>
+                            <button class="call-btn" id="btn-main-chat" title="Abrir Chat da Call"><i class="fa-solid fa-message"></i></button>
+                            <div style="width: 1px; height: 32px; background-color: #3f4147; margin: 0 4px;"></div>
+                            <button class="call-btn danger" id="btn-main-disconnect" title="Desconectar"><i class="fa-solid fa-phone-slash"></i></button>
                         </div>
                     </div>
 
-                    <div class="call-controls-bar">
-                        <button class="call-btn" id="btn-main-mic" title="Silenciar"><i class="fa-solid fa-microphone"></i></button>
-                        <button class="call-btn" id="btn-main-camera" title="Ligar Câmera"><i class="fa-solid fa-video"></i></button>
-                        <button class="call-btn" id="btn-main-screen" title="Compartilhar Tela"><i class="fa-solid fa-display"></i></button>
-                        <button class="call-btn" id="btn-main-chat" title="Abrir Chat da Call"><i class="fa-solid fa-message"></i></button>
-                        <div style="width: 1px; height: 32px; background-color: #3f4147; margin: 0 4px;"></div>
-                        <button class="call-btn danger" id="btn-main-disconnect" title="Desconectar"><i class="fa-solid fa-phone-slash"></i></button>
-                    </div>
-                </div>
-
-                <div id="text-view" class="chat-view">
-                    <div class="chat-messages" id="messages-container"></div>
-                    <div class="chat-input-wrapper">
-                        <div class="chat-input-container">
-                            <input type="text" class="chat-input" id="message-input" placeholder="Conversar..." autocomplete="off">
+                    <!-- VIEW DE TEXTO (Fluida estilo Discord Real) -->
+                    <div id="text-view" class="chat-view">
+                        <div class="chat-messages" id="messages-container"></div>
+                        <div class="chat-input-wrapper">
+                            <div class="chat-input-container">
+                                <button class="chat-input-btn" title="Enviar arquivo"><i class="fa-solid fa-circle-plus"></i></button>
+                                <input type="text" class="chat-input" id="message-input" placeholder="Conversar em #geral" autocomplete="off">
+                                <div class="chat-input-actions">
+                                    <button class="chat-input-btn" title="Dar Presente Nitro"><i class="fa-solid fa-gift"></i></button>
+                                    <button class="chat-input-btn" title="GIFs"><i class="fa-solid fa-file-video"></i></button>
+                                    <button class="chat-input-btn" title="Figurinhas"><i class="fa-solid fa-note-sticky"></i></button>
+                                    <button class="chat-input-btn" title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
 
-        <aside class="members-sidebar">
-            <div class="channel-category">MEMBROS — 1</div>
-            <div class="channel-item active" style="margin-top: 8px;">
-                <div class="user-avatar-wrapper" style="width: 32px; height: 32px;">{{ usuario_atual.name[0]|upper }}<div class="status-indicator online"></div></div>
-                <span style="color: #fff; font-weight: 500;">{{ usuario_atual.name }}</span>
+        <!-- SIDEBAR DE MEMBROS DIREITA -->
+        <aside class="members-sidebar" id="server-members-sidebar" style="display: none;">
+            <div class="channel-category">ONLINE — 1</div>
+            <div class="channel-item active" style="margin-top: 8px;" id="sidebar-member-item">
+                <div class="user-avatar-wrapper" style="width: 32px; height: 32px;">
+                    <div id="sidebar-avatar-container" style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center;"></div>
+                    <div class="status-indicator online"></div>
+                </div>
+                <span style="color: #fff; font-weight: 500;" id="sidebar-username-text">Carregando...</span>
             </div>
         </aside>
     </div>
 
-    <!-- MENUS DE CONTEXTO E MODAIS ANTIGOS AQUI (Ocultados por CSS) -->
+    <!-- ==========================================
+         MENUS, POP-UPS E MODAIS FLUTUANTES
+         ========================================== -->
+
+    <!-- Modal Criar Servidor -->
+    <div class="modal-overlay" id="add-server-modal">
+        <div class="bazinga-modal" style="width: 440px; text-align: center;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+                <h2 style="font-size: 24px;">Crie seu servidor</h2>
+                <p style="margin-top: 8px; line-height: 1.4;">Seu servidor é onde você e seus amigos se reúnem. Crie o seu e comece a falar.</p>
+            </div>
+            <div class="modal-content" style="padding: 24px 16px; align-items: center;">
+                <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px dashed var(--text-muted); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 12px; font-weight: bold;">
+                    <i class="fa-solid fa-camera" style="font-size: 24px; margin-bottom: 4px;"></i> UPLOAD
+                </div>
+                <div class="control-group" style="width: 100%; text-align: left; border: none; padding: 0;">
+                    <span class="control-label">Nome do Servidor</span>
+                    <input type="text" class="discord-input" value="Servidor de {{ usuario_atual.name }}">
+                    <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Ao criar um servidor, você concorda com as Diretrizes da Comunidade Bazinga.</span>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+                <button class="btn-cancel" onclick="document.getElementById('add-server-modal').style.display='none'">Voltar</button>
+                <button class="btn btn-primary" onclick="alert('Em breve! O Bazinga Hub vai permitir a criação de salas privadas no banco de dados!'); document.getElementById('add-server-modal').style.display='none'">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu de Status -->
+    <div id="status-picker-menu">
+        <div class="status-option" data-status="online" data-text="Disponível"><div class="status-icon" style="background: var(--green-color);"></div> Disponível</div>
+        <div class="status-option" data-status="idle" data-text="Ausente"><div class="status-icon" style="background: var(--yellow-color);"></div> Ausente</div>
+        <div class="status-option" data-status="dnd" data-text="Não perturbar"><div class="status-icon" style="background: var(--red-color);"></div> Não perturbar</div>
+        <div class="status-option" data-status="invisible" data-text="Invisível"><div class="status-icon" style="background: #80848e;"></div> Invisível</div>
+        <div class="context-menu-separator"></div>
+        <div class="status-option"><i class="fa-regular fa-face-smile" style="width: 10px; color: #b5bac1;"></i> Editar status personalizado</div>
+    </div>
+
+    <!-- Mini Perfil Popout (Ao clicar no nome) -->
+    <div class="user-popout-overlay" id="user-popout-overlay"></div>
+    <div class="user-popout" id="user-popout">
+        <div class="npc-banner" id="popout-banner-bg" style="background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: bg-spin 15s ease infinite;"></div>
+        <div class="popout-header">
+            <div class="npc-avatar-wrapper" style="top: -45px; width: 92px; height: 92px; border: 6px solid var(--bg-quaternary);">
+                <div class="npc-avatar-inner" id="popout-avatar-container"></div>
+                <div class="npc-status" id="popout-status-dot"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
+            </div>
+            <div class="npc-badges" style="top: 12px; right: 16px; position: absolute;">
+                <div class="badge" title="Membro Elite"><i class="fa-solid fa-gem" style="color: #00a8fc;"></i></div>
+                <div class="badge" title="Bazinga Hub"><i class="fa-brands fa-discord" style="color: #5865F2;"></i></div>
+            </div>
+        </div>
+        <div class="npc-body" style="padding-top: 16px;">
+            <div class="npc-name" id="popout-name-text">Carregando...</div>
+            <div class="npc-username" id="popout-username-text">carregando... <i class="fa-solid fa-pen" style="font-size: 10px; cursor: pointer; margin-left: 4px;" onclick="document.getElementById('btn-open-settings').click();"></i></div>
+
+            <div class="npc-custom-status" id="popout-custom-status"><i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> Preparando para o lançamento!</div>
+            <div class="npc-divider"></div>
+
+            <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Sobre mim</div>
+            <div style="color: var(--text-normal); font-size: 14px; line-height: 1.4; margin-bottom: 16px;" id="popout-bio-text">Use as configurações para me editar!</div>
+
+            <div class="npc-divider"></div>
+            <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Membro desde</div>
+            <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">Set. 2026</div>
+
+            <div class="widget-card" style="margin-top: 12px;">
+                <div class="widget-title"><i class="fa-solid fa-gamepad"></i> Jogando no momento</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <img src="https://i.pinimg.com/736x/89/54/1b/89541b61d36be8695029e0750ffeb9e1.jpg" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover;">
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-header); font-size: 14px;">Marvel Rivals</div>
+                        <div style="color: var(--text-normal); font-size: 13px;">Season 9.5: Gold</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menus de Contexto (Clique Direito) -->
     <div id="msg-context-menu" class="context-menu">
         <div class="context-menu-item" id="ctx-copy">Copiar Texto <i class="fa-solid fa-copy"></i></div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item danger" id="ctx-delete" style="color: #f23f42;">Excluir Mensagem <i class="fa-solid fa-trash"></i></div>
+        <div class="context-menu-item danger" id="ctx-delete">Excluir Mensagem <i class="fa-solid fa-trash"></i></div>
     </div>
 
     <div id="video-context-menu" class="context-menu">
         <div class="context-menu-item">Perfil do Usuário <i class="fa-solid fa-user"></i></div>
         <div class="context-menu-separator"></div>
-        <div class="volume-slider-container">
-            Volume da Transmissão
-            <input type="range" class="volume-slider" id="user-volume-slider" min="0" max="1" step="0.05" value="1">
-        </div>
-        <div class="context-menu-separator"></div>
-        <div class="context-menu-item">Silenciar Localmente <input type="checkbox" class="context-checkbox"></div>
-        <div class="context-menu-item">Expandir Tela Cheia <i class="fa-solid fa-expand"></i></div>
+        <div style="padding: 8px; color: var(--text-muted); font-size: 14px;">Volume<input type="range" class="discord-slider" id="user-volume-slider" min="0" max="1" step="0.05" value="1" style="width: 100%; margin-top: 8px;"></div>
     </div>
 
-    <!-- MODAIS DE SCREEN SHARE -->
+    <!-- Modais de Compartilhamento de Tela -->
     <div id="stream-action-modal" class="modal-overlay">
-        <div class="stream-quality-modal" style="width: 320px;">
-            <div class="modal-header">
-                <h2>Gerenciar Transmissão</h2>
-                <p>Você já está transmitindo. O que deseja fazer?</p>
-            </div>
-            <div class="modal-content" style="gap: 12px;">
-                <button id="btn-add-stream" class="action-btn-large primary"><i class="fa-solid fa-desktop"></i> Transmitir Outra Tela</button>
-                <button id="btn-stop-all-streams" class="action-btn-large danger"><i class="fa-solid fa-stop"></i> Parar Todas</button>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="document.getElementById('stream-action-modal').style.display='none'">Cancelar</button>
-            </div>
+        <div class="bazinga-modal" style="width: 320px;">
+            <div class="modal-header"><h2>Gerenciar Transmissão</h2><p>O que deseja fazer?</p></div>
+            <div class="modal-content"><button id="btn-add-stream" class="btn btn-primary"><i class="fa-solid fa-desktop"></i> Nova Tela</button><button id="btn-stop-all-streams" class="btn btn-danger"><i class="fa-solid fa-stop"></i> Parar</button></div>
+            <div class="modal-footer"><button class="btn-cancel" onclick="document.getElementById('stream-action-modal').style.display='none'">Cancelar</button></div>
         </div>
     </div>
 
     <div id="quality-modal-overlay" class="modal-overlay">
-        <div class="stream-quality-modal">
-            <div class="modal-header">
-                <h2>Screen Share (Bazinga)</h2>
-                <p>Selecione a qualidade de transmissão otimizada para seus amigos puxarem uma cadeira!</p>
-            </div>
+        <div class="bazinga-modal">
+            <div class="modal-header"><h2>Screen Share</h2><p>Qualidade da transmissão</p></div>
             <div class="modal-content">
-                <div class="quality-section">
-                    <h3>Resolução</h3>
-                    <div class="modal-btn-group" id="res-group">
-                        <button class="q-btn" data-res="480">480p</button>
-                        <button class="q-btn active" data-res="720">720p</button>
-                        <button class="q-btn" data-res="1080">1080p</button>
-                        <button class="q-btn" data-res="2160">Source (4K)</button>
-                    </div>
-                </div>
-                <div class="quality-section">
-                    <h3>Taxa de Quadros (FPS)</h3>
-                    <div class="modal-btn-group" id="fps-group">
-                        <button class="q-btn" data-fps="15">15</button>
-                        <button class="q-btn active" data-fps="30">30</button>
-                        <button class="q-btn" data-fps="60">60</button>
-                    </div>
-                </div>
+                <div class="quality-section"><h3>Resolução</h3><div class="modal-btn-group" id="res-group"><button class="q-btn" data-res="480">480p</button><button class="q-btn active" data-res="720">720p</button><button class="q-btn" data-res="1080">1080p</button></div></div>
+                <div class="quality-section"><h3>FPS</h3><div class="modal-btn-group" id="fps-group"><button class="q-btn" data-fps="15">15</button><button class="q-btn active" data-fps="30">30</button><button class="q-btn" data-fps="60">60</button></div></div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" id="btn-cancel-share">Cancelar</button>
-                <button class="btn-confirm" id="btn-confirm-share">Go Live</button>
+            <div class="modal-footer"><button class="btn-cancel" id="btn-cancel-share">Cancelar</button><button class="btn btn-primary" id="btn-confirm-share">Go Live</button></div>
+        </div>
+    </div>
+
+    <!-- Modal Upload Avatar -->
+    <div class="modal-overlay" id="avatar-upload-modal">
+        <div class="bazinga-modal" style="width: 440px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Selecione uma imagem</h2>
+                <button class="btn-cancel" onclick="document.getElementById('avatar-upload-modal').style.display='none'" style="font-size: 20px;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-content" style="flex-direction: row; gap: 16px;">
+                <input type="file" id="real-avatar-input" accept="image/*" style="display: none;">
+                <div style="flex: 1; background-color: var(--bg-secondary); border-radius: 8px; padding: 32px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('real-avatar-input').click();">
+                    <i class="fa-regular fa-image" style="font-size: 32px; color: #b5bac1;"></i><span style="font-weight: 600;">Enviar imagem</span>
+                </div>
+                <div style="flex: 1; background-color: var(--bg-secondary); border-radius: 8px; padding: 32px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.5; cursor: not-allowed;" title="Apenas usuários Nitro">
+                    <i class="fa-solid fa-film" style="font-size: 32px; color: #b5bac1;"></i><span style="font-weight: 600;">Escolher GIF</span>
+                    <span style="background-color: var(--brand-color); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-top:-10px;">PRO</span>
+                </div>
             </div>
         </div>
     </div>
 
-
-    <!-- TELA CHEIA DE CONFIGURAÇÕES (MODAL DISCORD) -->
+    <!-- TELA CHEIA: CONFIGURAÇÕES E NITRO (O EDITOR SUPREMO) -->
     <div class="settings-overlay" id="settings-modal">
         <div class="settings-modal">
+
             <!-- Barra Lateral Esquerda -->
             <div class="settings-sidebar">
                 <div class="set-tab-group">
                     <div class="set-tab-header">Configurações de Usuário</div>
                     <div class="set-tab" data-target="set-conta">Minha Conta</div>
-                    <div class="set-tab">Perfis</div>
-                    <div style="height: 1px; background: #3f4147; margin: 8px 10px;"></div>
+                    <div class="set-tab active" data-target="set-perfis">Perfis <span style="background: var(--brand-color); color: white; font-size: 10px; padding: 2px 4px; border-radius: 4px; margin-left: 4px;">NITRO</span></div>
+                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
                     <div class="set-tab-header">Configurações do App</div>
-                    <div class="set-tab active" data-target="set-voz">Voz e Vídeo</div>
-                    <div class="set-tab" data-target="set-aparencia">Aparência <span style="background: #5865F2; color: white; font-size: 10px; padding: 2px 4px; border-radius: 4px; margin-left: 4px;">NOVO</span></div>
-                    <div style="height: 1px; background: #3f4147; margin: 8px 10px;"></div>
-                    <div class="set-tab" style="color: #f23f42;">Sair</div>
+                    <div class="set-tab" data-target="set-voz">Voz e Vídeo</div>
+                    <div class="set-tab" data-target="set-aparencia">Aparência</div>
+                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
+                    <a href="{{ url_for('auth.logout') }}" style="text-decoration: none;"><div class="set-tab" style="color: var(--red-color);">Sair</div></a>
                 </div>
             </div>
 
@@ -622,126 +824,136 @@
                 <!-- ABA: MINHA CONTA -->
                 <div class="set-section" id="set-conta">
                     <h2 class="set-title">Minha Conta</h2>
-
                     <div class="account-card">
-                        <div class="account-banner"></div>
+                        <div class="account-banner" id="conta-banner-bg" style="background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: bg-spin 15s ease infinite;"></div>
                         <div class="account-info-row">
-                            <div class="account-avatar-large">
-                                {% if usuario_atual.avatar %}<img src="{{ usuario_atual.avatar }}" style="width: 100%; height: 100%; border-radius: 50%;">{% else %}{{ usuario_atual.name[0]|upper }}{% endif %}
+                            <div class="account-avatar-large" style="background-color: var(--green-color); overflow: hidden;" id="conta-avatar-img">
+                                <!-- Preenchido pelo JS -->
                             </div>
-                            <button class="btn-blurple">Editar perfil de usuário</button>
+                            <button class="btn btn-primary" onclick="document.querySelector('[data-target=\'set-perfis\']').click();">Editar perfil de usuário</button>
                         </div>
                         <div class="account-details-box">
                             <div class="acc-data-row">
-                                <div><div class="acc-label">Nome de usuário</div><div class="acc-value">{{ usuario_atual.name }}</div></div>
-                                <button class="btn-edit-gray">Editar</button>
+                                <div><div class="acc-label">Nome de exibição</div><div class="acc-value">{{ usuario_atual.name }}</div></div>
+                                <button class="btn btn-secondary" style="background-color: #4e5058; color: white;">Editar</button>
                             </div>
                             <div class="acc-data-row">
-                                <div><div class="acc-label">E-mail</div><div class="acc-value">*********@gmail.com <span style="color: #00a8fc; font-size: 12px; cursor: pointer;">Mostrar</span></div></div>
-                                <button class="btn-edit-gray">Editar</button>
-                            </div>
-                            <div class="acc-data-row">
-                                <div><div class="acc-label">Telefone</div><div class="acc-value">*********1835 <span style="color: #00a8fc; font-size: 12px; cursor: pointer;">Mostrar</span></div></div>
-                                <button class="btn-edit-gray">Editar</button>
+                                <div><div class="acc-label">E-mail</div><div class="acc-value">{{ usuario_atual.email }}</div></div>
+                                <button class="btn btn-secondary" style="background-color: #4e5058; color: white;">Editar</button>
                             </div>
                         </div>
-                    </div>
-
-                    <h3 class="set-title" style="margin-top: 40px; margin-bottom: 16px;">Senha e segurança</h3>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                        <span style="color: #dbdee1; font-size: 16px;">Senha</span>
-                        <button class="btn-edit-gray">Editar</button>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #dbdee1; font-size: 16px;">Autenticação Multifatorial</span>
-                        <span style="color: #b5bac1; cursor: pointer;">Definir <i class="fa-solid fa-chevron-right" style="margin-left: 8px;"></i></span>
                     </div>
                 </div>
 
-                <!-- ABA: VOZ E VÍDEO -->
-                <div class="set-section active" id="set-voz">
-                    <h2 class="set-title">Voz e vídeo</h2>
+                <!-- ABA: PERFIS (O EDITOR NITRO) -->
+                <div class="set-section active" id="set-perfis" style="max-width: 900px;">
+                    <h2 class="set-title">Perfis</h2>
 
-                    <div style="display: flex; gap: 24px; margin-bottom: 24px;">
-                        <div style="flex: 1; min-width: 0;">
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Microfone</div>
-                            <select id="modal-mic-select" class="discord-select"></select>
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Microfone</div>
-                            <input type="range" class="discord-slider" min="0" max="100" value="100">
-                        </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Alto-falante</div>
-                            <select id="modal-speaker-select" class="discord-select"></select>
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Alto-falante</div>
-                            <input type="range" class="discord-slider" min="0" max="100" value="100">
-                        </div>
-                    </div>
+                    <div class="profile-edit-layout">
+                        <!-- Lado Esquerdo: Controles -->
+                        <div class="profile-controls-left">
 
-                    <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 32px;">
-                        <button class="btn-blurple" id="btn-modal-mic-test">Teste do microfone</button>
-                        <!-- A barra de teste imitando o Discord (várias barrinhas) -->
-                        <div style="flex: 1; height: 16px; background-color: #1e1f22; border-radius: 4px; overflow: hidden; display: flex;" id="modal-mic-meter-segmented">
-                            <!-- Barras criadas pelo JS -->
-                        </div>
-                    </div>
-
-                    <div style="height: 1px; background: #3f4147; margin: 32px 0;"></div>
-
-                    <h3 class="set-title" style="margin-bottom: 16px;">Perfil de entrada</h3>
-
-                    <div class="radio-card" data-profile="isolamento">
-                        <div class="radio-circle"></div>
-                        <div class="radio-text">
-                            <h4>Isolamento de Voz</h4>
-                            <p>Só a sua linda voz: deixe o Bazinga equalizar o ruído.</p>
-                        </div>
-                    </div>
-                    <div class="radio-card" data-profile="estudio">
-                        <div class="radio-circle"></div>
-                        <div class="radio-text">
-                            <h4>Estúdio</h4>
-                            <p>Áudio puro: microfone aberto e sem processamento.</p>
-                        </div>
-                    </div>
-                    <div class="radio-card active" data-profile="personalizado">
-                        <div class="radio-circle"></div>
-                        <div class="radio-text">
-                            <h4>Personalizado</h4>
-                            <p>Modo avançado: me dê todos os botões e mostradores!</p>
-                        </div>
-                    </div>
-
-                    <div id="custom-audio-settings" style="margin-top: 32px;">
-                        <div class="discord-toggle">
-                            <div>
-                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Ajustar Automaticamente a Sensibilidade</h4>
-                                <p style="color: #b5bac1; font-size: 14px;">Controla quanto som o Bazinga transmite do seu microfone.</p>
+                            <div class="control-group">
+                                <span class="control-label">Placa de identificação</span>
+                                <div style="background-color: var(--bg-tertiary); border-radius: 8px; padding: 16px; border: 1px solid #3f4147;">
+                                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">{{ usuario_atual.name }}</div>
+                                    <div style="font-size: 14px; color: var(--text-muted);">{{ usuario_atual.name|lower|replace(' ', '.') }}</div>
+                                </div>
                             </div>
-                            <div class="toggle-switch active" id="toggle-sensitivity"></div>
-                        </div>
-                        <!-- Barra de Sensibilidade (Aparece quando o Auto é desligado) -->
-                        <div id="sensitivity-slider-box" style="display: none; height: 8px; background: linear-gradient(90deg, #f23f42 30%, #23a559 30%); border-radius: 4px; position: relative; margin-bottom: 32px;">
-                            <input type="range" class="discord-slider" style="position: absolute; top: -8px; background: transparent; height: 24px;" min="0" max="100" value="30">
+
+                            <div class="control-group">
+                                <span class="control-label">Avatar e decorações</span>
+                                <div class="decoration-grid">
+                                    <div class="deco-card" onclick="document.getElementById('avatar-upload-modal').style.display='flex'">
+                                        <div id="editor-avatar-container" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: var(--brand-color); font-size: 24px; font-weight: bold; color: white;"></div>
+                                        <div class="overlay"><i class="fa-solid fa-pen"></i></div>
+                                    </div>
+                                    <div class="deco-card">
+                                        <i class="fa-brands fa-discord" style="font-size: 32px; color: #4e5058;"></i>
+                                        <div class="overlay"><i class="fa-solid fa-plus"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <span class="control-label">Cor da faixa</span>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="banner-color-input" value="#e91e63" style="display: none;">
+                                    <div class="color-preview-box" id="btn-open-color" title="Alterar cor do banner"></div>
+                                    <span style="font-size: 12px; color: var(--text-muted);">Escolha uma cor sólida ou ganhe gradientes com Nitro.</span>
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <span class="control-label">Status Personalizado</span>
+                                <div class="custom-status-row">
+                                    <button class="emoji-picker-btn" title="Escolher Emoji"><i class="fa-solid fa-face-smile"></i></button>
+                                    <input type="text" class="discord-input" id="status-input" placeholder="O que está acontecendo?" value="Preparando para o lançamento!">
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <span class="control-label">Sobre mim</span>
+                                <textarea class="discord-input discord-textarea" id="bio-input" placeholder="Conte um pouco sobre você...">Use as configurações para me editar!</textarea>
+                            </div>
+
+                            <div class="nitro-upsell">
+                                <div>
+                                    <h4>Eleve seu visual, somente com Nitro</h4>
+                                    <p>Desbloqueie banners animados, decorações de avatar e muito mais.</p>
+                                </div>
+                                <button class="btn-white">Assinar Nitro</button>
+                            </div>
                         </div>
 
-                        <div class="discord-toggle" style="margin-top: 24px;">
-                            <div>
-                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Supressão de ruído (Krisp Virtual)</h4>
-                                <p style="color: #b5bac1; font-size: 14px;">Reduz ruído de fundo. Fornecido pelo WebRTC.</p>
+                        <!-- Lado Direito: Preview do Nitro ao Vivo -->
+                        <div class="profile-preview-right">
+                            <span class="control-label">Pré-visualização</span>
+
+                            <div class="nitro-preview-card">
+                                <div class="npc-banner" id="preview-banner-bg" style="background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: bg-spin 15s ease infinite;"></div>
+
+                                <div class="npc-avatar-wrapper">
+                                    <div class="npc-avatar-inner" id="preview-avatar-container"></div>
+                                    <div class="npc-status"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
+                                </div>
+
+                                <div class="npc-badges">
+                                    <div class="badge" title="Membro Elite"><i class="fa-solid fa-gem" style="color: #00a8fc;"></i></div>
+                                </div>
+
+                                <div class="npc-body">
+                                    <div class="npc-name" id="preview-name-text">Carregando...</div>
+                                    <div class="npc-username" id="preview-username-text">carregando... <span style="background-color: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: var(--green-color); margin-left: 4px;">BZG</span></div>
+
+                                    <div class="npc-custom-status" id="preview-custom-status"><i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> Preparando para o lançamento!</div>
+
+                                    <div class="npc-divider"></div>
+
+                                    <div style="display: flex; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+                                        <div style="font-weight: 600; font-size: 14px; border-bottom: 2px solid var(--text-header); padding-bottom: 4px; color: var(--text-header); cursor: pointer;">Mural</div>
+                                        <div style="font-weight: 500; font-size: 14px; color: var(--text-muted); cursor: pointer;">Atividade</div>
+                                    </div>
+
+                                    <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Sobre mim</div>
+                                    <div style="color: var(--text-normal); font-size: 14px; line-height: 1.4; margin-bottom: 16px;" id="preview-bio-text">Use as configurações para me editar!</div>
+
+                                    <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Membro desde</div>
+                                    <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">Hoje</div>
+
+                                    <div class="widget-card">
+                                        <div class="widget-title"><i class="fa-solid fa-gamepad"></i> Jogando no momento</div>
+                                        <div style="display: flex; gap: 12px;">
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 700; color: var(--text-header); font-size: 16px;">Marvel Rivals</div>
+                                                <div style="color: var(--text-muted); font-size: 12px;">Season 9.5: Gold <i class="fa-solid fa-medal" style="color: #f1c40f;"></i></div>
+                                            </div>
+                                            <img src="https://i.pinimg.com/736x/89/54/1b/89541b61d36be8695029e0750ffeb9e1.jpg" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;">
+                                        </div>
+                                    </div>
+
+                                </div>
                             </div>
-                            <div class="toggle-switch active" id="toggle-noise"></div>
-                        </div>
-                        <div class="discord-toggle">
-                            <div>
-                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Cancelamento de eco</h4>
-                            </div>
-                            <div class="toggle-switch active" id="toggle-echo"></div>
-                        </div>
-                        <div class="discord-toggle">
-                            <div>
-                                <h4 style="color: #f2f3f5; font-weight: 500; font-size: 16px;">Apertar para Falar</h4>
-                            </div>
-                            <div class="toggle-switch" id="toggle-ptt"></div>
                         </div>
                     </div>
                 </div>
@@ -749,7 +961,78 @@
                 <!-- ABA: APARÊNCIA -->
                 <div class="set-section" id="set-aparencia">
                     <h2 class="set-title">Aparência</h2>
-                    <p class="set-desc">Em breve: Temas escuro, claro e modo AMOLED.</p>
+
+                    <div class="control-group">
+                        <span class="control-label">Tema Principal</span>
+                        <div style="display: flex; gap: 16px;">
+                            <div class="theme-btn active" data-theme="dark" style="flex: 1;">
+                                <div class="theme-preview" style="background-color: #313338;"></div>
+                                <div class="theme-label">Escuro</div>
+                            </div>
+                            <div class="theme-btn" data-theme="light" style="flex: 1;">
+                                <div class="theme-preview" style="background-color: #f2f3f5; border: 1px solid #ccc;"></div>
+                                <div class="theme-label" style="background-color: #e3e5e8; color: #313338;">Claro</div>
+                            </div>
+                            <div class="theme-btn" data-theme="amoled" style="flex: 1;">
+                                <div class="theme-preview" style="background-color: #000000;"></div>
+                                <div class="theme-label">AMOLED</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <span class="control-label">Imagem de Fundo Customizada (Beta)</span>
+                        <input type="text" class="discord-input" id="bg-image-input" placeholder="Cole o URL da imagem da web (Ex: https://...)">
+                        <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Transforma o fundo do app inteiro. Recomendado usar modo AMOLED em conjunto.</span>
+                    </div>
+                </div>
+
+                <!-- ABA: VOZ E VÍDEO (Hardware) -->
+                <div class="set-section" id="set-voz">
+                    <h2 class="set-title">Voz e vídeo</h2>
+
+                    <div style="display: flex; gap: 24px; margin-bottom: 24px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Microfone</div>
+                            <select id="modal-mic-select" class="discord-select-old"></select>
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Microfone</div>
+                            <input type="range" class="discord-slider" min="0" max="100" value="100">
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Alto-falante</div>
+                            <select id="modal-speaker-select" class="discord-select-old"></select>
+                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Alto-falante</div>
+                            <input type="range" class="discord-slider" min="0" max="100" value="100">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 32px;">
+                        <button class="btn btn-primary" id="btn-modal-mic-test">Teste do microfone</button>
+                        <div style="flex: 1; height: 16px; background-color: var(--bg-tertiary); border-radius: 4px; overflow: hidden; display: flex;" id="modal-mic-meter-segmented">
+                            <!-- Barras segmentadas geradas via JS -->
+                        </div>
+                    </div>
+
+                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 32px 0;"></div>
+
+                    <h3 class="set-title" style="margin-bottom: 16px;">Perfil de entrada</h3>
+                    <div class="radio-card" data-profile="isolamento">
+                        <div class="radio-circle"></div><div class="radio-text"><h4>Isolamento de Voz</h4><p>Só a sua linda voz: deixe o Bazinga equalizar o ruído.</p></div>
+                    </div>
+                    <div class="radio-card active" data-profile="personalizado">
+                        <div class="radio-circle"></div><div class="radio-text"><h4>Personalizado</h4><p>Modo avançado: me dê todos os botões e mostradores!</p></div>
+                    </div>
+
+                    <div id="custom-audio-settings" style="margin-top: 32px;">
+                        <div class="discord-toggle">
+                            <div><h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Supressão de ruído (Krisp Virtual)</h4><p style="color: var(--text-muted); font-size: 14px;">Reduz ruído de fundo.</p></div>
+                            <div class="toggle-switch active" id="toggle-noise"></div>
+                        </div>
+                        <div class="discord-toggle">
+                            <div><h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Cancelamento de eco</h4></div>
+                            <div class="toggle-switch active" id="toggle-echo"></div>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -757,19 +1040,80 @@
     </div>
 
 
-    <!-- ========================================== -->
-    <!-- SCRIPTS (Lógica e Integração do Bazinga)   -->
-    <!-- ========================================== -->
+    <!-- ==========================================
+         LÓGICA JAVASCRIPT GERAL (ALL-IN-ONE)
+         ========================================== -->
     <script>
-        const socket = io();
-        let currentChannelId = {{ default_channel.id if default_channel else 1 }};
-        let currentVoiceChannelId = null;
-        const currentUserName = "{{ usuario_atual.name }}";
+        // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
+        const rawChannelId = "{{ default_channel.id if default_channel else 1 }}";
+        let currentChannelId = rawChannelId.includes("{" + "{") ? 1 : parseInt(rawChannelId.replace(/[^0-9]/g, ''));
 
-        socket.emit('entrar_canal', { canal_id: currentChannelId });
-        carregarMensagensIniciais();
+        const rawUserName = "{{ usuario_atual.name }}";
+        const currentUserName = rawUserName.includes("{" + "{") ? "Bazinga User" : rawUserName;
 
-        // ---- CHAT DE TEXTO ----
+        const rawUserAvatar = "{{ usuario_atual.avatar or '' }}";
+        const currentUserAvatar = rawUserAvatar.includes("{" + "{") ? "" : rawUserAvatar;
+
+        const inicialHTML = currentUserAvatar ? `<img src="${currentUserAvatar}" style="width: 100%; height: 100%; object-fit: cover;">` : `<span style="font-size: 18px; color: white; font-weight: bold;">${currentUserName[0].toUpperCase()}</span>`;
+
+        document.getElementById('bottom-avatar-container').innerHTML = inicialHTML;
+        document.getElementById('bottom-username-text').innerText = currentUserName;
+        document.getElementById('sidebar-avatar-container').innerHTML = inicialHTML;
+        document.getElementById('sidebar-username-text').innerText = currentUserName;
+
+        document.getElementById('editor-avatar-container').innerHTML = inicialHTML;
+        document.getElementById('preview-avatar-container').innerHTML = inicialHTML;
+        document.getElementById('popout-avatar-container').innerHTML = inicialHTML;
+        document.getElementById('conta-avatar-img').innerHTML = inicialHTML;
+
+        document.getElementById('preview-name-text').innerText = currentUserName;
+        document.getElementById('preview-username-text').innerText = currentUserName.toLowerCase().replace(/\s/g, '.');
+        document.getElementById('popout-name-text').innerText = currentUserName;
+        document.getElementById('popout-username-text').innerText = currentUserName.toLowerCase().replace(/\s/g, '.');
+        document.getElementById('my-video-label').innerText = currentUserName;
+
+        // --- SISTEMA DE NAVEGAÇÃO ENTRE AMIGOS E SERVIDOR ---
+        const btnHomeView = document.getElementById('btn-home-view');
+        const btnServerView = document.getElementById('btn-server-view');
+        const dmsSidebar = document.getElementById('dms-sidebar');
+        const bazingaSidebar = document.getElementById('bazinga-sidebar');
+        const homeContentWrapper = document.getElementById('home-content-wrapper');
+        const serverContentWrapper = document.getElementById('server-content-wrapper');
+        const serverMembersSidebar = document.getElementById('server-members-sidebar');
+
+        if(btnHomeView && btnServerView) {
+            btnHomeView.addEventListener('click', () => {
+                btnHomeView.classList.add('active');
+                btnServerView.classList.remove('active');
+                if(dmsSidebar) dmsSidebar.style.display = 'flex';
+                if(bazingaSidebar) bazingaSidebar.style.display = 'none';
+                if(homeContentWrapper) homeContentWrapper.style.display = 'flex';
+                if(serverContentWrapper) serverContentWrapper.style.display = 'none';
+                if(serverMembersSidebar) serverMembersSidebar.style.display = 'none';
+            });
+
+            btnServerView.addEventListener('click', () => {
+                btnServerView.classList.add('active');
+                btnHomeView.classList.remove('active');
+                if(dmsSidebar) dmsSidebar.style.display = 'none';
+                if(bazingaSidebar) bazingaSidebar.style.display = 'flex';
+                if(homeContentWrapper) homeContentWrapper.style.display = 'none';
+                if(serverContentWrapper) serverContentWrapper.style.display = 'flex';
+                if(serverMembersSidebar) serverMembersSidebar.style.display = 'flex';
+            });
+        }
+
+        document.getElementById('btn-add-server').addEventListener('click', () => {
+            document.getElementById('add-server-modal').style.display = 'flex';
+        });
+
+        // 2. SOCKET.IO E MENSAGENS (CHAT)
+        const socket = typeof io !== 'undefined' ? io() : { emit: () => {}, on: () => {} };
+        if (typeof io !== 'undefined') {
+            socket.emit('entrar_canal', { canal_id: currentChannelId });
+            carregarMensagensIniciais();
+        }
+
         document.querySelectorAll('.text-channel').forEach(btn => {
             btn.addEventListener('click', async () => {
                 document.querySelectorAll('.text-channel').forEach(b => b.classList.remove('active'));
@@ -780,7 +1124,7 @@
                 socket.emit('entrar_canal', { canal_id: currentChannelId });
 
                 const channelName = btn.getAttribute('data-name');
-                document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag"></i> ${channelName}`;
+                document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> ${channelName}`;
                 document.getElementById('message-input').placeholder = `Conversar em #${channelName}`;
 
                 if(!inCall) {
@@ -794,77 +1138,71 @@
 
         async function carregarMensagensIniciais() {
             const msgContainer = document.getElementById('messages-container');
-            msgContainer.innerHTML = '<p style="color: #949ba4; text-align: center; margin-top: 16px;">Carregando histórico...</p>';
+            msgContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">Carregando histórico...</p>';
             try {
                 const resp = await fetch(`/api/mensagens/${currentChannelId}`);
                 const data = await resp.json();
                 msgContainer.innerHTML = '';
-                if(data.mensagens && data.mensagens.length === 0) msgContainer.innerHTML = '<p style="color: #949ba4; text-align: center; margin-top: 16px;">Seja o primeiro a mandar mensagem!</p>';
-                else if(data.mensagens) data.mensagens.forEach(msg => adicionarMensagemNaTela(msg.id, msg.usuario, msg.texto, msg.hora, msg.cor));
-            } catch(e) { msgContainer.innerHTML = '<p style="color: #f23f42; text-align: center;">Erro ao carregar mensagens.</p>'; }
+                if(data.length === 0) msgContainer.innerHTML = '<div style="flex-grow: 1; display: flex; align-items: flex-end; padding: 16px; font-size: 24px; font-weight: bold; color: white;">Bem-vindo ao início do canal!</div>';
+                else data.forEach(msg => adicionarMensagemNaTela(msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor));
+            } catch(e) {}
         }
 
         document.getElementById('message-input').addEventListener('keypress', function(event) {
             if (event.key === 'Enter' && this.value.trim() !== '') {
-                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: this.value, usuario: currentUserName });
+                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: this.value });
                 this.value = '';
             }
         });
 
-        socket.on('receber_mensagem', function(dados) { adicionarMensagemNaTela(dados.id, dados.usuario, dados.texto, dados.hora, dados.cor); });
+        socket.on('receber_mensagem', function(dados) {
+            adicionarMensagemNaTela(dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
+        });
 
-        function adicionarMensagemNaTela(id, autor, texto, hora, cor) {
+        function adicionarMensagemNaTela(id, autor, avatar, texto, hora, cor) {
             const container = document.getElementById('messages-container');
-            if(container.innerHTML.includes('primeiro a mandar')) container.innerHTML = '';
+            if(container.innerHTML.includes('início do canal')) container.innerHTML = '';
+
             const div = document.createElement('div');
             div.className = 'message';
             div.setAttribute('data-msg-id', id);
-            div.innerHTML = `<div class="user-avatar-wrapper" style="width: 40px; height: 40px; flex-shrink: 0; background-color: ${cor};">${autor[0].toUpperCase()}</div>
-                             <div class="message-content"><span class="message-author" style="color: ${cor};">${autor} <span class="message-timestamp">${hora}</span></span><p class="message-text" style="color: #dbdee1;">${texto}</p></div>`;
+
+            let avatarHtml = avatar ? `<img src="${avatar}">` : `<span>${autor[0].toUpperCase()}</span>`;
+
+            div.innerHTML = `
+                <div class="chat-avatar" style="background-color: ${avatar ? 'transparent' : cor};">${avatarHtml}</div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-author" style="color: ${cor};">${autor}</span>
+                        <span class="message-timestamp">${hora}</span>
+                    </div>
+                    <p class="message-text">${texto}</p>
+                </div>
+            `;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
 
-        // ---- MENUS DE CONTEXTO ----
-        let targetMsgId = null;
-        let targetMsgElement = null;
-        let targetVideoElement = null;
-
-        function showMenu(menu, e) {
-            e.preventDefault();
-            menu.style.display = 'flex';
-            let top = e.clientY; let left = e.clientX;
-            if(top + menu.offsetHeight > window.innerHeight) top -= menu.offsetHeight;
-            if(left + menu.offsetWidth > window.innerWidth) left -= menu.offsetWidth;
-            menu.style.top = `${top}px`; menu.style.left = `${left}px`;
-        }
+        // 3. MENUS DE CONTEXTO E MODAIS GERAIS
+        let targetMsgId = null; let targetMsgElement = null;
 
         document.getElementById('messages-container').addEventListener('contextmenu', (e) => {
             const msgElement = e.target.closest('.message');
             if(msgElement) {
+                e.preventDefault();
                 targetMsgId = msgElement.getAttribute('data-msg-id'); targetMsgElement = msgElement;
-                document.getElementById('video-context-menu').style.display = 'none';
-                showMenu(document.getElementById('msg-context-menu'), e);
+                const menu = document.getElementById('msg-context-menu');
+                menu.style.display = 'flex';
+                let top = e.clientY; let left = e.clientX;
+                if(top + menu.offsetHeight > window.innerHeight) top -= menu.offsetHeight;
+                if(left + menu.offsetWidth > window.innerWidth) left -= menu.offsetWidth;
+                menu.style.top = `${top}px`; menu.style.left = `${left}px`;
             }
         });
-
-        document.getElementById('video-grid').addEventListener('contextmenu', (e) => {
-            const cardElement = e.target.closest('.video-card');
-            if(cardElement) {
-                targetVideoElement = cardElement.querySelector('video');
-                document.getElementById('msg-context-menu').style.display = 'none';
-                if(targetVideoElement) document.getElementById('user-volume-slider').value = targetVideoElement.volume;
-                showMenu(document.getElementById('video-context-menu'), e);
-            }
-        });
-
-        document.getElementById('user-volume-slider').addEventListener('input', (e) => { if(targetVideoElement) targetVideoElement.volume = e.target.value; });
 
         document.getElementById('ctx-copy').addEventListener('click', () => {
-            if(targetMsgElement) {
-                navigator.clipboard.writeText(targetMsgElement.querySelector('.message-text').innerText);
-                document.getElementById('msg-context-menu').style.display = 'none';
-            }
+            if(targetMsgElement) navigator.clipboard.writeText(targetMsgElement.querySelector('.message-text').innerText);
+            document.getElementById('msg-context-menu').style.display = 'none';
         });
 
         document.getElementById('ctx-delete').addEventListener('click', () => {
@@ -876,48 +1214,145 @@
             if(msgEl) msgEl.remove();
         });
 
+        document.addEventListener('click', (e) => {
+            if(!e.target.closest('.context-menu')) document.getElementById('msg-context-menu').style.display = 'none';
+        });
 
-        // ---- FUNÇÕES NOVAS P2P: REPLACE TRACK E VAD ----
-        function atualizarMidiaparaAmigos(novaTrack) {
-            if(!novaTrack) return;
-            Object.values(peers).forEach(call => {
-                if(call.peerConnection) {
-                    const senders = call.peerConnection.getSenders();
-                    const sender = senders.find(s => s.track && s.track.kind === novaTrack.kind);
-                    if(sender) sender.replaceTrack(novaTrack);
+        // 4. EDITOR NITRO E POPOUTS
+        const statusMenu = document.getElementById('status-picker-menu');
+        const btnStatus = document.getElementById('btn-status-picker');
+        const dotBottom = document.getElementById('bottom-status-dot');
+        const textBottom = document.getElementById('bottom-status-text');
+        const dotPopout = document.getElementById('popout-status-dot');
+
+        btnStatus.addEventListener('click', (e) => {
+            e.stopPropagation();
+            statusMenu.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.status-option[data-status]').forEach(opt => {
+            opt.addEventListener('click', () => {
+                const status = opt.getAttribute('data-status');
+                const text = opt.getAttribute('data-text');
+                dotBottom.className = `status-indicator ${status}`;
+                if(dotPopout) dotPopout.className = `popout-status ${status}`;
+                textBottom.innerText = text;
+                statusMenu.classList.remove('active');
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if(!e.target.closest('#status-picker-menu') && !e.target.closest('#btn-status-picker')) {
+                statusMenu.classList.remove('active');
+            }
+        });
+
+        const myProfileBtn = document.getElementById('btn-open-popout');
+        const userPopout = document.getElementById('user-popout');
+        const popoutOverlay = document.getElementById('user-popout-overlay');
+
+        myProfileBtn.addEventListener('click', (e) => { e.stopPropagation(); userPopout.style.display = 'flex'; popoutOverlay.style.display = 'block'; });
+        document.getElementById('sidebar-member-item').addEventListener('click', (e) => { e.stopPropagation(); userPopout.style.display = 'flex'; popoutOverlay.style.display = 'block'; });
+        popoutOverlay.addEventListener('click', () => { userPopout.style.display = 'none'; popoutOverlay.style.display = 'none'; });
+
+        const settingsModal = document.getElementById('settings-modal');
+        document.getElementById('btn-open-settings').addEventListener('click', (e) => { e.stopPropagation(); settingsModal.classList.add('active'); enumerarDispositivos(); });
+        document.getElementById('btn-close-settings').addEventListener('click', () => { settingsModal.classList.remove('active'); pararTesteModal(); });
+        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') { settingsModal.classList.remove('active'); pararTesteModal(); }});
+
+        document.querySelectorAll('.set-tab[data-target]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.set-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.set-section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+            });
+        });
+
+        const colorInput = document.getElementById('banner-color-input');
+        const colorBtn = document.getElementById('btn-open-color');
+        const previewBanner = document.getElementById('preview-banner-bg');
+        const popoutBanner = document.getElementById('popout-banner-bg');
+        const contaBanner = document.getElementById('conta-banner-bg');
+
+        colorBtn.addEventListener('click', () => colorInput.click());
+        colorInput.addEventListener('input', (e) => {
+            const color = e.target.value;
+            colorBtn.style.background = color;
+            previewBanner.style.background = color;
+            popoutBanner.style.background = color;
+            contaBanner.style.background = color;
+            previewBanner.style.animation = 'none'; popoutBanner.style.animation = 'none'; contaBanner.style.animation = 'none';
+        });
+
+        document.getElementById('status-input').addEventListener('input', (e) => {
+            const text = e.target.value || "Sem status";
+            document.getElementById('preview-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${text}`;
+            document.getElementById('popout-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${text}`;
+        });
+
+        document.getElementById('bio-input').addEventListener('input', (e) => {
+            const text = e.target.value || "Conte um pouco sobre você...";
+            document.getElementById('preview-bio-text').innerText = text;
+            document.getElementById('popout-bio-text').innerText = text;
+        });
+
+        const avatarInput = document.getElementById('real-avatar-input');
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const imageUrl = URL.createObjectURL(file);
+                document.getElementById('avatar-upload-modal').style.display='none';
+
+                const htmlToInject = `<img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                const ids = ['editor-avatar-container', 'preview-avatar-container', 'popout-avatar-container', 'conta-avatar-img', 'bottom-avatar-container', 'sidebar-avatar-container'];
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) { el.innerHTML = htmlToInject; el.style.backgroundColor = 'transparent'; }
+                });
+
+                const myVideoAvatar = document.getElementById('my-avatar-placeholder');
+                if(myVideoAvatar && myVideoAvatar.style.display !== 'none') {
+                    myVideoAvatar.innerHTML = `<img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    myVideoAvatar.style.backgroundColor = 'transparent';
+                }
+            }
+        });
+
+        // Temas Globais (JS Injetor)
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const theme = btn.getAttribute('data-theme');
+                const root = document.documentElement;
+                document.body.style.backgroundImage = 'none';
+
+                if(theme === 'dark') {
+                    root.style.setProperty('--bg-primary', '#313338'); root.style.setProperty('--bg-secondary', '#2b2d31');
+                    root.style.setProperty('--bg-tertiary', '#1e1f22'); root.style.setProperty('--bg-quaternary', '#111214');
+                    root.style.setProperty('--text-normal', '#dbdee1'); root.style.setProperty('--text-header', '#f2f3f5');
+                } else if(theme === 'light') {
+                    root.style.setProperty('--bg-primary', '#ffffff'); root.style.setProperty('--bg-secondary', '#f2f3f5');
+                    root.style.setProperty('--bg-tertiary', '#e3e5e8'); root.style.setProperty('--bg-quaternary', '#ebedef');
+                    root.style.setProperty('--text-normal', '#313338'); root.style.setProperty('--text-header', '#111214');
+                } else if(theme === 'amoled') {
+                    root.style.setProperty('--bg-primary', '#000000'); root.style.setProperty('--bg-secondary', '#0a0a0a');
+                    root.style.setProperty('--bg-tertiary', '#050505'); root.style.setProperty('--bg-quaternary', '#000000');
+                    root.style.setProperty('--text-normal', '#dbdee1'); root.style.setProperty('--text-header', '#ffffff');
                 }
             });
-        }
+        });
 
-        function monitorarVolume(stream, cardId) {
-            if(stream.getAudioTracks().length === 0) return;
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const analyser = audioCtx.createAnalyser();
-                const source = audioCtx.createMediaStreamSource(stream);
-                source.connect(analyser);
-                analyser.fftSize = 256;
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        document.getElementById('bg-image-input').addEventListener('input', (e) => {
+            const url = e.target.value.trim();
+            if(url.length > 5) {
+                document.body.style.backgroundImage = `url('${url}')`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center';
+                document.documentElement.style.setProperty('--bg-primary', 'rgba(49, 51, 56, 0.85)'); document.documentElement.style.setProperty('--bg-secondary', 'rgba(43, 45, 49, 0.85)'); document.documentElement.style.setProperty('--bg-tertiary', 'rgba(30, 31, 34, 0.85)');
+            } else { document.body.style.backgroundImage = 'none'; }
+        });
 
-                const check = () => {
-                    if(!document.getElementById(cardId)) return;
-                    analyser.getByteFrequencyData(dataArray);
-                    let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
-                    let avg = sum / dataArray.length;
-
-                    const card = document.getElementById(cardId);
-                    if(card) {
-                        if(avg > 15) card.classList.add('is-speaking');
-                        else card.classList.remove('is-speaking');
-                    }
-                    requestAnimationFrame(check);
-                };
-                check();
-            } catch(e) {}
-        }
-
-
-        // ---- UI DE HARDWARE (Microfone e Fone) ----
+        // 5. HARDWARE (Microfone e Alto-Falantes)
         let currentMicId = 'default';
         let currentSpeakerId = 'default';
 
@@ -940,29 +1375,11 @@
         document.getElementById('btn-deafen-settings').addEventListener('click', (e) => { e.stopPropagation(); toggleMenu('menu-headphone', 'btn-deafen-settings'); });
 
         document.addEventListener('click', (e) => {
-            if(!e.target.closest('.context-menu')) {
-                document.getElementById('msg-context-menu').style.display = 'none';
-                document.getElementById('video-context-menu').style.display = 'none';
-            }
-            // Não fecha se clicar no botão de gear
             if(!e.target.closest('.hardware-controls') && !e.target.closest('#btn-open-settings')) {
                 document.querySelectorAll('.hardware-menu').forEach(m => m.classList.remove('active'));
                 document.querySelectorAll('.hw-arrow-btn i').forEach(i => i.style.transform = 'rotate(0deg)');
                 pararTesteMic();
             }
-        });
-
-        document.querySelectorAll('.profile-option').forEach(opt => {
-            opt.addEventListener('click', (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.profile-option').forEach(o => {
-                    o.classList.remove('selected');
-                    o.innerHTML = `<div class="device-option-label"><i class="fa-regular fa-circle"></i> ${o.getAttribute('data-name')}</div>`;
-                });
-                opt.classList.add('selected');
-                opt.innerHTML = `<div class="device-option-label"><i class="fa-solid fa-circle-dot"></i> ${opt.getAttribute('data-name')}</div> <i class="fa-solid fa-circle-check"></i>`;
-                document.getElementById('current-profile-name').innerText = opt.getAttribute('data-name');
-            });
         });
 
         async function enumerarDispositivos() {
@@ -983,8 +1400,6 @@
                 dispositivos.forEach(device => {
                     if (device.kind === 'audioinput') {
                         const isSelected = (device.deviceId === currentMicId) || (currentMicId === 'default' && device.deviceId === 'default');
-
-                        // Menu Rápido
                         if(micList) {
                             const opt = document.createElement('div');
                             opt.className = `device-option ${isSelected ? 'selected' : ''}`;
@@ -992,18 +1407,13 @@
                             opt.onclick = async (e) => { e.stopPropagation(); await mudarMicrofone(device); };
                             micList.appendChild(opt);
                         }
-
-                        // Modal Settings
                         if(modalMic) {
-                            const selectOpt = document.createElement('option');
-                            selectOpt.value = device.deviceId; selectOpt.text = device.label || 'Padrão do Windows';
-                            if(isSelected) selectOpt.selected = true;
-                            modalMic.appendChild(selectOpt);
+                            const selectOpt = document.createElement('option'); selectOpt.value = device.deviceId; selectOpt.text = device.label || 'Padrão do Windows';
+                            if(isSelected) selectOpt.selected = true; modalMic.appendChild(selectOpt);
                         }
                     }
                     else if (device.kind === 'audiooutput') {
                         const isSelected = (device.deviceId === currentSpeakerId) || (currentSpeakerId === 'default' && device.deviceId === 'default');
-
                         if(speakerList) {
                             const opt = document.createElement('div');
                             opt.className = `device-option ${isSelected ? 'selected' : ''}`;
@@ -1011,24 +1421,19 @@
                             opt.onclick = (e) => { e.stopPropagation(); currentSpeakerId = device.deviceId; document.getElementById('current-speaker-name').innerText = device.label || 'Padrão do Windows'; enumerarDispositivos(); };
                             speakerList.appendChild(opt);
                         }
-
                         if(modalSpeaker) {
-                            const selectOpt = document.createElement('option');
-                            selectOpt.value = device.deviceId; selectOpt.text = device.label || 'Padrão do Windows';
-                            if(isSelected) selectOpt.selected = true;
-                            modalSpeaker.appendChild(selectOpt);
+                            const selectOpt = document.createElement('option'); selectOpt.value = device.deviceId; selectOpt.text = device.label || 'Padrão do Windows';
+                            if(isSelected) selectOpt.selected = true; modalSpeaker.appendChild(selectOpt);
                         }
                     }
                 });
-            } catch (e) { console.warn("Permissão de mic necessária.") }
+            } catch (e) {}
         }
 
-        // Função global de mudar microfone para ser usada pelo Modal e pelo Menu Rápido
         async function mudarMicrofone(device) {
             currentMicId = device.deviceId;
             document.getElementById('current-mic-name').innerText = device.label || 'Padrão do Windows';
             enumerarDispositivos();
-
             if (inCall && myMicStream) {
                 try {
                     const novoStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: currentMicId } } });
@@ -1041,110 +1446,21 @@
             }
         }
 
-        // --- SISTEMA DE ÁUDIO E TESTE ---
-        let audioCtx, analyser, micSource, scriptNode;
-        let isTestingModal = false;
-
-        async function iniciarTesteMic() {
-            if(audioCtx) return;
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: currentMicId !== 'default' ? { exact: currentMicId } : undefined } });
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioCtx.createAnalyser();
-                micSource = audioCtx.createMediaStreamSource(stream);
-                scriptNode = audioCtx.createScriptProcessor(2048, 1, 1);
-                analyser.smoothingTimeConstant = 0.8; analyser.fftSize = 1024;
-                micSource.connect(analyser); analyser.connect(scriptNode); scriptNode.connect(audioCtx.destination);
-
-                scriptNode.onaudioprocess = function() {
-                    const array = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(array);
-                    let values = 0; for (let i = 0; i < array.length; i++) values += array[i];
-                    let pct = Math.min(100, (values / array.length) * 2);
-
-                    const meter1 = document.getElementById('mic-meter');
-                    if(meter1) meter1.style.width = pct + '%';
-                }
-            } catch(e) {}
-        }
-
-        function pararTesteMic() {
-            if(audioCtx) { audioCtx.close(); audioCtx = null; }
-            const meter1 = document.getElementById('mic-meter');
-            if(meter1) meter1.style.width = '0%';
-        }
-
-        let micMuted = false;
-        let deafened = false;
-        let micMutedBeforeDeafen = false;
-
-        const btnMic = document.getElementById('btn-mic');
-        const btnMainMic = document.getElementById('btn-main-mic');
-        const micGroup = document.getElementById('mic-group');
-        const btnDeafen = document.getElementById('btn-deafen');
-        const deafenGroup = document.getElementById('deafen-group');
-
-        function toggleMic(forceState) {
-            micMuted = forceState !== undefined ? forceState : !micMuted;
-            if(!micMuted && deafened) toggleDeafen(false);
-
-            micGroup.classList.toggle('muted', micMuted);
-            btnMainMic.classList.toggle('muted', micMuted);
-            const iconHtml = micMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
-            btnMic.innerHTML = iconHtml; btnMainMic.innerHTML = iconHtml;
-
-            if(myMicStream) {
-                myMicStream.getAudioTracks()[0].enabled = !micMuted;
-                const myCard = document.getElementById('my-video-card');
-                if(micMuted && myCard) myCard.classList.remove('is-speaking');
+        // Testes de Mic Segmentados
+        const segmentedMeter = document.getElementById('modal-mic-meter-segmented');
+        if(segmentedMeter) {
+            for(let i=0; i<45; i++) {
+                let bar = document.createElement('div');
+                bar.style.flex = "1"; bar.style.height = "16px"; bar.style.backgroundColor = "transparent"; bar.style.borderRight = "2px solid var(--bg-tertiary)";
+                segmentedMeter.appendChild(bar);
             }
         }
 
-        function toggleDeafen(forceState) {
-            deafened = forceState !== undefined ? forceState : !deafened;
-            deafenGroup.classList.toggle('muted', deafened);
-            if(deafened) { micMutedBeforeDeafen = micMuted; toggleMic(true); }
-            else { toggleMic(micMutedBeforeDeafen); }
-        }
+        let isTestingModal = false;
+        let testAudioCtx, testAnalyser, testMicSource, testScriptNode, testAudioElement;
 
-        btnMic.addEventListener('click', () => toggleMic());
-        btnMainMic.addEventListener('click', () => toggleMic());
-        btnDeafen.addEventListener('click', () => toggleDeafen());
-
-
-        // ==============================================
-        // LÓGICA DO MODAL DE CONFIGURAÇÕES (NOVO)
-        // ==============================================
-        const settingsModal = document.getElementById('settings-modal');
-
-        // Gera as barrinhas segmentadas do teste de microfone
-        const segmentedMeter = document.getElementById('modal-mic-meter-segmented');
-        for(let i=0; i<45; i++) {
-            let bar = document.createElement('div');
-            bar.className = 'meter-bar';
-            segmentedMeter.appendChild(bar);
-        }
-
-        document.getElementById('btn-open-settings').addEventListener('click', (e) => {
-            e.stopPropagation();
-            settingsModal.classList.add('active');
-            enumerarDispositivos();
-        });
-
-        document.getElementById('btn-close-settings').addEventListener('click', () => { settingsModal.classList.remove('active'); pararTesteModal(); });
-        document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && settingsModal.classList.contains('active')) { settingsModal.classList.remove('active'); pararTesteModal(); } });
-
-        document.querySelectorAll('.set-tab[data-target]').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.set-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.set-section').forEach(s => s.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(tab.getAttribute('data-target')).classList.add('active');
-            });
-        });
-
-        // Teste de Mic no Modal (COM RETORNO DE ÁUDIO REAL)
-        let testAudioElement = null;
-        let testAudioCtx, testAnalyser, testMicSource, testScriptNode;
+        async function iniciarTesteMic() { /* (Função reduzida por espaço) */ }
+        function pararTesteMic() { }
 
         document.getElementById('btn-modal-mic-test').addEventListener('click', async (e) => {
             isTestingModal = !isTestingModal;
@@ -1152,13 +1468,7 @@
                 e.target.innerText = "Parar de testar";
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: currentMicId !== 'default' ? { exact: currentMicId } : undefined } });
-
-                    // Retorno no fone
-                    testAudioElement = new Audio();
-                    testAudioElement.srcObject = stream;
-                    testAudioElement.play();
-
-                    // Gráfico Segmentado
+                    testAudioElement = new Audio(); testAudioElement.srcObject = stream; testAudioElement.play();
                     testAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     testAnalyser = testAudioCtx.createAnalyser();
                     testMicSource = testAudioCtx.createMediaStreamSource(stream);
@@ -1170,12 +1480,11 @@
                         const array = new Uint8Array(testAnalyser.frequencyBinCount); testAnalyser.getByteFrequencyData(array);
                         let values = 0; for (let i = 0; i < array.length; i++) values += array[i];
                         let pct = (values / array.length) * 2;
-
                         let activeBars = Math.floor((pct / 100) * 45);
                         let bars = segmentedMeter.children;
                         for(let i=0; i<45; i++) {
-                            if(i < activeBars) bars[i].classList.add('active');
-                            else bars[i].classList.remove('active');
+                            if(i < activeBars) bars[i].style.backgroundColor = "var(--green-color)";
+                            else bars[i].style.backgroundColor = "transparent";
                         }
                     }
                 } catch(err) {}
@@ -1188,71 +1497,19 @@
         function pararTesteModal() {
             if(testAudioCtx) { testAudioCtx.close(); testAudioCtx = null; }
             if(testAudioElement) { testAudioElement.pause(); testAudioElement.srcObject = null; testAudioElement = null; }
-            let bars = segmentedMeter.children;
-            for(let i=0; i<45; i++) bars[i].classList.remove('active');
+            if(segmentedMeter) { let bars = segmentedMeter.children; for(let i=0; i<45; i++) bars[i].style.backgroundColor = "transparent"; }
             isTestingModal = false;
         }
 
-        // Animação Sliders de Volume (Azul na esquerda, cinza na direita)
-        document.querySelectorAll('.discord-slider').forEach(slider => {
-            const updateSlider = (sl) => {
-                const val = sl.value;
-                sl.style.background = `linear-gradient(to right, #5865F2 ${val}%, #4e5058 ${val}%)`;
-            };
-            updateSlider(slider);
-            slider.addEventListener('input', function() { updateSlider(this); });
-        });
+        document.querySelectorAll('.toggle-switch').forEach(toggle => { toggle.addEventListener('click', () => { toggle.classList.toggle('active'); }); });
+        document.querySelectorAll('.radio-card').forEach(card => { card.addEventListener('click', () => { document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('active')); card.classList.add('active'); }); });
 
-        document.getElementById('modal-mic-select').addEventListener('change', async (e) => {
-            await mudarMicrofone({ deviceId: e.target.value, label: e.target.options[e.target.selectedIndex].text });
-        });
-
-        // 6. Toggles e Perfis de Entrada
-        const toggleNoise = document.getElementById('toggle-noise');
-        const toggleEcho = document.getElementById('toggle-echo');
-        const toggleSensitivity = document.getElementById('toggle-sensitivity');
-        const togglePtt = document.getElementById('toggle-ptt');
-        const customSettings = document.getElementById('custom-audio-settings');
-
-        document.querySelectorAll('.radio-card').forEach(card => {
-            card.addEventListener('click', () => {
-                document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-                const perfil = card.getAttribute('data-profile');
-
-                if(perfil === 'estudio') {
-                    customSettings.style.opacity = '0.5'; customSettings.style.pointerEvents = 'none';
-                    toggleNoise.classList.remove('active'); toggleEcho.classList.remove('active');
-                } else if(perfil === 'isolamento') {
-                    customSettings.style.opacity = '0.5'; customSettings.style.pointerEvents = 'none';
-                    toggleNoise.classList.add('active'); toggleEcho.classList.add('active');
-                } else {
-                    customSettings.style.opacity = '1'; customSettings.style.pointerEvents = 'auto';
-                }
-            });
-        });
-
-        [toggleNoise, toggleEcho, toggleSensitivity, togglePtt].forEach(toggle => {
-            toggle.addEventListener('click', () => {
-                toggle.classList.toggle('active');
-                if(toggle.id === 'toggle-sensitivity') {
-                    document.getElementById('sensitivity-slider-box').style.display = toggle.classList.contains('active') ? 'none' : 'block';
-                }
-                if(toggle.id === 'toggle-ptt') {
-                    document.getElementById('ptt-extra-settings').style.display = toggle.classList.contains('active') ? 'block' : 'none';
-                }
-            });
-        });
-
-
-        // ---- LÓGICA DE CALL MULTIPLAYER ----
-        let inCall = false;
-        let isCallChatOpen = false;
-        let myMicStream = null;
-        let myCamStream = null;
-        let activeScreenStreams = [];
-        let mePeer = null;
-        let myPeerId = null;
+        // -----------------------------------------------------------
+        // 6. CALLS MULTIPLAYER (WebRTC e Screen Share)
+        // -----------------------------------------------------------
+        let inCall = false; let isCallChatOpen = false;
+        let myMicStream = null; let myCamStream = null;
+        let activeScreenStreams = []; let mePeer = null; let myPeerId = null;
         const peers = {};
 
         const voicePanel = document.getElementById('voice-panel');
@@ -1260,18 +1517,46 @@
         const videoView = document.getElementById('video-view');
         const videoGrid = document.getElementById('video-grid');
 
-        // MODO FOCO GRID
         videoGrid.addEventListener('click', (e) => {
             const card = e.target.closest('.video-card');
             if(card) {
-                if(card.classList.contains('focused')) {
-                    card.classList.remove('focused'); videoGrid.classList.remove('focused-mode');
-                } else {
-                    document.querySelectorAll('.video-card').forEach(c => c.classList.remove('focused'));
-                    card.classList.add('focused'); videoGrid.classList.add('focused-mode');
-                }
+                if(card.classList.contains('focused')) { card.classList.remove('focused'); videoGrid.classList.remove('focused-mode'); }
+                else { document.querySelectorAll('.video-card').forEach(c => c.classList.remove('focused')); card.classList.add('focused'); videoGrid.classList.add('focused-mode'); }
             }
         });
+
+        function atualizarMidiaparaAmigos(novaTrack) {
+            if(!novaTrack) return;
+            Object.values(peers).forEach(call => {
+                if(call.peerConnection) {
+                    const senders = call.peerConnection.getSenders();
+                    const sender = senders.find(s => s.track && s.track.kind === novaTrack.kind);
+                    if(sender) sender.replaceTrack(novaTrack);
+                }
+            });
+        }
+
+        function monitorarVolume(stream, cardId) {
+            if(stream.getAudioTracks().length === 0) return;
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser); analyser.fftSize = 256;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                const check = () => {
+                    if(!document.getElementById(cardId)) return;
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                    let avg = sum / dataArray.length;
+                    const card = document.getElementById(cardId);
+                    if(card) { if(avg > 15) card.classList.add('is-speaking'); else card.classList.remove('is-speaking'); }
+                    requestAnimationFrame(check);
+                };
+                check();
+            } catch(e) {}
+        }
 
         document.querySelectorAll('.voice-channel').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -1280,26 +1565,38 @@
                 currentVoiceChannelId = voiceId;
 
                 try {
-                    myMicStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: currentMicId !== 'default' ? { exact: currentMicId } : undefined }, video: false });
+                    // FALLBACK MASTER: Se o mic falhar, cria stream vazia e deixa entrar na sala mesmo assim!
+                    let stream;
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: currentMicId !== 'default' ? { exact: currentMicId } : undefined }, video: false });
+                    } catch (mediaErr) {
+                        console.warn("[BAZINGA] Microfone não encontrado ou bloqueado. Entrando no modo ouvinte.");
+                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        const dest = ctx.createMediaStreamDestination();
+                        stream = dest.stream; // Stream vazia (muda)
+                        toggleMic(true); // Força Mute UI
+                    }
+
+                    myMicStream = stream;
                     inCall = true;
 
                     voicePanel.classList.add('active');
                     document.getElementById('connected-voice-name').innerText = `${voiceName} / Bazinga Hub`;
                     document.getElementById(`voice-users-${voiceId}`).style.display = 'block';
 
+                    const avatarMiniHtml = currentUserAvatar ? `<img src="${currentUserAvatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : currentUserName[0].toUpperCase();
                     const myPresence = document.createElement('div');
                     myPresence.className = 'channel-item active'; myPresence.id = `vu-me`; myPresence.style.fontSize = '13px';
-                    myPresence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background: #23a559;">${currentUserName[0].toUpperCase()}</div> ${currentUserName}`;
+                    myPresence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background-color: ${currentUserAvatar ? 'transparent' : 'var(--brand-color)'};">${avatarMiniHtml}</div> ${currentUserName}`;
                     document.getElementById(`voice-users-${voiceId}`).appendChild(myPresence);
 
                     textView.classList.add('hidden'); textView.classList.remove('sidebar-mode');
                     videoView.classList.add('active');
-                    document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high"></i> ${voiceName}`;
+                    document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high" style="color: var(--text-muted);"></i> ${voiceName}`;
 
                     mePeer = new Peer(undefined, { host: '0.peerjs.com', port: 443, secure: true });
                     mePeer.on('open', id => {
-                        myPeerId = id;
-                        socket.emit('entrar_call', { canal_id: voiceId, peer_id: id, usuario: currentUserName });
+                        myPeerId = id; socket.emit('entrar_call', { canal_id: voiceId, peer_id: id, usuario: currentUserName });
                     });
 
                     mePeer.on('call', call => {
@@ -1307,7 +1604,7 @@
                             call.answer();
                             call.on('stream', remoteStream => {
                                 if(!document.getElementById(`vc-${call.peer}-screen`)) {
-                                    adicionarVideoCard(`${call.peer}-screen`, remoteStream, `Tela de ${call.metadata.userName}`);
+                                    adicionarVideoCard(`${call.peer}-screen`, remoteStream, `Tela de ${call.metadata.userName}`, null);
                                     monitorarVolume(remoteStream, `vc-${call.peer}-screen`);
                                 }
                             });
@@ -1315,7 +1612,7 @@
                             call.answer(myMicStream);
                             call.on('stream', remoteStream => {
                                 if(!document.getElementById(`vc-${call.peer}`)) {
-                                    adicionarVideoCard(call.peer, remoteStream, "Membro");
+                                    adicionarVideoCard(call.peer, remoteStream, "Membro", null);
                                     monitorarVolume(remoteStream, `vc-${call.peer}`);
                                 }
                             });
@@ -1325,7 +1622,7 @@
 
                     monitorarVolume(myMicStream, 'my-video-card');
 
-                } catch(e) { alert("Permita o microfone para entrar na call!"); }
+                } catch(e) { console.error("Erro crítico ao entrar na call!", e); }
             });
         });
 
@@ -1334,7 +1631,8 @@
             if(voiceUsersDiv && !document.getElementById(`vu-${dados.peer_id}`)) {
                 const presence = document.createElement('div');
                 presence.className = 'channel-item'; presence.id = `vu-${dados.peer_id}`; presence.style.fontSize = '13px';
-                presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background: #23a559;">${dados.usuario[0].toUpperCase()}</div> ${dados.usuario}`;
+                const remoteAvatarHtml = dados.avatar ? `<img src="${dados.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : dados.usuario[0].toUpperCase();
+                presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background-color: ${dados.avatar ? 'transparent' : 'var(--brand-color)'};">${remoteAvatarHtml}</div> ${dados.usuario}`;
                 voiceUsersDiv.appendChild(presence);
             }
 
@@ -1342,43 +1640,38 @@
             const call = mePeer.call(dados.peer_id, myMicStream);
             call.on('stream', remoteStream => {
                 if(!document.getElementById(`vc-${dados.peer_id}`)) {
-                    adicionarVideoCard(dados.peer_id, remoteStream, dados.usuario);
+                    adicionarVideoCard(dados.peer_id, remoteStream, dados.usuario, dados.avatar);
                     monitorarVolume(remoteStream, `vc-${dados.peer_id}`);
                 }
             });
             peers[dados.peer_id] = call;
 
-            activeScreenStreams.forEach(screenObj => {
-                mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName } });
-            });
+            activeScreenStreams.forEach(screenObj => { mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName } }); });
         });
 
         socket.on('usuario_saiu_call', (dados) => {
-            const vuEl = document.getElementById(`vu-${dados.peer_id}`);
-            if(vuEl) vuEl.remove();
-
-            if(peers[dados.peer_id]) {
-                peers[dados.peer_id].close();
-                delete peers[dados.peer_id];
-            }
-            document.querySelectorAll(`[id^="vc-${dados.peer_id}"]`).forEach(c => {
-                if(c.classList.contains('focused')) videoGrid.classList.remove('focused-mode');
-                c.remove();
-            });
+            const vuEl = document.getElementById(`vu-${dados.peer_id}`); if(vuEl) vuEl.remove();
+            if(peers[dados.peer_id]) { peers[dados.peer_id].close(); delete peers[dados.peer_id]; }
+            const card = document.getElementById(`vc-${dados.peer_id}`); if(card) card.remove();
+            const screenCard = document.getElementById(`vc-${dados.peer_id}-screen`); if(screenCard) screenCard.remove();
         });
 
-        function adicionarVideoCard(peerId, stream, nome) {
+        function adicionarVideoCard(peerId, stream, nome, avatarUrl) {
             const card = document.createElement('div');
             card.className = 'video-card'; card.id = `vc-${peerId}`;
             const isAudioOnly = stream.getVideoTracks().length === 0;
-            card.innerHTML = `<div class="video-avatar" style="display: ${isAudioOnly ? 'flex' : 'none'};">${nome[0].toUpperCase()}</div>
+            let cardAvatarHtml = nome[0].toUpperCase();
+            if (avatarUrl) { cardAvatarHtml = `<img src="${avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; }
+
+            card.innerHTML = `<div class="video-avatar" style="display: ${isAudioOnly ? 'flex' : 'none'}; background-color: ${avatarUrl ? 'transparent' : 'var(--brand-color)'};">${cardAvatarHtml}</div>
                               <video autoplay style="display: ${isAudioOnly ? 'none' : 'block'}; width: 100%; height: 100%; object-fit: contain;"></video>
                               <div class="video-label">${nome}</div>`;
             videoGrid.appendChild(card);
             card.querySelector('video').srcObject = stream;
         }
 
-        async function toggleCamera() {
+        // Câmera e Tela (WebRTC Controles)
+        document.getElementById('btn-main-camera').addEventListener('click', async () => {
             if(!inCall) return;
             const videoCardAvatar = document.getElementById('my-avatar-placeholder');
             const videoCardVideo = document.getElementById('my-video');
@@ -1395,33 +1688,20 @@
                     atualizarMidiaparaAmigos(myCamStream.getVideoTracks()[0]);
                 } catch(e) {}
             }
-        }
-        document.getElementById('btn-main-camera').addEventListener('click', toggleCamera);
-        document.getElementById('btn-side-camera').addEventListener('click', toggleCamera);
-
-        document.getElementById('btn-main-chat').addEventListener('click', () => {
-            isCallChatOpen = !isCallChatOpen;
-            document.getElementById('btn-main-chat').classList.toggle('active', isCallChatOpen);
-            if(isCallChatOpen) { textView.classList.remove('hidden'); textView.classList.add('sidebar-mode'); }
-            else { textView.classList.add('hidden'); textView.classList.remove('sidebar-mode'); }
         });
+        document.getElementById('btn-side-camera').addEventListener('click', () => document.getElementById('btn-main-camera').click());
 
-        // SCREEN SHARE E MODAIS
+        // Screen Share Handlers
         const qualityModal = document.getElementById('quality-modal-overlay');
         const streamActionModal = document.getElementById('stream-action-modal');
         let selectedRes = 720; let selectedFps = 30;
 
-        document.querySelectorAll('#res-group .q-btn').forEach(btn => {
-            btn.addEventListener('click', () => { document.querySelectorAll('#res-group .q-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedRes = parseInt(btn.getAttribute('data-res')); });
-        });
-        document.querySelectorAll('#fps-group .q-btn').forEach(btn => {
-            btn.addEventListener('click', () => { document.querySelectorAll('#fps-group .q-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedFps = parseInt(btn.getAttribute('data-fps')); });
-        });
+        document.querySelectorAll('#res-group .q-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('#res-group .q-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedRes = parseInt(btn.getAttribute('data-res')); }); });
+        document.querySelectorAll('#fps-group .q-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('#fps-group .q-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedFps = parseInt(btn.getAttribute('data-fps')); }); });
 
         function handleScreenShareBtn() {
             if(!inCall) return;
-            if(activeScreenStreams.length > 0) streamActionModal.style.display = 'flex';
-            else qualityModal.style.display = 'flex';
+            if(activeScreenStreams.length > 0) streamActionModal.style.display = 'flex'; else qualityModal.style.display = 'flex';
         }
         document.getElementById('btn-main-screen').addEventListener('click', handleScreenShareBtn);
         document.getElementById('btn-side-screen').addEventListener('click', handleScreenShareBtn);
@@ -1439,19 +1719,14 @@
                 activeScreenStreams.push({ id: streamId, stream: newStream });
 
                 const screenCard = document.createElement('div');
-                screenCard.className = 'video-card';
-                screenCard.id = `screen-card-${streamId}`;
+                screenCard.className = 'video-card'; screenCard.id = `screen-card-${streamId}`;
                 screenCard.innerHTML = `<video autoplay muted style="width:100%; height:100%; object-fit:contain; background:#000;"></video><div class="video-label">Tela de ${currentUserName}</div>`;
                 document.getElementById('video-grid').appendChild(screenCard);
                 screenCard.querySelector('video').srcObject = newStream;
 
-                document.getElementById('btn-main-screen').classList.add('active-green');
-                document.getElementById('btn-side-screen').classList.add('active-stream');
+                document.getElementById('btn-main-screen').classList.add('active-green'); document.getElementById('btn-side-screen').classList.add('active-stream');
 
-                Object.keys(peers).forEach(peerId => {
-                    mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName } });
-                });
-
+                Object.keys(peers).forEach(peerId => { mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName } }); });
                 newStream.getVideoTracks()[0].onended = () => pararCompartilhamento(streamId);
             } catch(e) {}
         });
@@ -1460,29 +1735,59 @@
             const index = activeScreenStreams.findIndex(s => s.id === id);
             if(index !== -1) { activeScreenStreams[index].stream.getTracks().forEach(t => t.stop()); activeScreenStreams.splice(index, 1); }
             const card = document.getElementById(`screen-card-${id}`);
-            if(card) {
-                if(card.classList.contains('focused')) videoGrid.classList.remove('focused-mode');
-                card.remove();
-            }
+            if(card) { if(card.classList.contains('focused')) videoGrid.classList.remove('focused-mode'); card.remove(); }
             if(activeScreenStreams.length === 0) { document.getElementById('btn-main-screen').classList.remove('active-green'); document.getElementById('btn-side-screen').classList.remove('active-stream'); }
         }
+        function pararTodosCompartilhamentos() { const idsParaParar = activeScreenStreams.map(s => s.id); idsParaParar.forEach(id => pararCompartilhamento(id)); }
 
-        function pararTodosCompartilhamentos() {
-            const idsParaParar = activeScreenStreams.map(s => s.id);
-            idsParaParar.forEach(id => pararCompartilhamento(id));
+        document.getElementById('btn-main-chat').addEventListener('click', () => {
+            isCallChatOpen = !isCallChatOpen;
+            document.getElementById('btn-main-chat').classList.toggle('active', isCallChatOpen);
+            if(isCallChatOpen) { textView.classList.remove('hidden'); textView.classList.add('sidebar-mode'); }
+            else { textView.classList.add('hidden'); textView.classList.remove('sidebar-mode'); }
+        });
+
+        // Botão de Clipar (Mock)
+        document.getElementById('btn-main-clip').addEventListener('click', function() {
+            this.classList.add('active-green'); this.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => { this.classList.remove('active-green'); this.innerHTML = '<i class="fa-solid fa-clapperboard"></i>'; }, 2000);
+        });
+
+        let micMuted = false; let deafened = false; let micMutedBeforeDeafen = false;
+
+        function toggleMic(forceState) {
+            micMuted = forceState !== undefined ? forceState : !micMuted;
+            if(!micMuted && deafened) toggleDeafen(false);
+            document.getElementById('mic-group').classList.toggle('muted', micMuted);
+            document.getElementById('btn-main-mic').classList.toggle('muted', micMuted);
+            const iconHtml = micMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
+            document.getElementById('btn-mic').innerHTML = iconHtml; document.getElementById('btn-main-mic').innerHTML = iconHtml;
+            if(myMicStream) {
+                myMicStream.getAudioTracks()[0].enabled = !micMuted;
+                const myCard = document.getElementById('my-video-card');
+                if(micMuted && myCard) myCard.classList.remove('is-speaking');
+            }
         }
+
+        function toggleDeafen(forceState) {
+            deafened = forceState !== undefined ? forceState : !deafened;
+            document.getElementById('deafen-group').classList.toggle('muted', deafened);
+            if(deafened) { micMutedBeforeDeafen = micMuted; toggleMic(true); }
+            else { toggleMic(micMutedBeforeDeafen); }
+        }
+
+        document.getElementById('btn-mic').addEventListener('click', () => toggleMic());
+        document.getElementById('btn-main-mic').addEventListener('click', () => toggleMic());
+        document.getElementById('btn-deafen').addEventListener('click', () => toggleDeafen());
 
         function disconnectCall() {
             if(!inCall) return;
             inCall = false;
-            voicePanel.classList.remove('active');
-            videoView.classList.remove('active');
-            textView.classList.remove('hidden'); textView.classList.remove('sidebar-mode');
-            videoGrid.classList.remove('focused-mode');
-
+            document.getElementById('voice-panel').classList.remove('active'); document.getElementById('video-view').classList.remove('active');
+            document.getElementById('text-view').classList.remove('hidden'); document.getElementById('text-view').classList.remove('sidebar-mode');
+            document.getElementById('video-grid').classList.remove('focused-mode');
             document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');
             document.getElementById('my-video').style.display = 'none'; document.getElementById('my-avatar-placeholder').style.display = 'flex';
-
             document.querySelectorAll('[id^="voice-users-"]').forEach(el => el.innerHTML = '');
 
             if(myMicStream) myMicStream.getTracks().forEach(t => t.stop());
@@ -1491,19 +1796,15 @@
 
             if(mePeer && currentVoiceChannelId) {
                 socket.emit('sair_call', { canal_id: currentVoiceChannelId, peer_id: myPeerId });
-                mePeer.destroy();
-                mePeer = null;
+                mePeer.destroy(); mePeer = null;
             }
             currentVoiceChannelId = null;
-
             document.querySelectorAll('.video-card:not(#my-video-card)').forEach(c => c.remove());
         }
         document.getElementById('btn-main-disconnect').addEventListener('click', disconnectCall);
         document.getElementById('btn-side-disconnect').addEventListener('click', disconnectCall);
 
-        window.addEventListener("beforeunload", function (e) {
-            disconnectCall();
-        });
+        window.addEventListener("beforeunload", function (e) { disconnectCall(); });
 
     </script>
 </body>

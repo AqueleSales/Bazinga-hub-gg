@@ -5,6 +5,18 @@ from ..models import Person, Channel, Message, db
 
 main_bp = Blueprint("main", __name__)
 
+# --- O CONTEXT PROCESSOR (Injeta o usuário em todas as telas automaticamente) ---
+@main_bp.context_processor
+def inject_user():
+    user = None
+    # Procura pelo 'user_id' que a nossa nova rota do Google salvou na Sessão
+    if 'user_id' in session:
+        try:
+            user = Person.query.get(session['user_id'])
+        except (OperationalError, PendingRollbackError):
+            db.session.rollback()
+    return dict(user=user)
+
 
 def formatar_data(ts):
     if not ts: return ""
@@ -22,31 +34,21 @@ def formatar_data(ts):
 
 @main_bp.route("/")
 def index():
-    # Se a pessoa estiver logada, pegamos os dados dela para enviar para o Hub (ex: fotinha na Navbar)
-    user = None
-    if 'person_id' in session:
-        try:
-            user = Person.query.get(session['person_id'])
-        except (OperationalError, PendingRollbackError):
-            db.session.rollback()
-
-    return render_template("index.html", user=user)
+    # O user já é injetado pelo context_processor, não precisa passar aqui!
+    return render_template("index.html")
 
 
 @main_bp.route("/chat")
 def chat():
     # --- O GUARDIÃO ---
-    # Se não tiver a sessão (ou seja, não logou pelo Google), volta pra página inicial!
-    if 'person_id' not in session:
+    if 'user_id' not in session:
         return redirect(url_for('main.index'))
 
     try:
-        # Pega as informações de quem está logado lá no Neon
-        usuario_atual = Person.query.get(session['person_id'])
+        usuario_atual = Person.query.get(session['user_id'])
 
-        # Proteção extra: se resetarmos o banco e o ID sumir de lá, desloga o cara na marra
         if not usuario_atual:
-            session.pop('person_id', None)
+            session.pop('user_id', None)
             return redirect(url_for('main.index'))
 
         text_channels = Channel.query.filter_by(channel_type="text").all()
@@ -55,8 +57,7 @@ def chat():
 
         messages = []
         if default_channel:
-            messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(
-                50).all()
+            messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(50).all()
             for m in messages:
                 m.formatada = formatar_data(m.timestamp)
 
@@ -64,7 +65,6 @@ def chat():
         db.session.rollback()
         return "Erro de conexão com o banco. Recarregue a página."
 
-    # Agora injetamos o usuário REAl que veio do Google direto no seu chat.html
     return render_template(
         "chat.html",
         usuario_atual=usuario_atual,
@@ -88,6 +88,7 @@ def pegar_mensagens(canal_id):
         dados.append({
             'id': msg.id,
             'autor': msg.author.name,
+            'avatar': msg.author.avatar, # <-- AQUI ESTÁ A MÁGICA! Agora o histórico envia a foto!
             'texto': msg.text,
             'hora': formatar_data(msg.timestamp),
             'cor': msg.author.role.color if msg.author.role else '#23a559'
