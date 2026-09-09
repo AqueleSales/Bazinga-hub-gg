@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, session, jsonify, redirect, url_for
 from sqlalchemy.exc import OperationalError, PendingRollbackError
 from datetime import datetime
-from ..models import Person, Channel, Message, db
+from sqlalchemy import or_, and_
+from ..models import Person, Channel, Message, DirectMessage, db
 
 main_bp = Blueprint("main", __name__)
+
 
 # --- O CONTEXT PROCESSOR (Injeta o usuário em todas as telas automaticamente) ---
 @main_bp.context_processor
@@ -57,7 +59,8 @@ def chat():
 
         messages = []
         if default_channel:
-            messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(50).all()
+            messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(
+                50).all()
             for m in messages:
                 m.formatada = formatar_data(m.timestamp)
 
@@ -88,10 +91,47 @@ def pegar_mensagens(canal_id):
         dados.append({
             'id': msg.id,
             'autor': msg.author.name,
-            'avatar': msg.author.avatar, # <-- AQUI ESTÁ A MÁGICA! Agora o histórico envia a foto!
+            'avatar': msg.author.avatar,  # <-- AQUI ESTÁ A MÁGICA! Agora o histórico envia a foto!
             'texto': msg.text,
             'hora': formatar_data(msg.timestamp),
             'cor': msg.author.role.color if msg.author.role else '#23a559'
+        })
+
+    return jsonify(dados)
+
+
+# ==========================================
+# NOVA ROTA: Buscar histórico de Conexões Diretas (DMs)
+# ==========================================
+@main_bp.route("/api/dms/<int:target_id>")
+def get_dms(target_id):
+    # O Guardião de Segurança da API
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    meu_id = session['user_id']
+
+    try:
+        # Busca DMs onde (Eu mandei pra Ele) OU (Ele mandou pra Mim)
+        mensagens_db = DirectMessage.query.filter(
+            or_(
+                and_(DirectMessage.sender_id == meu_id, DirectMessage.receiver_id == target_id),
+                and_(DirectMessage.sender_id == target_id, DirectMessage.receiver_id == meu_id)
+            )
+        ).order_by(DirectMessage.timestamp.asc()).limit(50).all()
+    except (OperationalError, PendingRollbackError):
+        db.session.rollback()
+        mensagens_db = []
+
+    dados = []
+    for msg in mensagens_db:
+        dados.append({
+            'id': msg.id,
+            'autor': msg.sender.name,
+            'avatar': msg.sender.avatar,
+            'texto': msg.content,
+            'hora': formatar_data(msg.timestamp),
+            'cor': msg.sender.role.color if msg.sender.role else '#5865F2'
         })
 
     return jsonify(dados)

@@ -3,7 +3,7 @@ from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.exc import OperationalError, PendingRollbackError
 from datetime import timedelta
 from . import socketio
-from .models import db, Message, Person
+from .models import db, Message, Person, DirectMessage  # <-- DirectMessage adicionado
 
 
 @socketio.on('entrar_canal')
@@ -113,3 +113,63 @@ def lidar_sair_call(dados):
 
     leave_room(sala_call)
     emit('usuario_saiu_call', {'peer_id': peer_id}, to=sala_call, include_self=False)
+
+
+# ==========================================
+# EVENTOS PARA MENSAGENS DIRETAS (DMs)
+# ==========================================
+@socketio.on('entrar_dm')
+def on_entrar_dm(data):
+    # Proteção: Pega ID pela sessão
+    user_id = session.get('user_id')
+    if not user_id:
+        return
+
+    target_id = int(data.get('target_id'))
+
+    # Cria um nome de sala único para as duas pessoas. Ex: dm_1_2
+    room = f"dm_{min(user_id, target_id)}_{max(user_id, target_id)}"
+    join_room(room)
+
+
+@socketio.on('enviar_mensagem_direta')
+def on_enviar_mensagem_direta(data):
+    # Proteção: Pega ID pela sessão
+    user_id = session.get('user_id')
+    if not user_id:
+        return
+
+    target_id = int(data.get('target_id'))
+    texto = data.get('texto')
+
+    try:
+        usuario = Person.query.get(user_id)
+        if not usuario:
+            return
+
+        # 1. Salva no banco de dados
+        nova_msg = DirectMessage(sender_id=user_id, receiver_id=target_id, content=texto)
+        db.session.add(nova_msg)
+        db.session.commit()
+
+        # Converte o horário para o mesmo padrão (UTC-3)
+        hora_br = nova_msg.timestamp - timedelta(hours=3)
+        hora_formatada = f"Hoje às {hora_br.strftime('%H:%M')}"
+
+        # 2. Envia apenas para a sala privada dos dois
+        room = f"dm_{min(user_id, target_id)}_{max(user_id, target_id)}"
+        cor = usuario.role.color if usuario.role else '#5865F2'
+
+        emit('receber_mensagem_direta', {
+            'id': nova_msg.id,
+            'usuario': usuario.name,
+            'usuario_id': usuario.id,
+            'avatar': usuario.avatar,
+            'texto': texto,
+            'hora': hora_formatada,
+            'cor': cor
+        }, room=room)
+
+    except (OperationalError, PendingRollbackError):
+        db.session.rollback()
+        return

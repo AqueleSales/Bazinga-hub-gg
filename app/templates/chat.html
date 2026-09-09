@@ -6,6 +6,11 @@
     <title>Chat - Bazinga Hub</title>
     <!-- Ícones FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Leaflet Mapa (CSS e JS) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
     <!-- WebSockets e P2P -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
@@ -39,7 +44,7 @@
         button { font-family: inherit; }
 
         /* ==========================================================================
-           2. SIDEBARS E DASHBOARD RADAR BAZINGA
+           2. SIDEBARS E DASHBOARD
            ========================================================================== */
         .left-sidebar-wrapper { width: 312px; display: flex; flex-direction: column; flex-shrink: 0; background-color: var(--bg-tertiary); border-right: 1px solid rgba(0,0,0,0.2); transition: background-color 0.3s;}
         .left-top-section { display: flex; flex-grow: 1; overflow: hidden; }
@@ -52,7 +57,6 @@
         .server-icon.add-server:hover { background-color: var(--green-color); color: white; }
         .server-icon img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* O "pino" branco que aparece do lado esquerdo do servidor ativo */
         .server-icon::before { content: ''; position: absolute; left: -16px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; background-color: white; border-radius: 0 4px 4px 0; transition: 0.2s; }
         .server-icon:hover::before { left: -20px; height: 20px; }
         .server-icon.active::before { left: -20px; height: 40px; }
@@ -70,7 +74,6 @@
         .channel-item:hover { background-color: rgba(255,255,255,0.05); color: var(--text-normal); }
         .channel-item.active { background-color: rgba(255,255,255,0.1); color: var(--text-header); }
 
-        /* Estilos Exclusivos do Radar Bazinga (Fugindo do Copyright) */
         .bz-pill-btn { background: transparent; border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
         .bz-pill-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-normal); }
         .bz-pill-btn.active { background: rgba(255,255,255,0.1); color: var(--text-header); }
@@ -78,9 +81,90 @@
         .dm-card { padding: 8px; margin: 4px 8px; border-radius: 8px; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.03); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;}
         .dm-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background-color: transparent; transition: 0.2s;}
         .dm-card:hover { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); transform: translateX(4px); }
-        .dm-card:hover::before { background-color: var(--brand-color); }
+        .dm-card.active { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        .dm-card:hover::before, .dm-card.active::before { background-color: var(--brand-color); }
+
+        .dm-notification-badge { background-color: var(--red-color); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; min-width: 16px; text-align: center; display: none; }
+        .dm-notification-badge.active { display: block; animation: radar-pulse 1s infinite; }
 
         @keyframes radar-pulse { 0% { transform: scale(1); opacity: 0.1; } 50% { transform: scale(1.15); opacity: 0.3; } 100% { transform: scale(1); opacity: 0.1; } }
+
+        /* ==========================================================================
+           RADAR BAZINGA MAP STYLES (Leaflet Customização)
+           ========================================================================== */
+        #bazinga-map {
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-quaternary);
+            z-index: 1;
+        }
+
+        /* O Segredo do Dark Mode sem API Key: Filtro CSS Invertido */
+        .leaflet-tile {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-normal) !important;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
+            border-radius: 8px !important;
+        }
+        .leaflet-popup-content { margin: 12px !important; font-family: inherit; }
+        .leaflet-container a.leaflet-popup-close-button {
+            color: var(--text-muted) !important;
+            padding: 4px !important;
+        }
+        .leaflet-container a.leaflet-popup-close-button:hover {
+            color: var(--text-normal) !important;
+        }
+        .leaflet-control-zoom a {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-normal) !important;
+            border: 1px solid rgba(0,0,0,0.5) !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background-color: var(--bg-tertiary) !important;
+            color: white !important;
+        }
+
+        /* Marcadores Customizados do Mapa */
+        .user-marker {
+            border-radius: 50%;
+            border: 3px solid var(--brand-color);
+            box-shadow: 0 0 15px var(--brand-color);
+            overflow: hidden;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .user-marker:hover { transform: scale(1.1); z-index: 1000 !important; }
+
+        .geo-note-marker {
+            background-color: var(--yellow-color);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--yellow-color), 0 0 20px var(--yellow-color);
+            border: 2px solid white;
+            cursor: pointer;
+            animation: radar-pulse 2s infinite;
+        }
+
+        .server-marker {
+            border-radius: 12px;
+            border: 3px solid #fff;
+            box-shadow: 0 0 20px var(--green-color);
+            overflow: hidden;
+            background-color: var(--bg-primary);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .server-marker:hover { transform: scale(1.1); }
 
         /* ==========================================================================
            3. PAINEL DE CONTROLE DO USUÁRIO (Canto inferior esquerdo)
@@ -254,6 +338,19 @@
         .q-btn:hover { background-color: var(--bg-secondary); }
         .q-btn.active { background-color: var(--brand-hover); color: white; }
 
+        .meter-bar { flex: 1; height: 8px; background-color: #4e5058; border-radius: 2px; transition: 0.1s ease; }
+        .meter-bar.active { background-color: var(--green-color); height: 16px; }
+
+        /* ==========================================================================
+           9. SISTEMA DE TOASTS E NOTIFICAÇÕES (Substitutos de Alert)
+           ========================================================================== */
+        .bazinga-toast { background-color: var(--bg-quaternary); border-left: 4px solid var(--brand-color); color: var(--text-normal); padding: 12px 16px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; animation: slideInRight 0.3s ease forwards; min-width: 250px; }
+        .bazinga-toast.success { border-color: var(--green-color); }
+        .bazinga-toast.error { border-color: var(--red-color); }
+        .bazinga-toast.warning { border-color: var(--yellow-color); }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+
         /* ==========================================================================
            7. SISTEMA DE CONFIGURAÇÕES DE USUÁRIO (TELA CHEIA NITRO)
            ========================================================================== */
@@ -379,9 +476,6 @@
         .radio-text h4 { color: var(--text-normal); font-size: 16px; font-weight: 500; margin-bottom: 4px; }
         .radio-text p { color: var(--text-muted); font-size: 14px; }
 
-        .meter-bar { flex: 1; height: 8px; background-color: #4e5058; border-radius: 2px; transition: 0.1s ease; }
-        .meter-bar.active { background-color: var(--green-color); height: 16px; }
-
     </style>
 </head>
 <body>
@@ -398,7 +492,6 @@
                     <!-- BOTÃO HOME/AMIGOS (O Infinito) -->
                     <div class="server-wrapper">
                         <div class="server-icon home-icon active" id="btn-home-view" title="Radar Bazinga (Mensagens Diretas)" style="background-color: var(--bg-primary); transition: 0.2s; padding: 10px;">
-                            <!-- Tentamos carregar do static, fallback pra um FontAwesome bonito se a imagem quebrar -->
                             <img src="{{ url_for('static', filename='img/icone_home.png') }}" alt="Home" style="width: 100%; height: 100%; object-fit: contain; border-radius: 0;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-infinity\' style=\'font-size: 24px;\'></i>';">
                         </div>
                     </div>
@@ -432,22 +525,43 @@
 
                     <div class="channels-list">
                         <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA BAZINGA</div>
-                        <div class="channel-item active" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
+                        <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
                         <div class="channel-item" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Em breve: Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
 
+                        <div style="height: 1px; background-color: rgba(255,255,255,0.05); margin: 8px 16px;"></div>
+
+                        <!-- FILTROS DE AMIGOS MOVIDOS PARA A SIDEBAR -->
+                        <div class="channel-item bz-filter-btn" id="filter-disponivel" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-user-check" style="font-size: 16px;"></i> Disponível</div>
+                        <div class="channel-item bz-filter-btn active" id="filter-todos" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-users" style="font-size: 16px;"></i> Todos</div>
+
                         <div style="padding: 24px 8px 8px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;">
-                            CONEXÕES DIRETAS <i class="fa-solid fa-plus" style="cursor: pointer;" title="Criar Conexão"></i>
+                            CONEXÕES DIRETAS <i class="fa-solid fa-plus" style="cursor: pointer;" title="Criar Conexão" id="btn-create-dm"></i>
                         </div>
 
-                        <!-- Card de DM Estilo Bazinga -->
-                        <div class="dm-card">
-                            <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: transparent;">
-                                <img src="https://ui-avatars.com/api/?name=John+Censurado&background=random" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-                                <div class="status-indicator dnd"></div>
+                        <div id="dm-list-container" style="display: flex; flex-direction: column;">
+                            <!-- Card de DM Estilo Bazinga 1 -->
+                            <div class="dm-card user-dm-item" id="dm-john" data-user-id="2" data-status="dnd" data-name="John Censurado" data-avatar="https://ui-avatars.com/api/?name=John+Censurado&background=random">
+                                <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: transparent;">
+                                    <img src="https://ui-avatars.com/api/?name=John+Censurado&background=random" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                                    <div class="status-indicator dnd"></div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
+                                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">John Censurado</span>
+                                    <span style="color: var(--brand-color); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fa-solid fa-gamepad"></i> Jogando Marvel Rivals</span>
+                                </div>
+                                <div class="dm-notification-badge" id="badge-john">1</div>
                             </div>
-                            <div style="display: flex; flex-direction: column; overflow: hidden;">
-                                <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">John Censurado</span>
-                                <span style="color: var(--brand-color); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fa-solid fa-gamepad"></i> Jogando Marvel Rivals</span>
+
+                            <!-- Mock Amigo Online -->
+                             <div class="dm-card user-dm-item" id="dm-bazinga" data-user-id="3" data-status="online" data-name="Bazinga User" data-avatar="https://ui-avatars.com/api/?name=Bazinga+User&background=5865F2&color=fff">
+                                <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: transparent;">
+                                    <img src="https://ui-avatars.com/api/?name=Bazinga+User&background=5865F2&color=fff" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                                    <div class="status-indicator online"></div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
+                                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">Bazinga User</span>
+                                </div>
+                                <div class="dm-notification-badge" id="badge-bazinga">99+</div>
                             </div>
                         </div>
                     </div>
@@ -566,31 +680,57 @@
              ========================================== -->
         <main class="chat-area">
 
-            <!-- VIZUALIZAÇÃO 1: RADAR BAZINGA (DMs / Amigos) -->
-            <div id="home-content-wrapper" style="display: flex; flex-direction: column; flex-grow: 1; height: 100%;">
-                <header class="chat-header" style="background: var(--bg-primary); border-bottom: 1px solid rgba(0,0,0,0.2); gap: 16px; z-index: 10;">
-                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--text-header); padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.1);">
-                        <i class="fa-solid fa-user-group" style="color: var(--text-muted);"></i> Amigos
+            <!-- VIZUALIZAÇÃO 1: RADAR BAZINGA E CHAT DM (Conexões Diretas) -->
+            <div id="home-content-wrapper" style="display: flex; flex-direction: column; flex-grow: 1; height: 100%; position: relative;">
+                <header class="chat-header" id="radar-header" style="background: var(--bg-primary); border-bottom: 1px solid rgba(0,0,0,0.2); gap: 16px; z-index: 10;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--text-header); padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.1);" id="radar-header-title">
+                        <i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar Bazinga
                     </div>
-                    <div style="display: flex; gap: 16px; align-items: center; flex-grow: 1;">
-                        <div class="bz-pill-btn active" style="background: rgba(255,255,255,0.1); color: var(--text-header);">Disponível</div>
-                        <div class="bz-pill-btn">Todos</div>
-                        <div class="bz-pill-btn">Pendente <span style="background: var(--red-color); padding: 2px 6px; border-radius: 12px; font-size: 10px; margin-left: 4px; color: white;">2</span></div>
-                        <button class="btn btn-primary" style="background-color: var(--green-color); padding: 4px 8px; font-size: 13px; font-weight: 600;">Adicionar amigo</button>
+                    <div style="display: flex; gap: 16px; align-items: center; flex-grow: 1;" id="radar-header-actions">
+                        <div class="bz-pill-btn active" id="btn-toggle-ghost" style="background: rgba(255,255,255,0.1); color: var(--text-header); cursor: pointer;"><i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF</div>
+                        <button class="btn btn-primary" id="btn-plantar-servidor" style="background-color: var(--green-color); padding: 4px 8px; font-size: 13px; font-weight: 600;"><i class="fa-solid fa-location-dot"></i> Plantar Servidor</button>
                     </div>
                     <div style="display: flex; gap: 16px; color: var(--text-muted); font-size: 18px;">
+                        <i class="fa-solid fa-user-plus" style="cursor: pointer;" title="Adicionar Amigo" id="btn-header-add-friend"></i>
                         <i class="fa-solid fa-inbox" style="cursor: pointer;" title="Caixa de Entrada"></i>
                         <i class="fa-solid fa-circle-question" style="cursor: pointer;" title="Ajuda"></i>
                     </div>
                 </header>
-                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-primary) 100%);">
-                    <div style="font-size: 80px; color: var(--brand-color); opacity: 0.2; margin-bottom: 24px; animation: radar-pulse 2s infinite;"><i class="fa-solid fa-satellite-dish"></i></div>
-                    <h3 style="color: var(--text-header); font-size: 20px; font-weight: 700; margin-bottom: 8px;">O Radar está silencioso.</h3>
-                    <p style="color: var(--text-muted); font-size: 14px;">Ninguém por perto para jogar. Que tal adicionar alguns amigos?</p>
-                    <button class="btn btn-primary" style="margin-top: 24px; padding: 12px 24px; font-size: 14px; font-weight: 700; border-radius: 24px; box-shadow: 0 4px 12px rgba(88, 101, 242, 0.4);">
-                        <i class="fa-solid fa-user-plus"></i> Recrutar Membros
-                    </button>
+
+                <!-- O MAPA (Z-Index Inferior) -->
+                <div id="bazinga-map" style="flex-grow: 1; width: 100%; height: 100%; background-color: var(--bg-quaternary); z-index: 1;"></div>
+
+                <!-- Overlay invisível inicial enquanto carrega -->
+                <div id="map-loading-overlay" style="position: absolute; top: 48px; left: 0; right: 0; bottom: 0; background: var(--bg-primary); z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s;">
+                    <div style="font-size: 60px; color: var(--brand-color); animation: radar-pulse 1.5s infinite;"><i class="fa-solid fa-satellite-dish"></i></div>
+                    <h3 style="color: var(--text-header); margin-top: 16px;">Sintonizando satélites...</h3>
                 </div>
+
+                <!-- NOVO: CHAT DE MENSAGEM DIRETA (Sobrepõe o mapa quando ativo) -->
+                <!-- RESOLVIDO O BUG DA BARRA DE ROLAGEM VAZANDO A TELA: AQUI AGORA TEM TOP E BOTTOM ABSOLUTOS -->
+                <div id="dm-chat-view" style="display: none; flex-direction: column; background-color: var(--bg-primary); position: absolute; top: 48px; left: 0; right: 0; bottom: 0; z-index: 2;">
+                    <!-- Área de Mensagens -->
+                    <div class="chat-messages" id="dm-messages-container" style="flex-grow: 1; padding: 16px; overflow-y: auto;">
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
+                            <img id="dm-header-avatar" src="" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 16px; object-fit: cover;">
+                            <h1 id="dm-welcome-title" style="color: white; font-size: 24px; margin-bottom: 8px;">Comece a conversar</h1>
+                            <p style="color: var(--text-muted);">Este é o começo do seu histórico de mensagens diretas.</p>
+                        </div>
+                    </div>
+
+                    <!-- Input DM -->
+                    <div class="chat-input-wrapper">
+                        <div class="chat-input-container">
+                            <button class="chat-input-btn"><i class="fa-solid fa-circle-plus"></i></button>
+                            <input type="text" class="chat-input" id="dm-message-input" placeholder="Conversar em Mensagem Direta" autocomplete="off">
+                            <div class="chat-input-actions">
+                                <button class="chat-input-btn"><i class="fa-solid fa-gift"></i></button>
+                                <button class="chat-input-btn"><i class="fa-solid fa-face-smile"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- VIZUALIZAÇÃO 2: SERVIDOR BAZINGA (Chat e Call) -->
@@ -686,10 +826,64 @@
             </div>
             <div class="modal-footer" style="justify-content: space-between; align-items: center;">
                 <button class="btn-cancel" onclick="document.getElementById('add-server-modal').style.display='none'">Voltar</button>
-                <button class="btn btn-primary" onclick="alert('Em breve! O Bazinga Hub vai permitir a criação de salas privadas no banco de dados!'); document.getElementById('add-server-modal').style.display='none'">Criar</button>
+                <button class="btn btn-primary" onclick="showToast('Em breve! O Bazinga Hub vai permitir a criação de salas privadas no banco de dados!', 'info'); document.getElementById('add-server-modal').style.display='none'">Criar</button>
             </div>
         </div>
     </div>
+
+    <!-- Modal Adicionar Amigo -->
+    <div class="modal-overlay" id="add-friend-modal">
+        <div class="bazinga-modal" style="width: 440px;">
+            <div class="modal-header">
+                <h2>Adicionar Amigo</h2>
+                <p>Você pode adicionar um amigo com o nome de usuário do Discord dele.</p>
+            </div>
+            <div class="modal-content">
+                <div class="control-group" style="border: none; padding: 0;">
+                    <input type="text" class="discord-input" placeholder="Você pode adicionar amigos com o nome de usuário deles." id="add-friend-input" style="background-color: var(--bg-quaternary);">
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color: var(--bg-primary); border-top: 1px solid rgba(0,0,0,0.2);">
+                <button class="btn-cancel" onclick="document.getElementById('add-friend-modal').style.display='none'">Cancelar</button>
+                <button class="btn btn-primary" onclick="showToast('Pedido de amizade enviado! (Radar)', 'success'); document.getElementById('add-friend-modal').style.display='none'">Enviar pedido de amizade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modais Customizados para substituir Alert/Prompt/Confirm -->
+    <div class="modal-overlay" id="generic-input-modal" style="z-index: 6000;">
+        <div class="bazinga-modal" style="width: 400px;">
+            <div class="modal-header">
+                <h2 id="g-input-title">Título</h2>
+                <p id="g-input-desc">Descrição</p>
+            </div>
+            <div class="modal-content">
+                <input type="text" class="discord-input" id="g-input-field" placeholder="Digite aqui..." autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeInputModal()">Cancelar</button>
+                <button class="btn btn-primary" id="g-input-confirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="generic-confirm-modal" style="z-index: 6000;">
+        <div class="bazinga-modal" style="width: 400px;">
+            <div class="modal-header">
+                <h2 id="g-confirm-title">Confirmação</h2>
+            </div>
+            <div class="modal-content">
+                <p id="g-confirm-desc" style="color: var(--text-normal); line-height: 1.4;">Tem certeza?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeConfirmModal()">Cancelar</button>
+                <button class="btn btn-primary" id="g-confirm-btn">Sim</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container de Notificações Toast -->
+    <div id="bazinga-toast-container" style="position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 9999;"></div>
 
     <!-- Menu de Status -->
     <div id="status-picker-menu">
@@ -732,7 +926,9 @@
             <div class="widget-card" style="margin-top: 12px;">
                 <div class="widget-title"><i class="fa-solid fa-gamepad"></i> Jogando no momento</div>
                 <div style="display: flex; gap: 12px; align-items: center;">
-                    <img src="https://i.pinimg.com/736x/89/54/1b/89541b61d36be8695029e0750ffeb9e1.jpg" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover;">
+                    <div style="width: 60px; height: 60px; border-radius: 8px; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-size: 24px;">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </div>
                     <div>
                         <div style="font-weight: 700; color: var(--text-header); font-size: 14px;">Marvel Rivals</div>
                         <div style="color: var(--text-normal); font-size: 13px;">Season 9.5: Gold</div>
@@ -943,12 +1139,14 @@
 
                                     <div class="widget-card">
                                         <div class="widget-title"><i class="fa-solid fa-gamepad"></i> Jogando no momento</div>
-                                        <div style="display: flex; gap: 12px;">
+                                        <div style="display: flex; gap: 12px; align-items: center;">
                                             <div style="flex: 1;">
                                                 <div style="font-weight: 700; color: var(--text-header); font-size: 16px;">Marvel Rivals</div>
                                                 <div style="color: var(--text-muted); font-size: 12px;">Season 9.5: Gold <i class="fa-solid fa-medal" style="color: #f1c40f;"></i></div>
                                             </div>
-                                            <img src="https://i.pinimg.com/736x/89/54/1b/89541b61d36be8695029e0750ffeb9e1.jpg" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;">
+                                            <div style="width: 50px; height: 50px; border-radius: 8px; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-size: 20px;">
+                                                <i class="fa-solid fa-gamepad"></i>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1039,7 +1237,6 @@
         </div>
     </div>
 
-
     <!-- ==========================================
          LÓGICA JAVASCRIPT GERAL (ALL-IN-ONE)
          ========================================== -->
@@ -1072,6 +1269,58 @@
         document.getElementById('popout-username-text').innerText = currentUserName.toLowerCase().replace(/\s/g, '.');
         document.getElementById('my-video-label').innerText = currentUserName;
 
+        // --- SISTEMA DE TOASTS E MODAIS GENÉRICOS (Substitui Alert/Prompt/Confirm) ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('bazinga-toast-container');
+            const toast = document.createElement('div');
+            toast.className = `bazinga-toast ${type}`;
+            let icon = '<i class="fa-solid fa-circle-info" style="color: var(--brand-color);"></i>';
+            if(type === 'success') icon = '<i class="fa-solid fa-circle-check" style="color: var(--green-color);"></i>';
+            if(type === 'error') icon = '<i class="fa-solid fa-circle-exclamation" style="color: var(--red-color);"></i>';
+            if(type === 'warning') icon = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--yellow-color);"></i>';
+
+            toast.innerHTML = `${icon} <span style="flex-grow: 1;">${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        let currentInputCallback = null;
+        function openInputModal(title, desc, placeholder, callback) {
+            document.getElementById('g-input-title').innerText = title;
+            document.getElementById('g-input-desc').innerText = desc;
+            const field = document.getElementById('g-input-field');
+            field.placeholder = placeholder;
+            field.value = '';
+            currentInputCallback = callback;
+            document.getElementById('generic-input-modal').style.display = 'flex';
+            field.focus();
+        }
+        function closeInputModal() { document.getElementById('generic-input-modal').style.display = 'none'; currentInputCallback = null; }
+        document.getElementById('g-input-confirm').addEventListener('click', () => {
+            if(currentInputCallback) currentInputCallback(document.getElementById('g-input-field').value);
+            closeInputModal();
+        });
+        document.getElementById('g-input-field').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') document.getElementById('g-input-confirm').click();
+        });
+
+        let currentConfirmCallback = null;
+        function openConfirmModal(title, desc, callback) {
+            document.getElementById('g-confirm-title').innerText = title;
+            document.getElementById('g-confirm-desc').innerText = desc;
+            currentConfirmCallback = callback;
+            document.getElementById('generic-confirm-modal').style.display = 'flex';
+        }
+        function closeConfirmModal() { document.getElementById('generic-confirm-modal').style.display = 'none'; currentConfirmCallback = null; }
+        document.getElementById('g-confirm-btn').addEventListener('click', () => {
+            if(currentConfirmCallback) currentConfirmCallback();
+            closeConfirmModal();
+        });
+
         // --- SISTEMA DE NAVEGAÇÃO ENTRE AMIGOS E SERVIDOR ---
         const btnHomeView = document.getElementById('btn-home-view');
         const btnServerView = document.getElementById('btn-server-view');
@@ -1090,6 +1339,13 @@
                 if(homeContentWrapper) homeContentWrapper.style.display = 'flex';
                 if(serverContentWrapper) serverContentWrapper.style.display = 'none';
                 if(serverMembersSidebar) serverMembersSidebar.style.display = 'none';
+
+                // Recalcula o tamanho do mapa ao voltar para a aba principal
+                if(bazingaMap) {
+                    setTimeout(() => bazingaMap.invalidateSize(), 100);
+                } else {
+                    initMap();
+                }
             });
 
             btnServerView.addEventListener('click', () => {
@@ -1107,13 +1363,467 @@
             document.getElementById('add-server-modal').style.display = 'flex';
         });
 
-        // 2. SOCKET.IO E MENSAGENS (CHAT)
+        // ==========================================
+        // FILTROS DE AMIGOS E ADICIONAR AMIGO
+        // ==========================================
+        const filterDisponivel = document.getElementById('filter-disponivel');
+        const filterTodos = document.getElementById('filter-todos');
+        const dmItems = document.querySelectorAll('.user-dm-item');
+
+        function applyFriendFilter(filterType) {
+            dmItems.forEach(item => {
+                const status = item.getAttribute('data-status');
+                if (filterType === 'todos') {
+                    item.style.display = 'flex';
+                } else if (filterType === 'disponivel') {
+                    if (status === 'online' || status === 'idle') {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        if (filterDisponivel && filterTodos) {
+            filterDisponivel.addEventListener('click', () => {
+                filterDisponivel.classList.add('active');
+                filterTodos.classList.remove('active');
+                applyFriendFilter('disponivel');
+            });
+
+            filterTodos.addEventListener('click', () => {
+                filterTodos.classList.add('active');
+                filterDisponivel.classList.remove('active');
+                applyFriendFilter('todos');
+            });
+            // Apply default filter
+            applyFriendFilter('todos');
+        }
+
+        document.getElementById('btn-header-add-friend')?.addEventListener('click', () => {
+            document.getElementById('add-friend-modal').style.display = 'flex';
+        });
+        document.getElementById('btn-create-dm')?.addEventListener('click', () => {
+             document.getElementById('add-friend-modal').style.display = 'flex';
+        });
+
+        // ==========================================
+        // 2. LEAFLET MAPA: RADAR BAZINGA E GEONOTES
+        // ==========================================
+        let bazingaMap = null;
+        let myMapMarker = null;
+        let mapMarkers = {}; // Cofre para guardar os pinos dos amigos
+        let isPlantingServer = false;
+        let serverMarkerPreview = null;
+        let ghostMode = false;
+
+        document.getElementById('btn-toggle-ghost')?.addEventListener('click', function() {
+            ghostMode = !ghostMode;
+            if(ghostMode) {
+                this.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: ON';
+                this.style.color = 'var(--red-color)';
+                showToast("Modo Fantasma Ativado. Sua localização está invisível no radar.", "warning");
+            } else {
+                this.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF';
+                this.style.color = 'var(--text-header)';
+                showToast("Modo Fantasma Desativado. Sua localização está visível no radar.", "success");
+                // Força uma atualização imediata ao desligar
+                if(myMapMarker && navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        atualizarMinhaPosicao(pos.coords.latitude, pos.coords.longitude);
+                         if(typeof socket !== 'undefined' && socket.connected) {
+                            socket.emit('atualizar_localizacao', { lat: pos.coords.latitude, lng: pos.coords.longitude });
+                        }
+                    });
+                }
+            }
+        });
+
+        function initMap() {
+            if(bazingaMap) return; // Evita inicialização dupla
+
+            // Inicializa o mapa vazio primeiro, centrado no Brasil/SP como padrão
+            bazingaMap = L.map('bazinga-map', {
+                zoomControl: false,
+                attributionControl: false // Mantém o visual imersivo
+            }).setView([-23.550520, -46.633308], 16);
+
+            // A CURA DEFINITIVA DO API KEY: OpenStreetMap oficial + CSS Filter (Dark Mode)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(bazingaMap);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(bazingaMap);
+
+            // Adicionar controle para Centralizar em mim
+            const locControl = L.control({position: 'bottomright'});
+            locControl.onAdd = function (map) {
+                const btn = L.DomUtil.create('button', 'btn btn-primary');
+                btn.innerHTML = '<i class="fa-solid fa-crosshairs"></i>';
+                btn.style.width = '30px'; btn.style.height = '30px'; btn.style.padding = '0'; btn.style.borderRadius = '4px'; btn.style.margin = '10px'; btn.style.cursor = 'pointer'; btn.style.backgroundColor = 'var(--bg-secondary)'; btn.style.border = '1px solid rgba(0,0,0,0.5)'; btn.style.color = 'var(--text-normal)';
+                btn.title = "Centralizar em mim";
+                btn.onclick = function() {
+                    if(myMapMarker) map.setView(myMapMarker.getLatLng(), 16);
+                };
+                return btn;
+            };
+            locControl.addTo(bazingaMap);
+
+            // Lógica Dark Souls: Deixar uma Geo-Note clicando no mapa
+            bazingaMap.on('click', function(e) {
+                if (isPlantingServer) {
+                    isPlantingServer = false;
+                    document.getElementById('bazinga-map').style.cursor = '';
+
+                    openInputModal("Plantar Servidor", "Nomeie sua nova base/servidor geolocalizado:", "Ex: Loja Pokémon Central", (serverName) => {
+                        if(serverName && serverName.trim() !== "") {
+                            showToast(`Servidor "${serverName}" plantado com sucesso!`, "success");
+                            // Renderização visual temporária
+                            const serverIcon = L.divIcon({
+                                className: 'server-marker',
+                                html: `<img src="https://ui-avatars.com/api/?name=${serverName.replace(/\s/g, '+')}&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">`,
+                                iconSize: [48, 48],
+                                iconAnchor: [24, 48]
+                            });
+                            const srv = L.marker([e.latlng.lat, e.latlng.lng], {icon: serverIcon}).addTo(bazingaMap);
+                            srv.bindPopup(`
+                                <div style='text-align:center; min-width: 150px;'>
+                                    <h3 style='color:var(--text-header); font-size: 14px; margin-bottom: 4px;'>${serverName}</h3>
+                                    <p style='color:var(--text-muted); font-size: 12px; margin-bottom: 8px;'><i class="fa-solid fa-users"></i> 1 jogador online</p>
+                                    <button class='btn btn-primary' style='width:100%; padding: 6px; font-size: 12px;' onclick='document.getElementById("btn-server-view").click();'>Entrar no Servidor</button>
+                                </div>
+                            `);
+                        }
+                    });
+                    if(serverMarkerPreview) {
+                        bazingaMap.removeLayer(serverMarkerPreview);
+                        serverMarkerPreview = null;
+                    }
+                    return;
+                }
+
+                openInputModal("Nova Geo-Note", "Deixe uma mensagem holográfica no chão para outros jogadores:", "Ex: Loot raro nesta área...", (noteText) => {
+                    if(noteText && noteText.trim() !== "") {
+                        // Manda para o backend via Socket.IO
+                        if(typeof socket !== 'undefined' && socket.connected) {
+                            socket.emit('criar_geonote', { lat: e.latlng.lat, lng: e.latlng.lng, texto: noteText });
+                        }
+                        // Renderiza instantaneamente para o próprio usuário
+                        renderizarGeoNote(e.latlng.lat, e.latlng.lng, noteText, currentUserName, "Agora mesmo");
+                        showToast("Geo-Note deixada com sucesso!", "success");
+                    }
+                });
+            });
+
+            // Lógica de Preview do Servidor
+            bazingaMap.on('mousemove', function(e) {
+                if(isPlantingServer) {
+                    if(!serverMarkerPreview) {
+                        const serverIconPreview = L.divIcon({
+                            className: 'server-marker',
+                            html: '<div style="width:100%;height:100%;background-color:var(--brand-color);display:flex;justify-content:center;align-items:center;color:white;opacity:0.7;"><i class="fa-solid fa-plus"></i></div>',
+                            iconSize: [48, 48],
+                            iconAnchor: [24, 48]
+                        });
+                        serverMarkerPreview = L.marker([e.latlng.lat, e.latlng.lng], {icon: serverIconPreview, interactive: false}).addTo(bazingaMap);
+                    } else {
+                        serverMarkerPreview.setLatLng([e.latlng.lat, e.latlng.lng]);
+                    }
+                }
+            });
+
+            // TELETRANSPORTE (Correção do GPS do PC): Dois cliques para mover seu avatar manualmente
+            bazingaMap.on('dblclick', function(e) {
+                openConfirmModal("Correção de GPS (Teletransporte)", "Você deseja hackear os satélites e mover seu avatar exatamente para este ponto?", () => {
+                    atualizarMinhaPosicao(e.latlng.lat, e.latlng.lng);
+                    if(typeof socket !== 'undefined' && socket.connected) {
+                        socket.emit('atualizar_localizacao', { lat: e.latlng.lat, lng: e.latlng.lng });
+                    }
+                    showToast("GPS Corrigido! Teletransporte concluído.", "success");
+                });
+            });
+            // Desabilita o zoom nativo de dois cliques para não conflitar
+            bazingaMap.doubleClickZoom.disable();
+
+            // RASTREIO CONTÍNUO (A Mágica de andar pela rua)
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        atualizarMinhaPosicao(lat, lng);
+
+                        // Avisa o servidor (Flask) que eu me movi para espalhar pros amigos! (Apenas se ghost mode = off)
+                        if(!ghostMode && typeof socket !== 'undefined' && socket.connected) {
+                            socket.emit('atualizar_localizacao', { lat: lat, lng: lng });
+                        }
+                    },
+                    error => {
+                        console.warn("Geolocalização negada/falhou. Usando centro de São Paulo como fallback.");
+                        atualizarMinhaPosicao(-23.550520, -46.633308);
+                    },
+                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+                );
+            } else {
+                atualizarMinhaPosicao(-23.550520, -46.633308); // Fallback direto
+            }
+
+            // Mockar dados (Servidores locais, amigos e notas antigas)
+            mockMapEntities(-23.550520, -46.633308);
+
+            // Remover overlay de carregamento com transição suave
+            const overlay = document.getElementById('map-loading-overlay');
+            if(overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 500);
+            }
+        }
+
+        function atualizarMinhaPosicao(lat, lng) {
+            if (!myMapMarker) {
+                // Primeira vez: Cria o pino
+                const avatarHtml = document.getElementById('bottom-avatar-container').innerHTML;
+                const myIcon = L.divIcon({
+                    className: 'user-marker',
+                    html: avatarHtml,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
+                myMapMarker = L.marker([lat, lng], {icon: myIcon, zIndexOffset: 1000}).addTo(bazingaMap);
+                myMapMarker.bindPopup("<div style='text-align:center;'><b>Você está aqui!</b><br><span style='color:var(--text-muted); font-size:12px;'>Monitorando o radar...</span></div>");
+                bazingaMap.setView([lat, lng], 16);
+            } else {
+                // Já existe: Apenas desliza o pino para a nova coordenada
+                myMapMarker.setLatLng([lat, lng]);
+            }
+        }
+
+        function renderizarGeoNote(lat, lng, texto, autor, tempo) {
+            const noteIcon = L.divIcon({
+                className: 'geo-note-marker',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+                html: '' // CSS faz o brilho pulsar
+            });
+            const note = L.marker([lat, lng], {icon: noteIcon}).addTo(bazingaMap);
+            note.bindPopup(`<div style='text-align:center; font-style:italic; font-family: serif; font-size: 14px;'>"${texto}"</div><div style='text-align:right; font-size:10px; color:var(--text-muted); margin-top:4px;'>- ${autor} (${tempo})</div>`);
+        }
+
+        function mockMapEntities(baseLat, baseLng) {
+            // 1. Servidor Geolocalizado (Ex: Praça ou Shopping)
+            const serverIcon = L.divIcon({
+                className: 'server-marker',
+                html: '<img src="https://ui-avatars.com/api/?name=BZ&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">',
+                iconSize: [48, 48],
+                iconAnchor: [24, 48]
+            });
+            const srv = L.marker([baseLat + 0.003, baseLng + 0.004], {icon: serverIcon}).addTo(bazingaMap);
+            srv.bindPopup(`
+                <div style='text-align:center; min-width: 150px;'>
+                    <h3 style='color:var(--text-header); font-size: 14px; margin-bottom: 4px;'>Bazinga Hub Local</h3>
+                    <p style='color:var(--text-muted); font-size: 12px; margin-bottom: 8px;'><i class="fa-solid fa-users"></i> 12 jogadores ativos</p>
+                    <button class='btn btn-primary' style='width:100%; padding: 6px; font-size: 12px;' onclick='document.getElementById("btn-server-view").click();'>Entrar no Servidor</button>
+                </div>
+            `);
+
+            // 2. Amigo Próximo Falso (Mock visual)
+            const friendIcon = L.divIcon({
+                className: 'user-marker',
+                html: '<img src="https://ui-avatars.com/api/?name=JC&background=da373c&color=fff" style="width:100%;height:100%; object-fit: cover;">',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+            const frnd = L.marker([baseLat - 0.002, baseLng - 0.003], {icon: friendIcon}).addTo(bazingaMap);
+            frnd.bindPopup(`
+                <div style='display: flex; align-items: center; gap: 8px;'>
+                    <div style='width: 8px; height: 8px; border-radius: 50%; background: var(--red-color);'></div>
+                    <b>John Censurado</b>
+                </div>
+                <div style='color:var(--text-muted); font-size:11px; margin-top:4px;'>A 300 metros de distância</div>
+                <button class='btn' style='background: var(--bg-tertiary); color: var(--text-normal); width: 100%; margin-top: 8px; padding: 4px; font-size: 11px;'><i class="fa-solid fa-paper-plane"></i> Mandar DM</button>
+            `);
+        }
+
+        document.getElementById('btn-plantar-servidor').addEventListener('click', () => {
+            isPlantingServer = !isPlantingServer;
+            if(isPlantingServer) {
+                document.getElementById('bazinga-map').style.cursor = 'crosshair';
+                showToast("Modo Construção de Servidor ativado. Clique em um local do mapa.", "info");
+            } else {
+                document.getElementById('bazinga-map').style.cursor = '';
+                if(serverMarkerPreview) {
+                    bazingaMap.removeLayer(serverMarkerPreview);
+                    serverMarkerPreview = null;
+                }
+            }
+        });
+
+        // ==========================================
+        // LÓGICA DE MENSAGENS DIRETAS (DMs) E EMPILHAMENTO (LIFO)
+        // ==========================================
+        const bazingaMapContainer = document.getElementById('bazinga-map');
+        const dmChatView = document.getElementById('dm-chat-view');
+        const btnVoltarRadar = document.getElementById('btn-voltar-radar');
+        const dmListContainer = document.getElementById('dm-list-container');
+        const radarHeaderTitle = document.getElementById('radar-header-title');
+        const radarHeaderActions = document.getElementById('radar-header-actions');
+        let currentDmUserId = null;
+
+        // Botão Radar: Esconde Chat DM e Mostra Mapa, e restaura o Header original
+        if(btnVoltarRadar) {
+            btnVoltarRadar.addEventListener('click', () => {
+                btnVoltarRadar.classList.add('active');
+                document.querySelectorAll('.user-dm-item').forEach(d => d.classList.remove('active'));
+                if(dmChatView) dmChatView.style.display = 'none';
+                if(bazingaMapContainer) bazingaMapContainer.style.display = 'block';
+                if(bazingaMap) setTimeout(() => bazingaMap.invalidateSize(), 100);
+
+                currentDmUserId = null;
+
+                // Restaura o Header
+                radarHeaderTitle.innerHTML = `<i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar Bazinga`;
+                radarHeaderActions.style.display = 'flex';
+            });
+        }
+
+        // Clique em um Amigo: Abre o Chat, altera o Header e zera notificações
+        document.querySelectorAll('.user-dm-item').forEach(dmCard => {
+            dmCard.addEventListener('click', function() {
+                // 1. Controle de Estado Visual
+                document.querySelectorAll('.user-dm-item').forEach(d => d.classList.remove('active'));
+                if(btnVoltarRadar) btnVoltarRadar.classList.remove('active');
+                this.classList.add('active');
+
+                // Define quem é o alvo atual para o Socket.io
+                currentDmUserId = this.getAttribute('data-user-id');
+
+                // 2. Remove notificação (Bolinha de lido) e zera o contador
+                const badgeId = this.id.replace('dm-', 'badge-');
+                const badge = document.getElementById(badgeId);
+                if(badge) {
+                    badge.classList.remove('active');
+                    badge.innerText = '0';
+                }
+
+                // 3. Pega dados do amigo
+                const friendName = this.getAttribute('data-name');
+                const friendAvatar = this.getAttribute('data-avatar');
+
+                // 4. Modifica o Header (Esconde os botões e mostra o @Nome) sem a bolinha de status, conforme pedido.
+                radarHeaderActions.style.display = 'none';
+                radarHeaderTitle.innerHTML = `
+                    <i class="fa-solid fa-at" style="color: var(--text-muted); font-size: 20px;"></i>
+                    <span style="color: var(--text-header); font-size: 16px; font-weight: 700; margin-left: 8px;">${friendName}</span>
+                `;
+
+                // 5. Preenche a tela de Chat Central
+                const headerAvatar = document.getElementById('dm-header-avatar');
+                const welcomeTitle = document.getElementById('dm-welcome-title');
+                const messageInput = document.getElementById('dm-message-input');
+
+                if(headerAvatar) headerAvatar.src = friendAvatar;
+                if(welcomeTitle) welcomeTitle.innerText = `O começo com ${friendName}`;
+                if(messageInput) messageInput.placeholder = `Conversar com @${friendName}`;
+
+                // 6. Troca Tela (Esconde mapa, mostra chat)
+                if(bazingaMapContainer) bazingaMapContainer.style.display = 'none';
+                if(dmChatView) dmChatView.style.display = 'flex';
+            });
+        });
+
+        // 3. SOCKET.IO E MENSAGENS (CHAT)
         const socket = typeof io !== 'undefined' ? io() : { emit: () => {}, on: () => {} };
         if (typeof io !== 'undefined') {
             socket.emit('entrar_canal', { canal_id: currentChannelId });
             carregarMensagensIniciais();
+
+            // --- EVENTOS DO RADAR (GPS) ---
+            socket.on('posicao_amigo_atualizada', function(dados) {
+                if (!mapMarkers[dados.usuario_id]) {
+                    const avatarHtml = dados.avatar ? `<img src="${dados.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${dados.nome[0].toUpperCase()}</span>`;
+                    const friendIcon = L.divIcon({ className: 'user-marker', html: avatarHtml, iconSize: [36, 36], iconAnchor: [18, 18] });
+                    const marker = L.marker([dados.lat, dados.lng], {icon: friendIcon}).addTo(bazingaMap);
+                    marker.bindPopup(`<b>${dados.nome}</b>`);
+                    mapMarkers[dados.usuario_id] = marker;
+                } else {
+                    mapMarkers[dados.usuario_id].setLatLng([dados.lat, dados.lng]);
+                }
+            });
+
+            socket.on('nova_geonote', function(dados) {
+                renderizarGeoNote(dados.lat, dados.lng, dados.texto, dados.autor, "Agora mesmo");
+            });
+
+            // --- EVENTOS DE DM (CONEXÕES DIRETAS) ---
+            socket.on('receber_mensagem_direta', function(dados) {
+                // 1. Renderiza a mensagem se a pessoa for a que estamos com o chat aberto ou se fomos nós que mandamos
+                if (currentDmUserId == dados.usuario_id || currentUserName == dados.usuario) {
+                    adicionarMensagemNaTelaDM(dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
+                }
+
+                // 2. Lógica de Pular para o Topo (LIFO) e Notificação Badge
+                // Identifica quem é o alvo na sidebar. Se a msg é nossa, pula o alvo que a gente mandou. Se é deles, pula quem mandou.
+                const targetCardId = (currentUserName == dados.usuario && currentDmUserId) ? currentDmUserId : dados.usuario_id;
+                const amigoCard = document.querySelector(`.user-dm-item[data-user-id="${targetCardId}"]`);
+
+                if(amigoCard && dmListContainer) {
+                    // PULA PRO TOPO
+                    dmListContainer.insertBefore(amigoCard, dmListContainer.firstChild);
+
+                    // Animação visual leve de "nova atividade"
+                    amigoCard.style.animation = 'fadeIn 0.5s ease';
+                    setTimeout(() => amigoCard.style.animation = '', 500);
+
+                    // Só avisa a bolinha vermelha se o chat dele NÃO estiver aberto e não for eu mesmo enviando
+                    if (!amigoCard.classList.contains('active') && currentUserName != dados.usuario) {
+                        let badge = amigoCard.querySelector('.dm-notification-badge');
+                        if(badge) {
+                            badge.classList.add('active'); // Garante que fica visível e piscando
+                            let count = parseInt(badge.innerText.replace('+', '')) + 1;
+                            badge.innerText = count > 99 ? '99+' : count;
+                        }
+                        showToast(`Nova mensagem de ${dados.usuario}!`, 'info');
+                    }
+                }
+            });
         }
 
+        // --- ENVIAR MENSAGEM DIRETA ---
+        const dmMessageInput = document.getElementById('dm-message-input');
+        if(dmMessageInput) {
+            dmMessageInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' && this.value.trim() !== '' && currentDmUserId) {
+                    socket.emit('enviar_mensagem_direta', { target_id: currentDmUserId, texto: this.value });
+                    this.value = '';
+                }
+            });
+        }
+
+        function adicionarMensagemNaTelaDM(id, autor, avatar, texto, hora, cor) {
+            const container = document.getElementById('dm-messages-container');
+            if(container.innerHTML.includes('começo do seu histórico')) container.innerHTML = '';
+
+            const div = document.createElement('div');
+            div.className = 'message';
+            let avatarHtml = avatar ? `<img src="${avatar}">` : `<span>${autor[0].toUpperCase()}</span>`;
+
+            div.innerHTML = `
+                <div class="chat-avatar" style="background-color: ${avatar ? 'transparent' : cor};">${avatarHtml}</div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-author" style="color: ${cor};">${autor}</span>
+                        <span class="message-timestamp">${hora}</span>
+                    </div>
+                    <p class="message-text">${texto}</p>
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // --- CANAIS PÚBLICOS ---
         document.querySelectorAll('.text-channel').forEach(btn => {
             btn.addEventListener('click', async () => {
                 document.querySelectorAll('.text-channel').forEach(b => b.classList.remove('active'));
@@ -1183,7 +1893,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // 3. MENUS DE CONTEXTO E MODAIS GERAIS
+        // 4. MENUS DE CONTEXTO E MODAIS GERAIS
         let targetMsgId = null; let targetMsgElement = null;
 
         document.getElementById('messages-container').addEventListener('contextmenu', (e) => {
@@ -1203,6 +1913,7 @@
         document.getElementById('ctx-copy').addEventListener('click', () => {
             if(targetMsgElement) navigator.clipboard.writeText(targetMsgElement.querySelector('.message-text').innerText);
             document.getElementById('msg-context-menu').style.display = 'none';
+            showToast("Texto copiado para a área de transferência", "success");
         });
 
         document.getElementById('ctx-delete').addEventListener('click', () => {
@@ -1218,7 +1929,7 @@
             if(!e.target.closest('.context-menu')) document.getElementById('msg-context-menu').style.display = 'none';
         });
 
-        // 4. EDITOR NITRO E POPOUTS
+        // 5. EDITOR NITRO E POPOUTS
         const statusMenu = document.getElementById('status-picker-menu');
         const btnStatus = document.getElementById('btn-status-picker');
         const dotBottom = document.getElementById('bottom-status-dot');
@@ -1352,7 +2063,7 @@
             } else { document.body.style.backgroundImage = 'none'; }
         });
 
-        // 5. HARDWARE (Microfone e Alto-Falantes)
+        // 6. HARDWARE (Microfone e Alto-Falantes)
         let currentMicId = 'default';
         let currentSpeakerId = 'default';
 
@@ -1446,7 +2157,6 @@
             }
         }
 
-        // Testes de Mic Segmentados
         const segmentedMeter = document.getElementById('modal-mic-meter-segmented');
         if(segmentedMeter) {
             for(let i=0; i<45; i++) {
@@ -1459,7 +2169,7 @@
         let isTestingModal = false;
         let testAudioCtx, testAnalyser, testMicSource, testScriptNode, testAudioElement;
 
-        async function iniciarTesteMic() { /* (Função reduzida por espaço) */ }
+        async function iniciarTesteMic() { /* Reservado */ }
         function pararTesteMic() { }
 
         document.getElementById('btn-modal-mic-test').addEventListener('click', async (e) => {
@@ -1505,7 +2215,7 @@
         document.querySelectorAll('.radio-card').forEach(card => { card.addEventListener('click', () => { document.querySelectorAll('.radio-card').forEach(c => c.classList.remove('active')); card.classList.add('active'); }); });
 
         // -----------------------------------------------------------
-        // 6. CALLS MULTIPLAYER (WebRTC e Screen Share)
+        // 7. CALLS MULTIPLAYER (WebRTC e Screen Share)
         // -----------------------------------------------------------
         let inCall = false; let isCallChatOpen = false;
         let myMicStream = null; let myCamStream = null;
@@ -1565,7 +2275,6 @@
                 currentVoiceChannelId = voiceId;
 
                 try {
-                    // FALLBACK MASTER: Se o mic falhar, cria stream vazia e deixa entrar na sala mesmo assim!
                     let stream;
                     try {
                         stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: currentMicId !== 'default' ? { exact: currentMicId } : undefined }, video: false });
@@ -1573,8 +2282,8 @@
                         console.warn("[BAZINGA] Microfone não encontrado ou bloqueado. Entrando no modo ouvinte.");
                         const ctx = new (window.AudioContext || window.webkitAudioContext)();
                         const dest = ctx.createMediaStreamDestination();
-                        stream = dest.stream; // Stream vazia (muda)
-                        toggleMic(true); // Força Mute UI
+                        stream = dest.stream;
+                        toggleMic(true);
                     }
 
                     myMicStream = stream;
@@ -1670,7 +2379,7 @@
             card.querySelector('video').srcObject = stream;
         }
 
-        // Câmera e Tela (WebRTC Controles)
+        // Câmera e Tela
         document.getElementById('btn-main-camera').addEventListener('click', async () => {
             if(!inCall) return;
             const videoCardAvatar = document.getElementById('my-avatar-placeholder');
@@ -1747,7 +2456,6 @@
             else { textView.classList.add('hidden'); textView.classList.remove('sidebar-mode'); }
         });
 
-        // Botão de Clipar (Mock)
         document.getElementById('btn-main-clip').addEventListener('click', function() {
             this.classList.add('active-green'); this.innerHTML = '<i class="fa-solid fa-check"></i>';
             setTimeout(() => { this.classList.remove('active-green'); this.innerHTML = '<i class="fa-solid fa-clapperboard"></i>'; }, 2000);
@@ -1805,6 +2513,9 @@
         document.getElementById('btn-side-disconnect').addEventListener('click', disconnectCall);
 
         window.addEventListener("beforeunload", function (e) { disconnectCall(); });
+
+        // Inicializar Mapa ao carregar
+        setTimeout(initMap, 200);
 
     </script>
 </body>
