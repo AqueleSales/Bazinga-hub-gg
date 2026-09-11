@@ -3,7 +3,7 @@ from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.exc import OperationalError, PendingRollbackError
 from datetime import timedelta
 from . import socketio
-from .models import db, Message, Person, DirectMessage  # <-- DirectMessage adicionado
+from .models import db, Message, Person, DirectMessage
 
 
 @socketio.on('entrar_canal')
@@ -20,8 +20,6 @@ def handle_leave(dados):
 
 @socketio.on('enviar_mensagem')
 def lidar_com_mensagem(dados):
-    # A MÁGICA DA SEGURANÇA: Buscamos o ID pela sessão segura do Flask!
-    # O JavaScript não pode mais forjar quem está mandando a mensagem.
     user_id = session.get('user_id')
     if not user_id:
         return
@@ -41,20 +39,19 @@ def lidar_com_mensagem(dados):
         db.session.add(nova_msg)
         db.session.commit()
 
-    except (OperationalError, PendingRollbackError):
+    except Exception as e:
         db.session.rollback()
-        return  # Falha silenciosa para não crachar o servidor
+        print(f"[ERRO CHAT GERAL] Não foi possível salvar: {e}")
+        return
 
     cor = usuario.role.color if usuario.role else '#23a559'
-
-    # Converte o horário do banco (UTC) para Brasília (UTC-3)
     hora_br = nova_msg.timestamp - timedelta(hours=3)
     hora_formatada = f"Hoje às {hora_br.strftime('%H:%M')}"
 
     emit('receber_mensagem', {
         'id': nova_msg.id,
         'usuario': usuario.name,
-        'avatar': usuario.avatar,  # <-- Agora enviamos a foto real que veio do Google!
+        'avatar': usuario.avatar,
         'texto': nova_msg.text,
         'hora': hora_formatada,
         'cor': cor
@@ -70,10 +67,10 @@ def lidar_com_exclusao(dados):
             canal_id = str(msg.channel_id)
             db.session.delete(msg)
             db.session.commit()
-            # Manda o aviso de exclusão pra todo mundo na sala
             emit('mensagem_apagada', {'msg_id': msg_id}, to=canal_id)
-    except (OperationalError, PendingRollbackError):
+    except Exception as e:
         db.session.rollback()
+        print(f"[ERRO AO APAGAR] {e}")
 
 
 @socketio.on('entrar_call')
@@ -85,7 +82,6 @@ def lidar_entrar_call(dados):
     sala_call = f"voz_{canal_id}"
     join_room(sala_call)
 
-    # Busca a foto no banco usando a Sessão segura para mostrar na tela da Call
     user_id = session.get('user_id')
     avatar = None
     if user_id:
@@ -93,10 +89,9 @@ def lidar_entrar_call(dados):
             usuario = Person.query.get(user_id)
             if usuario:
                 avatar = usuario.avatar
-        except (OperationalError, PendingRollbackError):
+        except Exception as e:
             db.session.rollback()
 
-    # Avisa todos na sala de voz enviando o peer_id, nome e o AVATAR
     emit('novo_usuario_call', {
         'peer_id': peer_id,
         'usuario': nome_usuario,
@@ -120,23 +115,21 @@ def lidar_sair_call(dados):
 # ==========================================
 @socketio.on('entrar_dm')
 def on_entrar_dm(data):
-    # Proteção: Pega ID pela sessão
     user_id = session.get('user_id')
     if not user_id:
         return
 
     target_id = int(data.get('target_id'))
-
-    # Cria um nome de sala único para as duas pessoas. Ex: dm_1_2
     room = f"dm_{min(user_id, target_id)}_{max(user_id, target_id)}"
     join_room(room)
+    print(f"[SISTEMA] Usuário {user_id} entrou na sala de DM: {room}")
 
 
 @socketio.on('enviar_mensagem_direta')
 def on_enviar_mensagem_direta(data):
-    # Proteção: Pega ID pela sessão
     user_id = session.get('user_id')
     if not user_id:
+        print("[ERRO DM] Usuário não está logado na sessão.")
         return
 
     target_id = int(data.get('target_id'))
@@ -145,18 +138,20 @@ def on_enviar_mensagem_direta(data):
     try:
         usuario = Person.query.get(user_id)
         if not usuario:
+            print("[ERRO DM] Usuário não encontrado no banco.")
             return
 
-        # 1. Salva no banco de dados
+        # 1. Tenta salvar no banco de dados (Se o target_id não existir, vai dar erro aqui)
         nova_msg = DirectMessage(sender_id=user_id, receiver_id=target_id, content=texto)
         db.session.add(nova_msg)
         db.session.commit()
 
-        # Converte o horário para o mesmo padrão (UTC-3)
+        print(f"[SUCESSO] DM salva no banco! De: {user_id} Para: {target_id}")
+
         hora_br = nova_msg.timestamp - timedelta(hours=3)
         hora_formatada = f"Hoje às {hora_br.strftime('%H:%M')}"
 
-        # 2. Envia apenas para a sala privada dos dois
+        # 2. Envia para a sala privada
         room = f"dm_{min(user_id, target_id)}_{max(user_id, target_id)}"
         cor = usuario.role.color if usuario.role else '#5865F2'
 
@@ -170,6 +165,7 @@ def on_enviar_mensagem_direta(data):
             'cor': cor
         }, room=room)
 
-    except (OperationalError, PendingRollbackError):
+    except Exception as e:
         db.session.rollback()
+        print(f"[ERRO CRÍTICO NA DM] O banco bloqueou o salvamento: {e}")
         return

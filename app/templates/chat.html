@@ -32,6 +32,7 @@
             --green-color: #23a559;
             --red-color: #da373c;
             --yellow-color: #f0b232;
+            --purple-color: #eb459e;
             --nitro-gradient: linear-gradient(90deg, #8547c6, #b845c1, #ab5d8a);
         }
 
@@ -87,10 +88,12 @@
         .dm-notification-badge { background-color: var(--red-color); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; min-width: 16px; text-align: center; display: none; }
         .dm-notification-badge.active { display: block; animation: radar-pulse 1s infinite; }
 
+        .temp-tag { background-color: var(--purple-color); color: white; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-left: auto; }
+
         @keyframes radar-pulse { 0% { transform: scale(1); opacity: 0.1; } 50% { transform: scale(1.15); opacity: 0.3; } 100% { transform: scale(1); opacity: 0.1; } }
 
         /* ==========================================================================
-           RADAR BAZINGA MAP STYLES (Leaflet Customização)
+           RADAR BAZINGA MAP STYLES E MMO
            ========================================================================== */
         #bazinga-map {
             flex-grow: 1;
@@ -100,7 +103,6 @@
             z-index: 1;
         }
 
-        /* O Segredo do Dark Mode sem API Key: Filtro CSS Invertido */
         .leaflet-tile {
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
@@ -130,41 +132,61 @@
             color: white !important;
         }
 
-        /* Marcadores Customizados do Mapa */
+        /* Pinos de Usuários */
         .user-marker {
-            border-radius: 50%;
-            border: 3px solid var(--brand-color);
-            box-shadow: 0 0 15px var(--brand-color);
-            overflow: hidden;
-            background-color: var(--bg-tertiary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-weight: bold;
-            transition: transform 0.2s;
+            border-radius: 50%; border: 3px solid var(--brand-color); box-shadow: 0 0 15px var(--brand-color);
+            overflow: hidden; background-color: var(--bg-tertiary); display: flex; justify-content: center;
+            align-items: center; color: white; font-weight: bold; transition: all 0.3s ease;
         }
         .user-marker:hover { transform: scale(1.1); z-index: 1000 !important; }
 
-        .geo-note-marker {
-            background-color: var(--yellow-color);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--yellow-color), 0 0 20px var(--yellow-color);
-            border: 2px solid white;
-            cursor: pointer;
-            animation: radar-pulse 2s infinite;
+        /* O Modo Fantasma - Fica translúcido e opaco */
+        .user-marker.ghost {
+            opacity: 0.5; border-color: #5e6b8c; box-shadow: 0 0 10px rgba(94, 107, 140, 0.5);
+            filter: grayscale(50%) sepia(20%) hue-rotate(180deg);
         }
 
+        /* Servidores no Mapa */
         .server-marker {
-            border-radius: 12px;
-            border: 3px solid #fff;
-            box-shadow: 0 0 20px var(--green-color);
-            overflow: hidden;
-            background-color: var(--bg-primary);
-            cursor: pointer;
-            transition: transform 0.2s;
+            border-radius: 12px; border: 3px solid #fff; box-shadow: 0 0 20px var(--green-color);
+            overflow: hidden; background-color: var(--bg-primary); cursor: pointer; transition: transform 0.2s;
         }
         .server-marker:hover { transform: scale(1.1); }
+        .server-marker.hologram {
+            opacity: 0.6; box-shadow: 0 0 30px var(--green-color);
+            animation: floatAnim 2s infinite ease-in-out; pointer-events: none;
+        }
+
+        @keyframes floatAnim { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        /* O Balão de Fala HQ (GeoNote) */
+        .geo-note-bubble {
+            background-color: var(--bg-primary); border: 2px solid var(--note-color, var(--brand-color));
+            border-radius: 8px; padding: 8px 12px; color: white; font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; white-space: nowrap;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; align-items: center; gap: 8px; cursor: pointer;
+            transform-origin: bottom center;
+        }
+        .geo-note-bubble::after {
+            content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+            border-width: 8px 8px 0; border-style: solid; border-color: var(--note-color, var(--brand-color)) transparent transparent transparent;
+        }
+        .geo-note-bubble .note-emoji { font-size: 18px; }
+        .geo-note-bubble .note-actions { display: none; gap: 8px; margin-left: 12px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 12px; }
+        .geo-note-bubble:hover .note-actions { display: flex; }
+        .note-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; transition: 0.2s; font-size: 14px;}
+        .note-btn:hover { color: white; transform: scale(1.1); }
+
+        /* Estado Minimizado do Balão (Longe) */
+        .geo-note-bubble.minimized {
+            width: 16px; height: 16px; min-width: 16px; padding: 0; border-radius: 50%;
+            background-color: var(--note-color, var(--brand-color)); border: 2px solid white;
+            box-shadow: 0 0 10px var(--note-color, var(--brand-color)); overflow: hidden; opacity: 0.8;
+            transform: translateY(10px);
+        }
+        .geo-note-bubble.minimized * { display: none !important; }
+        .geo-note-bubble.minimized::after { display: none; }
 
         /* ==========================================================================
            3. PAINEL DE CONTROLE DO USUÁRIO (Canto inferior esquerdo)
@@ -239,7 +261,7 @@
         .mic-bar-fill { height: 100%; background-color: var(--green-color); width: 0%; transition: width 0.1s linear; }
 
         /* ==========================================================================
-           4. ÁREA CENTRAL (Chat de Texto Fluido)
+           4. ÁREA CENTRAL (Chat de Texto Fluido com Agrupamento estilo Discord)
            ========================================================================== */
         .chat-area { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-primary); position: relative; overflow: hidden; transition: background-color 0.3s;}
         .chat-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.2); z-index: 5; flex-shrink: 0;}
@@ -253,16 +275,26 @@
         .chat-messages::-webkit-scrollbar { width: 8px; }
         .chat-messages::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 4px; }
 
-        .message { display: flex; padding: 4px 16px 4px 72px; position: relative; margin-top: 1.0625rem; }
+        /* NOVA LÓGICA DE AGRUPAMENTO (FLUIDEZ) */
+        .message { display: flex; padding: 2px 16px 2px 72px; position: relative; margin-top: 0; }
+        .message.first { margin-top: 1.0625rem; }
         .message:hover { background-color: rgba(0,0,0,0.06); }
+
         .message .chat-avatar { position: absolute; left: 16px; top: 2px; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; cursor: pointer; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 18px;}
         .message .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .message.grouped .chat-avatar { display: none; }
+
         .message-content { display: flex; flex-direction: column; width: 100%; }
         .message-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+        .message.grouped .message-header { display: none; }
+
         .message-author { font-size: 16px; font-weight: 500; cursor: pointer; color: var(--text-header); }
         .message-author:hover { text-decoration: underline; }
         .message-timestamp { font-size: 12px; color: var(--text-muted); font-weight: 400; }
         .message-text { color: var(--text-normal); font-size: 16px; line-height: 1.375rem; word-wrap: break-word; white-space: pre-wrap;}
+
+        .grouped-timestamp { display: none; position: absolute; left: 16px; top: 2px; font-size: 10px; color: var(--text-muted); width: 48px; text-align: right; line-height: 1.375rem; user-select: none; font-weight: 600;}
+        .message.grouped:hover .grouped-timestamp { display: block; }
 
         .chat-input-wrapper { padding: 0 16px 24px 16px; flex-shrink: 0;}
         .chat-input-container { background-color: var(--bg-secondary); border-radius: 8px; padding: 0 16px; display: flex; align-items: center; min-height: 44px; gap: 8px;}
@@ -272,6 +304,37 @@
         .chat-input-actions { display: flex; align-items: center; gap: 4px; }
 
         .members-sidebar { width: 240px; background-color: var(--bg-secondary); display: flex; flex-direction: column; padding: 16px 8px; flex-shrink: 0; transition: background-color 0.3s;}
+
+        /* ==========================================================================
+           10. MERCADO ELITE (Loja e Bazar)
+           ========================================================================== */
+        .market-wrapper { display: none; flex-direction: column; flex-grow: 1; height: 100%; background-color: var(--bg-primary); overflow: hidden; }
+        .market-header { height: 48px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.2); z-index: 5; flex-shrink: 0; gap: 24px; }
+        .market-tab { font-size: 16px; font-weight: 600; color: var(--text-muted); cursor: pointer; position: relative; height: 100%; display: flex; align-items: center; transition: 0.2s; }
+        .market-tab:hover { color: var(--text-normal); }
+        .market-tab.active { color: var(--text-header); }
+        .market-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background-color: var(--brand-color); border-radius: 2px 2px 0 0; }
+
+        .market-content { flex-grow: 1; overflow-y: auto; padding: 24px 32px; scrollbar-width: thin; scrollbar-color: #1a1b1e transparent; display: none; }
+        .market-content.active { display: block; }
+        .market-content::-webkit-scrollbar { width: 8px; }
+        .market-content::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 4px; }
+
+        .market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; margin-top: 16px; }
+
+        .product-card { background-color: var(--bg-secondary); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.1); }
+        .product-img { width: 100%; aspect-ratio: 16/9; background-color: var(--bg-tertiary); object-fit: cover; }
+        .product-info { padding: 16px; display: flex; flex-direction: column; flex-grow: 1; }
+        .product-title { font-size: 16px; font-weight: 700; color: var(--text-header); margin-bottom: 4px; }
+        .product-author { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .product-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+
+        .price-bzc { color: var(--yellow-color); font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 4px; }
+        .price-pix { color: var(--green-color); font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 4px; }
+
+        .market-section-title { font-size: 20px; font-weight: 800; color: var(--text-header); margin: 32px 0 16px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;}
+        .market-section-title:first-child { margin-top: 0; }
 
         /* ==========================================================================
            5. ÁREA DE VÍDEO E CALL (WebRTC P2P)
@@ -491,8 +554,8 @@
 
                     <!-- BOTÃO HOME/AMIGOS (O Infinito) -->
                     <div class="server-wrapper">
-                        <div class="server-icon home-icon active" id="btn-home-view" title="Radar Bazinga (Mensagens Diretas)" style="background-color: var(--bg-primary); transition: 0.2s; padding: 10px;">
-                            <img src="{{ url_for('static', filename='img/icone_home.png') }}" alt="Home" style="width: 100%; height: 100%; object-fit: contain; border-radius: 0;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-infinity\' style=\'font-size: 24px;\'></i>';">
+                        <div class="server-icon home-icon active" id="btn-home-view" title="Radar Bazinga (Mensagens Diretas)" style="background-color: var(--bg-primary); padding: 10px;">
+                            <img src="{{ url_for('static', filename='img/icone_home.png') }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-infinity\' style=\'font-size: 24px;\'></i>';">
                         </div>
                     </div>
 
@@ -501,7 +564,7 @@
                     <!-- BOTÃO SERVIDOR BAZINGA -->
                     <div class="server-wrapper">
                         <div class="server-icon bazinga-server" id="btn-server-view" title="Bazinga Hub">
-                            <img src="{{ url_for('static', filename='img/bazinga_logo.png') }}" alt="BZ" onerror="this.style.display='none'; this.parentElement.innerText='BZ'">
+                            <img src="{{ url_for('static', filename='img/bazinga_logo.png') }}" onerror="this.style.display='none'; this.parentElement.innerText='BZ'">
                         </div>
                     </div>
 
@@ -526,7 +589,7 @@
                     <div class="channels-list">
                         <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA BAZINGA</div>
                         <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
-                        <div class="channel-item" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Em breve: Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
+                        <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
 
                         <div style="height: 1px; background-color: rgba(255,255,255,0.05); margin: 8px 16px;"></div>
 
@@ -539,30 +602,35 @@
                         </div>
 
                         <div id="dm-list-container" style="display: flex; flex-direction: column;">
-                            <!-- Card de DM Estilo Bazinga 1 -->
-                            <div class="dm-card user-dm-item" id="dm-john" data-user-id="2" data-status="dnd" data-name="John Censurado" data-avatar="https://ui-avatars.com/api/?name=John+Censurado&background=random">
-                                <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: transparent;">
-                                    <img src="https://ui-avatars.com/api/?name=John+Censurado&background=random" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-                                    <div class="status-indicator dnd"></div>
-                                </div>
-                                <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
-                                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">John Censurado</span>
-                                    <span style="color: var(--brand-color); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class="fa-solid fa-gamepad"></i> Jogando Marvel Rivals</span>
-                                </div>
-                                <div class="dm-notification-badge" id="badge-john">1</div>
-                            </div>
-
-                            <!-- Mock Amigo Online -->
-                             <div class="dm-card user-dm-item" id="dm-bazinga" data-user-id="3" data-status="online" data-name="Bazinga User" data-avatar="https://ui-avatars.com/api/?name=Bazinga+User&background=5865F2&color=fff">
-                                <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: transparent;">
-                                    <img src="https://ui-avatars.com/api/?name=Bazinga+User&background=5865F2&color=fff" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                            <!-- Anotações (Eu Mesmo) -->
+                            <div class="dm-card user-dm-item" id="dm-me" data-user-id="{{ usuario_atual.id }}" data-status="online" data-name="Anotações (Eu mesmo)">
+                                <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
+                                    {% if usuario_atual.avatar %}<img src="{{ usuario_atual.avatar }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">{% else %}<span>{{ usuario_atual.name[0]|upper }}</span>{% endif %}
                                     <div class="status-indicator online"></div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
-                                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">Bazinga User</span>
+                                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">Anotações (Eu mesmo)</span>
                                 </div>
-                                <div class="dm-notification-badge" id="badge-bazinga">99+</div>
+                                <div class="dm-notification-badge" id="badge-{{ usuario_atual.id }}">0</div>
                             </div>
+
+                            <!-- Loop Mágico -->
+                            {% for amigo in amigos %}
+                            <div class="dm-card user-dm-item" id="dm-{{ amigo.id }}" data-user-id="{{ amigo.id }}" data-status="online" data-name="{{ amigo.name }}" data-avatar="{{ amigo.avatar or '' }}">
+                                <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
+                                    {% if amigo.avatar %}
+                                        <img src="{{ amigo.avatar }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                                    {% else %}
+                                        <span>{{ amigo.name[0]|upper }}</span>
+                                    {% endif %}
+                                    <div class="status-indicator online"></div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
+                                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">{{ amigo.name }}</span>
+                                </div>
+                                <div class="dm-notification-badge" id="badge-{{ amigo.id }}">0</div>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </aside>
@@ -686,32 +754,32 @@
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--text-header); padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.1);" id="radar-header-title">
                         <i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar Bazinga
                     </div>
-                    <div style="display: flex; gap: 16px; align-items: center; flex-grow: 1;" id="radar-header-actions">
+                    <div style="display: flex; gap: 12px; align-items: center; flex-grow: 1; margin-left: 16px;" id="radar-header-actions">
                         <div class="bz-pill-btn active" id="btn-toggle-ghost" style="background: rgba(255,255,255,0.1); color: var(--text-header); cursor: pointer;"><i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF</div>
-                        <button class="btn btn-primary" id="btn-plantar-servidor" style="background-color: var(--green-color); padding: 4px 8px; font-size: 13px; font-weight: 600;"><i class="fa-solid fa-location-dot"></i> Plantar Servidor</button>
+                        <div style="width: 1px; height: 20px; background-color: rgba(255,255,255,0.1); margin: 0 4px;"></div>
+
+                        <!-- BOTOES MAPA -->
+                        <button class="btn" style="background-color: var(--bg-tertiary); color: var(--text-normal); font-weight: 600; padding: 6px 12px;" onclick="abrirModalNota('create')">
+                            <i class="fa-solid fa-comment-dots" style="color: var(--yellow-color);"></i> Deixar Nota
+                        </button>
+                        <button class="btn btn-primary" style="background-color: var(--green-color); padding: 6px 12px; font-weight: 600;" onclick="abrirModalServidor('create')">
+                            <i class="fa-solid fa-location-dot"></i> Plantar Servidor
+                        </button>
+
                     </div>
-                    <div style="display: flex; gap: 16px; color: var(--text-muted); font-size: 18px;">
-                        <i class="fa-solid fa-user-plus" style="cursor: pointer;" title="Adicionar Amigo" id="btn-header-add-friend"></i>
+                    <div style="display: flex; gap: 16px; color: var(--text-muted); font-size: 18px;" id="dm-header-actions">
                         <i class="fa-solid fa-inbox" style="cursor: pointer;" title="Caixa de Entrada"></i>
-                        <i class="fa-solid fa-circle-question" style="cursor: pointer;" title="Ajuda"></i>
                     </div>
                 </header>
 
                 <!-- O MAPA (Z-Index Inferior) -->
-                <div id="bazinga-map" style="flex-grow: 1; width: 100%; height: 100%; background-color: var(--bg-quaternary); z-index: 1;"></div>
-
-                <!-- Overlay invisível inicial enquanto carrega -->
-                <div id="map-loading-overlay" style="position: absolute; top: 48px; left: 0; right: 0; bottom: 0; background: var(--bg-primary); z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s;">
-                    <div style="font-size: 60px; color: var(--brand-color); animation: radar-pulse 1.5s infinite;"><i class="fa-solid fa-satellite-dish"></i></div>
-                    <h3 style="color: var(--text-header); margin-top: 16px;">Sintonizando satélites...</h3>
-                </div>
+                <div id="bazinga-map"></div>
 
                 <!-- NOVO: CHAT DE MENSAGEM DIRETA (Sobrepõe o mapa quando ativo) -->
-                <!-- RESOLVIDO O BUG DA BARRA DE ROLAGEM VAZANDO A TELA: AQUI AGORA TEM TOP E BOTTOM ABSOLUTOS -->
                 <div id="dm-chat-view" style="display: none; flex-direction: column; background-color: var(--bg-primary); position: absolute; top: 48px; left: 0; right: 0; bottom: 0; z-index: 2;">
                     <!-- Área de Mensagens -->
                     <div class="chat-messages" id="dm-messages-container" style="flex-grow: 1; padding: 16px; overflow-y: auto;">
-                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
+                        <div class="dm-welcome-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
                             <img id="dm-header-avatar" src="" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 16px; object-fit: cover;">
                             <h1 id="dm-welcome-title" style="color: white; font-size: 24px; margin-bottom: 8px;">Comece a conversar</h1>
                             <p style="color: var(--text-muted);">Este é o começo do seu histórico de mensagens diretas.</p>
@@ -788,6 +856,56 @@
                     </div>
                 </div>
             </div>
+
+            <!-- VIZUALIZAÇÃO 3: MERCADO ELITE (Oficial e Comunidade) -->
+            <div id="market-content-wrapper" class="market-wrapper">
+                <header class="market-header">
+                    <h2 style="color: var(--text-header); font-size: 16px; display: flex; align-items: center; gap: 8px; font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 16px;">
+                        <i class="fa-solid fa-store" style="color: var(--text-muted);"></i> Mercado Elite
+                    </h2>
+                    <div style="display: flex; gap: 24px; height: 100%;">
+                        <div class="market-tab active" data-tab="tab-loja">Loja Bazinga</div>
+                        <div class="market-tab" data-tab="tab-bazar">Bazar da Comunidade</div>
+                    </div>
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+                        <!-- DINÂMICO: PUXANDO DO BANCO DE DADOS -->
+                        <div class="price-bzc" title="Seus Bazinga Coins"><img src="{{ url_for('static', filename='img/icone_home.png') }}" style="width: 16px; filter: brightness(0) saturate(100%) invert(77%) sepia(50%) saturate(1048%) hue-rotate(345deg) brightness(101%) contrast(92%);"> {{ usuario_atual.bazinga_coins }}</div>
+                    </div>
+                </header>
+
+                <!-- ABA 1: LOJA OFICIAL (Cosméticos com BZC) -->
+                <div class="market-content active" id="tab-loja">
+
+                    <div class="market-section-title">Em Destaque</div>
+                    <div style="width: 100%; height: 200px; border-radius: 8px; background: linear-gradient(45deg, #5865F2, #ab5d8a); display: flex; flex-direction: column; justify-content: center; padding: 32px; position: relative; overflow: hidden; margin-bottom: 32px;">
+                        <div style="position: absolute; right: -20px; bottom: -40px; font-size: 200px; color: rgba(255,255,255,0.1); transform: rotate(-15deg);"><i class="fa-solid fa-bolt"></i></div>
+                        <span style="background: rgba(0,0,0,0.5); color: white; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; width: fit-content; text-transform: uppercase; margin-bottom: 12px;">Novo Lançamento</span>
+                        <h1 style="color: white; font-size: 32px; font-weight: 800; margin-bottom: 8px;">Pacote Cyberpunk</h1>
+                        <p style="color: rgba(255,255,255,0.8); max-width: 400px; font-size: 14px;">Domine o radar com um pino de nave neon e uma borda de avatar hacker. Exclusivo por tempo limitado.</p>
+                        <button class="btn btn-primary" style="width: fit-content; margin-top: 16px; background: white; color: black;"><i class="fa-solid fa-cart-shopping"></i> Comprar por 800 BZC</button>
+                    </div>
+
+                    <div class="market-section-title">Catálogo Oficial</div>
+                    <!-- AQUI O JAVASCRIPT INJETA OS ITENS DE BZC -->
+                    <div class="market-grid" id="loja-grid-container"></div>
+                </div>
+
+                <!-- ABA 2: BAZAR DA COMUNIDADE (PIX) -->
+                <div class="market-content" id="tab-bazar">
+
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
+                        <div>
+                            <div class="market-section-title" style="border: none; padding: 0; margin: 0;">Bazar da Comunidade</div>
+                            <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Apoie criadores independentes. Pagamento direto via PIX, sem taxas.</p>
+                        </div>
+                        <button class="btn btn-primary" style="background-color: #fff; color: #000;"><i class="fa-solid fa-plus"></i> Vender no Bazar</button>
+                    </div>
+
+                    <!-- AQUI O JAVASCRIPT INJETA OS ITENS DA COMUNIDADE (PIX) -->
+                    <div class="market-grid" id="bazar-grid-container"></div>
+                </div>
+
+            </div>
         </main>
 
         <!-- SIDEBAR DE MEMBROS DIREITA -->
@@ -827,6 +945,87 @@
             <div class="modal-footer" style="justify-content: space-between; align-items: center;">
                 <button class="btn-cancel" onclick="document.getElementById('add-server-modal').style.display='none'">Voltar</button>
                 <button class="btn btn-primary" onclick="showToast('Em breve! O Bazinga Hub vai permitir a criação de salas privadas no banco de dados!', 'info'); document.getElementById('add-server-modal').style.display='none'">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Deixar/Editar Nota no Mapa -->
+    <div class="modal-overlay" id="note-modal">
+        <div class="bazinga-modal">
+            <div class="modal-header">
+                <h2 id="note-modal-title">Deixar uma Nota</h2>
+                <p>Crie um holograma permanente no mapa para outros jogadores verem.</p>
+            </div>
+            <div class="modal-content">
+                <div style="display: flex; gap: 8px;">
+                    <textarea class="discord-input discord-textarea" id="note-text-input" placeholder="O que você encontrou aqui? Loot raro? Perigo?" style="flex-grow: 1; font-size: 16px; font-weight: bold;"></textarea>
+                    <button class="btn" style="background: var(--bg-tertiary); border: 1px solid rgba(0,0,0,0.2); width: 48px; font-size: 20px;" title="Escolher Emoji"><i class="fa-regular fa-face-smile"></i></button>
+                </div>
+
+                <div>
+                    <span class="control-label">Duração no Mapa</span>
+                    <div class="modal-btn-group" id="note-duration-group">
+                        <button class="q-btn" data-time="1">1 Hora</button>
+                        <button class="q-btn active" data-time="24">1 Dia</button>
+                        <button class="q-btn" data-time="168">7 Dias</button>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="control-label">Cor do Holograma</span>
+                    <div style="display: flex; gap: 12px;">
+                        <div class="color-preview-box active" style="background: var(--brand-color); width: 32px; height: 32px; border-radius: 50%; opacity:1;" onclick="selecionarCor(this, 'var(--brand-color)')"></div>
+                        <div class="color-preview-box" style="background: var(--green-color); width: 32px; height: 32px; border-radius: 50%; opacity:0.3;" onclick="selecionarCor(this, 'var(--green-color)')"></div>
+                        <div class="color-preview-box" style="background: var(--red-color); width: 32px; height: 32px; border-radius: 50%; opacity:0.3;" onclick="selecionarCor(this, 'var(--red-color)')"></div>
+                        <div class="color-preview-box" style="background: var(--yellow-color); width: 32px; height: 32px; border-radius: 50%; opacity:0.3;" onclick="selecionarCor(this, 'var(--yellow-color)')"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeNoteModal()">Cancelar</button>
+                <button class="btn btn-primary" id="note-action-btn" onclick="prepararPlantio('note')">Escolher Local no Mapa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Plantar/Editar Servidor no Mapa -->
+    <div class="modal-overlay" id="server-modal">
+        <div class="bazinga-modal">
+            <div class="modal-header">
+                <h2 id="server-modal-title">Plantar Servidor Base</h2>
+                <p>Ancore um dos seus servidores Discord na vida real. Jogadores próximos poderão entrar nele.</p>
+            </div>
+            <div class="modal-content">
+                <span class="control-label">Escolha o Servidor</span>
+                <div class="server-carousel">
+                    <button class="carousel-btn"><i class="fa-solid fa-chevron-left"></i></button>
+                    <div class="carousel-item">
+                        <div class="carousel-icon"><img src="https://ui-avatars.com/api/?name=Guilda&background=5865F2&color=fff"></div>
+                        <span style="font-weight: 600; color: var(--text-header);">A Guilda do Dragão</span>
+                    </div>
+                    <button class="carousel-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+
+                <div style="display: flex; gap: 16px;">
+                    <div style="flex: 1;">
+                        <span class="control-label">Ingressos (Vagas)</span>
+                        <div class="modal-btn-group" id="server-tickets-group">
+                            <button class="q-btn active" data-vagas="ilimitado">Ilimitado</button>
+                            <button class="q-btn" data-vagas="12">12</button>
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <span class="control-label">Duração</span>
+                        <div class="modal-btn-group" id="server-duration-group">
+                            <button class="q-btn active" data-tempo="permanente">Permanente</button>
+                            <button class="q-btn" data-tempo="24">24h</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeServerModal()">Cancelar</button>
+                <button class="btn btn-primary" id="server-action-btn" style="background-color: var(--green-color);" onclick="prepararPlantio('server')">Escolher Local no Mapa</button>
             </div>
         </div>
     </div>
@@ -1324,40 +1523,103 @@
         // --- SISTEMA DE NAVEGAÇÃO ENTRE AMIGOS E SERVIDOR ---
         const btnHomeView = document.getElementById('btn-home-view');
         const btnServerView = document.getElementById('btn-server-view');
+        const btnMercado = document.getElementById('btn-mercado');
         const dmsSidebar = document.getElementById('dms-sidebar');
         const bazingaSidebar = document.getElementById('bazinga-sidebar');
-        const homeContentWrapper = document.getElementById('home-content-wrapper');
-        const serverContentWrapper = document.getElementById('server-content-wrapper');
-        const serverMembersSidebar = document.getElementById('server-members-sidebar');
 
-        if(btnHomeView && btnServerView) {
+        function switchMainView(viewName) {
+            // Hide all main containers
+            const homeContent = document.getElementById('home-content-wrapper');
+            const serverContent = document.getElementById('server-content-wrapper');
+            const marketContent = document.getElementById('market-content-wrapper');
+            const dmChat = document.getElementById('dm-chat-view');
+            const radarMap = document.getElementById('bazinga-map');
+            const membersSidebar = document.getElementById('server-members-sidebar');
+
+            if(homeContent) homeContent.style.display = 'none';
+            if(serverContent) serverContent.style.display = 'none';
+            if(marketContent) marketContent.style.display = 'none';
+            if(dmChat) dmChat.style.display = 'none';
+            if(radarMap) radarMap.style.display = 'none';
+            if(membersSidebar) membersSidebar.style.display = 'none';
+
+            if (viewName === 'home') {
+                if(homeContent) homeContent.style.display = 'flex';
+                if(radarMap) radarMap.style.display = 'block';
+                if(bazingaMap) setTimeout(() => bazingaMap.invalidateSize(), 100);
+                document.getElementById('radar-header-actions').style.display = 'flex';
+                document.getElementById('dm-header-actions').style.display = 'flex';
+                document.getElementById('radar-header-title').innerHTML = `<i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar Bazinga`;
+            } else if (viewName === 'dm') {
+                if(homeContent) homeContent.style.display = 'flex';
+                if(dmChat) dmChat.style.display = 'flex';
+            } else if (viewName === 'server') {
+                if(serverContent) serverContent.style.display = 'flex';
+                if(membersSidebar) membersSidebar.style.display = 'flex';
+            } else if (viewName === 'market') {
+                if(marketContent) marketContent.style.display = 'flex';
+            }
+        }
+
+        function resetSidebars() {
+            document.querySelectorAll('.server-icon').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.channel-item').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.user-dm-item').forEach(d => d.classList.remove('active'));
+        }
+
+        if(btnHomeView && btnServerView && btnMercado) {
             btnHomeView.addEventListener('click', () => {
+                resetSidebars();
                 btnHomeView.classList.add('active');
-                btnServerView.classList.remove('active');
                 if(dmsSidebar) dmsSidebar.style.display = 'flex';
                 if(bazingaSidebar) bazingaSidebar.style.display = 'none';
-                if(homeContentWrapper) homeContentWrapper.style.display = 'flex';
-                if(serverContentWrapper) serverContentWrapper.style.display = 'none';
-                if(serverMembersSidebar) serverMembersSidebar.style.display = 'none';
 
-                // Recalcula o tamanho do mapa ao voltar para a aba principal
-                if(bazingaMap) {
-                    setTimeout(() => bazingaMap.invalidateSize(), 100);
-                } else {
-                    initMap();
-                }
+                const btnVoltarRadar = document.getElementById('btn-voltar-radar');
+                if(btnVoltarRadar) btnVoltarRadar.classList.add('active');
+                switchMainView('home');
             });
 
             btnServerView.addEventListener('click', () => {
+                resetSidebars();
                 btnServerView.classList.add('active');
-                btnHomeView.classList.remove('active');
                 if(dmsSidebar) dmsSidebar.style.display = 'none';
                 if(bazingaSidebar) bazingaSidebar.style.display = 'flex';
-                if(homeContentWrapper) homeContentWrapper.style.display = 'none';
-                if(serverContentWrapper) serverContentWrapper.style.display = 'flex';
-                if(serverMembersSidebar) serverMembersSidebar.style.display = 'flex';
+                switchMainView('server');
+            });
+
+            btnMercado.addEventListener('click', () => {
+                resetSidebars();
+                btnHomeView.classList.add('active');
+                btnMercado.classList.add('active');
+                if(dmsSidebar) dmsSidebar.style.display = 'flex';
+                if(bazingaSidebar) bazingaSidebar.style.display = 'none';
+
+                switchMainView('market');
+                carregarMercado();
             });
         }
+
+        const btnVoltarRadar = document.getElementById('btn-voltar-radar');
+        if(btnVoltarRadar) {
+            btnVoltarRadar.addEventListener('click', () => {
+                resetSidebars();
+                btnHomeView.classList.add('active');
+                btnVoltarRadar.classList.add('active');
+                switchMainView('home');
+            });
+        }
+
+        // Sistema de Abas do Mercado Elite
+        document.querySelectorAll('.market-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.market-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.market-content').forEach(c => c.classList.remove('active'));
+
+                tab.classList.add('active');
+                const targetId = tab.getAttribute('data-tab');
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
 
         document.getElementById('btn-add-server').addEventListener('click', () => {
             document.getElementById('add-server-modal').style.display = 'flex';
@@ -1409,36 +1671,156 @@
         });
 
         // ==========================================
-        // 2. LEAFLET MAPA: RADAR BAZINGA E GEONOTES
+        // 2. LEAFLET MAPA: RADAR BAZINGA E GEONOTES E MMO
         // ==========================================
         let bazingaMap = null;
         let myMapMarker = null;
         let mapMarkers = {}; // Cofre para guardar os pinos dos amigos
         let isPlantingServer = false;
         let serverMarkerPreview = null;
-        let ghostMode = false;
+        let geoNotesAtivas = []; // Array para monitorar proximidade
 
-        document.getElementById('btn-toggle-ghost')?.addEventListener('click', function() {
-            ghostMode = !ghostMode;
+        let ghostMode = localStorage.getItem('bzGhostMode') === 'true';
+        const btnToggleGhost = document.getElementById('btn-toggle-ghost');
+
+        function updateGhostVisuals() {
             if(ghostMode) {
-                this.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: ON';
-                this.style.color = 'var(--red-color)';
-                showToast("Modo Fantasma Ativado. Sua localização está invisível no radar.", "warning");
+                btnToggleGhost.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: ON';
+                btnToggleGhost.style.color = 'var(--red-color)';
+                if(myMapMarker) L.DomUtil.addClass(myMapMarker._icon, 'ghost');
             } else {
-                this.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF';
-                this.style.color = 'var(--text-header)';
-                showToast("Modo Fantasma Desativado. Sua localização está visível no radar.", "success");
-                // Força uma atualização imediata ao desligar
-                if(myMapMarker && navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(pos => {
-                        atualizarMinhaPosicao(pos.coords.latitude, pos.coords.longitude);
-                         if(typeof socket !== 'undefined' && socket.connected) {
-                            socket.emit('atualizar_localizacao', { lat: pos.coords.latitude, lng: pos.coords.longitude });
-                        }
-                    });
-                }
+                btnToggleGhost.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF';
+                btnToggleGhost.style.color = 'var(--text-header)';
+                if(myMapMarker) L.DomUtil.removeClass(myMapMarker._icon, 'ghost');
+            }
+        }
+
+        btnToggleGhost?.addEventListener('click', function() {
+            ghostMode = !ghostMode;
+            localStorage.setItem('bzGhostMode', ghostMode);
+            updateGhostVisuals();
+            showToast(ghostMode ? "Modo Fantasma Ativado. Você está invisível para os outros." : "Modo Fantasma Desativado. Cuidado na rua!", ghostMode ? "warning" : "success");
+
+            if(!ghostMode && myMapMarker && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    atualizarMinhaPosicao(pos.coords.latitude, pos.coords.longitude);
+                    if(typeof socket !== 'undefined' && socket.connected) {
+                        socket.emit('atualizar_localizacao', { lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    }
+                });
             }
         });
+
+        // Calculadora de Distância em Metros (Haversine)
+        function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Metros
+            const r1 = lat1 * Math.PI/180, r2 = lat2 * Math.PI/180;
+            const dLat = (lat2-lat1) * Math.PI/180, dLon = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(r1) * Math.cos(r2) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Radar de Proximidade (Verifica se chegou perto das notas)
+        function verificarProximidadeRadar() {
+            if(!myMapMarker || geoNotesAtivas.length === 0) return;
+            const myPos = myMapMarker.getLatLng();
+
+            geoNotesAtivas.forEach(nota => {
+                const dist = calcularDistanciaMetros(myPos.lat, myPos.lng, nota.lat, nota.lng);
+                const bubble = nota.marker.getElement().querySelector('.geo-note-bubble');
+                if(bubble) {
+                    if(dist < 100) { // Se estiver a menos de 100 metros
+                        bubble.classList.remove('minimized');
+                    } else {
+                        bubble.classList.add('minimized');
+                    }
+                }
+            });
+        }
+        setInterval(verificarProximidadeRadar, 1500);
+
+        // ==========================================
+        // SISTEMA DE PLANTIO E MODAIS (EDITAR/CRIAR)
+        // ==========================================
+        let plantingMode = null; // 'note' ou 'server'
+        let placementPreview = null;
+        let selectedNoteColor = 'var(--brand-color)';
+        let editingItemId = null; // ID to track if we are editing
+
+        document.querySelectorAll('.modal-btn-group .q-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const group = this.parentElement;
+                group.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        function selecionarCor(element, cor) {
+            document.querySelectorAll('.color-preview-box').forEach(el => el.style.opacity = '0.3');
+            element.style.opacity = '1'; selectedNoteColor = cor;
+        }
+
+        // Modal de NOTA
+        function abrirModalNota(modo, id = null) {
+            document.getElementById('note-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('note-modal').classList.add('active'), 10);
+            if(modo === 'create') {
+                editingItemId = null;
+                document.getElementById('note-modal-title').innerText = "Deixar uma Nota";
+                document.getElementById('note-action-btn').innerText = "Escolher Local no Mapa";
+                document.getElementById('note-action-btn').onclick = () => prepararPlantio('note');
+                document.getElementById('note-text-input').value = '';
+            } else if (modo === 'edit') {
+                editingItemId = id;
+                document.getElementById('note-modal-title').innerText = "Editar sua Nota";
+                document.getElementById('note-action-btn').innerText = "Salvar Alterações";
+                document.getElementById('note-action-btn').onclick = () => salvarEdicao('note');
+            }
+        }
+        function closeNoteModal() {
+            document.getElementById('note-modal').classList.remove('active');
+            setTimeout(() => document.getElementById('note-modal').style.display = 'none', 200);
+        }
+
+        // Modal de SERVIDOR
+        function abrirModalServidor(modo, id = null) {
+            document.getElementById('server-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('server-modal').classList.add('active'), 10);
+            if(modo === 'create') {
+                editingItemId = null;
+                document.getElementById('server-modal-title').innerText = "Plantar Servidor Base";
+                document.getElementById('server-action-btn').innerText = "Escolher Local no Mapa";
+                document.getElementById('server-action-btn').onclick = () => prepararPlantio('server');
+            } else if (modo === 'edit') {
+                editingItemId = id;
+                document.getElementById('server-modal-title').innerText = "Configurar Servidor Base";
+                document.getElementById('server-action-btn').innerText = "Salvar e Atualizar";
+                document.getElementById('server-action-btn').onclick = () => salvarEdicao('server');
+            }
+        }
+        function closeServerModal() {
+            document.getElementById('server-modal').classList.remove('active');
+            setTimeout(() => document.getElementById('server-modal').style.display = 'none', 200);
+        }
+
+        function prepararPlantio(mode) {
+            plantingMode = mode;
+            closeNoteModal(); closeServerModal();
+            document.getElementById('bazinga-map').style.cursor = 'crosshair';
+            showToast("Holograma ativo! Clique no mapa para confirmar o local exato.", "info");
+        }
+
+        function salvarEdicao(mode) {
+            closeNoteModal(); closeServerModal();
+            showToast(mode === 'note' ? "Sua Geo-Note foi atualizada!" : "Regras do servidor alteradas com sucesso!", "success");
+        }
+
+        function apagarItem(mode, id) {
+            openConfirmModal("Apagar " + (mode === 'note' ? "Nota" : "Servidor"), "Uma vez apagado, ele sumirá do mapa de todos. Prosseguir?", () => {
+                showToast("Item apagado via hack no satélite.", "success");
+            });
+        }
 
         function initMap() {
             if(bazingaMap) return; // Evita inicialização dupla
@@ -1471,67 +1853,46 @@
             };
             locControl.addTo(bazingaMap);
 
-            // Lógica Dark Souls: Deixar uma Geo-Note clicando no mapa
-            bazingaMap.on('click', function(e) {
-                if (isPlantingServer) {
-                    isPlantingServer = false;
-                    document.getElementById('bazinga-map').style.cursor = '';
+            // Holograma seguindo o mouse (O Ghost Preview)
+            bazingaMap.on('mousemove', function(e) {
+                if(!plantingMode) return;
 
-                    openInputModal("Plantar Servidor", "Nomeie sua nova base/servidor geolocalizado:", "Ex: Loja Pokémon Central", (serverName) => {
-                        if(serverName && serverName.trim() !== "") {
-                            showToast(`Servidor "${serverName}" plantado com sucesso!`, "success");
-                            // Renderização visual temporária
-                            const serverIcon = L.divIcon({
-                                className: 'server-marker',
-                                html: `<img src="https://ui-avatars.com/api/?name=${serverName.replace(/\s/g, '+')}&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">`,
-                                iconSize: [48, 48],
-                                iconAnchor: [24, 48]
-                            });
-                            const srv = L.marker([e.latlng.lat, e.latlng.lng], {icon: serverIcon}).addTo(bazingaMap);
-                            srv.bindPopup(`
-                                <div style='text-align:center; min-width: 150px;'>
-                                    <h3 style='color:var(--text-header); font-size: 14px; margin-bottom: 4px;'>${serverName}</h3>
-                                    <p style='color:var(--text-muted); font-size: 12px; margin-bottom: 8px;'><i class="fa-solid fa-users"></i> 1 jogador online</p>
-                                    <button class='btn btn-primary' style='width:100%; padding: 6px; font-size: 12px;' onclick='document.getElementById("btn-server-view").click();'>Entrar no Servidor</button>
-                                </div>
-                            `);
-                        }
-                    });
-                    if(serverMarkerPreview) {
-                        bazingaMap.removeLayer(serverMarkerPreview);
-                        serverMarkerPreview = null;
-                    }
-                    return;
+                if(!placementPreview) {
+                    let htmlContent = '';
+                    if(plantingMode === 'note') htmlContent = `<div class="geo-note-bubble" style="opacity:0.8; pointer-events:none; --note-color: ${selectedNoteColor};"><i class="fa-solid fa-comment-dots" style="font-size:18px;"></i> Alocando Nota...</div>`;
+                    if(plantingMode === 'server') htmlContent = `<div class="server-marker hologram"><img src="https://ui-avatars.com/api/?name=Guilda&background=5865F2&color=fff" style="width:100%;height:100%;"></div>`;
+
+                    const previewIcon = L.divIcon({ className: '', html: htmlContent, iconSize: [0, 0] });
+                    placementPreview = L.marker([e.latlng.lat, e.latlng.lng], {icon: previewIcon, interactive: false}).addTo(bazingaMap);
+                } else {
+                    placementPreview.setLatLng([e.latlng.lat, e.latlng.lng]);
                 }
-
-                openInputModal("Nova Geo-Note", "Deixe uma mensagem holográfica no chão para outros jogadores:", "Ex: Loot raro nesta área...", (noteText) => {
-                    if(noteText && noteText.trim() !== "") {
-                        // Manda para o backend via Socket.IO
-                        if(typeof socket !== 'undefined' && socket.connected) {
-                            socket.emit('criar_geonote', { lat: e.latlng.lat, lng: e.latlng.lng, texto: noteText });
-                        }
-                        // Renderiza instantaneamente para o próprio usuário
-                        renderizarGeoNote(e.latlng.lat, e.latlng.lng, noteText, currentUserName, "Agora mesmo");
-                        showToast("Geo-Note deixada com sucesso!", "success");
-                    }
-                });
             });
 
-            // Lógica de Preview do Servidor
-            bazingaMap.on('mousemove', function(e) {
-                if(isPlantingServer) {
-                    if(!serverMarkerPreview) {
-                        const serverIconPreview = L.divIcon({
-                            className: 'server-marker',
-                            html: '<div style="width:100%;height:100%;background-color:var(--brand-color);display:flex;justify-content:center;align-items:center;color:white;opacity:0.7;"><i class="fa-solid fa-plus"></i></div>',
-                            iconSize: [48, 48],
-                            iconAnchor: [24, 48]
-                        });
-                        serverMarkerPreview = L.marker([e.latlng.lat, e.latlng.lng], {icon: serverIconPreview, interactive: false}).addTo(bazingaMap);
-                    } else {
-                        serverMarkerPreview.setLatLng([e.latlng.lat, e.latlng.lng]);
-                    }
+            // Clique para Plantar (Transação Final)
+            bazingaMap.on('click', function(e) {
+                if (!plantingMode) return;
+
+                if (plantingMode === 'note') {
+                    const texto = document.getElementById('note-text-input').value || "Nota Misteriosa";
+                    if(typeof socket !== 'undefined' && socket.connected) socket.emit('criar_geonote', { lat: e.latlng.lat, lng: e.latlng.lng, texto: texto, cor: selectedNoteColor });
+                    renderizarGeoNote(Date.now(), e.latlng.lat, e.latlng.lng, texto, currentUserName, "Agora mesmo", selectedNoteColor);
+                    showToast("Nota cravada no mapa!", "success");
+                    document.getElementById('note-text-input').value = '';
                 }
+                else if (plantingMode === 'server') {
+                    const srvName = "A Guilda do Dragão"; // Pegaria do carousel real
+                    const vagasBtn = document.querySelector('#server-tickets-group .active').getAttribute('data-vagas');
+                    const vagas = vagasBtn === 'ilimitado' ? '∞' : parseInt(vagasBtn);
+
+                    if(typeof socket !== 'undefined' && socket.connected) socket.emit('plantar_servidor', { lat: e.latlng.lat, lng: e.latlng.lng, nome: srvName, vagas: vagas });
+                    renderizarServidorMapa(Date.now(), e.latlng.lat, e.latlng.lng, srvName, currentUserName, vagas, 1);
+                    showToast(`O servidor "${srvName}" emergiu do solo!`, "success");
+                }
+
+                document.getElementById('bazinga-map').style.cursor = '';
+                if(placementPreview) { bazingaMap.removeLayer(placementPreview); placementPreview = null; }
+                plantingMode = null;
             });
 
             // TELETRANSPORTE (Correção do GPS do PC): Dois cliques para mover seu avatar manualmente
@@ -1570,15 +1931,14 @@
                 atualizarMinhaPosicao(-23.550520, -46.633308); // Fallback direto
             }
 
-            // Mockar dados (Servidores locais, amigos e notas antigas)
-            mockMapEntities(-23.550520, -46.633308);
-
             // Remover overlay de carregamento com transição suave
             const overlay = document.getElementById('map-loading-overlay');
             if(overlay) {
                 overlay.style.opacity = '0';
                 setTimeout(() => overlay.style.display = 'none', 500);
             }
+
+            carregarDadosDoMapa();
         }
 
         function atualizarMinhaPosicao(lat, lng) {
@@ -1592,6 +1952,7 @@
                     iconAnchor: [20, 20]
                 });
                 myMapMarker = L.marker([lat, lng], {icon: myIcon, zIndexOffset: 1000}).addTo(bazingaMap);
+                updateGhostVisuals();
                 myMapMarker.bindPopup("<div style='text-align:center;'><b>Você está aqui!</b><br><span style='color:var(--text-muted); font-size:12px;'>Monitorando o radar...</span></div>");
                 bazingaMap.setView([lat, lng], 16);
             } else {
@@ -1600,138 +1961,197 @@
             }
         }
 
-        function renderizarGeoNote(lat, lng, texto, autor, tempo) {
-            const noteIcon = L.divIcon({
-                className: 'geo-note-marker',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8],
-                html: '' // CSS faz o brilho pulsar
-            });
-            const note = L.marker([lat, lng], {icon: noteIcon}).addTo(bazingaMap);
-            note.bindPopup(`<div style='text-align:center; font-style:italic; font-family: serif; font-size: 14px;'>"${texto}"</div><div style='text-align:right; font-size:10px; color:var(--text-muted); margin-top:4px;'>- ${autor} (${tempo})</div>`);
+        // Renderiza as Notas como Balões de HQ Reativos
+        function renderizarGeoNote(id, lat, lng, texto, autor, tempo, cor = 'var(--brand-color)') {
+            const isDono = (autor === currentUserName);
+            const acoesHtml = isDono ? `<div class="note-actions"><button class="note-btn" title="Editar" onclick="abrirModalNota('edit', ${id})"><i class="fa-solid fa-pen"></i></button><button class="note-btn" title="Apagar" style="color:var(--red-color);" onclick="apagarItem('note', ${id})"><i class="fa-solid fa-xmark"></i></button></div>` : '';
+
+            const htmlContent = `
+                <div class="geo-note-bubble minimized" style="--note-color: ${cor};">
+                    <span class="note-emoji"><i class="fa-solid fa-comment"></i></span>
+                    <div style="display:flex; flex-direction:column; max-width:200px; white-space:normal;">
+                        <span style="line-height:1.2;">${texto}</span>
+                        <span style="font-size:9px; opacity:0.7; font-weight:normal; margin-top:4px;">De: ${autor}</span>
+                    </div>
+                    ${acoesHtml}
+                </div>
+            `;
+            const noteIcon = L.divIcon({ className: '', iconSize: [0, 0], html: htmlContent });
+            const marker = L.marker([lat, lng], {icon: noteIcon}).addTo(bazingaMap);
+
+            // Joga no radar!
+            geoNotesAtivas.push({ id: id, lat: lat, lng: lng, marker: marker });
         }
 
-        function mockMapEntities(baseLat, baseLng) {
-            // 1. Servidor Geolocalizado (Ex: Praça ou Shopping)
+        // Renderiza os Servidores Plantados (Com Vagas)
+        function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "∞", online = 1) {
             const serverIcon = L.divIcon({
                 className: 'server-marker',
-                html: '<img src="https://ui-avatars.com/api/?name=BZ&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">',
-                iconSize: [48, 48],
-                iconAnchor: [24, 48]
+                html: `<img src="https://ui-avatars.com/api/?name=${nome.replace(/\s/g, '+')}&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">`,
+                iconSize: [48, 48], iconAnchor: [24, 48]
             });
-            const srv = L.marker([baseLat + 0.003, baseLng + 0.004], {icon: serverIcon}).addTo(bazingaMap);
-            srv.bindPopup(`
-                <div style='text-align:center; min-width: 150px;'>
-                    <h3 style='color:var(--text-header); font-size: 14px; margin-bottom: 4px;'>Bazinga Hub Local</h3>
-                    <p style='color:var(--text-muted); font-size: 12px; margin-bottom: 8px;'><i class="fa-solid fa-users"></i> 12 jogadores ativos</p>
-                    <button class='btn btn-primary' style='width:100%; padding: 6px; font-size: 12px;' onclick='document.getElementById("btn-server-view").click();'>Entrar no Servidor</button>
-                </div>
-            `);
+            const srv = L.marker([lat, lng], {icon: serverIcon}).addTo(bazingaMap);
 
-            // 2. Amigo Próximo Falso (Mock visual)
-            const friendIcon = L.divIcon({
-                className: 'user-marker',
-                html: '<img src="https://ui-avatars.com/api/?name=JC&background=da373c&color=fff" style="width:100%;height:100%; object-fit: cover;">',
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
-            });
-            const frnd = L.marker([baseLat - 0.002, baseLng - 0.003], {icon: friendIcon}).addTo(bazingaMap);
-            frnd.bindPopup(`
-                <div style='display: flex; align-items: center; gap: 8px;'>
-                    <div style='width: 8px; height: 8px; border-radius: 50%; background: var(--red-color);'></div>
-                    <b>John Censurado</b>
+            const numVagas = vagas === "∞" ? 9999 : parseInt(vagas);
+            const vagasTexto = vagas === "∞" ? "Ingressos Ilimitados" : `${online}/${vagas} Vagas`;
+
+            let btnHtml = '';
+            if (online >= numVagas) {
+                btnHtml = `<button class='btn btn-danger' style='width:100%; padding: 6px; font-size: 12px; cursor:not-allowed;' disabled><i class="fa-solid fa-lock"></i> Sem mais ingressos</button>`;
+            } else {
+                btnHtml = `<button class='btn btn-primary' style='width:100%; padding: 6px; font-size: 12px; background:var(--green-color);' onclick='document.getElementById("btn-server-view").click();'><i class="fa-solid fa-door-open"></i> Entrar no Servidor</button>`;
+            }
+
+            const acoesOwner = (owner === currentUserName) ? `<div style="display:flex; justify-content:center; gap:24px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;"><i class="fa-solid fa-pen" style="color:var(--text-muted); cursor:pointer; font-size:16px; transition:0.2s;" title="Editar Servidor" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'" onclick="abrirModalServidor('edit', ${id})"></i> <i class="fa-solid fa-trash" style="color:var(--red-color); cursor:pointer; font-size:16px; transition:0.2s;" title="Apagar Servidor" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='none'" onclick="apagarItem('server', ${id})"></i></div>` : '';
+
+            srv.bindPopup(`
+                <div style='text-align:center; min-width: 180px; font-family: gg sans;'>
+                    <h3 style='color:var(--text-header); font-size: 16px; font-weight:800; margin-bottom: 4px;'>${nome}</h3>
+                    <p style='font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-bottom: 12px;'>Dono: ${owner}</p>
+                    <div style='display:flex; justify-content:center; gap:16px; font-size: 11px; font-weight:600; color:var(--text-muted); margin-bottom: 16px; background:rgba(0,0,0,0.2); padding:8px; border-radius:4px;'>
+                        <span style="display:flex; flex-direction:column;"><i class="fa-solid fa-users" style="color:var(--green-color); font-size:16px; margin-bottom:4px;"></i> ${online} Online</span>
+                        <span style="display:flex; flex-direction:column;"><i class="fa-solid fa-ticket" style="color:var(--yellow-color); font-size:16px; margin-bottom:4px;"></i> ${vagasTexto}</span>
+                    </div>
+                    ${btnHtml}
+                    ${acoesOwner}
                 </div>
-                <div style='color:var(--text-muted); font-size:11px; margin-top:4px;'>A 300 metros de distância</div>
-                <button class='btn' style='background: var(--bg-tertiary); color: var(--text-normal); width: 100%; margin-top: 8px; padding: 4px; font-size: 11px;'><i class="fa-solid fa-paper-plane"></i> Mandar DM</button>
             `);
         }
 
-        document.getElementById('btn-plantar-servidor').addEventListener('click', () => {
-            isPlantingServer = !isPlantingServer;
-            if(isPlantingServer) {
-                document.getElementById('bazinga-map').style.cursor = 'crosshair';
-                showToast("Modo Construção de Servidor ativado. Clique em um local do mapa.", "info");
-            } else {
-                document.getElementById('bazinga-map').style.cursor = '';
-                if(serverMarkerPreview) {
-                    bazingaMap.removeLayer(serverMarkerPreview);
-                    serverMarkerPreview = null;
-                }
-            }
-        });
+        async function carregarDadosDoMapa() {
+            try {
+                const resp = await fetch('/api/mapa/dados');
+                const dados = await resp.json();
+                dados.notas.forEach(n => renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.hora, n.cor || 'var(--brand-color)'));
+                dados.servers.forEach(s => renderizarServidorMapa(s.id, s.lat, s.lng, s.name, s.owner, s.vagas || "∞", 1));
+            } catch(e) { console.log("Carregando mapa limpo."); }
+        }
 
         // ==========================================
-        // LÓGICA DE MENSAGENS DIRETAS (DMs) E EMPILHAMENTO (LIFO)
+        // LÓGICA DE MENSAGENS DIRETAS E CLIQUE NO DM
         // ==========================================
-        const bazingaMapContainer = document.getElementById('bazinga-map');
-        const dmChatView = document.getElementById('dm-chat-view');
-        const btnVoltarRadar = document.getElementById('btn-voltar-radar');
-        const dmListContainer = document.getElementById('dm-list-container');
-        const radarHeaderTitle = document.getElementById('radar-header-title');
-        const radarHeaderActions = document.getElementById('radar-header-actions');
         let currentDmUserId = null;
 
-        // Botão Radar: Esconde Chat DM e Mostra Mapa, e restaura o Header original
-        if(btnVoltarRadar) {
-            btnVoltarRadar.addEventListener('click', () => {
-                btnVoltarRadar.classList.add('active');
-                document.querySelectorAll('.user-dm-item').forEach(d => d.classList.remove('active'));
-                if(dmChatView) dmChatView.style.display = 'none';
-                if(bazingaMapContainer) bazingaMapContainer.style.display = 'block';
-                if(bazingaMap) setTimeout(() => bazingaMap.invalidateSize(), 100);
+        function setupDMClickListeners() {
+            document.querySelectorAll('.user-dm-item').forEach(dmCard => {
+                if(dmCard.getAttribute('data-listener') === 'true') return;
+                dmCard.setAttribute('data-listener', 'true');
 
-                currentDmUserId = null;
+                dmCard.addEventListener('click', async function() {
+                    resetSidebars();
+                    btnHomeView.classList.add('active');
+                    this.classList.add('active');
 
-                // Restaura o Header
-                radarHeaderTitle.innerHTML = `<i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar Bazinga`;
-                radarHeaderActions.style.display = 'flex';
+                    currentDmUserId = this.getAttribute('data-user-id');
+                    if(typeof socket !== 'undefined' && socket.connected) {
+                        socket.emit('entrar_dm', { target_id: parseInt(currentDmUserId) });
+                    }
+
+                    const badgeId = this.id.replace('dm-', 'badge-');
+                    const badge = document.getElementById(badgeId);
+                    if(badge) {
+                        badge.classList.remove('active');
+                        badge.innerText = '0';
+                    }
+
+                    const friendName = this.getAttribute('data-name');
+                    const friendAvatar = this.getAttribute('data-avatar');
+                    const status = this.getAttribute('data-status');
+
+                    let statusColor = 'var(--text-muted)';
+                    if(status === 'online') statusColor = 'var(--green-color)';
+                    if(status === 'dnd') statusColor = 'var(--red-color)';
+                    if(status === 'idle') statusColor = 'var(--yellow-color)';
+
+                    document.getElementById('radar-header-actions').style.display = 'none';
+                    let headerHtml = `<i class="fa-solid fa-at" style="color: var(--text-muted); font-size: 20px;"></i><span style="color: var(--text-header); font-size: 16px; font-weight: 700; margin-left: 8px;">${friendName}</span><div style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColor}; margin-left: 8px;"></div>`;
+
+                    const dmActions = document.getElementById('dm-header-actions');
+                    if(this.classList.contains('temp-dm')) {
+                        const id = this.getAttribute('data-user-id');
+                        headerHtml += `<span class="temp-tag">Temporário 24h</span>`;
+                        dmActions.innerHTML = `<button class="btn btn-primary" style="background:var(--green-color); padding: 4px 12px; font-size: 12px;" onclick="aceitarDM(${id})"><i class="fa-solid fa-check"></i> Aceitar</button><button class="btn btn-danger" style="padding: 4px 12px; font-size: 12px;" onclick="recusarDM(${id})"><i class="fa-solid fa-xmark"></i> Recusar</button>`;
+                    } else {
+                        dmActions.innerHTML = `<i class="fa-solid fa-inbox" style="cursor: pointer;" title="Caixa de Entrada"></i>`;
+                    }
+                    document.getElementById('radar-header-title').innerHTML = headerHtml;
+
+                    switchMainView('dm');
+
+                    const messageInput = document.getElementById('dm-message-input');
+                    if(messageInput) messageInput.placeholder = `Conversar com @${friendName}`;
+
+                    const container = document.getElementById('dm-messages-container');
+
+                    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">Carregando histórico de DMs...</p>';
+                    try {
+                        const resp = await fetch(`/api/dms/${currentDmUserId}`);
+                        const mensagens = await resp.json();
+                        container.innerHTML = '';
+
+                        if(mensagens.length === 0) {
+                            container.innerHTML = `
+                                <div class="dm-welcome-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
+                                    <img id="dm-header-avatar" src="" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 16px; object-fit: cover;">
+                                    <h1 id="dm-welcome-title" style="color: white; font-size: 24px; margin-bottom: 8px;">Comece a conversar</h1>
+                                    <p style="color: var(--text-muted);">Este é o começo do seu histórico de mensagens diretas.</p>
+                                </div>
+                            `;
+                        } else {
+                            mensagens.forEach(msg => {
+                                appendMessageGrouped(container, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor);
+                            });
+                        }
+                    } catch(err) {
+                        container.innerHTML = '<p style="color: var(--red-color); text-align: center;">Erro ao carregar mensagens.</p>';
+                    }
+                });
             });
         }
+        setupDMClickListeners();
 
-        // Clique em um Amigo: Abre o Chat, altera o Header e zera notificações
-        document.querySelectorAll('.user-dm-item').forEach(dmCard => {
-            dmCard.addEventListener('click', function() {
-                // 1. Controle de Estado Visual
-                document.querySelectorAll('.user-dm-item').forEach(d => d.classList.remove('active'));
-                if(btnVoltarRadar) btnVoltarRadar.classList.remove('active');
-                this.classList.add('active');
-
-                // Define quem é o alvo atual para o Socket.io
-                currentDmUserId = this.getAttribute('data-user-id');
-
-                // 2. Remove notificação (Bolinha de lido) e zera o contador
-                const badgeId = this.id.replace('dm-', 'badge-');
-                const badge = document.getElementById(badgeId);
-                if(badge) {
-                    badge.classList.remove('active');
-                    badge.innerText = '0';
-                }
-
-                // 3. Pega dados do amigo
-                const friendName = this.getAttribute('data-name');
-                const friendAvatar = this.getAttribute('data-avatar');
-
-                // 4. Modifica o Header (Esconde os botões e mostra o @Nome) sem a bolinha de status, conforme pedido.
-                radarHeaderActions.style.display = 'none';
-                radarHeaderTitle.innerHTML = `
-                    <i class="fa-solid fa-at" style="color: var(--text-muted); font-size: 20px;"></i>
-                    <span style="color: var(--text-header); font-size: 16px; font-weight: 700; margin-left: 8px;">${friendName}</span>
+        function iniciarDMTemporaria(id, nome, avatar) {
+            let existingCard = document.getElementById(`dm-${id}`);
+            if(!existingCard) {
+                const container = document.getElementById('dm-list-container');
+                const avatarHtml = avatar && avatar !== 'null' && avatar !== '' ? `<img src="${avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : `<span>${nome[0].toUpperCase()}</span>`;
+                existingCard = document.createElement('div');
+                existingCard.className = 'dm-card user-dm-item temp-dm';
+                existingCard.id = `dm-${id}`;
+                existingCard.setAttribute('data-user-id', id);
+                existingCard.setAttribute('data-name', nome);
+                existingCard.innerHTML = `
+                    <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
+                        ${avatarHtml}
+                        <div class="status-indicator online"></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
+                        <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">${nome}</span>
+                    </div>
                 `;
+                container.insertBefore(existingCard, container.children[1]);
+                setupDMClickListeners();
+            }
+            existingCard.click();
+        }
 
-                // 5. Preenche a tela de Chat Central
-                const headerAvatar = document.getElementById('dm-header-avatar');
-                const welcomeTitle = document.getElementById('dm-welcome-title');
-                const messageInput = document.getElementById('dm-message-input');
-
-                if(headerAvatar) headerAvatar.src = friendAvatar;
-                if(welcomeTitle) welcomeTitle.innerText = `O começo com ${friendName}`;
-                if(messageInput) messageInput.placeholder = `Conversar com @${friendName}`;
-
-                // 6. Troca Tela (Esconde mapa, mostra chat)
-                if(bazingaMapContainer) bazingaMapContainer.style.display = 'none';
-                if(dmChatView) dmChatView.style.display = 'flex';
+        function aceitarDM(id) {
+            const card = document.getElementById(`dm-${id}`);
+            if(card) {
+                card.classList.remove('temp-dm');
+                card.click();
+                showToast("Contato salvo na sua lista de DMs permanentes.", "success");
+            }
+        }
+        function recusarDM(id) {
+            openConfirmModal("Excluir DM Temporária", "A conversa será fechada e os dados sumirão em 24h. Deseja mesmo recusar?", () => {
+                const card = document.getElementById(`dm-${id}`);
+                if(card) card.remove();
+                const btnVoltarRadar = document.getElementById('btn-voltar-radar');
+                if(btnVoltarRadar) btnVoltarRadar.click();
+                showToast("Conversa recusada.", "warning");
             });
-        });
+        }
 
         // 3. SOCKET.IO E MENSAGENS (CHAT)
         const socket = typeof io !== 'undefined' ? io() : { emit: () => {}, on: () => {} };
@@ -1745,22 +2165,43 @@
                     const avatarHtml = dados.avatar ? `<img src="${dados.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${dados.nome[0].toUpperCase()}</span>`;
                     const friendIcon = L.divIcon({ className: 'user-marker', html: avatarHtml, iconSize: [36, 36], iconAnchor: [18, 18] });
                     const marker = L.marker([dados.lat, dados.lng], {icon: friendIcon}).addTo(bazingaMap);
-                    marker.bindPopup(`<b>${dados.nome}</b>`);
                     mapMarkers[dados.usuario_id] = marker;
                 } else {
                     mapMarkers[dados.usuario_id].setLatLng([dados.lat, dados.lng]);
                 }
+
+                if(myMapMarker) {
+                    const myPos = myMapMarker.getLatLng();
+                    const distMetros = calcularDistanciaMetros(myPos.lat, myPos.lng, dados.lat, dados.lng);
+                    const distTexto = distMetros < 1000 ? Math.round(distMetros) + " metros" : (distMetros/1000).toFixed(1) + " km";
+
+                    mapMarkers[dados.usuario_id].bindPopup(`
+                        <div style='text-align:center; font-family: gg sans;'>
+                            <div style='display: flex; justify-content:center; align-items: center; gap: 6px;'>
+                                <div style='width: 8px; height: 8px; border-radius: 50%; background: var(--green-color);'></div>
+                                <b style="font-size:16px;">${dados.nome}</b>
+                            </div>
+                            <div style='color:var(--text-muted); font-size:11px; margin-top:4px;'>A ${distTexto} de distância</div>
+                            <button class='btn btn-primary' style='width: 100%; margin-top: 12px; padding: 6px; font-size: 11px; background:var(--brand-color);' onclick='iniciarDMTemporaria(${dados.usuario_id}, "${dados.nome}", "${dados.avatar||''}")'><i class="fa-solid fa-paper-plane"></i> Mandar DM Rápida</button>
+                        </div>
+                    `);
+                }
             });
 
             socket.on('nova_geonote', function(dados) {
-                renderizarGeoNote(dados.lat, dados.lng, dados.texto, dados.autor, "Agora mesmo");
+                renderizarGeoNote(Date.now(), dados.lat, dados.lng, dados.texto, dados.autor, "Agora mesmo", dados.cor);
+            });
+
+            socket.on('novo_servidor_mapa', function(dados) {
+                renderizarServidorMapa(Date.now(), dados.lat, dados.lng, dados.nome, dados.owner, dados.vagas, 1);
             });
 
             // --- EVENTOS DE DM (CONEXÕES DIRETAS) ---
             socket.on('receber_mensagem_direta', function(dados) {
                 // 1. Renderiza a mensagem se a pessoa for a que estamos com o chat aberto ou se fomos nós que mandamos
                 if (currentDmUserId == dados.usuario_id || currentUserName == dados.usuario) {
-                    adicionarMensagemNaTelaDM(dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
+                    const container = document.getElementById('dm-messages-container');
+                    appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
                 }
 
                 // 2. Lógica de Pular para o Topo (LIFO) e Notificação Badge
@@ -1769,12 +2210,15 @@
                 const amigoCard = document.querySelector(`.user-dm-item[data-user-id="${targetCardId}"]`);
 
                 if(amigoCard && dmListContainer) {
-                    // PULA PRO TOPO
-                    dmListContainer.insertBefore(amigoCard, dmListContainer.firstChild);
-
-                    // Animação visual leve de "nova atividade"
-                    amigoCard.style.animation = 'fadeIn 0.5s ease';
-                    setTimeout(() => amigoCard.style.animation = '', 500);
+                    // PULA PRO TOPO APENAS SE NÃO FOR O PRIMEIRO (Evita o pulo/flash na UI se já estivermos conversando com ele)
+                    if(dmListContainer.firstElementChild !== amigoCard) {
+                        dmListContainer.insertBefore(amigoCard, dmListContainer.firstChild);
+                        // Animação visual leve de "nova atividade" apenas se ele teve que pular (chat não estava aberto ativamente nela)
+                        if (!amigoCard.classList.contains('active')) {
+                            amigoCard.style.animation = 'fadeIn 0.5s ease';
+                            setTimeout(() => amigoCard.style.animation = '', 500);
+                        }
+                    }
 
                     // Só avisa a bolinha vermelha se o chat dele NÃO estiver aberto e não for eu mesmo enviando
                     if (!amigoCard.classList.contains('active') && currentUserName != dados.usuario) {
@@ -1795,30 +2239,60 @@
         if(dmMessageInput) {
             dmMessageInput.addEventListener('keypress', function(event) {
                 if (event.key === 'Enter' && this.value.trim() !== '' && currentDmUserId) {
-                    socket.emit('enviar_mensagem_direta', { target_id: currentDmUserId, texto: this.value });
+                    socket.emit('enviar_mensagem_direta', { target_id: parseInt(currentDmUserId), texto: this.value });
                     this.value = '';
                 }
             });
         }
 
-        function adicionarMensagemNaTelaDM(id, autor, avatar, texto, hora, cor) {
-            const container = document.getElementById('dm-messages-container');
-            if(container.innerHTML.includes('começo do seu histórico')) container.innerHTML = '';
+        // FUNÇÃO DE RENDERIZAÇÃO CENTRAL (Agrupa as mensagens do mesmo autor em sequencia)
+        function appendMessageGrouped(container, id, autor, avatar, texto, hora, cor) {
+            const welcomeBox = container.querySelector('.dm-welcome-box');
+            if(welcomeBox) welcomeBox.remove();
+            if(container.innerHTML.includes('Bem-vindo ao início do canal')) container.innerHTML = '';
+
+            const lastMsg = container.lastElementChild;
+            let isGrouped = false;
+
+            // Checa se a última mensagem é da mesma pessoa e na mesma hora (mesmo minuto)
+            if (lastMsg && lastMsg.classList.contains('message')) {
+                const lastAutor = lastMsg.getAttribute('data-autor');
+                const lastHora = lastMsg.getAttribute('data-hora');
+                if (lastAutor === autor && lastHora === hora) {
+                    isGrouped = true;
+                }
+            }
 
             const div = document.createElement('div');
-            div.className = 'message';
+            div.className = isGrouped ? 'message grouped' : 'message first';
+            div.setAttribute('data-msg-id', id);
+            div.setAttribute('data-autor', autor);
+            div.setAttribute('data-hora', hora);
+
             let avatarHtml = avatar ? `<img src="${avatar}">` : `<span>${autor[0].toUpperCase()}</span>`;
 
-            div.innerHTML = `
-                <div class="chat-avatar" style="background-color: ${avatar ? 'transparent' : cor};">${avatarHtml}</div>
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="message-author" style="color: ${cor};">${autor}</span>
-                        <span class="message-timestamp">${hora}</span>
+            if (isGrouped) {
+                // Pega só o horário limpo (ex: extrai "19:34" da string "Hoje às 19:34")
+                const timeOnly = hora.includes('às') ? hora.split('às')[1].trim() : hora;
+                div.innerHTML = `
+                    <div class="grouped-timestamp">${timeOnly}</div>
+                    <div class="message-content">
+                        <p class="message-text">${texto}</p>
                     </div>
-                    <p class="message-text">${texto}</p>
-                </div>
-            `;
+                `;
+            } else {
+                div.innerHTML = `
+                    <div class="chat-avatar" style="background-color: ${avatar ? 'transparent' : cor};">${avatarHtml}</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author" style="color: ${cor};">${autor}</span>
+                            <span class="message-timestamp">${hora}</span>
+                        </div>
+                        <p class="message-text">${texto}</p>
+                    </div>
+                `;
+            }
+
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
@@ -1854,7 +2328,7 @@
                 const data = await resp.json();
                 msgContainer.innerHTML = '';
                 if(data.length === 0) msgContainer.innerHTML = '<div style="flex-grow: 1; display: flex; align-items: flex-end; padding: 16px; font-size: 24px; font-weight: bold; color: white;">Bem-vindo ao início do canal!</div>';
-                else data.forEach(msg => adicionarMensagemNaTela(msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor));
+                else data.forEach(msg => appendMessageGrouped(msgContainer, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor));
             } catch(e) {}
         }
 
@@ -1866,32 +2340,9 @@
         });
 
         socket.on('receber_mensagem', function(dados) {
-            adicionarMensagemNaTela(dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
-        });
-
-        function adicionarMensagemNaTela(id, autor, avatar, texto, hora, cor) {
             const container = document.getElementById('messages-container');
-            if(container.innerHTML.includes('início do canal')) container.innerHTML = '';
-
-            const div = document.createElement('div');
-            div.className = 'message';
-            div.setAttribute('data-msg-id', id);
-
-            let avatarHtml = avatar ? `<img src="${avatar}">` : `<span>${autor[0].toUpperCase()}</span>`;
-
-            div.innerHTML = `
-                <div class="chat-avatar" style="background-color: ${avatar ? 'transparent' : cor};">${avatarHtml}</div>
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="message-author" style="color: ${cor};">${autor}</span>
-                        <span class="message-timestamp">${hora}</span>
-                    </div>
-                    <p class="message-text">${texto}</p>
-                </div>
-            `;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
+            appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
+        });
 
         // 4. MENUS DE CONTEXTO E MODAIS GERAIS
         let targetMsgId = null; let targetMsgElement = null;
@@ -2320,9 +2771,24 @@
                         } else {
                             call.answer(myMicStream);
                             call.on('stream', remoteStream => {
+                                const callerName = (call.metadata && call.metadata.userName) ? call.metadata.userName : "Membro";
+                                const callerAvatar = (call.metadata && call.metadata.avatar) ? call.metadata.avatar : null;
+
                                 if(!document.getElementById(`vc-${call.peer}`)) {
-                                    adicionarVideoCard(call.peer, remoteStream, "Membro", null);
+                                    adicionarVideoCard(call.peer, remoteStream, callerName, callerAvatar);
                                     monitorarVolume(remoteStream, `vc-${call.peer}`);
+                                }
+
+                                // Sidebar sync
+                                const voiceUsersDiv = document.getElementById(`voice-users-${currentVoiceChannelId}`);
+                                if(voiceUsersDiv && !document.getElementById(`vu-${call.peer}`)) {
+                                    const presence = document.createElement('div');
+                                    presence.className = 'channel-item';
+                                    presence.id = `vu-${call.peer}`;
+                                    presence.style.fontSize = '13px';
+                                    const remoteAvatarHtml = callerAvatar ? `<img src="${callerAvatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : `<span>${callerName[0].toUpperCase()}</span>`;
+                                    presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background-color: ${callerAvatar ? 'transparent' : 'var(--brand-color)'};">${remoteAvatarHtml}</div> ${callerName}`;
+                                    voiceUsersDiv.appendChild(presence);
                                 }
                             });
                             peers[call.peer] = call;
@@ -2346,7 +2812,8 @@
             }
 
             if(!inCall || !mePeer) return;
-            const call = mePeer.call(dados.peer_id, myMicStream);
+            // Send metadata back to the new user
+            const call = mePeer.call(dados.peer_id, myMicStream, { metadata: { type: 'voice', userName: currentUserName, avatar: currentUserAvatar } });
             call.on('stream', remoteStream => {
                 if(!document.getElementById(`vc-${dados.peer_id}`)) {
                     adicionarVideoCard(dados.peer_id, remoteStream, dados.usuario, dados.avatar);
@@ -2516,6 +2983,96 @@
 
         // Inicializar Mapa ao carregar
         setTimeout(initMap, 200);
+
+        // =====================================================================
+        // LÓGICA DO MERCADO ELITE (Buscar no Banco e Desenhar na Tela)
+        // =====================================================================
+        async function carregarMercado() {
+            try {
+                const resp = await fetch('/api/produtos');
+                const produtos = await resp.json();
+
+                const bazarContainer = document.getElementById('bazar-grid-container');
+                const lojaContainer = document.getElementById('loja-grid-container');
+
+                if (bazarContainer) bazarContainer.innerHTML = '';
+                if (lojaContainer) lojaContainer.innerHTML = '';
+
+                produtos.forEach(prod => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+
+                    if (!prod.is_official) {
+                        // BAZAR DA COMUNIDADE (Via PIX)
+                        card.innerHTML = `
+                            <img src="${prod.image_url || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600'}" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&q=80'">
+                            <div class="product-info">
+                                <div class="product-title">${prod.name}</div>
+                                <div class="product-author"><img src="https://ui-avatars.com/api/?name=${prod.seller.replace(/\s/g, '+')}&background=random" style="width: 16px; height: 16px; border-radius: 50%;"> Por ${prod.seller}</div>
+                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${prod.description}</p>
+                                <div class="product-footer">
+                                    <div class="price-pix"><i class="fa-brands fa-pix"></i> R$ ${prod.price_pix.toFixed(2).replace('.', ',')}</div>
+                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; background-color: var(--green-color);" onclick="abrirModalCompra(${prod.id}, '${prod.name.replace(/'/g, "\\'")}', ${prod.price_pix}, 'PIX')">Comprar</button>
+                                </div>
+                            </div>
+                        `;
+                        if(bazarContainer) bazarContainer.appendChild(card);
+                    } else {
+                        // LOJA BAZINGA OFICIAL (Via BZC)
+                        let imgHtml = '';
+
+                        // O JAVASCRIPT INTELIGENTE: Restaura os efeitos visuais Premium baseados no nome!
+                        if (prod.name.includes("Anel de Ouro")) {
+                            imgHtml = `
+                            <div class="product-img" style="background: #111214; display: flex; justify-content: center; align-items: center; position: relative;">
+                                <img src="https://ui-avatars.com/api/?name=BU&background=5865F2&color=fff" style="width: 64px; height: 64px; border-radius: 50%;">
+                                <div style="position: absolute; width: 80px; height: 80px; border: 4px solid #f0b232; border-radius: 50%; box-shadow: 0 0 15px #f0b232;"></div>
+                            </div>`;
+                        } else if (prod.name.includes("Radar Hacker")) {
+                            imgHtml = `
+                            <div class="product-img" style="background: #111214; display: flex; justify-content: center; align-items: center; position: relative;">
+                                <img src="https://ui-avatars.com/api/?name=BU&background=5865F2&color=fff" style="width: 64px; height: 64px; border-radius: 50%;">
+                                <div style="position: absolute; width: 76px; height: 76px; border: 2px dashed #00ff00; border-radius: 50%; animation: bg-spin 4s linear infinite;"></div>
+                            </div>`;
+                        } else if (prod.name.includes("Foguete") || prod.name.includes("Pino")) {
+                            imgHtml = `
+                            <div class="product-img" style="background: #1e1f22; display: flex; justify-content: center; align-items: center; font-size: 48px; color: #da373c;">
+                                <i class="fa-solid fa-rocket"></i>
+                            </div>`;
+                        } else if (prod.image_url) {
+                            imgHtml = `<img src="${prod.image_url}" class="product-img">`;
+                        } else {
+                            imgHtml = `<div class="product-img" style="background: #111214; display: flex; justify-content: center; align-items: center;"><i class="fa-solid fa-gem" style="font-size: 48px; color: var(--brand-color);"></i></div>`;
+                        }
+
+                        card.innerHTML = `
+                            ${imgHtml}
+                            <div class="product-info">
+                                <div class="product-title">${prod.name}</div>
+                                <div class="product-author"><i class="fa-solid fa-check-circle" style="color: var(--brand-color);"></i> Oficial Bazinga</div>
+                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${prod.description}</p>
+                                <div class="product-footer">
+                                    <div class="price-bzc">${prod.price_bzc} BZC</div>
+                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="abrirModalCompra(${prod.id}, '${prod.name.replace(/'/g, "\\'")}', ${prod.price_bzc}, 'BZC')">Comprar</button>
+                                </div>
+                            </div>
+                        `;
+                        if(lojaContainer) lojaContainer.appendChild(card);
+                    }
+                });
+            } catch (err) {
+                console.error("Erro ao carregar o mercado:", err);
+            }
+        }
+
+        // Função do Caixa (O Botão de Comprar)
+        function abrirModalCompra(id, nome, preco, moeda) {
+            if(moeda === 'PIX') {
+                showToast(`Gerando QR Code PIX de R$ ${preco.toFixed(2).replace('.', ',')} para: ${nome}`, 'info');
+            } else {
+                showToast(`Processando compra de ${nome} por ${preco} BZC...`, 'success');
+            }
+        }
 
     </script>
 </body>

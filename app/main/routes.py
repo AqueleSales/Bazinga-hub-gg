@@ -2,12 +2,11 @@ from flask import Blueprint, render_template, session, jsonify, redirect, url_fo
 from sqlalchemy.exc import OperationalError, PendingRollbackError
 from datetime import datetime
 from sqlalchemy import or_, and_
-from ..models import Person, Channel, Message, DirectMessage, db
+from ..models import Person, Channel, Message, DirectMessage, Product, db
 
 main_bp = Blueprint("main", __name__)
 
 
-# --- O CONTEXT PROCESSOR (Injeta o usuário em todas as telas automaticamente) ---
 @main_bp.context_processor
 def inject_user():
     user = None
@@ -42,13 +41,11 @@ def index():
 
 @main_bp.route("/chat")
 def chat():
-    # --- O GUARDIÃO ---
     if 'user_id' not in session:
         return redirect(url_for('main.index'))
 
     try:
         usuario_atual = Person.query.get(session['user_id'])
-
         if not usuario_atual:
             session.pop('user_id', None)
             return redirect(url_for('main.index'))
@@ -59,10 +56,12 @@ def chat():
 
         messages = []
         if default_channel:
-            messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(
-                50).all()
+            messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(50).all()
             for m in messages:
                 m.formatada = formatar_data(m.timestamp)
+
+        # Busca todas as pessoas no banco (exceto você) para simular sua lista de amigos
+        amigos = Person.query.filter(Person.id != usuario_atual.id).all()
 
     except (OperationalError, PendingRollbackError):
         db.session.rollback()
@@ -74,7 +73,8 @@ def chat():
         text_channels=text_channels,
         voice_channels=voice_channels,
         default_channel=default_channel,
-        messages=messages
+        messages=messages,
+        amigos=amigos
     )
 
 
@@ -91,7 +91,7 @@ def pegar_mensagens(canal_id):
         dados.append({
             'id': msg.id,
             'autor': msg.author.name,
-            'avatar': msg.author.avatar,  # <-- AQUI ESTÁ A MÁGICA! Agora o histórico envia a foto!
+            'avatar': msg.author.avatar,
             'texto': msg.text,
             'hora': formatar_data(msg.timestamp),
             'cor': msg.author.role.color if msg.author.role else '#23a559'
@@ -101,18 +101,16 @@ def pegar_mensagens(canal_id):
 
 
 # ==========================================
-# NOVA ROTA: Buscar histórico de Conexões Diretas (DMs)
+# Buscar histórico de Conexões Diretas (DMs)
 # ==========================================
 @main_bp.route("/api/dms/<int:target_id>")
 def get_dms(target_id):
-    # O Guardião de Segurança da API
     if 'user_id' not in session:
         return jsonify({'error': 'Acesso negado'}), 401
 
     meu_id = session['user_id']
 
     try:
-        # Busca DMs onde (Eu mandei pra Ele) OU (Ele mandou pra Mim)
         mensagens_db = DirectMessage.query.filter(
             or_(
                 and_(DirectMessage.sender_id == meu_id, DirectMessage.receiver_id == target_id),
@@ -135,3 +133,33 @@ def get_dms(target_id):
         })
 
     return jsonify(dados)
+
+
+# ==========================================
+# ROTA DO MERCADO ELITE: Buscar Produtos
+# ==========================================
+@main_bp.route("/api/produtos")
+def get_produtos():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    try:
+        produtos_db = Product.query.order_by(Product.created_at.desc()).all()
+        dados = []
+        for p in produtos_db:
+            dados.append({
+                'id': p.id,
+                'name': p.name,
+                'description': p.description,
+                'price_bzc': p.price_bzc,
+                'price_pix': p.price_pix,
+                'image_url': p.image_url,
+                'is_official': p.is_official,
+                # Pega o nome do vendedor se existir, senão é a Bazinga Oficial
+                'seller': p.seller.name if p.seller else 'Bazinga Oficial'
+            })
+        return jsonify(dados)
+    except Exception as e:
+        db.session.rollback()
+        print("Erro na rota de produtos:", e)
+        return jsonify([])

@@ -29,3 +29,4 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         "poolclass": NullPool
     }
+    
