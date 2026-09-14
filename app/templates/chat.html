@@ -92,6 +92,10 @@
 
         @keyframes radar-pulse { 0% { transform: scale(1); opacity: 0.1; } 50% { transform: scale(1.15); opacity: 0.3; } 100% { transform: scale(1); opacity: 0.1; } }
 
+        .welcome-action-btn { background-color: var(--bg-tertiary); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px; }
+        .welcome-action-btn:hover { background-color: var(--bg-secondary); border-color: rgba(255,255,255,0.1); }
+        .welcome-action-icon { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; font-size: 18px; margin-right: 12px; }
+
         /* ==========================================================================
            RADAR BAZINGA MAP STYLES E MMO
            ========================================================================== */
@@ -142,8 +146,8 @@
 
         /* O Modo Fantasma - Fica translúcido e opaco */
         .user-marker.ghost {
-            opacity: 0.5; border-color: #5e6b8c; box-shadow: 0 0 10px rgba(94, 107, 140, 0.5);
-            filter: grayscale(50%) sepia(20%) hue-rotate(180deg);
+            opacity: 0.4; border-color: rgba(255,255,255,0.3); box-shadow: 0 0 10px rgba(255,255,255,0.1);
+            filter: grayscale(100%); transition: all 0.3s ease;
         }
 
         /* Servidores no Mapa */
@@ -159,34 +163,50 @@
 
         @keyframes floatAnim { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-        /* O Balão de Fala HQ (GeoNote) */
+        /* O Balão de Fala HQ (GeoNote) - Reativo ao Hover */
+        .geo-note-wrapper {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            display: flex; justify-content: center; align-items: flex-end;
+            padding: 40px; margin-bottom: -20px; /* Hitbox GIGANTE invisível para o mouse nunca escapar e não bugar (flicker) */
+        }
         .geo-note-bubble {
             background-color: var(--bg-primary); border: 2px solid var(--note-color, var(--brand-color));
-            border-radius: 8px; padding: 8px 12px; color: white; font-size: 13px; font-weight: 600;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; white-space: nowrap;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 12px; padding: 10px 14px; color: white; font-size: 13px; font-weight: 600;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.7); position: relative; white-space: nowrap;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex; align-items: center; gap: 8px; cursor: pointer;
-            transform-origin: bottom center;
+            transform-origin: bottom center; z-index: 500; min-width: max-content;
         }
         .geo-note-bubble::after {
-            content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
-            border-width: 8px 8px 0; border-style: solid; border-color: var(--note-color, var(--brand-color)) transparent transparent transparent;
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            border-width: 10px 10px 0; border-style: solid; border-color: var(--note-color, var(--brand-color)) transparent transparent transparent;
         }
         .geo-note-bubble .note-emoji { font-size: 18px; }
+        .geo-note-bubble .note-content-area { display: flex; flex-direction: column; }
         .geo-note-bubble .note-actions { display: none; gap: 8px; margin-left: 12px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 12px; }
         .geo-note-bubble:hover .note-actions { display: flex; }
         .note-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; transition: 0.2s; font-size: 14px;}
-        .note-btn:hover { color: white; transform: scale(1.1); }
+        .note-btn:hover { color: white; transform: scale(1.2); }
 
         /* Estado Minimizado do Balão (Longe) */
         .geo-note-bubble.minimized {
-            width: 16px; height: 16px; min-width: 16px; padding: 0; border-radius: 50%;
-            background-color: var(--note-color, var(--brand-color)); border: 2px solid white;
+            width: 20px; height: 20px; min-width: 20px; padding: 0; border-radius: 50%;
+            background-color: var(--note-color, var(--brand-color)); border: 2px solid rgba(255,255,255,0.8);
             box-shadow: 0 0 10px var(--note-color, var(--brand-color)); overflow: hidden; opacity: 0.8;
-            transform: translateY(10px);
+            transform: translateY(10px) scale(1); /* Posição firme no chão */
         }
         .geo-note-bubble.minimized * { display: none !important; }
         .geo-note-bubble.minimized::after { display: none; }
+
+        /* Magia do Hover: Expande a bolinha quando passa o mouse por cima */
+        .geo-note-wrapper:hover .geo-note-bubble.minimized {
+            width: auto; height: auto; min-width: max-content; padding: 10px 14px; border-radius: 12px;
+            background-color: var(--bg-primary); border: 2px solid var(--note-color, var(--brand-color));
+            opacity: 1; transform: translateY(0) scale(1.05); z-index: 1000 !important;
+        }
+        .geo-note-wrapper:hover .geo-note-bubble.minimized * { display: flex !important; }
+        .geo-note-wrapper:hover .geo-note-bubble.minimized .note-content-area { flex-direction: column !important; }
+        .geo-note-wrapper:hover .geo-note-bubble.minimized::after { display: block; }
 
         /* ==========================================================================
            3. PAINEL DE CONTROLE DO USUÁRIO (Canto inferior esquerdo)
@@ -394,13 +414,35 @@
         .btn-cancel { background: none; color: var(--text-header); }
         .btn-cancel:hover { text-decoration: underline; }
 
-        .quality-section h3 { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .discord-input { width: 100%; padding: 10px 12px; background-color: var(--bg-tertiary); color: var(--text-normal); border: 1px solid rgba(0,0,0,0.2); border-radius: 4px; outline: none; font-size: 14px; transition: 0.2s;}
+        .discord-input:focus { border-color: var(--brand-color); }
+        .discord-textarea { resize: none; height: 60px; font-size: 14px; line-height: 1.4; }
+        .control-label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block;}
+
         .modal-btn-group { display: flex; background-color: var(--bg-tertiary); border-radius: 4px; overflow: hidden; border: 1px solid var(--bg-tertiary); }
         .q-btn { flex: 1; padding: 8px; text-align: center; background: none; border: none; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; border-right: 1px solid var(--bg-secondary);}
         .q-btn:last-child { border-right: none; }
         .q-btn:hover { background-color: var(--bg-secondary); }
         .q-btn.active { background-color: var(--brand-hover); color: white; }
 
+        /* Color Picker Premium */
+        .color-strip-container { display: flex; gap: 12px; justify-content: space-between; align-items: center; background: var(--bg-tertiary); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);}
+        .color-circle { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; transition: 0.2s; border: 2px solid transparent; opacity: 0.4; }
+        .color-circle:hover { transform: scale(1.1); opacity: 0.8; }
+        .color-circle.active { border-color: white; opacity: 1; transform: scale(1.1); box-shadow: 0 0 10px currentColor; }
+        .custom-color-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px dashed var(--text-muted); display: flex; justify-content: center; align-items: center; cursor: pointer; position: relative; overflow: hidden;}
+        .custom-color-btn input { position: absolute; opacity: 0; width: 200%; height: 200%; cursor: pointer;}
+
+        /* Carrossel de Servidores */
+        .server-carousel-container { display: flex; align-items: center; justify-content: space-between; background: var(--bg-tertiary); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); }
+        .carousel-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 8px; transition: 0.2s; }
+        .carousel-btn:hover { color: white; transform: scale(1.2); }
+        .carousel-item { display: flex; flex-direction: column; align-items: center; gap: 8px; animation: fadeIn 0.3s ease; }
+        .carousel-icon { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 15px var(--brand-color); border: 2px solid var(--brand-color); transition: 0.3s;}
+        .carousel-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .carousel-name { font-weight: 700; color: var(--text-header); font-size: 16px; }
+
+        .quality-section h3 { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
         .meter-bar { flex: 1; height: 8px; background-color: #4e5058; border-radius: 2px; transition: 0.1s ease; }
         .meter-bar.active { background-color: var(--green-color); height: 16px; }
 
@@ -561,12 +603,8 @@
 
                     <div class="server-separator"></div>
 
-                    <!-- BOTÃO SERVIDOR BAZINGA -->
-                    <div class="server-wrapper">
-                        <div class="server-icon bazinga-server" id="btn-server-view" title="Bazinga Hub">
-                            <img src="{{ url_for('static', filename='img/bazinga_logo.png') }}" onerror="this.style.display='none'; this.parentElement.innerText='BZ'">
-                        </div>
-                    </div>
+                    <!-- CONTAINER DINÂMICO PARA NOVOS SERVIDORES -->
+                    <div id="dynamic-servers-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
 
                     <!-- BOTÃO ADICIONAR SERVIDOR -->
                     <div class="server-wrapper">
@@ -928,38 +966,44 @@
     <!-- Modal Criar Servidor -->
     <div class="modal-overlay" id="add-server-modal">
         <div class="bazinga-modal" style="width: 440px; text-align: center;">
-            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
-                <h2 style="font-size: 24px;">Crie seu servidor</h2>
-                <p style="margin-top: 8px; line-height: 1.4;">Seu servidor é onde você e seus amigos se reúnem. Crie o seu e comece a falar.</p>
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; position: relative;">
+                <button style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;" onclick="document.getElementById('add-server-modal').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+                <h2 style="font-size: 24px; font-weight: 800; color: var(--text-header);">Personalize o seu servidor</h2>
+                <p style="margin-top: 8px; line-height: 1.4; color: var(--text-muted); font-size: 15px;">Deixe seu novo servidor com a sua cara dando um nome e um ícone a ele. Se quiser, é possível mudar depois.</p>
             </div>
             <div class="modal-content" style="padding: 24px 16px; align-items: center;">
-                <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px dashed var(--text-muted); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 12px; font-weight: bold;">
-                    <i class="fa-solid fa-camera" style="font-size: 24px; margin-bottom: 4px;"></i> UPLOAD
+                <div style="position: relative; width: 80px; height: 80px;">
+                    <div id="new-server-icon-preview" style="width: 100%; height: 100%; border-radius: 50%; border: 2px dashed var(--text-muted); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 12px; font-weight: bold; overflow: hidden; transition: 0.2s;" onclick="document.getElementById('new-server-file').click();">
+                        <i class="fa-solid fa-camera" style="font-size: 24px; margin-bottom: 4px;"></i> ENVIAR
+                    </div>
+                    <div style="position: absolute; top: 0; right: 0; background: var(--brand-color); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 14px; border: 3px solid var(--bg-primary); pointer-events: none;"><i class="fa-solid fa-plus"></i></div>
+                    <input type="file" id="new-server-file" style="display: none;" accept="image/*">
                 </div>
-                <div class="control-group" style="width: 100%; text-align: left; border: none; padding: 0;">
-                    <span class="control-label">Nome do Servidor</span>
-                    <input type="text" class="discord-input" value="Servidor de {{ usuario_atual.name }}">
-                    <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Ao criar um servidor, você concorda com as Diretrizes da Comunidade Bazinga.</span>
+                <div class="control-group" style="width: 100%; text-align: left; border: none; padding: 0; margin-top: 24px;">
+                    <span class="control-label" style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block;">Nome do servidor <span style="color: var(--red-color);">*</span></span>
+                    <input type="text" class="discord-input" id="new-server-name-input" value="Servidor de {{ usuario_atual.name }}">
+                    <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Ao criar um servidor, você concorda com as <a href="#" style="color: var(--brand-color); text-decoration: none;">diretrizes da comunidade</a> do Discord.</span>
                 </div>
             </div>
-            <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+            <div class="modal-footer" style="justify-content: space-between; align-items: center; background-color: var(--bg-secondary); border-top: none;">
                 <button class="btn-cancel" onclick="document.getElementById('add-server-modal').style.display='none'">Voltar</button>
-                <button class="btn btn-primary" onclick="showToast('Em breve! O Bazinga Hub vai permitir a criação de salas privadas no banco de dados!', 'info'); document.getElementById('add-server-modal').style.display='none'">Criar</button>
+                <button class="btn btn-primary" id="btn-confirm-create-server" style="background-color: var(--brand-color); width: 96px;">Criar</button>
             </div>
         </div>
     </div>
 
     <!-- Modal: Deixar/Editar Nota no Mapa -->
     <div class="modal-overlay" id="note-modal">
-        <div class="bazinga-modal">
-            <div class="modal-header">
+        <div class="bazinga-modal" style="width: 400px;">
+            <div class="modal-header" style="position: relative;">
                 <h2 id="note-modal-title">Deixar uma Nota</h2>
-                <p>Crie um holograma permanente no mapa para outros jogadores verem.</p>
+                <p style="margin-top: 8px; line-height: 1.4; color: var(--text-muted); font-size: 14px;">Crie um balão HQ permanente no mapa.</p>
+                <button style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;" onclick="closeNoteModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="modal-content">
+            <div class="modal-content" style="gap: 16px; padding-top: 8px;">
                 <div style="display: flex; gap: 8px;">
-                    <textarea class="discord-input discord-textarea" id="note-text-input" placeholder="O que você encontrou aqui? Loot raro? Perigo?" style="flex-grow: 1; font-size: 16px; font-weight: bold;"></textarea>
-                    <button class="btn" style="background: var(--bg-tertiary); border: 1px solid rgba(0,0,0,0.2); width: 48px; font-size: 20px;" title="Escolher Emoji"><i class="fa-regular fa-face-smile"></i></button>
+                    <textarea class="discord-input discord-textarea" id="note-text-input" placeholder="O que você encontrou aqui?"></textarea>
+                    <button class="btn" style="background: var(--bg-tertiary); border: 1px solid rgba(0,0,0,0.2); width: 60px; height: 60px; font-size: 24px; color: var(--yellow-color);" title="Escolher Emoji" id="note-emoji-btn"><i class="fa-solid fa-face-smile"></i></button>
                 </div>
 
                 <div>
@@ -972,12 +1016,18 @@
                 </div>
 
                 <div>
-                    <span class="control-label">Cor do Holograma</span>
-                    <div style="display: flex; gap: 12px;">
-                        <div class="color-preview-box active" style="background: var(--brand-color); width: 32px; height: 32px; border-radius: 50%; opacity:1;" onclick="selecionarCor(this, 'var(--brand-color)')"></div>
-                        <div class="color-preview-box" style="background: var(--green-color); width: 32px; height: 32px; border-radius: 50%; opacity:0.3;" onclick="selecionarCor(this, 'var(--green-color)')"></div>
-                        <div class="color-preview-box" style="background: var(--red-color); width: 32px; height: 32px; border-radius: 50%; opacity:0.3;" onclick="selecionarCor(this, 'var(--red-color)')"></div>
-                        <div class="color-preview-box" style="background: var(--yellow-color); width: 32px; height: 32px; border-radius: 50%; opacity:0.3;" onclick="selecionarCor(this, 'var(--yellow-color)')"></div>
+                    <span class="control-label">Cor do Balão HQ</span>
+                    <div class="color-strip-container">
+                        <div class="color-circle active" style="background-color: #5865F2; color: #5865F2;" onclick="selecionarCor(this, '#5865F2')"></div>
+                        <div class="color-circle" style="background-color: #23a559; color: #23a559;" onclick="selecionarCor(this, '#23a559')"></div>
+                        <div class="color-circle" style="background-color: #da373c; color: #da373c;" onclick="selecionarCor(this, '#da373c')"></div>
+                        <div class="color-circle" style="background-color: #f0b232; color: #f0b232;" onclick="selecionarCor(this, '#f0b232')"></div>
+                        <div class="color-circle" style="background-color: #eb459e; color: #eb459e;" onclick="selecionarCor(this, '#eb459e')"></div>
+                        <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.1);"></div>
+                        <div class="custom-color-btn" title="Cor Customizada">
+                            <i class="fa-solid fa-eye-dropper" style="font-size: 12px; color: var(--text-normal);"></i>
+                            <input type="color" id="note-custom-color" value="#ffffff" onchange="aplicarCorCustomizada(this.value)">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -990,34 +1040,37 @@
 
     <!-- Modal: Plantar/Editar Servidor no Mapa -->
     <div class="modal-overlay" id="server-modal">
-        <div class="bazinga-modal">
-            <div class="modal-header">
+        <div class="bazinga-modal" style="width: 400px;">
+            <div class="modal-header" style="position: relative;">
                 <h2 id="server-modal-title">Plantar Servidor Base</h2>
-                <p>Ancore um dos seus servidores Discord na vida real. Jogadores próximos poderão entrar nele.</p>
+                <p style="margin-top: 8px; line-height: 1.4; color: var(--text-muted); font-size: 14px;">Ancore seu servidor Discord na vida real.</p>
+                <button style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;" onclick="closeServerModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="modal-content">
-                <span class="control-label">Escolha o Servidor</span>
-                <div class="server-carousel">
-                    <button class="carousel-btn"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="carousel-item">
-                        <div class="carousel-icon"><img src="https://ui-avatars.com/api/?name=Guilda&background=5865F2&color=fff"></div>
-                        <span style="font-weight: 600; color: var(--text-header);">A Guilda do Dragão</span>
+            <div class="modal-content" style="gap: 16px; padding-top: 8px;">
+                <div>
+                    <span class="control-label">Escolha o Servidor</span>
+                    <div class="server-carousel-container">
+                        <button class="carousel-btn" onclick="mudarCarrossel(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div class="carousel-item" id="carousel-display">
+                            <div class="carousel-icon"><img src="https://ui-avatars.com/api/?name=Guilda&background=5865F2&color=fff" id="car-img"></div>
+                            <span class="carousel-name" id="car-name">A Guilda do Dragão</span>
+                        </div>
+                        <button class="carousel-btn" onclick="mudarCarrossel(1)"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
-                    <button class="carousel-btn"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
 
                 <div style="display: flex; gap: 16px;">
                     <div style="flex: 1;">
-                        <span class="control-label">Ingressos (Vagas)</span>
+                        <span class="control-label">Vagas</span>
                         <div class="modal-btn-group" id="server-tickets-group">
-                            <button class="q-btn active" data-vagas="ilimitado">Ilimitado</button>
+                            <button class="q-btn active" data-vagas="ilimitado">Ilimit.</button>
                             <button class="q-btn" data-vagas="12">12</button>
                         </div>
                     </div>
                     <div style="flex: 1;">
                         <span class="control-label">Duração</span>
                         <div class="modal-btn-group" id="server-duration-group">
-                            <button class="q-btn active" data-tempo="permanente">Permanente</button>
+                            <button class="q-btn active" data-tempo="permanente">Perm.</button>
                             <button class="q-btn" data-tempo="24">24h</button>
                         </div>
                     </div>
@@ -1626,6 +1679,157 @@
         });
 
         // ==========================================
+        // SISTEMA DE SERVIDORES DINÂMICOS (DISCORD LIKE)
+        // ==========================================
+        let meUserServers = [];
+        let activeMyServerId = null;
+        let tempUploadedServerIcon = null;
+
+        document.getElementById('new-server-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                tempUploadedServerIcon = URL.createObjectURL(file);
+                document.getElementById('new-server-icon-preview').innerHTML = `<img src="${tempUploadedServerIcon}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                document.getElementById('new-server-icon-preview').style.border = 'none';
+            }
+        });
+
+        document.getElementById('btn-confirm-create-server').addEventListener('click', () => {
+            const nameInput = document.getElementById('new-server-name-input');
+            const serverName = nameInput.value.trim() || `Servidor de ${currentUserName}`;
+
+            const newServer = {
+                id: Date.now(),
+                name: serverName,
+                iconUrl: tempUploadedServerIcon,
+                initials: serverName.substring(0, 2).toUpperCase(),
+                channels: [
+                    { id: Date.now() + 1, name: 'geral', type: 'text' },
+                    { id: Date.now() + 2, name: 'LOBBY', type: 'voice' }
+                ]
+            };
+
+            meUserServers.push(newServer);
+            renderizarMeusServidores();
+
+            document.getElementById('add-server-modal').style.display = 'none';
+            tempUploadedServerIcon = null;
+            document.getElementById('new-server-icon-preview').innerHTML = `<i class="fa-solid fa-camera" style="font-size: 24px; margin-bottom: 4px;"></i> ENVIAR`;
+            document.getElementById('new-server-icon-preview').style.border = '2px dashed var(--text-muted)';
+
+            entrarNoServidor(newServer.id);
+            showToast(`Servidor "${serverName}" criado!`, "success");
+        });
+
+        function renderizarMeusServidores() {
+            const container = document.getElementById('dynamic-servers-container');
+            container.innerHTML = '';
+
+            meUserServers.forEach(srv => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'server-wrapper';
+
+                const iconHtml = srv.iconUrl
+                    ? `<img src="${srv.iconUrl}" style="width:100%;height:100%;object-fit:cover;">`
+                    : srv.initials;
+
+                wrapper.innerHTML = `
+                    <div class="server-icon ${activeMyServerId === srv.id ? 'active' : ''}" id="my-server-icon-${srv.id}" title="${srv.name}">
+                        ${iconHtml}
+                    </div>
+                `;
+
+                wrapper.querySelector('.server-icon').addEventListener('click', () => entrarNoServidor(srv.id));
+                container.appendChild(wrapper);
+            });
+        }
+
+        function entrarNoServidor(id) {
+            resetSidebars();
+            activeMyServerId = id;
+            const srv = meUserServers.find(s => s.id === id);
+
+            document.querySelectorAll('.server-icon').forEach(i => i.classList.remove('active'));
+            const iconEl = document.getElementById(`my-server-icon-${id}`);
+            if(iconEl) iconEl.classList.add('active');
+
+            document.getElementById('dms-sidebar').style.display = 'none';
+            const serverSidebar = document.getElementById('bazinga-sidebar');
+            serverSidebar.style.display = 'flex';
+
+            serverSidebar.querySelector('.channels-header').innerHTML = `<h3>${srv.name} <i class="fa-solid fa-chevron-down" style="font-size: 12px;"></i></h3>`;
+
+            const channelsList = serverSidebar.querySelector('.channels-list');
+            channelsList.innerHTML = `
+                <div class="channel-category"><i class="fa-solid fa-chevron-down"></i> CANAIS DE TEXTO <i class="fa-solid fa-plus" style="margin-left: auto; cursor:pointer;" title="Criar Canal"></i></div>
+            `;
+
+            srv.channels.filter(c => c.type === 'text').forEach((c, index) => {
+                channelsList.innerHTML += `
+                    <div class="channel-item text-channel ${index === 0 ? 'active' : ''}" data-id="${c.id}" data-name="${c.name}">
+                        <i class="fa-solid fa-hashtag channel-icon" style="font-size: 18px; color: var(--text-muted);"></i> ${c.name}
+                    </div>
+                `;
+            });
+
+            channelsList.innerHTML += `
+                <div class="channel-category" style="margin-top: 16px;"><i class="fa-solid fa-chevron-down"></i> CANAIS DE VOZ <i class="fa-solid fa-plus" style="margin-left: auto; cursor:pointer;" title="Criar Canal"></i></div>
+            `;
+
+            srv.channels.filter(c => c.type === 'voice').forEach(c => {
+                channelsList.innerHTML += `
+                    <div class="channel-item voice-channel" data-id="${c.id}" data-name="${c.name}">
+                        <i class="fa-solid fa-volume-high channel-icon" style="font-size: 16px;"></i> ${c.name}
+                    </div>
+                    <div id="voice-users-${c.id}" style="padding-left: 24px; display: none; margin-bottom: 8px;"></div>
+                `;
+            });
+
+            switchMainView('server');
+
+            const msgContainer = document.getElementById('messages-container');
+            msgContainer.innerHTML = `
+                <div class="server-welcome-screen" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 16px; height: 100%;">
+                    <div style="width: 68px; height: 68px; border-radius: 50%; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-size: 32px; font-weight: bold; margin-bottom: 16px; overflow: hidden;">
+                        ${srv.iconUrl ? `<img src="${srv.iconUrl}" style="width:100%;height:100%;object-fit:cover;">` : srv.initials}
+                    </div>
+                    <h1 style="color: white; font-size: 32px; font-weight: 800; margin-bottom: 8px;">Bem-vindo(a) a<br>${srv.name}</h1>
+                    <p style="color: var(--text-muted); font-size: 15px; line-height: 1.4; margin-bottom: 24px; max-width: 600px;">Este é seu servidor, novinho em folha. Aqui vão algumas dicas para ajudar você a começar! Para mais informações, confira nosso <a href="#" style="color: var(--brand-color); text-decoration: none;">guia de como começar</a>.</p>
+
+                    <div style="width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 8px;">
+                        <div class="welcome-action-btn">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon"><img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6cc3c481a15a141738_icon_clyde_white_RGB.svg" style="width:24px; filter: brightness(0) invert(1);"></div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Convide seus amigos</span></div>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
+                        </div>
+                        <div class="welcome-action-btn" onclick="document.getElementById('btn-open-settings').click();">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🖌️</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Personalize seu servidor com um ícone</span></div>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
+                        </div>
+                        <div class="welcome-action-btn" onclick="document.getElementById('message-input').focus();">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">✍️</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Envie sua primeira mensagem</span></div>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
+                        </div>
+                        <div class="welcome-action-btn">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🎮</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Adicione seu primeiro app</span></div>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
+                        </div>
+                        <div class="welcome-action-btn">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">💎</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Desbloqueie vantagens para todos com impulsos</span></div>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            bindChannelListeners();
+        }
+
+        function bindChannelListeners() {
+            document.querySelectorAll('.text-channel').forEach(initTextChannel);
+            document.querySelectorAll('.voice-channel').forEach(initVoiceChannel);
+        }
+
+        // ==========================================
         // FILTROS DE AMIGOS E ADICIONAR AMIGO
         // ==========================================
         const filterDisponivel = document.getElementById('filter-disponivel');
@@ -1644,6 +1848,32 @@
                         item.style.display = 'none';
                     }
                 }
+            });
+        }
+
+        if(btnHomeView && btnMercado) {
+            btnHomeView.addEventListener('click', () => {
+                resetSidebars();
+                activeMyServerId = null;
+                btnHomeView.classList.add('active');
+                if(dmsSidebar) dmsSidebar.style.display = 'flex';
+                if(bazingaSidebar) bazingaSidebar.style.display = 'none';
+
+                const btnVoltarRadar = document.getElementById('btn-voltar-radar');
+                if(btnVoltarRadar) btnVoltarRadar.classList.add('active');
+                switchMainView('home');
+            });
+
+            btnMercado.addEventListener('click', () => {
+                resetSidebars();
+                activeMyServerId = null;
+                btnHomeView.classList.add('active');
+                btnMercado.classList.add('active');
+                if(dmsSidebar) dmsSidebar.style.display = 'flex';
+                if(bazingaSidebar) bazingaSidebar.style.display = 'none';
+
+                switchMainView('market');
+                carregarMercado();
             });
         }
 
@@ -1677,8 +1907,9 @@
         let myMapMarker = null;
         let mapMarkers = {}; // Cofre para guardar os pinos dos amigos
         let isPlantingServer = false;
-        let serverMarkerPreview = null;
+        let placementPreview = null;
         let geoNotesAtivas = []; // Array para monitorar proximidade
+        let serverMarkersAtivos = [];
 
         let ghostMode = localStorage.getItem('bzGhostMode') === 'true';
         const btnToggleGhost = document.getElementById('btn-toggle-ghost');
@@ -1721,8 +1952,8 @@
             return R * c;
         }
 
-        // Radar de Proximidade (Verifica se chegou perto das notas)
-        function verificarProximidadeRadar() {
+        // Radar de Proximidade (Verifica se chegou perto das notas para abrir automaticamente)
+        setInterval(() => {
             if(!myMapMarker || geoNotesAtivas.length === 0) return;
             const myPos = myMapMarker.getLatLng();
 
@@ -1730,22 +1961,21 @@
                 const dist = calcularDistanciaMetros(myPos.lat, myPos.lng, nota.lat, nota.lng);
                 const bubble = nota.marker.getElement().querySelector('.geo-note-bubble');
                 if(bubble) {
-                    if(dist < 100) { // Se estiver a menos de 100 metros
+                    // Se o seu avatar chegar a menos de 100 metros, a nota expande automaticamente!
+                    if(dist < 100) {
                         bubble.classList.remove('minimized');
                     } else {
                         bubble.classList.add('minimized');
                     }
                 }
             });
-        }
-        setInterval(verificarProximidadeRadar, 1500);
+        }, 1500);
 
         // ==========================================
         // SISTEMA DE PLANTIO E MODAIS (EDITAR/CRIAR)
         // ==========================================
         let plantingMode = null; // 'note' ou 'server'
-        let placementPreview = null;
-        let selectedNoteColor = 'var(--brand-color)';
+        let selectedNoteColor = '#5865F2';
         let editingItemId = null; // ID to track if we are editing
 
         document.querySelectorAll('.modal-btn-group .q-btn').forEach(btn => {
@@ -1757,36 +1987,58 @@
         });
 
         function selecionarCor(element, cor) {
-            document.querySelectorAll('.color-preview-box').forEach(el => el.style.opacity = '0.3');
-            element.style.opacity = '1'; selectedNoteColor = cor;
+            document.querySelectorAll('.color-circle').forEach(el => el.classList.remove('active'));
+            if(element) element.classList.add('active');
+            selectedNoteColor = cor;
+        }
+        function aplicarCorCustomizada(cor) {
+            selecionarCor(null, cor);
+            document.querySelector('.custom-color-btn').style.borderColor = cor;
+            document.querySelector('.custom-color-btn i').style.color = cor;
         }
 
         // Modal de NOTA
-        function abrirModalNota(modo, id = null) {
+        function abrirModalNota(modo, id = null, txt = "", cor = "#5865F2") {
             document.getElementById('note-modal').style.display = 'flex';
-            setTimeout(() => document.getElementById('note-modal').classList.add('active'), 10);
             if(modo === 'create') {
                 editingItemId = null;
                 document.getElementById('note-modal-title').innerText = "Deixar uma Nota";
                 document.getElementById('note-action-btn').innerText = "Escolher Local no Mapa";
                 document.getElementById('note-action-btn').onclick = () => prepararPlantio('note');
                 document.getElementById('note-text-input').value = '';
+                selecionarCor(document.querySelectorAll('.color-circle')[0], '#5865F2');
             } else if (modo === 'edit') {
                 editingItemId = id;
                 document.getElementById('note-modal-title').innerText = "Editar sua Nota";
                 document.getElementById('note-action-btn').innerText = "Salvar Alterações";
                 document.getElementById('note-action-btn').onclick = () => salvarEdicao('note');
+                document.getElementById('note-text-input').value = txt;
+                aplicarCorCustomizada(cor);
             }
         }
-        function closeNoteModal() {
-            document.getElementById('note-modal').classList.remove('active');
-            setTimeout(() => document.getElementById('note-modal').style.display = 'none', 200);
+        function closeNoteModal() { document.getElementById('note-modal').style.display = 'none'; }
+
+        // Modal de SERVIDOR (Carrossel Real)
+        const servidoresUser = [
+            {nome: "A Guilda do Dragão", img: "GU", bg: "5865F2"},
+            {nome: "Mercenários", img: "ME", bg: "da373c"},
+            {nome: "Clube da Luta", img: "CL", bg: "23a559"}
+        ];
+        let carrosselIndex = 0;
+        function mudarCarrossel(dir) {
+            carrosselIndex += dir;
+            if(carrosselIndex < 0) carrosselIndex = servidoresUser.length - 1;
+            if(carrosselIndex >= servidoresUser.length) carrosselIndex = 0;
+            const s = servidoresUser[carrosselIndex];
+            document.getElementById('car-name').innerText = s.nome;
+            document.getElementById('car-img').src = `https://ui-avatars.com/api/?name=${s.img}&background=${s.bg}&color=fff`;
+
+            const item = document.getElementById('carousel-display');
+            item.style.animation = 'none'; void item.offsetWidth; item.style.animation = 'fadeIn 0.3s ease';
         }
 
-        // Modal de SERVIDOR
         function abrirModalServidor(modo, id = null) {
             document.getElementById('server-modal').style.display = 'flex';
-            setTimeout(() => document.getElementById('server-modal').classList.add('active'), 10);
             if(modo === 'create') {
                 editingItemId = null;
                 document.getElementById('server-modal-title').innerText = "Plantar Servidor Base";
@@ -1799,10 +2051,7 @@
                 document.getElementById('server-action-btn').onclick = () => salvarEdicao('server');
             }
         }
-        function closeServerModal() {
-            document.getElementById('server-modal').classList.remove('active');
-            setTimeout(() => document.getElementById('server-modal').style.display = 'none', 200);
-        }
+        function closeServerModal() { document.getElementById('server-modal').style.display = 'none'; }
 
         function prepararPlantio(mode) {
             plantingMode = mode;
@@ -1813,13 +2062,19 @@
 
         function salvarEdicao(mode) {
             closeNoteModal(); closeServerModal();
-            showToast(mode === 'note' ? "Sua Geo-Note foi atualizada!" : "Regras do servidor alteradas com sucesso!", "success");
+            showToast(mode === 'note' ? "Sua HQ Note foi atualizada!" : "Regras do servidor alteradas com sucesso!", "success");
         }
 
         function apagarItem(mode, id) {
-            openConfirmModal("Apagar " + (mode === 'note' ? "Nota" : "Servidor"), "Uma vez apagado, ele sumirá do mapa de todos. Prosseguir?", () => {
-                showToast("Item apagado via hack no satélite.", "success");
-            });
+            document.getElementById('g-confirm-title').innerText = mode === 'note' ? "Apagar Nota HQ" : "Desconectar Servidor";
+            document.getElementById('g-confirm-desc').innerText = "Uma vez apagado, sumirá do mapa de todos os jogadores instantaneamente. Prosseguir?";
+            document.getElementById('g-confirm-btn').onclick = () => {
+                showToast(`${mode === 'note' ? 'Nota' : 'Servidor'} apagado com sucesso.`, "success");
+                const markerObj = mode === 'note' ? geoNotesAtivas.find(n => n.id === id) : serverMarkersAtivos.find(s => s.id === id);
+                if(markerObj && markerObj.marker) bazingaMap.removeLayer(markerObj.marker);
+                document.getElementById('generic-confirm-modal').style.display = 'none';
+            };
+            document.getElementById('generic-confirm-modal').style.display = 'flex';
         }
 
         function initMap() {
@@ -1859,11 +2114,14 @@
 
                 if(!placementPreview) {
                     let htmlContent = '';
-                    if(plantingMode === 'note') htmlContent = `<div class="geo-note-bubble" style="opacity:0.8; pointer-events:none; --note-color: ${selectedNoteColor};"><i class="fa-solid fa-comment-dots" style="font-size:18px;"></i> Alocando Nota...</div>`;
-                    if(plantingMode === 'server') htmlContent = `<div class="server-marker hologram"><img src="https://ui-avatars.com/api/?name=Guilda&background=5865F2&color=fff" style="width:100%;height:100%;"></div>`;
-
-                    const previewIcon = L.divIcon({ className: '', html: htmlContent, iconSize: [0, 0] });
-                    placementPreview = L.marker([e.latlng.lat, e.latlng.lng], {icon: previewIcon, interactive: false}).addTo(bazingaMap);
+                    if(plantingMode === 'note') {
+                        htmlContent = `<div class="geo-note-wrapper"><div class="geo-note-bubble" style="opacity:0.6; pointer-events:none; --note-color: ${selectedNoteColor};"><div class="note-content-area">Posicionando Nota...</div></div></div>`;
+                    }
+                    if(plantingMode === 'server') {
+                        const srv = servidoresUser[carrosselIndex];
+                        htmlContent = `<div class="server-marker hologram"><img src="https://ui-avatars.com/api/?name=${srv.img}&background=${srv.bg}&color=fff" style="width:100%;height:100%;"></div>`;
+                    }
+                    placementPreview = L.marker([e.latlng.lat, e.latlng.lng], {icon: L.divIcon({ className: '', html: htmlContent, iconSize: [40, 40], iconAnchor: [20, 40] }), interactive: false}).addTo(bazingaMap);
                 } else {
                     placementPreview.setLatLng([e.latlng.lat, e.latlng.lng]);
                 }
@@ -1874,20 +2132,19 @@
                 if (!plantingMode) return;
 
                 if (plantingMode === 'note') {
-                    const texto = document.getElementById('note-text-input').value || "Nota Misteriosa";
+                    const texto = document.getElementById('note-text-input').value || "Loot raro aqui!";
                     if(typeof socket !== 'undefined' && socket.connected) socket.emit('criar_geonote', { lat: e.latlng.lat, lng: e.latlng.lng, texto: texto, cor: selectedNoteColor });
-                    renderizarGeoNote(Date.now(), e.latlng.lat, e.latlng.lng, texto, currentUserName, "Agora mesmo", selectedNoteColor);
-                    showToast("Nota cravada no mapa!", "success");
-                    document.getElementById('note-text-input').value = '';
+                    renderizarGeoNote(Date.now(), e.latlng.lat, e.latlng.lng, texto, currentUserName, selectedNoteColor);
+                    showToast("Nota HQ cravada no mapa!", "success");
                 }
                 else if (plantingMode === 'server') {
-                    const srvName = "A Guilda do Dragão"; // Pegaria do carousel real
+                    const srv = servidoresUser[carrosselIndex];
                     const vagasBtn = document.querySelector('#server-tickets-group .active').getAttribute('data-vagas');
-                    const vagas = vagasBtn === 'ilimitado' ? '∞' : parseInt(vagasBtn);
+                    const vagas = vagasBtn === 'ilimitado' ? 'ilimitado' : parseInt(vagasBtn);
 
-                    if(typeof socket !== 'undefined' && socket.connected) socket.emit('plantar_servidor', { lat: e.latlng.lat, lng: e.latlng.lng, nome: srvName, vagas: vagas });
-                    renderizarServidorMapa(Date.now(), e.latlng.lat, e.latlng.lng, srvName, currentUserName, vagas, 1);
-                    showToast(`O servidor "${srvName}" emergiu do solo!`, "success");
+                    if(typeof socket !== 'undefined' && socket.connected) socket.emit('plantar_servidor', { lat: e.latlng.lat, lng: e.latlng.lng, nome: srv.nome, vagas: vagas });
+                    renderizarServidorMapa(Date.now(), e.latlng.lat, e.latlng.lng, srv.nome, currentUserName, vagas, 1);
+                    showToast(`O servidor "${srv.nome}" emergiu do solo!`, "success");
                 }
 
                 document.getElementById('bazinga-map').style.cursor = '';
@@ -1962,21 +2219,30 @@
         }
 
         // Renderiza as Notas como Balões de HQ Reativos
-        function renderizarGeoNote(id, lat, lng, texto, autor, tempo, cor = 'var(--brand-color)') {
+        function renderizarGeoNote(id, lat, lng, texto, autor, cor = '#5865F2') {
             const isDono = (autor === currentUserName);
-            const acoesHtml = isDono ? `<div class="note-actions"><button class="note-btn" title="Editar" onclick="abrirModalNota('edit', ${id})"><i class="fa-solid fa-pen"></i></button><button class="note-btn" title="Apagar" style="color:var(--red-color);" onclick="apagarItem('note', ${id})"><i class="fa-solid fa-xmark"></i></button></div>` : '';
+            const acoesHtml = isDono ? `
+                <div class="note-actions">
+                    <button class="note-btn" title="Editar" onclick="event.stopPropagation(); abrirModalNota('edit', ${id}, '${texto.replace(/'/g, "\\'")}', '${cor}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="note-btn" title="Apagar" style="color:var(--red-color);" onclick="event.stopPropagation(); apagarItem('note', ${id})"><i class="fa-solid fa-xmark"></i></button>
+                </div>` : '';
 
-            const htmlContent = `
-                <div class="geo-note-bubble minimized" style="--note-color: ${cor};">
-                    <span class="note-emoji"><i class="fa-solid fa-comment"></i></span>
-                    <div style="display:flex; flex-direction:column; max-width:200px; white-space:normal;">
-                        <span style="line-height:1.2;">${texto}</span>
-                        <span style="font-size:9px; opacity:0.7; font-weight:normal; margin-top:4px;">De: ${autor}</span>
+            const noteIcon = L.divIcon({
+                className: '', // Removido para o Leaflet não interferir no HTML do balão
+                iconSize: [40, 40], // FIXO: Impede o Leaflet de recalcular e causar o "flicker"
+                iconAnchor: [20, 40], // Fica perfeitamente cravado no chão (base)
+                html: `
+                <div class="geo-note-wrapper">
+                    <div class="geo-note-bubble minimized" style="--note-color: ${cor};">
+                        <span class="note-emoji">💬</span>
+                        <div class="note-content-area">
+                            <span>${texto}</span>
+                            <span style="font-size:9px; opacity:0.6; font-weight:800; margin-top:4px; text-transform:uppercase;">De: ${autor}</span>
+                        </div>
+                        ${acoesHtml}
                     </div>
-                    ${acoesHtml}
-                </div>
-            `;
-            const noteIcon = L.divIcon({ className: '', iconSize: [0, 0], html: htmlContent });
+                </div>`
+            });
             const marker = L.marker([lat, lng], {icon: noteIcon}).addTo(bazingaMap);
 
             // Joga no radar!
@@ -1984,7 +2250,7 @@
         }
 
         // Renderiza os Servidores Plantados (Com Vagas)
-        function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "∞", online = 1) {
+        function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "ilimitado", online = 1) {
             const serverIcon = L.divIcon({
                 className: 'server-marker',
                 html: `<img src="https://ui-avatars.com/api/?name=${nome.replace(/\s/g, '+')}&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">`,
@@ -1992,38 +2258,40 @@
             });
             const srv = L.marker([lat, lng], {icon: serverIcon}).addTo(bazingaMap);
 
-            const numVagas = vagas === "∞" ? 9999 : parseInt(vagas);
-            const vagasTexto = vagas === "∞" ? "Ingressos Ilimitados" : `${online}/${vagas} Vagas`;
+            const isFull = vagas !== 'ilimitado' && online >= vagas;
+            const vagasTexto = vagas === 'ilimitado' ? "Ilimitado" : `${online}/${vagas} Vagas`;
 
-            let btnHtml = '';
-            if (online >= numVagas) {
-                btnHtml = `<button class='btn btn-danger' style='width:100%; padding: 6px; font-size: 12px; cursor:not-allowed;' disabled><i class="fa-solid fa-lock"></i> Sem mais ingressos</button>`;
-            } else {
-                btnHtml = `<button class='btn btn-primary' style='width:100%; padding: 6px; font-size: 12px; background:var(--green-color);' onclick='document.getElementById("btn-server-view").click();'><i class="fa-solid fa-door-open"></i> Entrar no Servidor</button>`;
-            }
+            let btnHtml = isFull
+                ? `<button class='btn btn-danger' style='width:100%; padding: 8px; font-size: 13px; cursor:not-allowed;' disabled><i class="fa-solid fa-lock"></i> Sem mais ingressos</button>`
+                : `<button class='btn btn-primary' style='width:100%; padding: 8px; font-size: 13px; background:var(--green-color);' onclick='document.getElementById("btn-server-view").click();'><i class="fa-solid fa-door-open"></i> Entrar no Servidor</button>`;
 
-            const acoesOwner = (owner === currentUserName) ? `<div style="display:flex; justify-content:center; gap:24px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;"><i class="fa-solid fa-pen" style="color:var(--text-muted); cursor:pointer; font-size:16px; transition:0.2s;" title="Editar Servidor" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'" onclick="abrirModalServidor('edit', ${id})"></i> <i class="fa-solid fa-trash" style="color:var(--red-color); cursor:pointer; font-size:16px; transition:0.2s;" title="Apagar Servidor" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='none'" onclick="apagarItem('server', ${id})"></i></div>` : '';
+            const acoesOwner = (owner === currentUserName) ? `
+                <div style="display:flex; justify-content:center; gap:24px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+                    <i class="fa-solid fa-pen" style="color:var(--text-muted); cursor:pointer; font-size:16px; transition:0.2s;" title="Editar Servidor" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'" onclick="abrirModalServidor('edit', ${id})"></i>
+                    <i class="fa-solid fa-trash" style="color:var(--red-color); cursor:pointer; font-size:16px; transition:0.2s;" title="Apagar Servidor" onmouseover="this.style.color='#ff4444'" onmouseout="this.style.color='var(--red-color)'" onclick="apagarItem('server', ${id})"></i>
+                </div>` : '';
 
             srv.bindPopup(`
-                <div style='text-align:center; min-width: 180px; font-family: gg sans;'>
-                    <h3 style='color:var(--text-header); font-size: 16px; font-weight:800; margin-bottom: 4px;'>${nome}</h3>
-                    <p style='font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-bottom: 12px;'>Dono: ${owner}</p>
-                    <div style='display:flex; justify-content:center; gap:16px; font-size: 11px; font-weight:600; color:var(--text-muted); margin-bottom: 16px; background:rgba(0,0,0,0.2); padding:8px; border-radius:4px;'>
-                        <span style="display:flex; flex-direction:column;"><i class="fa-solid fa-users" style="color:var(--green-color); font-size:16px; margin-bottom:4px;"></i> ${online} Online</span>
-                        <span style="display:flex; flex-direction:column;"><i class="fa-solid fa-ticket" style="color:var(--yellow-color); font-size:16px; margin-bottom:4px;"></i> ${vagasTexto}</span>
+                <div style='text-align:center; min-width: 200px; font-family: gg sans;'>
+                    <h3 style='color:var(--text-header); font-size: 18px; font-weight:800; margin-bottom: 4px;'>${nome}</h3>
+                    <p style='font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-bottom: 12px;'>👑 Dono: ${owner}</p>
+                    <div style='display:flex; justify-content:center; gap:16px; font-size: 12px; font-weight:600; color:var(--text-header); margin-bottom: 16px; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;'>
+                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-users" style="color:var(--green-color); font-size:18px; margin-bottom:6px;"></i> ${online} Online</span>
+                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-ticket" style="color:var(--yellow-color); font-size:18px; margin-bottom:6px;"></i> ${vagasTexto}</span>
                     </div>
                     ${btnHtml}
                     ${acoesOwner}
                 </div>
             `);
+            serverMarkersAtivos.push({ id: id, lat: lat, lng: lng, marker: srv });
         }
 
         async function carregarDadosDoMapa() {
             try {
                 const resp = await fetch('/api/mapa/dados');
                 const dados = await resp.json();
-                dados.notas.forEach(n => renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.hora, n.cor || 'var(--brand-color)'));
-                dados.servers.forEach(s => renderizarServidorMapa(s.id, s.lat, s.lng, s.name, s.owner, s.vagas || "∞", 1));
+                dados.notas.forEach(n => renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.cor || '#5865F2'));
+                dados.servers.forEach(s => renderizarServidorMapa(s.id, s.lat, s.lng, s.name, s.owner, s.vagas || "ilimitado", 1));
             } catch(e) { console.log("Carregando mapa limpo."); }
         }
 
@@ -2144,13 +2412,16 @@
             }
         }
         function recusarDM(id) {
-            openConfirmModal("Excluir DM Temporária", "A conversa será fechada e os dados sumirão em 24h. Deseja mesmo recusar?", () => {
+            document.getElementById('g-confirm-title').innerText = "Excluir DM Temporária";
+            document.getElementById('g-confirm-desc').innerText = "A conversa será fechada e os dados sumirão em 24h. Deseja mesmo recusar?";
+            document.getElementById('g-confirm-btn').onclick = () => {
                 const card = document.getElementById(`dm-${id}`);
                 if(card) card.remove();
-                const btnVoltarRadar = document.getElementById('btn-voltar-radar');
-                if(btnVoltarRadar) btnVoltarRadar.click();
-                showToast("Conversa recusada.", "warning");
-            });
+                document.getElementById('btn-voltar-radar').click();
+                document.getElementById('generic-confirm-modal').style.display = 'none';
+                showToast("Conversa recusada e excluída.", "warning");
+            };
+            document.getElementById('generic-confirm-modal').style.display = 'flex';
         }
 
         // 3. SOCKET.IO E MENSAGENS (CHAT)
@@ -2178,18 +2449,18 @@
                     mapMarkers[dados.usuario_id].bindPopup(`
                         <div style='text-align:center; font-family: gg sans;'>
                             <div style='display: flex; justify-content:center; align-items: center; gap: 6px;'>
-                                <div style='width: 8px; height: 8px; border-radius: 50%; background: var(--green-color);'></div>
+                                <div style='width: 10px; height: 10px; border-radius: 50%; background: var(--green-color);'></div>
                                 <b style="font-size:16px;">${dados.nome}</b>
                             </div>
-                            <div style='color:var(--text-muted); font-size:11px; margin-top:4px;'>A ${distTexto} de distância</div>
-                            <button class='btn btn-primary' style='width: 100%; margin-top: 12px; padding: 6px; font-size: 11px; background:var(--brand-color);' onclick='iniciarDMTemporaria(${dados.usuario_id}, "${dados.nome}", "${dados.avatar||''}")'><i class="fa-solid fa-paper-plane"></i> Mandar DM Rápida</button>
+                            <div style='color:var(--text-muted); font-size:12px; margin-top:4px;'><i class="fa-solid fa-person-walking"></i> A ${distTexto} de distância</div>
+                            <button class='btn btn-primary' style='width: 100%; margin-top: 12px; padding: 8px; font-size: 12px; background:var(--brand-color);' onclick='iniciarDMTemporaria(${dados.usuario_id}, "${dados.nome}", "${dados.avatar||''}")'><i class="fa-solid fa-paper-plane"></i> Mandar DM Rápida</button>
                         </div>
                     `);
                 }
             });
 
             socket.on('nova_geonote', function(dados) {
-                renderizarGeoNote(Date.now(), dados.lat, dados.lng, dados.texto, dados.autor, "Agora mesmo", dados.cor);
+                renderizarGeoNote(Date.now(), dados.lat, dados.lng, dados.texto, dados.autor, dados.cor);
             });
 
             socket.on('novo_servidor_mapa', function(dados) {
@@ -2298,7 +2569,10 @@
         }
 
         // --- CANAIS PÚBLICOS ---
-        document.querySelectorAll('.text-channel').forEach(btn => {
+        function initTextChannel(btn) {
+            if(btn.getAttribute('data-listener') === 'true') return;
+            btn.setAttribute('data-listener', 'true');
+
             btn.addEventListener('click', async () => {
                 document.querySelectorAll('.text-channel').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -2318,7 +2592,9 @@
                 }
                 carregarMensagensIniciais();
             });
-        });
+        }
+
+        document.querySelectorAll('.text-channel').forEach(initTextChannel);
 
         async function carregarMensagensIniciais() {
             const msgContainer = document.getElementById('messages-container');
@@ -2719,7 +2995,10 @@
             } catch(e) {}
         }
 
-        document.querySelectorAll('.voice-channel').forEach(btn => {
+        function initVoiceChannel(btn) {
+            if(btn.getAttribute('data-listener') === 'true') return;
+            btn.setAttribute('data-listener', 'true');
+
             btn.addEventListener('click', async () => {
                 if(inCall) { textView.classList.add('hidden'); textView.classList.remove('sidebar-mode'); videoView.classList.add('active'); return; }
                 const voiceId = btn.getAttribute('data-id'); const voiceName = btn.getAttribute('data-name');
@@ -2799,7 +3078,9 @@
 
                 } catch(e) { console.error("Erro crítico ao entrar na call!", e); }
             });
-        });
+        }
+
+        document.querySelectorAll('.voice-channel').forEach(initVoiceChannel);
 
         socket.on('novo_usuario_call', (dados) => {
             const voiceUsersDiv = document.getElementById(`voice-users-${dados.canal_id}`);

@@ -1,9 +1,13 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import pytz
 
 # Inicializa o banco de dados
 db = SQLAlchemy()
 
+# Utilitário: Definindo o fuso horário de Brasília para todas as tabelas
+def br_now():
+    return datetime.now(pytz.timezone('America/Sao_Paulo'))
 
 class Role(db.Model):
     __tablename__ = 'role'
@@ -51,7 +55,8 @@ class Message(db.Model):
     __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    # Atualizado para o horário de Brasília
+    timestamp = db.Column(db.DateTime, default=br_now)
 
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'), nullable=False)
@@ -66,7 +71,8 @@ class DirectMessage(db.Model):
     receiver_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
 
     content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    # Atualizado para o horário de Brasília
+    timestamp = db.Column(db.DateTime, default=br_now)
 
     # Relacionamentos para puxar os nomes e avatares fácil depois
     sender = db.relationship('Person', foreign_keys=[sender_id])
@@ -93,7 +99,8 @@ class Product(db.Model):
 
     # Se for um item do Bazar, quem está vendendo? (Se for da Loja Oficial, fica nulo)
     seller_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Atualizado para o horário de Brasília
+    created_at = db.Column(db.DateTime, default=br_now)
 
 
 # ==========================================
@@ -111,7 +118,8 @@ class GeoNote(db.Model):
     duration_hours = db.Column(db.Integer, default=24)
 
     author_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    # Atualizado para o horário de Brasília
+    timestamp = db.Column(db.DateTime, default=br_now)
 
     author = db.relationship('Person', backref='geonotes')
 
@@ -128,6 +136,7 @@ class MapServer(db.Model):
     duration_hours = db.Column(db.Integer, nullable=True)  # Nulo = Permanente
 
     owner_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Atualizado para o horário de Brasília
+    created_at = db.Column(db.DateTime, default=br_now)
 
     owner = db.relationship('Person', backref='map_servers')
