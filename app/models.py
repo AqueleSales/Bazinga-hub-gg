@@ -5,9 +5,11 @@ import pytz
 # Inicializa o banco de dados
 db = SQLAlchemy()
 
+
 # Utilitário: Definindo o fuso horário de Brasília para todas as tabelas
 def br_now():
     return datetime.now(pytz.timezone('America/Sao_Paulo'))
+
 
 class Role(db.Model):
     __tablename__ = 'role'
@@ -17,6 +19,17 @@ class Role(db.Model):
 
     # Relacionamento: Um cargo pode ter várias pessoas
     users = db.relationship('Person', backref='role', lazy=True)
+
+
+# ==========================================
+# NOVO: Tabela de Associação (Muitos para Muitos)
+# Liga os Usuários aos Servidores que eles participam
+# ==========================================
+server_members = db.Table('server_members',
+                          db.Column('person_id', db.Integer, db.ForeignKey('person.id'), primary_key=True),
+                          db.Column('server_id', db.Integer, db.ForeignKey('server.id'), primary_key=True),
+                          db.Column('joined_at', db.DateTime, default=br_now)
+                          )
 
 
 class Person(db.Model):
@@ -29,40 +42,69 @@ class Person(db.Model):
     avatar = db.Column(db.String(255), nullable=True)  # URL da foto de perfil
     provider_id = db.Column(db.String(100), nullable=True)  # ID único devolvido pelo Google
 
-    # NOVO: Carteira do Usuário (Começa com 500 moedas de brinde)
+    # Carteira do Usuário (Começa com 500 moedas de brinde)
     bazinga_coins = db.Column(db.Integer, default=500)
+
+    # Perfil (editável na tela de Configurações)
+    bio = db.Column(db.Text, nullable=True)
+    custom_status = db.Column(db.String(128), nullable=True)
+    banner_color = db.Column(db.String(50), nullable=True)
+    status = db.Column(db.String(20), default="online")  # online, idle, dnd, invisible
 
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=True)
 
-    # Relacionamento: Uma pessoa tem várias mensagens de canal
+    # Relacionamentos
     messages = db.relationship('Message', backref='author', lazy=True)
-
-    # NOVO: Relacionamento: Produtos que essa pessoa colocou à venda no Bazar
     products_for_sale = db.relationship('Product', backref='seller', lazy=True)
+
+
+# ==========================================
+# NOVO: O Servidor Real (Chat)
+# ==========================================
+class Server(db.Model):
+    __tablename__ = 'server'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+
+    owner_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    icon_url = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    # Relacionamentos
+    # Quando o servidor for deletado, os canais somem junto (cascade)
+    channels = db.relationship('Channel', backref='server', lazy=True, cascade="all, delete-orphan")
+
+    # A lista de membros deste servidor!
+    members = db.relationship('Person', secondary=server_members, lazy='subquery',
+                              backref=db.backref('servers', lazy=True))
+
+    owner = db.relationship('Person', foreign_keys=[owner_id])
 
 
 class Channel(db.Model):
     __tablename__ = 'channel'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    channel_type = db.Column(db.String(20), default='text')  # Pode ser 'text' ou 'voice'
+    channel_type = db.Column(db.String(20), default='text')  # 'text' ou 'voice'
+
+    # Canal pode pertencer a um Servidor criado por um usuário. Nulo = canal
+    # padrão do "Bazinga Hub" (o servidor global inicial, fora do sistema de Servers).
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=True)
 
     # Relacionamento: Um canal tem várias mensagens
-    messages = db.relationship('Message', backref='channel', lazy=True)
+    messages = db.relationship('Message', backref='channel', lazy=True, cascade="all, delete-orphan")
 
 
 class Message(db.Model):
     __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
-    # Atualizado para o horário de Brasília
     timestamp = db.Column(db.DateTime, default=br_now)
 
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'), nullable=False)
 
 
-# Tabela para salvar as DMs (Conexões Diretas)
 class DirectMessage(db.Model):
     __tablename__ = 'direct_message'
     id = db.Column(db.Integer, primary_key=True)
@@ -71,40 +113,29 @@ class DirectMessage(db.Model):
     receiver_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
 
     content = db.Column(db.Text, nullable=False)
-    # Atualizado para o horário de Brasília
     timestamp = db.Column(db.DateTime, default=br_now)
 
-    # Relacionamentos para puxar os nomes e avatares fácil depois
     sender = db.relationship('Person', foreign_keys=[sender_id])
     receiver = db.relationship('Person', foreign_keys=[receiver_id])
 
 
-# ==========================================
-# Tabela de Produtos do Mercado Elite
-# ==========================================
 class Product(db.Model):
     __tablename__ = 'product'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    # Preços (Separados para ficar compatível com o seed_loja.py)
     price_bzc = db.Column(db.Integer, nullable=True)
     price_pix = db.Column(db.Float, nullable=True)
 
     image_url = db.Column(db.String(255), nullable=True)
-
-    # is_official = True (Loja Bazinga) | is_official = False (Bazar da Comunidade)
     is_official = db.Column(db.Boolean, default=False)
-
-    # Se for um item do Bazar, quem está vendendo? (Se for da Loja Oficial, fica nulo)
     seller_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True)
-    # Atualizado para o horário de Brasília
     created_at = db.Column(db.DateTime, default=br_now)
 
 
 # ==========================================
-# NOVAS TABELAS: Mapa (GeoNotes e Servidores)
+# MAPA: GeoNotes e Servidores Plantados
 # ==========================================
 class GeoNote(db.Model):
     __tablename__ = 'geo_note'
@@ -113,12 +144,13 @@ class GeoNote(db.Model):
     lng = db.Column(db.Float, nullable=False)
     text = db.Column(db.Text, nullable=False)
 
-    # NOVAS COLUNAS: Cor e Duração
     color = db.Column(db.String(20), default="var(--brand-color)")
     duration_hours = db.Column(db.Integer, default=24)
 
+    # NOVO: Data exata em que a nota deve expirar
+    expires_at = db.Column(db.DateTime, nullable=True)
+
     author_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    # Atualizado para o horário de Brasília
     timestamp = db.Column(db.DateTime, default=br_now)
 
     author = db.relationship('Person', backref='geonotes')
@@ -131,12 +163,18 @@ class MapServer(db.Model):
     lat = db.Column(db.Float, nullable=False)
     lng = db.Column(db.Float, nullable=False)
 
-    # NOVAS COLUNAS: Limite de Vagas e Duração
     max_tickets = db.Column(db.Integer, nullable=True)  # Nulo = Ilimitado
     duration_hours = db.Column(db.Integer, nullable=True)  # Nulo = Permanente
 
+    # NOVO: Data exata em que o pino some do mapa
+    expires_at = db.Column(db.DateTime, nullable=True)
+
     owner_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    # Atualizado para o horário de Brasília
+
+    # NOVO: Liga o Pino do Mapa ao Servidor Real de Chat
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=True)
+
     created_at = db.Column(db.DateTime, default=br_now)
 
-    owner = db.relationship('Person', backref='map_servers')
+    owner = db.relationship('Person', backref='map_servers', foreign_keys=[owner_id])
+    server = db.relationship('Server', backref=db.backref('map_pin', uselist=False))
