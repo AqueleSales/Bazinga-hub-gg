@@ -1545,6 +1545,11 @@
         const rawUserName = "{{ usuario_atual.name }}";
         const currentUserName = rawUserName.includes("{" + "{") ? "Bazinga User" : rawUserName;
 
+        // Id numérico do usuário: usado para saber quem é dono de nota/pino no
+        // mapa (comparar pelo nome falhava com nomes repetidos).
+        const rawUserId = "{{ usuario_atual.id }}";
+        const currentUserId = parseInt(rawUserId.replace(/[^0-9]/g, '')) || 0;
+
         const rawUserAvatar = "{{ usuario_atual.avatar or '' }}";
         const currentUserAvatar = rawUserAvatar.includes("{" + "{") ? "" : rawUserAvatar;
 
@@ -1569,6 +1574,38 @@
         // 2. SOCKET.IO SETUP (precisa vir cedo: vários handlers abaixo dependem de `socket`)
         const socket = typeof io !== 'undefined' ? io() : { emit: () => {}, on: () => {}, connected: false };
 
+        // ==========================================
+        // SEGURANÇA: escapando texto de usuário antes de jogar em innerHTML
+        // ------------------------------------------------------------------
+        // Tudo que vem de outro usuário (mensagem, nome, nota do mapa, URL de
+        // avatar) passa por aqui. Sem isso, uma mensagem tipo
+        // `<img src=x onerror=...>` executava script no navegador de todo mundo
+        // que abrisse o canal.
+        // ==========================================
+        function esc(valor) {
+            if (valor === null || valor === undefined) return '';
+            return String(valor)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Para URLs que vão em src=""/href="": só deixa passar http(s) e
+        // caminhos do próprio site, barrando javascript: e data:.
+        function escUrl(url) {
+            if (!url) return '';
+            const limpa = String(url).trim();
+            if (/^(https?:\/\/|\/)/i.test(limpa)) return esc(limpa);
+            return '';
+        }
+
+        // Para valores que entram dentro de um onclick="..." inline.
+        function escJs(valor) {
+            return esc(JSON.stringify(valor === undefined ? null : valor));
+        }
+
         // --- SISTEMA DE TOASTS E MODAIS GENÉRICOS (Substitui Alert/Prompt/Confirm) ---
         function showToast(message, type = 'info') {
             const container = document.getElementById('bazinga-toast-container');
@@ -1579,7 +1616,7 @@
             if(type === 'error') icon = '<i class="fa-solid fa-circle-exclamation" style="color: var(--red-color);"></i>';
             if(type === 'warning') icon = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--yellow-color);"></i>';
 
-            toast.innerHTML = `${icon} <span style="flex-grow: 1;">${message}</span>`;
+            toast.innerHTML = `${icon} <span style="flex-grow: 1;">${esc(message)}</span>`;
             container.appendChild(toast);
 
             setTimeout(() => {
@@ -1790,12 +1827,13 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = 'server-wrapper';
 
-                const iconHtml = srv.iconUrl
-                    ? `<img src="${srv.iconUrl}" style="width:100%;height:100%;object-fit:cover;">`
-                    : iniciaisServidor(srv.name);
+                const iconeSeguro = escUrl(srv.iconUrl);
+                const iconHtml = iconeSeguro
+                    ? `<img src="${iconeSeguro}" style="width:100%;height:100%;object-fit:cover;">`
+                    : esc(iniciaisServidor(srv.name || '?'));
 
                 wrapper.innerHTML = `
-                    <div class="server-icon ${activeMyServerId === srv.id ? 'active' : ''}" id="my-server-icon-${srv.id}" title="${srv.name}">
+                    <div class="server-icon ${activeMyServerId === srv.id ? 'active' : ''}" id="my-server-icon-${Number(srv.id)}" title="${esc(srv.name)}">
                         ${iconHtml}
                     </div>
                 `;
@@ -1837,7 +1875,7 @@
             const serverSidebar = document.getElementById('bazinga-sidebar');
             serverSidebar.style.display = 'flex';
 
-            serverSidebar.querySelector('.channels-header').innerHTML = `<h3>${srv.name} <i class="fa-solid fa-chevron-down" style="font-size: 12px;"></i></h3>`;
+            serverSidebar.querySelector('.channels-header').innerHTML = `<h3>${esc(srv.name)} <i class="fa-solid fa-chevron-down" style="font-size: 12px;"></i></h3>`;
 
             const channelsList = serverSidebar.querySelector('.channels-list');
             channelsList.innerHTML = `
@@ -2500,12 +2538,16 @@
         }
 
         // Renderiza as Notas como Balões de HQ Reativos
-        function renderizarGeoNote(id, lat, lng, texto, autor, cor = '#5865F2') {
-            const isDono = (autor === currentUserName);
+        function renderizarGeoNote(id, lat, lng, texto, autor, cor = '#5865F2', autorId = null) {
+            // Dono pelo id, não pelo nome: dois usuários com o mesmo nome do
+            // Google viam os botões de editar/apagar um do outro.
+            const isDono = autorId !== null && autorId !== undefined
+                ? Number(autorId) === Number(currentUserId)
+                : (autor === currentUserName);
             const acoesHtml = isDono ? `
                 <div class="note-actions">
-                    <button class="note-btn" title="Editar" onclick="event.stopPropagation(); abrirModalNota('edit', ${id}, '${texto.replace(/'/g, "\\'")}', '${cor}')"><i class="fa-solid fa-pen"></i></button>
-                    <button class="note-btn" title="Apagar" style="color:var(--red-color);" onclick="event.stopPropagation(); apagarItem('note', ${id})"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="note-btn" title="Editar" onclick="event.stopPropagation(); abrirModalNota('edit', ${Number(id)}, ${escJs(texto)}, ${escJs(cor)})"><i class="fa-solid fa-pen"></i></button>
+                    <button class="note-btn" title="Apagar" style="color:var(--red-color);" onclick="event.stopPropagation(); apagarItem('note', ${Number(id)})"><i class="fa-solid fa-xmark"></i></button>
                 </div>` : '';
 
             const noteIcon = L.divIcon({
@@ -2514,11 +2556,11 @@
                 iconAnchor: [20, 40], // Fica perfeitamente cravado no chão (base)
                 html: `
                 <div class="geo-note-wrapper">
-                    <div class="geo-note-bubble minimized" style="--note-color: ${cor};">
+                    <div class="geo-note-bubble minimized" style="--note-color: ${esc(cor)};">
                         <span class="note-emoji">💬</span>
                         <div class="note-content-area">
-                            <span>${texto}</span>
-                            <span style="font-size:9px; opacity:0.6; font-weight:800; margin-top:4px; text-transform:uppercase;">De: ${autor}</span>
+                            <span>${esc(texto)}</span>
+                            <span style="font-size:9px; opacity:0.6; font-weight:800; margin-top:4px; text-transform:uppercase;">De: ${esc(autor)}</span>
                         </div>
                         ${acoesHtml}
                     </div>
@@ -2526,15 +2568,16 @@
             });
             const marker = L.marker([lat, lng], {icon: noteIcon}).addTo(bazingaMap);
 
-            // Joga no radar!
-            geoNotesAtivas.push({ id: id, lat: lat, lng: lng, marker: marker });
+            // Joga no radar! (texto/cor guardados para redesenhar na edição)
+            geoNotesAtivas.push({ id: id, lat: lat, lng: lng, marker: marker,
+                                  texto: texto, cor: cor, autor: autor, autorId: autorId });
         }
 
         // Renderiza os Servidores Plantados (Com Vagas)
-        function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "ilimitado", online = 1, serverId = null) {
+        function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "ilimitado", online = 1, serverId = null, ownerId = null) {
             const serverIcon = L.divIcon({
                 className: 'server-marker',
-                html: `<img src="https://ui-avatars.com/api/?name=${nome.replace(/\s/g, '+')}&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">`,
+                html: `<img src="https://ui-avatars.com/api/?name=${encodeURIComponent(nome || '?')}&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">`,
                 iconSize: [48, 48], iconAnchor: [24, 48]
             });
             const srv = L.marker([lat, lng], {icon: serverIcon}).addTo(bazingaMap);
@@ -2546,7 +2589,11 @@
                 ? `<button class='btn btn-danger' style='width:100%; padding: 8px; font-size: 13px; cursor:not-allowed;' disabled><i class="fa-solid fa-lock"></i> Sem mais ingressos</button>`
                 : `<button class='btn btn-primary' style='width:100%; padding: 8px; font-size: 13px; background:var(--green-color);' onclick='entrarNoServidorPin(${serverId ?? 'null'})'><i class="fa-solid fa-door-open"></i> Entrar no Servidor</button>`;
 
-            const acoesOwner = (owner === currentUserName) ? `
+            const isDono = ownerId !== null && ownerId !== undefined
+                ? Number(ownerId) === Number(currentUserId)
+                : (owner === currentUserName);
+
+            const acoesOwner = isDono ? `
                 <div style="display:flex; justify-content:center; gap:24px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
                     <i class="fa-solid fa-pen" style="color:var(--text-muted); cursor:pointer; font-size:16px; transition:0.2s;" title="Editar Servidor" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'" onclick="abrirModalServidor('edit', ${id}, ${vagas === 'ilimitado' ? 'null' : vagas})"></i>
                     <i class="fa-solid fa-trash" style="color:var(--red-color); cursor:pointer; font-size:16px; transition:0.2s;" title="Apagar Servidor" onmouseover="this.style.color='#ff4444'" onmouseout="this.style.color='var(--red-color)'" onclick="apagarItem('server', ${id})"></i>
@@ -2554,25 +2601,28 @@
 
             srv.bindPopup(`
                 <div style='text-align:center; min-width: 200px; font-family: gg sans;'>
-                    <h3 style='color:var(--text-header); font-size: 18px; font-weight:800; margin-bottom: 4px;'>${nome}</h3>
-                    <p style='font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-bottom: 12px;'>👑 Dono: ${owner}</p>
+                    <h3 style='color:var(--text-header); font-size: 18px; font-weight:800; margin-bottom: 4px;'>${esc(nome)}</h3>
+                    <p style='font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-bottom: 12px;'>👑 Dono: ${esc(owner)}</p>
                     <div style='display:flex; justify-content:center; gap:16px; font-size: 12px; font-weight:600; color:var(--text-header); margin-bottom: 16px; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;'>
-                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-users" style="color:var(--green-color); font-size:18px; margin-bottom:6px;"></i> ${online} Online</span>
-                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-ticket" style="color:var(--yellow-color); font-size:18px; margin-bottom:6px;"></i> ${vagasTexto}</span>
+                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-users" style="color:var(--green-color); font-size:18px; margin-bottom:6px;"></i> ${Number(online) || 0} Online</span>
+                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-ticket" style="color:var(--yellow-color); font-size:18px; margin-bottom:6px;"></i> ${esc(vagasTexto)}</span>
                     </div>
                     ${btnHtml}
                     ${acoesOwner}
                 </div>
             `);
-            serverMarkersAtivos.push({ id: id, lat: lat, lng: lng, marker: srv });
+            serverMarkersAtivos.push({ id: id, lat: lat, lng: lng, marker: srv,
+                                       nome: nome, owner: owner, ownerId: ownerId,
+                                       vagas: vagas, online: online, serverId: serverId });
         }
 
         async function carregarDadosDoMapa() {
             try {
                 const resp = await fetch('/api/mapa/dados');
                 const dados = await resp.json();
-                dados.notas.forEach(n => renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.cor || '#5865F2'));
-                dados.servers.forEach(s => renderizarServidorMapa(s.id, s.lat, s.lng, s.name, s.owner, s.vagas || "ilimitado", 1, s.server_id));
+                dados.notas.forEach(n => renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.cor || '#5865F2', n.autor_id));
+                dados.servers.forEach(s => renderizarServidorMapa(s.id, s.lat, s.lng, s.name, s.owner,
+                                                                  s.vagas || "ilimitado", s.online || 1, s.server_id, s.owner_id));
             } catch(e) { console.log("Carregando mapa limpo."); }
         }
 
@@ -2720,7 +2770,10 @@
             // --- EVENTOS DO RADAR (GPS) ---
             socket.on('posicao_amigo_atualizada', function(dados) {
                 if (!mapMarkers[dados.usuario_id]) {
-                    const avatarHtml = dados.avatar ? `<img src="${dados.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<span>${dados.nome[0].toUpperCase()}</span>`;
+                    const avatarSeguro = escUrl(dados.avatar);
+                    const avatarHtml = avatarSeguro
+                        ? `<img src="${avatarSeguro}" style="width:100%;height:100%;object-fit:cover;">`
+                        : `<span>${esc((dados.nome || '?')[0].toUpperCase())}</span>`;
                     const friendIcon = L.divIcon({ className: 'user-marker', html: avatarHtml, iconSize: [36, 36], iconAnchor: [18, 18] });
                     const marker = L.marker([dados.lat, dados.lng], {icon: friendIcon}).addTo(bazingaMap);
                     mapMarkers[dados.usuario_id] = marker;
@@ -2737,23 +2790,44 @@
                         <div style='text-align:center; font-family: gg sans;'>
                             <div style='display: flex; justify-content:center; align-items: center; gap: 6px;'>
                                 <div style='width: 10px; height: 10px; border-radius: 50%; background: var(--green-color);'></div>
-                                <b style="font-size:16px;">${dados.nome}</b>
+                                <b style="font-size:16px;">${esc(dados.nome)}</b>
                             </div>
-                            <div style='color:var(--text-muted); font-size:12px; margin-top:4px;'><i class="fa-solid fa-person-walking"></i> A ${distTexto} de distância</div>
-                            <button class='btn btn-primary' style='width: 100%; margin-top: 12px; padding: 8px; font-size: 12px; background:var(--brand-color);' onclick='iniciarDMTemporaria(${dados.usuario_id}, "${dados.nome}", "${dados.avatar||''}")'><i class="fa-solid fa-paper-plane"></i> Mandar DM Rápida</button>
+                            <div style='color:var(--text-muted); font-size:12px; margin-top:4px;'><i class="fa-solid fa-person-walking"></i> A ${esc(distTexto)} de distância</div>
+                            <button class='btn btn-primary' style='width: 100%; margin-top: 12px; padding: 8px; font-size: 12px; background:var(--brand-color);' onclick="iniciarDMTemporaria(${Number(dados.usuario_id)}, ${escJs(dados.nome)}, ${escJs(dados.avatar || '')})"><i class="fa-solid fa-paper-plane"></i> Mandar DM Rápida</button>
                         </div>
                     `);
                 }
             });
 
             socket.on('nova_geonote', function(dados) {
-                renderizarGeoNote(dados.id, dados.lat, dados.lng, dados.texto, dados.autor, dados.cor);
-                if (dados.autor === currentUserName) showToast("Nota HQ cravada e salva no banco!", "success");
+                renderizarGeoNote(dados.id, dados.lat, dados.lng, dados.texto, dados.autor, dados.cor, dados.autor_id);
+                if (Number(dados.autor_id) === Number(currentUserId)) showToast("Nota HQ cravada e salva no banco!", "success");
             });
 
             socket.on('novo_servidor_mapa', function(dados) {
-                renderizarServidorMapa(dados.id, dados.lat, dados.lng, dados.nome, dados.owner, dados.vagas, 1, dados.server_id);
-                if (dados.owner === currentUserName) showToast(`O servidor "${dados.nome}" foi salvo e plantado!`, "success");
+                renderizarServidorMapa(dados.id, dados.lat, dados.lng, dados.nome, dados.owner,
+                                       dados.vagas, dados.online || 1, dados.server_id, dados.owner_id);
+                if (Number(dados.owner_id) === Number(currentUserId)) showToast(`O servidor "${dados.nome}" foi salvo e plantado!`, "success");
+            });
+
+            // Edição vinda de outro cliente: antes esses dois eventos eram
+            // emitidos pelo backend mas ninguém escutava, então a alteração só
+            // aparecia depois de dar F5.
+            socket.on('geonote_editada', function(dados) {
+                const nota = geoNotesAtivas.find(n => n.id === dados.id);
+                if (!nota) return;
+                bazingaMap.removeLayer(nota.marker);
+                geoNotesAtivas = geoNotesAtivas.filter(n => n.id !== dados.id);
+                renderizarGeoNote(dados.id, nota.lat, nota.lng, dados.texto, nota.autor, dados.cor, nota.autorId);
+            });
+
+            socket.on('servidor_mapa_editado', function(dados) {
+                const pino = serverMarkersAtivos.find(s => s.id === dados.id);
+                if (!pino) return;
+                bazingaMap.removeLayer(pino.marker);
+                serverMarkersAtivos = serverMarkersAtivos.filter(s => s.id !== dados.id);
+                renderizarServidorMapa(dados.id, pino.lat, pino.lng, pino.nome, pino.owner,
+                                       dados.vagas, pino.online, pino.serverId, pino.ownerId);
             });
 
             socket.on('geonote_apagada', function(dados) {
@@ -2839,26 +2913,31 @@
             div.setAttribute('data-autor', autor);
             div.setAttribute('data-hora', hora);
 
-            let avatarHtml = avatar ? `<img src="${avatar}">` : `<span>${autor[0].toUpperCase()}</span>`;
+            // Tudo abaixo vem de outro usuário: sempre passar por esc()/escUrl().
+            const avatarSeguro = escUrl(avatar);
+            const corSegura = esc(cor);
+            let avatarHtml = avatarSeguro
+                ? `<img src="${avatarSeguro}">`
+                : `<span>${esc((autor || '?')[0].toUpperCase())}</span>`;
 
             if (isGrouped) {
                 // Pega só o horário limpo (ex: extrai "19:34" da string "Hoje às 19:34")
                 const timeOnly = hora.includes('às') ? hora.split('às')[1].trim() : hora;
                 div.innerHTML = `
-                    <div class="grouped-timestamp">${timeOnly}</div>
+                    <div class="grouped-timestamp">${esc(timeOnly)}</div>
                     <div class="message-content">
-                        <p class="message-text">${texto}</p>
+                        <p class="message-text">${esc(texto)}</p>
                     </div>
                 `;
             } else {
                 div.innerHTML = `
-                    <div class="chat-avatar" style="background-color: ${avatar ? 'transparent' : cor};">${avatarHtml}</div>
+                    <div class="chat-avatar" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${avatarHtml}</div>
                     <div class="message-content">
                         <div class="message-header">
-                            <span class="message-author" style="color: ${cor};">${autor}</span>
-                            <span class="message-timestamp">${hora}</span>
+                            <span class="message-author" style="color: ${corSegura};">${esc(autor)}</span>
+                            <span class="message-timestamp">${esc(hora)}</span>
                         </div>
-                        <p class="message-text">${texto}</p>
+                        <p class="message-text">${esc(texto)}</p>
                     </div>
                 `;
             }
@@ -2881,7 +2960,7 @@
                 socket.emit('entrar_canal', { canal_id: currentChannelId });
 
                 const channelName = btn.getAttribute('data-name');
-                document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> ${channelName}`;
+                document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> ${esc(channelName)}`;
                 document.getElementById('message-input').placeholder = `Conversar em #${channelName}`;
 
                 if(!inCall) {
@@ -2943,7 +3022,10 @@
         });
 
         document.getElementById('ctx-delete').addEventListener('click', () => {
-            if(targetMsgId) { socket.emit('apagar_mensagem', { msg_id: targetMsgId }); targetMsgElement.remove(); document.getElementById('msg-context-menu').style.display = 'none'; }
+            // Não remove na hora: espera o 'mensagem_apagada' voltar do servidor.
+            // Agora o backend recusa apagar mensagem dos outros, e sumir o
+            // elemento antes da confirmação mentia pro usuário.
+            if(targetMsgId) { socket.emit('apagar_mensagem', { msg_id: targetMsgId }); document.getElementById('msg-context-menu').style.display = 'none'; }
         });
 
         socket.on('mensagem_apagada', function(dados) {
@@ -3033,8 +3115,8 @@
 
         document.getElementById('status-input').addEventListener('input', (e) => {
             const text = e.target.value || "Sem status";
-            document.getElementById('preview-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${text}`;
-            document.getElementById('popout-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${text}`;
+            document.getElementById('preview-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
+            document.getElementById('popout-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
         });
 
         document.getElementById('bio-input').addEventListener('input', (e) => {
@@ -3437,7 +3519,7 @@
 
                     textView.classList.add('hidden'); textView.classList.remove('sidebar-mode');
                     videoView.classList.add('active');
-                    document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high" style="color: var(--text-muted);"></i> ${voiceName}`;
+                    document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high" style="color: var(--text-muted);"></i> ${esc(voiceName)}`;
 
                     mePeer = new Peer(undefined, { host: '0.peerjs.com', port: 443, secure: true });
                     mePeer.on('open', id => {
@@ -3471,8 +3553,9 @@
                                     presence.className = 'channel-item';
                                     presence.id = `vu-${call.peer}`;
                                     presence.style.fontSize = '13px';
-                                    const remoteAvatarHtml = callerAvatar ? `<img src="${callerAvatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : `<span>${callerName[0].toUpperCase()}</span>`;
-                                    presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background-color: ${callerAvatar ? 'transparent' : 'var(--brand-color)'};">${remoteAvatarHtml}</div> ${callerName}`;
+                                    const callerAvatarSeguro = escUrl(callerAvatar);
+                                    const remoteAvatarHtml = callerAvatarSeguro ? `<img src="${callerAvatarSeguro}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : `<span>${esc((callerName || '?')[0].toUpperCase())}</span>`;
+                                    presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background-color: ${callerAvatarSeguro ? 'transparent' : 'var(--brand-color)'};">${remoteAvatarHtml}</div> ${esc(callerName)}`;
                                     voiceUsersDiv.appendChild(presence);
                                 }
                             });
@@ -3493,8 +3576,9 @@
             if(voiceUsersDiv && !document.getElementById(`vu-${dados.peer_id}`)) {
                 const presence = document.createElement('div');
                 presence.className = 'channel-item'; presence.id = `vu-${dados.peer_id}`; presence.style.fontSize = '13px';
-                const remoteAvatarHtml = dados.avatar ? `<img src="${dados.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : dados.usuario[0].toUpperCase();
-                presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background-color: ${dados.avatar ? 'transparent' : 'var(--brand-color)'};">${remoteAvatarHtml}</div> ${dados.usuario}`;
+                const avatarSeguro = escUrl(dados.avatar);
+                const remoteAvatarHtml = avatarSeguro ? `<img src="${avatarSeguro}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : esc((dados.usuario || '?')[0].toUpperCase());
+                presence.innerHTML = `<div class="user-avatar-wrapper" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 4px; background-color: ${avatarSeguro ? 'transparent' : 'var(--brand-color)'};">${remoteAvatarHtml}</div> ${esc(dados.usuario)}`;
                 voiceUsersDiv.appendChild(presence);
             }
 
@@ -3523,12 +3607,13 @@
             const card = document.createElement('div');
             card.className = 'video-card'; card.id = `vc-${peerId}`;
             const isAudioOnly = stream.getVideoTracks().length === 0;
-            let cardAvatarHtml = nome[0].toUpperCase();
-            if (avatarUrl) { cardAvatarHtml = `<img src="${avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; }
+            const avatarSeguro = escUrl(avatarUrl);
+            let cardAvatarHtml = esc((nome || '?')[0].toUpperCase());
+            if (avatarSeguro) { cardAvatarHtml = `<img src="${avatarSeguro}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; }
 
-            card.innerHTML = `<div class="video-avatar" style="display: ${isAudioOnly ? 'flex' : 'none'}; background-color: ${avatarUrl ? 'transparent' : 'var(--brand-color)'};">${cardAvatarHtml}</div>
+            card.innerHTML = `<div class="video-avatar" style="display: ${isAudioOnly ? 'flex' : 'none'}; background-color: ${avatarSeguro ? 'transparent' : 'var(--brand-color)'};">${cardAvatarHtml}</div>
                               <video autoplay style="display: ${isAudioOnly ? 'none' : 'block'}; width: 100%; height: 100%; object-fit: contain;"></video>
-                              <div class="video-label">${nome}</div>`;
+                              <div class="video-label">${esc(nome)}</div>`;
             videoGrid.appendChild(card);
             card.querySelector('video').srcObject = stream;
         }
@@ -3692,14 +3777,14 @@
                     if (!prod.is_official) {
                         // BAZAR DA COMUNIDADE (Via PIX)
                         card.innerHTML = `
-                            <img src="${prod.image_url || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600'}" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&q=80'">
+                            <img src="${escUrl(prod.image_url) || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600'}" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&q=80'">
                             <div class="product-info">
-                                <div class="product-title">${prod.name}</div>
-                                <div class="product-author"><img src="https://ui-avatars.com/api/?name=${prod.seller.replace(/\s/g, '+')}&background=random" style="width: 16px; height: 16px; border-radius: 50%;"> Por ${prod.seller}</div>
-                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${prod.description}</p>
+                                <div class="product-title">${esc(prod.name)}</div>
+                                <div class="product-author"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(prod.seller || '?')}&background=random" style="width: 16px; height: 16px; border-radius: 50%;"> Por ${esc(prod.seller)}</div>
+                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${esc(prod.description)}</p>
                                 <div class="product-footer">
-                                    <div class="price-pix"><i class="fa-brands fa-pix"></i> R$ ${prod.price_pix.toFixed(2).replace('.', ',')}</div>
-                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; background-color: var(--green-color);" onclick="abrirModalCompra(${prod.id}, '${prod.name.replace(/'/g, "\\'")}', ${prod.price_pix}, 'PIX')">Comprar</button>
+                                    <div class="price-pix"><i class="fa-brands fa-pix"></i> R$ ${Number(prod.price_pix || 0).toFixed(2).replace('.', ',')}</div>
+                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; background-color: var(--green-color);" onclick="abrirModalCompra(${Number(prod.id)}, ${escJs(prod.name)}, ${Number(prod.price_pix || 0)}, 'PIX')">Comprar</button>
                                 </div>
                             </div>
                         `;
@@ -3726,8 +3811,8 @@
                             <div class="product-img" style="background: #1e1f22; display: flex; justify-content: center; align-items: center; font-size: 48px; color: #da373c;">
                                 <i class="fa-solid fa-rocket"></i>
                             </div>`;
-                        } else if (prod.image_url) {
-                            imgHtml = `<img src="${prod.image_url}" class="product-img">`;
+                        } else if (escUrl(prod.image_url)) {
+                            imgHtml = `<img src="${escUrl(prod.image_url)}" class="product-img">`;
                         } else {
                             imgHtml = `<div class="product-img" style="background: #111214; display: flex; justify-content: center; align-items: center;"><i class="fa-solid fa-gem" style="font-size: 48px; color: var(--brand-color);"></i></div>`;
                         }
@@ -3735,12 +3820,12 @@
                         card.innerHTML = `
                             ${imgHtml}
                             <div class="product-info">
-                                <div class="product-title">${prod.name}</div>
+                                <div class="product-title">${esc(prod.name)}</div>
                                 <div class="product-author"><i class="fa-solid fa-check-circle" style="color: var(--brand-color);"></i> Oficial Bazinga</div>
-                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${prod.description}</p>
+                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${esc(prod.description)}</p>
                                 <div class="product-footer">
-                                    <div class="price-bzc">${prod.price_bzc} BZC</div>
-                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="abrirModalCompra(${prod.id}, '${prod.name.replace(/'/g, "\\'")}', ${prod.price_bzc}, 'BZC')">Comprar</button>
+                                    <div class="price-bzc">${Number(prod.price_bzc || 0)} BZC</div>
+                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="abrirModalCompra(${Number(prod.id)}, ${escJs(prod.name)}, ${Number(prod.price_bzc || 0)}, 'BZC')">Comprar</button>
                                 </div>
                             </div>
                         `;

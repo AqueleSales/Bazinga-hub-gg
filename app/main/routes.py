@@ -1,47 +1,49 @@
 from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app
 from sqlalchemy.exc import OperationalError, PendingRollbackError, SQLAlchemyError
-from datetime import datetime
 from sqlalchemy import or_, and_
 from werkzeug.utils import secure_filename
 import os
-import time
 import uuid
 from ..models import Person, Channel, Message, DirectMessage, Product, GeoNote, MapServer, br_now, db
+from ..utils import com_retry, comitar_com_retry, canal_permitido
 
 main_bp = Blueprint("main", __name__)
 
 EXTENSOES_PERMITIDAS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
+# Assinaturas dos formatos que a gente aceita. Checar a extensão do nome não
+# basta - qualquer arquivo renomeado para .png passaria.
+ASSINATURAS_IMAGEM = (
+    b'\x89PNG\r\n\x1a\n',      # png
+    b'\xff\xd8\xff',            # jpg/jpeg
+    b'GIF87a', b'GIF89a',       # gif
+    b'RIFF',                    # webp (RIFF....WEBP)
+)
 
-def com_retry(fn, tentativas=3, espera=0.8):
-    """Roda fn() e tenta de novo se o Neon estiver 'acordando' de um cold start
-    (com NullPool toda query abre conexão nova, então isso pode acontecer em qualquer rota)."""
-    for tentativa in range(tentativas):
-        try:
-            return fn()
-        except OperationalError:
-            db.session.rollback()
-            if tentativa == tentativas - 1:
-                raise
-            time.sleep(espera * (tentativa + 1))
+
+def usuario_da_sessao():
+    """Person logada, ou None. Não levanta exceção se o banco estiver frio."""
+    if 'user_id' not in session:
+        return None
+    try:
+        return com_retry(lambda: Person.query.get(session['user_id']))
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"[ERRO BANCO] usuario_da_sessao: {e}")
+        return None
 
 
 @main_bp.context_processor
 def inject_user():
-    user = None
-    # Procura pelo 'user_id' que a nossa nova rota do Google salvou na Sessão
-    if 'user_id' in session:
-        try:
-            user = com_retry(lambda: Person.query.get(session['user_id']))
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            print(f"[ERRO BANCO] inject_user: {e}")
-    return dict(user=user)
+    # Procura pelo 'user_id' que a nossa rota do Google salvou na Sessão
+    return dict(user=usuario_da_sessao())
 
 
 def formatar_data(ts):
     if not ts: return ""
-    hoje = datetime.now().date()
+    # br_now() e não datetime.now(): o servidor do Render roda em UTC, então
+    # comparar com a hora local dele trocava "Hoje"/"Ontem" perto da meia-noite.
+    hoje = br_now().date()
     data_msg = ts.date()
     hora_str = ts.strftime('%H:%M')
 
@@ -111,11 +113,21 @@ def chat():
 
 @main_bp.route("/api/mensagens/<int:canal_id>")
 def pegar_mensagens(canal_id):
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    # Sem isso dava pra ler o histórico de qualquer canal só chutando o id.
+    if not canal_permitido(usuario, canal_id):
+        return jsonify({'error': 'Você não tem acesso a esse canal'}), 403
+
     try:
-        mensagens_db = Message.query.filter_by(channel_id=canal_id).order_by(Message.timestamp.asc()).limit(50).all()
-    except (OperationalError, PendingRollbackError):
+        mensagens_db = com_retry(lambda: Message.query.filter_by(channel_id=canal_id)
+                                 .order_by(Message.timestamp.asc()).limit(50).all())
+    except (OperationalError, PendingRollbackError) as e:
         db.session.rollback()
-        mensagens_db = Message.query.filter_by(channel_id=canal_id).order_by(Message.timestamp.asc()).limit(50).all()
+        print(f"[ERRO BANCO] /api/mensagens/{canal_id}: {e}")
+        return jsonify({'error': 'Banco indisponível, tente de novo'}), 503
 
     dados = []
     for msg in mensagens_db:
@@ -243,16 +255,21 @@ def dados_do_mapa():
                 or_(MapServer.expires_at == None, MapServer.expires_at > agora)
             ).all()
 
+            # autor_id/owner_id vão junto porque o frontend decidia quem é dono
+            # comparando o NOME - dois usuários com o mesmo nome do Google viam
+            # os botões de editar/apagar um do outro.
             notas = [{
                 'id': n.id, 'lat': n.lat, 'lng': n.lng,
                 'texto': n.text, 'autor': n.author.name if n.author else '???',
-                'cor': n.color
+                'autor_id': n.author_id, 'cor': n.color
             } for n in notas_db]
 
             servers = [{
                 'id': s.id, 'lat': s.lat, 'lng': s.lng,
                 'name': s.name, 'owner': s.owner.name if s.owner else '???',
+                'owner_id': s.owner_id,
                 'vagas': s.max_tickets if s.max_tickets else 'ilimitado',
+                'online': len(s.server.members) if s.server else 1,
                 'server_id': s.server_id
             } for s in servers_db]
 
@@ -281,6 +298,13 @@ def upload_imagem():
     extensao = arquivo.filename.rsplit('.', 1)[-1].lower() if '.' in arquivo.filename else ''
     if extensao not in EXTENSOES_PERMITIDAS:
         return jsonify({'error': 'Formato de imagem não permitido'}), 400
+
+    # Confere a assinatura real do arquivo: um .php/.svg renomeado para .png
+    # passava só na checagem de extensão.
+    cabecalho = arquivo.stream.read(12)
+    arquivo.stream.seek(0)
+    if not cabecalho.startswith(ASSINATURAS_IMAGEM):
+        return jsonify({'error': 'Esse arquivo não é uma imagem de verdade'}), 400
 
     pasta_uploads = os.path.join(current_app.static_folder, 'uploads')
     os.makedirs(pasta_uploads, exist_ok=True)
