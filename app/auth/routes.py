@@ -71,6 +71,13 @@ def callback():
         comitar_com_retry(atualizar_avatar)
 
     session['user_id'] = user.id
+
+    # Se a pessoa chegou por um link de convite antes de logar, volta pra ele
+    # em vez de jogar na home e perder o convite.
+    codigo = session.pop('convite_pendente', None)
+    if codigo:
+        return redirect(url_for('main.entrar_por_link', code=codigo))
+
     return redirect(url_for('main.index'))
 
 

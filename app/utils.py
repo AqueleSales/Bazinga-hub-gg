@@ -3,8 +3,9 @@
 Antes cada um desses arquivos tinha a sua própria cópia de `com_retry()` -
 mesma ideia, tempos de espera diferentes. Agora é só uma.
 """
+import secrets
+import string
 import time
-from functools import wraps
 
 from sqlalchemy.exc import OperationalError
 
@@ -74,3 +75,42 @@ def canal_permitido(usuario, canal_id):
     except (TypeError, ValueError):
         return None
     return canal if pode_ver_canal(usuario, canal) else None
+
+
+def pode_gerenciar_servidor(usuario, servidor):
+    """Quem pode mexer nas configurações do servidor, canais, convites e eventos.
+
+    Hoje é só o dono. Quando existir um sistema de cargos por servidor, é aqui
+    que a checagem de permissão entra - todos os handlers já passam por esta
+    função, então não vai ser preciso caçar cada um.
+    """
+    if usuario is None or servidor is None:
+        return False
+    return servidor.owner_id == usuario.id
+
+
+def servidor_gerenciavel(usuario, server_id):
+    """Busca o servidor e devolve ele só se o usuário puder administrá-lo."""
+    if usuario is None:
+        return None
+    try:
+        servidor = com_retry(lambda: Server.query.get(int(server_id)))
+    except (TypeError, ValueError):
+        return None
+    return servidor if pode_gerenciar_servidor(usuario, servidor) else None
+
+
+def gerar_codigo_convite(tamanho=8):
+    """Código curto e único para o link/QR de convite.
+
+    `secrets` e não `random`: o código é o que dá acesso ao servidor, então
+    precisa ser imprevisível.
+    """
+    from .models import Invite
+    alfabeto = string.ascii_lowercase + string.digits
+    for _ in range(12):
+        codigo = ''.join(secrets.choice(alfabeto) for _ in range(tamanho))
+        if not Invite.query.filter_by(code=codigo).first():
+            return codigo
+    # Praticamente impossível chegar aqui, mas melhor que devolver um repetido.
+    raise RuntimeError("Não foi possível gerar um código de convite único")

@@ -58,6 +58,34 @@ def atualizar_banco():
             # incompleta de uma versão anterior)
             add_column_se_nao_existir("purchase", "price_paid_bzc INTEGER")
 
+            # 8. Configurações de servidor e canal (editáveis depois da criação)
+            add_column_se_nao_existir("server", "description TEXT")
+            add_column_se_nao_existir("server", "banner_color VARCHAR(50)")
+            add_column_se_nao_existir("channel", "topic VARCHAR(255)")
+            add_column_se_nao_existir("channel", "is_private BOOLEAN DEFAULT FALSE")
+            add_column_se_nao_existir("channel", "position INTEGER DEFAULT 0")
+
+            # 9. Anexos e edição de mensagem
+            add_column_se_nao_existir("message", "attachment_url VARCHAR(500)")
+            add_column_se_nao_existir("message", "attachment_type VARCHAR(20)")
+            add_column_se_nao_existir("message", "attachment_name VARCHAR(255)")
+            add_column_se_nao_existir("message", "edited_at TIMESTAMP")
+
+            # Mensagem só de anexo não tem texto, então a coluna precisa aceitar NULL
+            try:
+                db.session.execute(text("ALTER TABLE message ALTER COLUMN text DROP NOT NULL"))
+                db.session.commit()
+                print("✅ Coluna 'text' de 'message' liberada para aceitar NULL (mensagem só com anexo).")
+            except Exception:
+                db.session.rollback()
+                print("ℹ️ 'text' já aceitava NULL (ou aviso ignorável).")
+
+            # 10. Tabelas novas (reaction, invite, event) - o db.create_all() acima
+            # já cria; isso aqui é a rede de segurança se vierem incompletas.
+            add_column_se_nao_existir("invite", "uses INTEGER DEFAULT 0")
+            add_column_se_nao_existir("event", "emoji VARCHAR(16)")
+            add_column_se_nao_existir("event", "color VARCHAR(20)")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

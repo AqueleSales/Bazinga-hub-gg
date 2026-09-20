@@ -8,7 +8,16 @@ db = SQLAlchemy()
 
 # Utilitário: Definindo o fuso horário de Brasília para todas as tabelas
 def br_now():
-    return datetime.now(pytz.timezone('America/Sao_Paulo'))
+    """Agora, no horário de Brasília, SEM tzinfo.
+
+    Todas as colunas de data aqui são `db.DateTime` (TIMESTAMP sem fuso), que
+    guardam só a hora de parede. Se esta função devolvesse um datetime com
+    fuso, gravar funcionaria (o driver descarta o tzinfo), mas qualquer
+    comparação em Python - `br_now() >= convite.expires_at`, por exemplo -
+    estouraria com "can't compare offset-naive and offset-aware datetimes",
+    já que o valor lido do banco volta sem fuso.
+    """
+    return datetime.now(pytz.timezone('America/Sao_Paulo')).replace(tzinfo=None)
 
 
 class Role(db.Model):
@@ -70,9 +79,15 @@ class Server(db.Model):
     icon_url = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=br_now)
 
+    # Configurações editáveis depois da criação
+    description = db.Column(db.Text, nullable=True)
+    banner_color = db.Column(db.String(50), nullable=True)
+
     # Relacionamentos
     # Quando o servidor for deletado, os canais somem junto (cascade)
     channels = db.relationship('Channel', backref='server', lazy=True, cascade="all, delete-orphan")
+    invites = db.relationship('Invite', backref='server', lazy=True, cascade="all, delete-orphan")
+    events = db.relationship('Event', backref='server', lazy=True, cascade="all, delete-orphan")
 
     # A lista de membros deste servidor!
     members = db.relationship('Person', secondary=server_members, lazy='subquery',
@@ -91,6 +106,11 @@ class Channel(db.Model):
     # padrão do "Bazinga Hub" (o servidor global inicial, fora do sistema de Servers).
     server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=True)
 
+    # Configurações do canal
+    topic = db.Column(db.String(255), nullable=True)   # "assunto" mostrado no header
+    is_private = db.Column(db.Boolean, default=False)  # só o dono e convidados veem
+    position = db.Column(db.Integer, default=0)        # ordem na sidebar
+
     # Relacionamento: Um canal tem várias mensagens
     messages = db.relationship('Message', backref='channel', lazy=True, cascade="all, delete-orphan")
 
@@ -98,11 +118,95 @@ class Channel(db.Model):
 class Message(db.Model):
     __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.Text, nullable=False)
+    # Mensagem só de anexo (foto/vídeo/gif) vem com texto vazio, por isso
+    # nullable=True aqui - antes era obrigatório ter texto.
+    text = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=br_now)
+
+    # Anexo: imagem, gif ou vídeo. Guarda a URL já processada (comprimida no
+    # navegador antes do upload) e o tipo, pra saber se renderiza <img> ou <video>.
+    attachment_url = db.Column(db.String(500), nullable=True)
+    attachment_type = db.Column(db.String(20), nullable=True)  # 'image' | 'video'
+    attachment_name = db.Column(db.String(255), nullable=True)
+
+    edited_at = db.Column(db.DateTime, nullable=True)
 
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'), nullable=False)
+
+    reactions = db.relationship('Reaction', backref='message', lazy=True, cascade="all, delete-orphan")
+
+
+class Reaction(db.Model):
+    """Uma reação de emoji de uma pessoa numa mensagem.
+
+    Uma linha por (mensagem, pessoa, emoji) - a contagem é feita agrupando,
+    e a unicidade impede a mesma pessoa reagir duas vezes com o mesmo emoji.
+    """
+    __tablename__ = 'reaction'
+    id = db.Column(db.Integer, primary_key=True)
+
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    emoji = db.Column(db.String(16), nullable=False)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    person = db.relationship('Person', foreign_keys=[person_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('message_id', 'person_id', 'emoji', name='uq_reacao_unica'),
+    )
+
+
+class Invite(db.Model):
+    """Convite para entrar num servidor, por link ou QR code.
+
+    O `code` é o que vai na URL (/convite/<code>) e dentro do QR.
+    """
+    __tablename__ = 'invite'
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(16), unique=True, nullable=False, index=True)
+
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+
+    expires_at = db.Column(db.DateTime, nullable=True)  # Nulo = nunca expira
+    max_uses = db.Column(db.Integer, nullable=True)     # Nulo = ilimitado
+    uses = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    creator = db.relationship('Person', foreign_keys=[creator_id])
+
+    def esta_valido(self):
+        if self.expires_at is not None and br_now() >= self.expires_at:
+            return False
+        if self.max_uses is not None and (self.uses or 0) >= self.max_uses:
+            return False
+        return True
+
+
+class Event(db.Model):
+    """Evento do calendário de um servidor."""
+    __tablename__ = 'event'
+    id = db.Column(db.Integer, primary_key=True)
+
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    starts_at = db.Column(db.DateTime, nullable=False)
+    ends_at = db.Column(db.DateTime, nullable=True)
+
+    # Enfeite do quadradinho no calendário
+    emoji = db.Column(db.String(16), nullable=True, default="🎉")
+    color = db.Column(db.String(20), nullable=True, default="#5865F2")
+
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    creator = db.relationship('Person', foreign_keys=[creator_id])
 
 
 class DirectMessage(db.Model):

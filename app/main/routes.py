@@ -5,12 +5,14 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
-                      GeoNote, MapServer, br_now, db)
+                      GeoNote, MapServer, Server, Invite, Reaction, br_now, db)
 from ..utils import com_retry, comitar_com_retry, canal_permitido
 
 main_bp = Blueprint("main", __name__)
 
-EXTENSOES_PERMITIDAS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+EXTENSOES_IMAGEM = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+EXTENSOES_VIDEO = {'mp4', 'webm', 'mov'}
+EXTENSOES_PERMITIDAS = EXTENSOES_IMAGEM | EXTENSOES_VIDEO
 
 # Assinaturas dos formatos que a gente aceita. Checar a extensão do nome não
 # basta - qualquer arquivo renomeado para .png passaria.
@@ -20,6 +22,20 @@ ASSINATURAS_IMAGEM = (
     b'GIF87a', b'GIF89a',       # gif
     b'RIFF',                    # webp (RIFF....WEBP)
 )
+
+# Limites por tipo. O navegador já comprime as imagens antes de mandar
+# (ver comprimirImagem() no chat.html), então 8 MB é folga de sobra.
+LIMITE_IMAGEM = 8 * 1024 * 1024
+LIMITE_VIDEO = 25 * 1024 * 1024
+
+
+def _assinatura_de_video(cabecalho):
+    """mp4/mov têm 'ftyp' no offset 4; webm começa com o magic do Matroska."""
+    if cabecalho[4:8] == b'ftyp':
+        return True
+    if cabecalho.startswith(b'\x1a\x45\xdf\xa3'):
+        return True
+    return False
 
 
 def usuario_da_sessao():
@@ -108,8 +124,12 @@ def chat():
         print(f"[ERRO BANCO] rota /chat: {e}")
         return "Erro de conexão com o banco. Recarregue a página."
 
+    # Mensagem de "entrou pelo convite" deixada pela rota /convite/<code>
+    aviso_convite = session.pop('aviso_convite', None)
+
     return render_template(
         "chat.html",
+        aviso_convite=aviso_convite,
         usuario_atual=usuario_atual,
         text_channels=text_channels,
         voice_channels=voice_channels,
@@ -137,13 +157,29 @@ def pegar_mensagens(canal_id):
         print(f"[ERRO BANCO] /api/mensagens/{canal_id}: {e}")
         return jsonify({'error': 'Banco indisponível, tente de novo'}), 503
 
+    # Reações de todas as mensagens de uma vez (em vez de uma query por mensagem)
+    ids = [m.id for m in mensagens_db]
+    reacoes_por_msg = {}
+    if ids:
+        for r in Reaction.query.filter(Reaction.message_id.in_(ids)).all():
+            grupo = reacoes_por_msg.setdefault(r.message_id, {})
+            item = grupo.setdefault(r.emoji, {'emoji': r.emoji, 'total': 0, 'quem': []})
+            item['total'] += 1
+            item['quem'].append(r.person_id)
+
     dados = []
     for msg in mensagens_db:
         dados.append({
             'id': msg.id,
             'autor': msg.author.name,
+            'autor_id': msg.person_id,
             'avatar': msg.author.avatar,
-            'texto': msg.text,
+            'texto': msg.text or '',
+            'anexo_url': msg.attachment_url,
+            'anexo_tipo': msg.attachment_type,
+            'anexo_nome': msg.attachment_name,
+            'editada': msg.edited_at is not None,
+            'reacoes': list(reacoes_por_msg.get(msg.id, {}).values()),
             'hora': formatar_data(msg.timestamp),
             'cor': msg.author.role.color if msg.author.role else '#23a559'
         })
@@ -343,14 +379,27 @@ def upload_imagem():
 
     extensao = arquivo.filename.rsplit('.', 1)[-1].lower() if '.' in arquivo.filename else ''
     if extensao not in EXTENSOES_PERMITIDAS:
-        return jsonify({'error': 'Formato de imagem não permitido'}), 400
+        return jsonify({'error': 'Formato não permitido (use imagem, gif ou vídeo)'}), 400
+
+    e_video = extensao in EXTENSOES_VIDEO
 
     # Confere a assinatura real do arquivo: um .php/.svg renomeado para .png
     # passava só na checagem de extensão.
-    cabecalho = arquivo.stream.read(12)
+    cabecalho = arquivo.stream.read(16)
+    arquivo.stream.seek(0, os.SEEK_END)
+    tamanho = arquivo.stream.tell()
     arquivo.stream.seek(0)
-    if not cabecalho.startswith(ASSINATURAS_IMAGEM):
-        return jsonify({'error': 'Esse arquivo não é uma imagem de verdade'}), 400
+
+    if e_video:
+        if not _assinatura_de_video(cabecalho):
+            return jsonify({'error': 'Esse arquivo não é um vídeo de verdade'}), 400
+        if tamanho > LIMITE_VIDEO:
+            return jsonify({'error': 'Vídeo muito pesado (máximo 25 MB)'}), 400
+    else:
+        if not cabecalho.startswith(ASSINATURAS_IMAGEM):
+            return jsonify({'error': 'Esse arquivo não é uma imagem de verdade'}), 400
+        if tamanho > LIMITE_IMAGEM:
+            return jsonify({'error': 'Imagem muito pesada (máximo 8 MB)'}), 400
 
     pasta_uploads = os.path.join(current_app.static_folder, 'uploads')
     os.makedirs(pasta_uploads, exist_ok=True)
@@ -360,4 +409,44 @@ def upload_imagem():
     arquivo.save(caminho_completo)
 
     url = url_for('static', filename=f'uploads/{nome_seguro}')
-    return jsonify({'url': url})
+    return jsonify({'url': url, 'tipo': 'video' if e_video else 'image', 'tamanho': tamanho})
+
+
+# ==========================================
+# CONVITE: link que leva direto pra dentro do servidor
+# ==========================================
+@main_bp.route("/convite/<code>")
+def entrar_por_link(code):
+    """Abre o convite. Quem não está logado vai pro login e volta pra cá."""
+    usuario = usuario_da_sessao()
+    if not usuario:
+        session['convite_pendente'] = code
+        return redirect(url_for('main.index'))
+
+    try:
+        convite = com_retry(lambda: Invite.query.filter_by(code=code).first())
+        if not convite or not convite.esta_valido():
+            session['aviso_convite'] = 'Convite inválido ou expirado.'
+            return redirect(url_for('main.chat'))
+
+        servidor = Server.query.get(convite.server_id)
+        if not servidor:
+            session['aviso_convite'] = 'Esse servidor não existe mais.'
+            return redirect(url_for('main.chat'))
+
+        if usuario not in servidor.members:
+            def preparar():
+                servidor.members.append(usuario)
+                convite.uses = (convite.uses or 0) + 1
+
+            comitar_com_retry(preparar)
+            session['aviso_convite'] = f'Você entrou em {servidor.name}!'
+        else:
+            session['aviso_convite'] = f'Você já estava em {servidor.name}.'
+
+        return redirect(url_for('main.chat'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO CONVITE] {e}")
+        session['aviso_convite'] = 'Não foi possível entrar pelo convite.'
+        return redirect(url_for('main.chat'))
