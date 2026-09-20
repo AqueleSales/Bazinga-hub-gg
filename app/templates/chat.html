@@ -14,6 +14,9 @@
     <!-- WebSockets e P2P -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <!-- Gera o QR code do convite no próprio navegador (nenhuma API externa
+         recebe o link do servidor) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         /* ==========================================================================
@@ -411,6 +414,106 @@
         .btn-primary { background-color: var(--brand-color); color: white; }
         .btn-primary:hover { background-color: var(--brand-hover); }
         .btn-danger { background-color: var(--red-color); color: white; }
+        /* ==========================================
+           COMPONENTES DOS MODAIS DE SERVIDOR / CANAL / CONVITE / EVENTO
+           ========================================== */
+        .modal-close-x { position: absolute; top: 16px; right: 16px; color: var(--text-muted); cursor: pointer; font-size: 18px; transition: 0.15s; }
+        .modal-close-x:hover { color: var(--text-header); }
+
+        .bz-label { display: block; font-size: 12px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+
+        .bz-input { width: 100%; background: var(--bg-tertiary); border: 1px solid transparent; border-radius: 4px; padding: 11px 12px; color: var(--text-header); font-size: 15px; outline: none; transition: border-color .15s; }
+        .bz-input:focus { border-color: var(--brand-color); }
+        .bz-input::placeholder { color: var(--text-muted); }
+        .bz-input[readonly] { color: var(--text-normal); }
+
+        .bz-input-wrap { display: flex; align-items: center; background: var(--bg-tertiary); border-radius: 4px; overflow: hidden; border: 1px solid transparent; transition: border-color .15s; }
+        .bz-input-wrap:focus-within { border-color: var(--brand-color); }
+        .bz-input-wrap .bz-input { background: transparent; border: none; }
+        .bz-input-prefix { padding-left: 12px; color: var(--text-muted); font-size: 18px; font-weight: 700; }
+
+        /* Cartões de "tipo de canal" (texto / voz) */
+        .bz-radio-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 6px; cursor: pointer; transition: background .15s; margin-bottom: 4px; }
+        .bz-radio-card:hover { background: rgba(255,255,255,0.04); }
+        .bz-radio-card.selected { background: rgba(88,101,242,0.12); }
+        .bz-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--text-muted); flex-shrink: 0; margin-top: 2px; position: relative; transition: border-color .15s; }
+        .bz-radio-card.selected .bz-radio { border-color: var(--brand-color); }
+        .bz-radio-card.selected .bz-radio::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand-color); }
+        .bz-radio-title { color: var(--text-header); font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+        .bz-radio-desc { color: var(--text-muted); font-size: 13px; line-height: 1.35; margin-top: 2px; }
+
+        /* Interruptor (canal privado) */
+        .bz-switch-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; background: var(--bg-tertiary); padding: 12px; border-radius: 6px; }
+        .bz-switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+        .bz-switch input { opacity: 0; width: 0; height: 0; }
+        .bz-switch-slider { position: absolute; cursor: pointer; inset: 0; background: #72767d; border-radius: 24px; transition: .2s; }
+        .bz-switch-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
+        .bz-switch input:checked + .bz-switch-slider { background: var(--green-color); }
+        .bz-switch input:checked + .bz-switch-slider::before { transform: translateX(18px); }
+
+        /* Preview do ícone do servidor nas configurações */
+        .bz-icon-preview { width: 92px; height: 92px; border-radius: 50%; background: var(--bg-tertiary); border: 2px dashed rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 26px; cursor: pointer; overflow: hidden; flex-shrink: 0; transition: border-color .15s; position: relative; }
+        .bz-icon-preview:hover { border-color: var(--brand-color); color: var(--text-header); }
+        .bz-icon-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Linha de cores reutilizada em servidor e evento */
+        .bz-color-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .bz-color-dot { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform .12s, border-color .12s; }
+        .bz-color-dot:hover { transform: scale(1.12); }
+        .bz-color-dot.selected { border-color: var(--text-header); }
+
+        .bz-emoji-btn { height: 44px; background: var(--bg-tertiary); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; transition: background .15s; }
+        .bz-emoji-btn:hover { background: var(--bg-quaternary); }
+
+        /* A engrenagem de cada canal só aparece no hover da linha */
+        .channel-item:hover .btn-config-channel { opacity: .65 !important; }
+        .btn-config-channel:hover { opacity: 1 !important; color: var(--text-header); }
+        .channel-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Itens "só do dono" somem para membros comuns */
+        .context-menu.nao-sou-dono .owner-only { display: none; }
+
+        /* ==========================================
+           CALENDÁRIO DO SERVIDOR
+           ========================================== */
+        .cal-topo { display: flex; justify-content: space-between; align-items: flex-end; padding: 24px 28px 18px; gap: 16px; flex-wrap: wrap; }
+        .cal-topo h1 { color: var(--text-header); font-size: 28px; font-weight: 800; text-transform: capitalize; }
+        .cal-topo p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+        .cal-controles { display: flex; align-items: center; gap: 8px; }
+        .cal-nav-btn { width: 36px; height: 36px; border-radius: 8px; background: var(--bg-tertiary); border: none; color: var(--text-normal); cursor: pointer; transition: .15s; }
+        .cal-nav-btn:hover { background: var(--bg-quaternary); color: var(--text-header); }
+        .cal-hoje-btn { height: 36px; padding: 0 14px; border-radius: 8px; background: var(--bg-tertiary); border: none; color: var(--text-normal); cursor: pointer; font-weight: 600; font-size: 13px; transition: .15s; }
+        .cal-hoje-btn:hover { background: var(--bg-quaternary); color: var(--text-header); }
+        .cal-novo-btn { height: 36px; padding: 0 16px; font-size: 13px; margin-left: 6px; }
+
+        .cal-grade-dias-semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 0 28px 8px; }
+        .cal-grade-dias-semana span { text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--text-muted); }
+
+        .cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 0 28px; }
+        .cal-dia { min-height: 104px; background: var(--bg-secondary); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 4px; border: 1px solid transparent; transition: border-color .15s, background .15s; overflow: hidden; }
+        .cal-dia.pode-criar { cursor: pointer; }
+        .cal-dia.pode-criar:hover { border-color: var(--brand-color); background: var(--bg-tertiary); }
+        .cal-dia.fora-do-mes { opacity: .35; }
+        .cal-dia.hoje { border-color: var(--brand-color); }
+        .cal-dia-numero { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+        .cal-dia.hoje .cal-dia-numero { color: var(--brand-color); }
+
+        /* O "quadradinho" do evento: emoji + cor escolhidos por quem criou */
+        .cal-evento { display: flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; transition: transform .12s, filter .12s; overflow: hidden; }
+        .cal-evento:hover { transform: translateX(2px); filter: brightness(1.15); }
+        .cal-evento-emoji { flex-shrink: 0; font-size: 13px; }
+        .cal-evento-titulo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cal-mais { font-size: 11px; color: var(--text-muted); padding-left: 4px; font-weight: 600; }
+
+        .cal-proximos { padding: 28px; }
+        .cal-proximos h3 { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 12px; }
+        .cal-card { display: flex; gap: 14px; align-items: center; background: var(--bg-secondary); border-radius: 10px; padding: 14px; margin-bottom: 8px; cursor: pointer; border-left: 4px solid var(--brand-color); transition: background .15s; }
+        .cal-card:hover { background: var(--bg-tertiary); }
+        .cal-card-emoji { font-size: 26px; flex-shrink: 0; }
+        .cal-card-titulo { color: var(--text-header); font-weight: 700; font-size: 15px; }
+        .cal-card-quando { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+        .cal-vazio { color: var(--text-muted); font-size: 14px; padding: 16px; text-align: center; background: var(--bg-secondary); border-radius: 10px; }
+
         .btn-cancel { background: rgba(255,255,255,0.05); color: var(--text-normal); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 10px 16px; font-weight: 500; cursor: pointer; transition: 0.2s; font-size: 14px; }
         .btn-cancel:hover { background: rgba(255,255,255,0.1); color: var(--text-header); border-color: rgba(255,255,255,0.2); }
 
@@ -956,6 +1059,36 @@
             </div>
         </main>
 
+            <!-- ==========================================
+                 CALENDÁRIO DO SERVIDOR (aba própria, não pop-up)
+                 ========================================== -->
+            <div id="calendar-content-wrapper" style="display: none; flex-direction: column; flex-grow: 1; height: 100%; overflow-y: auto;">
+                <div class="cal-topo">
+                    <div>
+                        <h1 id="cal-mes-ano">Calendário</h1>
+                        <p id="cal-subtitulo">Eventos do servidor</p>
+                    </div>
+                    <div class="cal-controles">
+                        <button class="cal-nav-btn" onclick="mudarMesCalendario(-1)" title="Mês anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button class="cal-hoje-btn" onclick="irParaHojeCalendario()">Hoje</button>
+                        <button class="cal-nav-btn" onclick="mudarMesCalendario(1)" title="Próximo mês"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="btn btn-primary cal-novo-btn" id="cal-novo-evento" onclick="abrirModalEvento('criar')">
+                            <i class="fa-solid fa-plus"></i> Novo evento
+                        </button>
+                    </div>
+                </div>
+
+                <div class="cal-grade-dias-semana">
+                    <span>DOM</span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span>
+                </div>
+                <div class="cal-grade" id="cal-grade"></div>
+
+                <div class="cal-proximos">
+                    <h3>PRÓXIMOS EVENTOS</h3>
+                    <div id="cal-lista-proximos"></div>
+                </div>
+            </div>
+
         <!-- SIDEBAR DE MEMBROS DIREITA -->
         <aside class="members-sidebar" id="server-members-sidebar" style="display: none;">
             <div class="channel-category">ONLINE — 1</div>
@@ -1146,6 +1279,271 @@
                 <button class="btn btn-primary" id="g-confirm-btn">Sim</button>
             </div>
         </div>
+    </div>
+
+    <!-- ==========================================
+         CRIAR / EDITAR CANAL
+         ========================================== -->
+    <div class="modal-overlay" id="channel-modal">
+        <div class="bazinga-modal" style="width: 460px;">
+            <div class="modal-header" style="position: relative;">
+                <h2 id="channel-modal-title">Criar canal</h2>
+                <p id="channel-modal-sub">em Canais de Texto</p>
+                <i class="fa-solid fa-xmark modal-close-x" onclick="fecharModalCanal()"></i>
+            </div>
+            <div class="modal-content" style="gap: 18px;">
+                <div id="channel-type-group">
+                    <label class="bz-label">Tipo de canal</label>
+                    <div class="bz-radio-card" data-tipo="text">
+                        <div class="bz-radio"></div>
+                        <div>
+                            <div class="bz-radio-title"><i class="fa-solid fa-hashtag"></i> Texto</div>
+                            <div class="bz-radio-desc">Mande mensagens, fotos, GIFs, vídeos e piadas</div>
+                        </div>
+                    </div>
+                    <div class="bz-radio-card" data-tipo="voice">
+                        <div class="bz-radio"></div>
+                        <div>
+                            <div class="bz-radio-title"><i class="fa-solid fa-volume-high"></i> Voz</div>
+                            <div class="bz-radio-desc">Voz, vídeo e compartilhamento de tela com a turma</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="bz-label">Nome do canal</label>
+                    <div class="bz-input-wrap">
+                        <span class="bz-input-prefix" id="channel-name-prefix">#</span>
+                        <input type="text" id="channel-name-input" class="bz-input" placeholder="novo-canal" maxlength="100">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="bz-label">Assunto do canal <span style="opacity:.6; font-weight:500;">(opcional)</span></label>
+                    <input type="text" id="channel-topic-input" class="bz-input" placeholder="Sobre o que é esse canal?" maxlength="255" style="padding-left: 12px;">
+                </div>
+
+                <div class="bz-switch-row">
+                    <div>
+                        <div class="bz-radio-title" style="font-size:14px;"><i class="fa-solid fa-lock" style="font-size:12px;"></i> Canal privado</div>
+                        <div class="bz-radio-desc">Só o dono do servidor vê e escreve neste canal.</div>
+                    </div>
+                    <label class="bz-switch">
+                        <input type="checkbox" id="channel-private-input">
+                        <span class="bz-switch-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger" id="channel-delete-btn" style="display:none;" onclick="apagarCanalAtual()">
+                    <i class="fa-solid fa-trash"></i> Apagar canal
+                </button>
+                <div style="display:flex; gap:12px; margin-left:auto;">
+                    <button class="btn-cancel" onclick="fecharModalCanal()">Cancelar</button>
+                    <button class="btn btn-primary" id="channel-save-btn" onclick="salvarCanal()">Criar canal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         CONFIGURAÇÕES DO SERVIDOR
+         ========================================== -->
+    <div class="modal-overlay" id="server-config-modal">
+        <div class="bazinga-modal" style="width: 520px;">
+            <div class="modal-header" style="position: relative;">
+                <h2>Configurações do servidor</h2>
+                <p>Mude o visual e o nome. Todo mundo vê na hora.</p>
+                <i class="fa-solid fa-xmark modal-close-x" onclick="fecharConfigServidor()"></i>
+            </div>
+            <div class="modal-content" style="gap: 20px;">
+                <div style="display:flex; gap:20px; align-items:center;">
+                    <div id="cfg-icon-preview" class="bz-icon-preview" onclick="document.getElementById('cfg-icon-file').click()">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <div style="flex-grow:1;">
+                        <label class="bz-label">Ícone do servidor</label>
+                        <div class="bz-radio-desc" style="margin-bottom:10px;">PNG, JPG, GIF ou WebP. A gente encolhe pra não pesar.</div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-cancel" style="padding:8px 12px; font-size:13px;" onclick="document.getElementById('cfg-icon-file').click()">
+                                <i class="fa-solid fa-arrow-up-from-bracket"></i> Trocar foto
+                            </button>
+                            <button class="btn-cancel" id="cfg-icon-remove" style="padding:8px 12px; font-size:13px; color:var(--red-color);" onclick="removerIconeServidor()">
+                                Remover
+                            </button>
+                        </div>
+                        <input type="file" id="cfg-icon-file" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="bz-label">Nome do servidor</label>
+                    <input type="text" id="cfg-server-name" class="bz-input" maxlength="100" style="padding-left: 12px;">
+                </div>
+
+                <div>
+                    <label class="bz-label">Descrição <span style="opacity:.6; font-weight:500;">(opcional)</span></label>
+                    <textarea id="cfg-server-desc" class="bz-input" maxlength="1000" rows="3"
+                              style="padding: 12px; resize: vertical; font-family: inherit;"
+                              placeholder="Do que é esse servidor?"></textarea>
+                </div>
+
+                <div>
+                    <label class="bz-label">Cor do servidor</label>
+                    <div id="cfg-color-row" class="bz-color-row"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger" onclick="apagarServidorAtual()"><i class="fa-solid fa-trash"></i> Apagar servidor</button>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-cancel" onclick="fecharConfigServidor()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="salvarConfigServidor()">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         CONVITE (link + QR + colar código)
+         ========================================== -->
+    <div class="modal-overlay" id="invite-modal">
+        <div class="bazinga-modal" style="width: 480px;">
+            <div class="modal-header" style="position: relative;">
+                <h2>Convidar pra <span id="invite-server-name">o servidor</span></h2>
+                <p>Manda o link, mostra o QR ou cola um código que te deram.</p>
+                <i class="fa-solid fa-xmark modal-close-x" onclick="fecharModalConvite()"></i>
+            </div>
+            <div class="modal-content" style="gap: 18px;">
+                <div id="invite-owner-area">
+                    <div style="display:flex; gap:10px; margin-bottom:14px;">
+                        <div style="flex:1;">
+                            <label class="bz-label">Expira em</label>
+                            <select id="invite-duracao" class="bz-input" style="padding-left:12px;">
+                                <option value="1">1 hora</option>
+                                <option value="24" selected>1 dia</option>
+                                <option value="168">7 dias</option>
+                                <option value="ilimitado">Nunca</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label class="bz-label">Limite de usos</label>
+                            <select id="invite-usos" class="bz-input" style="padding-left:12px;">
+                                <option value="1">1 pessoa</option>
+                                <option value="5">5 pessoas</option>
+                                <option value="25">25 pessoas</option>
+                                <option value="ilimitado" selected>Sem limite</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%;" onclick="gerarConvite()">
+                        <i class="fa-solid fa-link"></i> Gerar link de convite
+                    </button>
+
+                    <div id="invite-result" style="display:none; margin-top:16px;">
+                        <label class="bz-label">Link do convite</label>
+                        <div class="bz-input-wrap" style="margin-bottom:12px;">
+                            <input type="text" id="invite-link" class="bz-input" readonly style="padding-left:12px;">
+                            <button class="btn btn-primary" style="padding:8px 14px; font-size:13px; border-radius:0 4px 4px 0;" onclick="copiarConvite()">Copiar</button>
+                        </div>
+                        <div style="display:flex; gap:16px; align-items:center; background:var(--bg-tertiary); padding:14px; border-radius:8px;">
+                            <div id="invite-qr" style="width:132px; height:132px; background:#fff; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;"></div>
+                            <div>
+                                <div class="bz-radio-title" style="font-size:14px;">Ou aponta a câmera</div>
+                                <div class="bz-radio-desc">Quem escanear cai direto no servidor. Funciona no celular sem precisar copiar nada.</div>
+                                <div id="invite-meta" class="bz-radio-desc" style="margin-top:8px; opacity:.75;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid rgba(255,255,255,.08); padding-top:16px;">
+                    <label class="bz-label">Recebeu um convite?</label>
+                    <div class="bz-input-wrap">
+                        <input type="text" id="invite-code-input" class="bz-input" placeholder="Cola o código ou o link aqui" style="padding-left:12px;">
+                        <button class="btn btn-primary" style="padding:8px 14px; font-size:13px; border-radius:0 4px 4px 0; background:var(--green-color);" onclick="entrarPorCodigo()">Entrar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="fecharModalConvite()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         EVENTO DO CALENDÁRIO
+         ========================================== -->
+    <div class="modal-overlay" id="event-modal">
+        <div class="bazinga-modal" style="width: 480px;">
+            <div class="modal-header" style="position: relative;">
+                <h2 id="event-modal-title">Novo evento</h2>
+                <p>Marca no calendário do servidor.</p>
+                <i class="fa-solid fa-xmark modal-close-x" onclick="fecharModalEvento()"></i>
+            </div>
+            <div class="modal-content" style="gap: 16px;">
+                <div style="display:flex; gap:12px;">
+                    <div style="width:88px;">
+                        <label class="bz-label">Emoji</label>
+                        <div id="event-emoji-btn" class="bz-emoji-btn">🎉</div>
+                    </div>
+                    <div style="flex-grow:1;">
+                        <label class="bz-label">Título</label>
+                        <input type="text" id="event-title" class="bz-input" maxlength="120" placeholder="Torneio de UBC" style="padding-left:12px;">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:12px;">
+                    <div style="flex:1;">
+                        <label class="bz-label">Começa</label>
+                        <input type="datetime-local" id="event-start" class="bz-input" style="padding-left:12px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label class="bz-label">Termina <span style="opacity:.6; font-weight:500;">(opcional)</span></label>
+                        <input type="datetime-local" id="event-end" class="bz-input" style="padding-left:12px;">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="bz-label">Descrição <span style="opacity:.6; font-weight:500;">(opcional)</span></label>
+                    <textarea id="event-desc" class="bz-input" maxlength="1000" rows="2"
+                              style="padding:12px; resize:vertical; font-family:inherit;" placeholder="Detalhes do rolê"></textarea>
+                </div>
+
+                <div>
+                    <label class="bz-label">Cor</label>
+                    <div id="event-color-row" class="bz-color-row"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-danger" id="event-delete-btn" style="display:none;" onclick="apagarEventoAtual()">
+                    <i class="fa-solid fa-trash"></i> Apagar
+                </button>
+                <div style="display:flex; gap:12px; margin-left:auto;">
+                    <button class="btn-cancel" onclick="fecharModalEvento()">Cancelar</button>
+                    <button class="btn btn-primary" id="event-save-btn" onclick="salvarEvento()">Criar evento</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu suspenso do servidor (abre no nome do servidor) -->
+    <div id="server-dropdown" class="context-menu" style="min-width: 240px;">
+        <div class="context-menu-item" id="srv-menu-invite">Convidar pessoas <i class="fa-solid fa-user-plus"></i></div>
+        <div class="context-menu-item" id="srv-menu-calendar">Calendário de eventos <i class="fa-solid fa-calendar-days"></i></div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item owner-only" id="srv-menu-config">Configurações do servidor <i class="fa-solid fa-gear"></i></div>
+        <div class="context-menu-item owner-only" id="srv-menu-new-text">Criar canal de texto <i class="fa-solid fa-hashtag"></i></div>
+        <div class="context-menu-item owner-only" id="srv-menu-new-voice">Criar canal de voz <i class="fa-solid fa-volume-high"></i></div>
+        <div class="context-menu-separator owner-only"></div>
+        <div class="context-menu-item danger" id="srv-menu-leave">Sair do servidor <i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+    </div>
+
+    <!-- Menu de contexto do canal (botão direito na lista de canais) -->
+    <div id="channel-context-menu" class="context-menu">
+        <div class="context-menu-item" id="ch-ctx-copy">Copiar nome <i class="fa-solid fa-copy"></i></div>
+        <div class="context-menu-item owner-only" id="ch-ctx-edit">Editar canal <i class="fa-solid fa-gear"></i></div>
+        <div class="context-menu-separator owner-only"></div>
+        <div class="context-menu-item danger owner-only" id="ch-ctx-delete">Apagar canal <i class="fa-solid fa-trash"></i></div>
     </div>
 
     <!-- Container de Notificações Toast -->
@@ -1670,6 +2068,7 @@
             const homeContent = document.getElementById('home-content-wrapper');
             const serverContent = document.getElementById('server-content-wrapper');
             const marketContent = document.getElementById('market-content-wrapper');
+            const calendarContent = document.getElementById('calendar-content-wrapper');
             const dmChat = document.getElementById('dm-chat-view');
             const radarMap = document.getElementById('bazinga-map');
             const membersSidebar = document.getElementById('server-members-sidebar');
@@ -1677,6 +2076,7 @@
             if(homeContent) homeContent.style.display = 'none';
             if(serverContent) serverContent.style.display = 'none';
             if(marketContent) marketContent.style.display = 'none';
+            if(calendarContent) calendarContent.style.display = 'none';
             if(dmChat) dmChat.style.display = 'none';
             if(radarMap) radarMap.style.display = 'none';
             if(membersSidebar) membersSidebar.style.display = 'none';
@@ -1696,6 +2096,8 @@
                 if(membersSidebar) membersSidebar.style.display = 'flex';
             } else if (viewName === 'market') {
                 if(marketContent) marketContent.style.display = 'flex';
+            } else if (viewName === 'calendar') {
+                if(calendarContent) calendarContent.style.display = 'flex';
             }
         }
 
@@ -1771,15 +2173,112 @@
         let tempServerIconFile = null;
         let tempUploadedServerIcon = null;
 
-        async function uploadImagem(file) {
+        // ==========================================
+        // ENVIO DE MÍDIA (foto / gif / vídeo)
+        // ------------------------------------------------------------------
+        // A compressão acontece AQUI, no navegador, antes de subir - é o que
+        // faz a foto de 6 MB da câmera virar ~200 KB sem o usuário esperar
+        // upload nenhum. O servidor só recebe o arquivo já pequeno.
+        //
+        // GIF não passa pelo canvas de propósito: o canvas só captura o
+        // primeiro quadro e a animação morre.
+        // ==========================================
+        const LADO_MAXIMO = 1600;       // px no maior lado
+        const QUALIDADE = 0.82;
+        const LIMITE_VIDEO_MB = 25;
+
+        function suportaWebp() {
+            const c = document.createElement('canvas');
+            c.width = c.height = 1;
+            return c.toDataURL('image/webp').startsWith('data:image/webp');
+        }
+
+        function comprimirImagem(file) {
+            return new Promise((resolve, reject) => {
+                // GIF animado e imagem já pequena passam direto.
+                if (file.type === 'image/gif' || file.size < 180 * 1024) {
+                    resolve(file);
+                    return;
+                }
+
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+
+                    let { width, height } = img;
+                    const maior = Math.max(width, height);
+                    if (maior > LADO_MAXIMO) {
+                        const escala = LADO_MAXIMO / maior;
+                        width = Math.round(width * escala);
+                        height = Math.round(height * escala);
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // WebP economiza ~30% em relação ao JPEG; se o navegador
+                    // não suportar, cai pra JPEG.
+                    const usaWebp = suportaWebp();
+                    const tipo = usaWebp ? 'image/webp' : 'image/jpeg';
+                    const ext = usaWebp ? 'webp' : 'jpg';
+
+                    canvas.toBlob(blob => {
+                        if (!blob) { reject(new Error('Não deu pra processar a imagem.')); return; }
+                        // Se a "compressão" deixou o arquivo maior (acontece com
+                        // PNG pequeno), manda o original mesmo.
+                        if (blob.size >= file.size) { resolve(file); return; }
+
+                        const nomeBase = (file.name || 'foto').replace(/\.[^.]+$/, '');
+                        resolve(new File([blob], `${nomeBase}.${ext}`, { type: tipo }));
+                    }, tipo, QUALIDADE);
+                };
+
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Arquivo de imagem inválido.'));
+                };
+                img.src = url;
+            });
+        }
+
+        // Sobe o arquivo e devolve { url, tipo, nome }. Comprime imagem antes.
+        async function uploadMidiaCompleto(file) {
+            const ehVideo = file.type.startsWith('video/');
+
+            if (ehVideo && file.size > LIMITE_VIDEO_MB * 1024 * 1024) {
+                // Vídeo o navegador não recomprime de forma confiável, então
+                // aqui o jeito honesto é avisar em vez de travar no upload.
+                throw new Error(`Vídeo muito pesado (${(file.size / 1048576).toFixed(1)} MB). O limite é ${LIMITE_VIDEO_MB} MB.`);
+            }
+
+            const paraEnviar = ehVideo ? file : await comprimirImagem(file);
+
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', paraEnviar);
             const resp = await fetch('/api/upload', { method: 'POST', body: formData });
             const data = await resp.json().catch(() => ({}));
-            // Mostra o motivo real (formato inválido, imagem acima de 5 MB...)
+            // Mostra o motivo real (formato inválido, arquivo grande demais...)
             // em vez de um "Falha no upload" genérico.
             if (!resp.ok) throw new Error(data.error || 'Falha no upload');
-            return data.url;
+
+            return { url: data.url, tipo: data.tipo || (ehVideo ? 'video' : 'image'),
+                     nome: file.name || '' };
+        }
+
+        // Atalho pra quem só quer a URL (avatar, ícone de servidor)
+        async function uploadMidia(file) {
+            return (await uploadMidiaCompleto(file)).url;
+        }
+
+        // Mantido: o resto do código já chamava por este nome
+        async function uploadImagem(file) {
+            return uploadMidia(file);
         }
 
         document.getElementById('new-server-file').addEventListener('change', function(e) {
@@ -1864,6 +2363,81 @@
             showToast(dados.msg || "Ocorreu um erro.", "error");
         });
 
+        // ==========================================
+        // SERVIDOR: sidebar de canais, menu e permissões
+        // ==========================================
+        function souDonoDoServidor(srv) {
+            return !!srv && Number(srv.owner_id) === Number(currentUserId);
+        }
+
+        function servidorAtivo() {
+            return meUserServers.find(s => s.id === activeMyServerId) || null;
+        }
+
+        function htmlCategoria(titulo, tipo, souDono, comMargem = false) {
+            // O "+" de criar canal só aparece pra quem pode criar.
+            const btnAdd = souDono
+                ? `<i class="fa-solid fa-plus btn-add-channel" data-tipo="${tipo}" style="margin-left: auto; cursor:pointer;" title="Criar Canal"></i>`
+                : '';
+            return `<div class="channel-category" style="${comMargem ? 'margin-top: 16px;' : ''}">
+                        <i class="fa-solid fa-chevron-down"></i> ${esc(titulo)} ${btnAdd}
+                    </div>`;
+        }
+
+        function htmlDoCanal(c, ativo, souDono) {
+            const ehVoz = c.type === 'voice';
+            const classe = ehVoz ? 'voice-channel' : 'text-channel';
+            const icone = ehVoz
+                ? `<i class="fa-solid fa-volume-high channel-icon" style="font-size: 16px;"></i>`
+                : `<i class="fa-solid fa-hashtag channel-icon" style="font-size: 18px; color: var(--text-muted);"></i>`;
+
+            // Cadeado indica canal privado (só dono e convidados veem)
+            const cadeado = c.is_private
+                ? `<i class="fa-solid fa-lock" style="font-size:10px; color:var(--text-muted); margin-left:4px;" title="Canal privado"></i>`
+                : '';
+
+            // Engrenagem de configuração do canal, igual ao Discord
+            const engrenagem = souDono
+                ? `<i class="fa-solid fa-gear btn-config-channel" data-id="${Number(c.id)}"
+                      style="margin-left:auto; font-size:13px; cursor:pointer; opacity:0; transition:0.15s;"
+                      title="Editar canal"></i>`
+                : '';
+
+            const linha = `<div class="channel-item ${classe} ${ativo ? 'active' : ''}"
+                                data-id="${Number(c.id)}" data-name="${esc(c.name)}"
+                                title="${esc(c.topic || c.name)}">
+                               ${icone} <span class="channel-name-text">${esc(c.name)}</span>${cadeado}${engrenagem}
+                           </div>`;
+
+            // O painel de quem está na call fica logo abaixo do canal de voz
+            return ehVoz
+                ? linha + `<div id="voice-users-${Number(c.id)}" style="padding-left: 24px; display: none; margin-bottom: 8px;"></div>`
+                : linha;
+        }
+
+        function ligarBotoesDeCanal(container) {
+            container.querySelectorAll('.btn-add-channel').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    abrirModalCanal('criar', { tipo: btn.getAttribute('data-tipo') });
+                });
+            });
+
+            container.querySelectorAll('.btn-config-channel').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const canal = acharCanal(Number(btn.getAttribute('data-id')));
+                    if (canal) abrirModalCanal('editar', canal);
+                });
+            });
+        }
+
+        function acharCanal(canalId) {
+            const srv = servidorAtivo();
+            if (!srv) return null;
+            return srv.channels.find(c => Number(c.id) === Number(canalId)) || null;
+        }
+
         function entrarNoServidor(id) {
             resetSidebars();
             activeMyServerId = id;
@@ -1877,82 +2451,55 @@
             const serverSidebar = document.getElementById('bazinga-sidebar');
             serverSidebar.style.display = 'flex';
 
-            serverSidebar.querySelector('.channels-header').innerHTML = `<h3>${esc(srv.name)} <i class="fa-solid fa-chevron-down" style="font-size: 12px;"></i></h3>`;
+            const souDono = souDonoDoServidor(srv);
+
+            serverSidebar.querySelector('.channels-header').innerHTML =
+                `<h3 style="display:flex; align-items:center; gap:6px; overflow:hidden;">
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(srv.name)}</span>
+                    <i class="fa-solid fa-chevron-down" style="font-size: 12px; flex-shrink:0;"></i>
+                 </h3>`;
 
             const channelsList = serverSidebar.querySelector('.channels-list');
-            channelsList.innerHTML = `
-                <div class="channel-category"><i class="fa-solid fa-chevron-down"></i> CANAIS DE TEXTO <i class="fa-solid fa-plus btn-add-channel" data-tipo="text" style="margin-left: auto; cursor:pointer;" title="Criar Canal"></i></div>
-            `;
+            channelsList.innerHTML = htmlCategoria('CANAIS DE TEXTO', 'text', souDono)
+                + srv.channels.filter(c => c.type === 'text')
+                    .map((c, i) => htmlDoCanal(c, i === 0, souDono)).join('')
+                + htmlCategoria('CANAIS DE VOZ', 'voice', souDono, true)
+                + srv.channels.filter(c => c.type === 'voice')
+                    .map(c => htmlDoCanal(c, false, souDono)).join('');
 
-            srv.channels.filter(c => c.type === 'text').forEach((c, index) => {
-                channelsList.innerHTML += `
-                    <div class="channel-item text-channel ${index === 0 ? 'active' : ''}" data-id="${c.id}" data-name="${c.name}">
-                        <i class="fa-solid fa-hashtag channel-icon" style="font-size: 18px; color: var(--text-muted);"></i> ${c.name}
-                    </div>
-                `;
-            });
-
-            channelsList.innerHTML += `
-                <div class="channel-category" style="margin-top: 16px;"><i class="fa-solid fa-chevron-down"></i> CANAIS DE VOZ <i class="fa-solid fa-plus btn-add-channel" data-tipo="voice" style="margin-left: auto; cursor:pointer;" title="Criar Canal"></i></div>
-            `;
-
-            srv.channels.filter(c => c.type === 'voice').forEach(c => {
-                channelsList.innerHTML += `
-                    <div class="channel-item voice-channel" data-id="${c.id}" data-name="${c.name}">
-                        <i class="fa-solid fa-volume-high channel-icon" style="font-size: 16px;"></i> ${c.name}
-                    </div>
-                    <div id="voice-users-${c.id}" style="padding-left: 24px; display: none; margin-bottom: 8px;"></div>
-                `;
-            });
-
-            channelsList.querySelectorAll('.btn-add-channel').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const tipo = btn.getAttribute('data-tipo');
-                    openInputModal(
-                        tipo === 'voice' ? "Criar Canal de Voz" : "Criar Canal de Texto",
-                        "Dê um nome para o novo canal.",
-                        tipo === 'voice' ? "novo-canal-de-voz" : "novo-canal",
-                        (nomeCanal) => {
-                            if (!nomeCanal || !nomeCanal.trim()) return;
-                            if (typeof socket !== 'undefined' && socket.connected) {
-                                socket.emit('criar_canal', { server_id: activeMyServerId, nome: nomeCanal.trim(), tipo: tipo });
-                            }
-                        }
-                    );
-                });
-            });
+            ligarBotoesDeCanal(channelsList);
 
             switchMainView('server');
 
             const msgContainer = document.getElementById('messages-container');
             msgContainer.innerHTML = `
                 <div class="server-welcome-screen" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 16px; height: 100%;">
-                    <div style="width: 68px; height: 68px; border-radius: 50%; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-size: 32px; font-weight: bold; margin-bottom: 16px; overflow: hidden;">
-                        ${srv.iconUrl ? `<img src="${srv.iconUrl}" style="width:100%;height:100%;object-fit:cover;">` : iniciaisServidor(srv.name)}
+                    <div style="width: 68px; height: 68px; border-radius: 50%; background-color: ${esc(srv.bannerColor || 'var(--brand-color)')}; display: flex; justify-content: center; align-items: center; color: white; font-size: 32px; font-weight: bold; margin-bottom: 16px; overflow: hidden;">
+                        ${escUrl(srv.iconUrl) ? `<img src="${escUrl(srv.iconUrl)}" style="width:100%;height:100%;object-fit:cover;">` : esc(iniciaisServidor(srv.name || '?'))}
                     </div>
-                    <h1 style="color: white; font-size: 32px; font-weight: 800; margin-bottom: 8px;">Bem-vindo(a) a<br>${srv.name}</h1>
-                    <p style="color: var(--text-muted); font-size: 15px; line-height: 1.4; margin-bottom: 24px; max-width: 600px;">Este é seu servidor, novinho em folha. Aqui vão algumas dicas para ajudar você a começar! Para mais informações, confira nosso <a href="#" style="color: var(--brand-color); text-decoration: none;">guia de como começar</a>.</p>
+                    <h1 style="color: white; font-size: 32px; font-weight: 800; margin-bottom: 8px;">Bem-vindo(a) a<br>${esc(srv.name)}</h1>
+                    <p style="color: var(--text-muted); font-size: 15px; line-height: 1.4; margin-bottom: 24px; max-width: 600px;">${srv.description ? esc(srv.description) : 'Este é seu servidor, novinho em folha. Aqui vão algumas dicas para ajudar você a começar!'}</p>
 
                     <div style="width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 8px;">
-                        <div class="welcome-action-btn">
-                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon"><img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6cc3c481a15a141738_icon_clyde_white_RGB.svg" style="width:24px; filter: brightness(0) invert(1);"></div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Convide seus amigos</span></div>
+                        <div class="welcome-action-btn" onclick="abrirModalConvite()">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🔗</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Convide seus amigos (link ou QR)</span></div>
                             <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
                         </div>
-                        <div class="welcome-action-btn" onclick="document.getElementById('btn-open-settings').click();">
-                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🖌️</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Personalize seu servidor com um ícone</span></div>
+                        ${souDono ? `
+                        <div class="welcome-action-btn" onclick="abrirConfigServidor()">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🖌️</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Personalize o ícone e o nome do servidor</span></div>
                             <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
                         </div>
+                        <div class="welcome-action-btn" onclick="abrirModalCanal('criar', { tipo: 'text' })">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">➕</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Crie mais um canal</span></div>
+                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
+                        </div>` : ''}
                         <div class="welcome-action-btn" onclick="document.getElementById('message-input').focus();">
                             <div style="display: flex; align-items: center;"><div class="welcome-action-icon">✍️</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Envie sua primeira mensagem</span></div>
                             <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
                         </div>
-                        <div class="welcome-action-btn">
-                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🎮</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Adicione seu primeiro app</span></div>
-                            <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
-                        </div>
-                        <div class="welcome-action-btn">
-                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">💎</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Desbloqueie vantagens para todos com impulsos</span></div>
+                        <div class="welcome-action-btn" onclick="abrirCalendario()">
+                            <div style="display: flex; align-items: center;"><div class="welcome-action-icon">📅</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Marque um evento no calendário</span></div>
                             <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
                         </div>
                     </div>
@@ -1971,24 +2518,711 @@
             document.querySelectorAll('.voice-channel').forEach(initVoiceChannel);
         }
 
-        socket.on('canal_criado', function(dados) {
-            if (dados.server_id !== activeMyServerId) return;
-            const serverSidebar = document.getElementById('bazinga-sidebar');
-            const channelsList = serverSidebar.querySelector('.channels-list');
+        // Guarda o canal no cache local do servidor e redesenha a sidebar.
+        function sincronizarCanais(serverId, mudanca) {
+            const srvCache = meUserServers.find(s => s.id === serverId);
+            if (!srvCache) return;
+            mudanca(srvCache);
+            // Redesenhar a lista inteira é mais simples (e menos sujeito a bug)
+            // do que inserir/remover nós na mão em 3 lugares diferentes.
+            if (serverId === activeMyServerId) entrarNoServidor(serverId);
+        }
 
-            if (dados.type === 'voice') {
-                channelsList.insertAdjacentHTML('beforeend', `<div class="channel-item voice-channel" data-id="${dados.id}" data-name="${dados.name}"><i class="fa-solid fa-volume-high channel-icon" style="font-size: 16px;"></i> ${dados.name}</div><div id="voice-users-${dados.id}" style="padding-left: 24px; display: none; margin-bottom: 8px;"></div>`);
-            } else {
-                const categorias = channelsList.querySelectorAll('.channel-category');
-                const grupoVoz = categorias[1];
-                grupoVoz.insertAdjacentHTML('beforebegin', `<div class="channel-item text-channel" data-id="${dados.id}" data-name="${dados.name}"><i class="fa-solid fa-hashtag channel-icon" style="font-size: 18px; color: var(--text-muted);"></i> ${dados.name}</div>`);
+        socket.on('canal_criado', function(dados) {
+            sincronizarCanais(dados.server_id, srv => {
+                if (!srv.channels.some(c => c.id === dados.id)) srv.channels.push(dados);
+            });
+            if (dados.server_id === activeMyServerId) {
+                showToast(`Canal ${dados.type === 'voice' ? '' : '#'}${dados.name} criado!`, "success");
+            }
+        });
+
+        socket.on('canal_editado', function(dados) {
+            sincronizarCanais(dados.server_id, srv => {
+                srv.channels = srv.channels.map(c => c.id === dados.id ? dados : c);
+            });
+            if (dados.server_id === activeMyServerId) showToast("Canal atualizado!", "success");
+        });
+
+        socket.on('canal_apagado', function(dados) {
+            sincronizarCanais(dados.server_id, srv => {
+                srv.channels = srv.channels.filter(c => c.id !== dados.canal_id);
+            });
+            if (dados.server_id === activeMyServerId) showToast("Canal apagado.", "warning");
+        });
+
+        socket.on('servidor_apagado', function(dados) {
+            meUserServers = meUserServers.filter(s => s.id !== dados.server_id);
+            renderizarMeusServidores();
+            if (typeof atualizarCarrossel === 'function') atualizarCarrossel();
+
+            if (activeMyServerId === dados.server_id) {
+                activeMyServerId = null;
+                fecharTodosOsModais();
+                document.getElementById('btn-home-view')?.click();
+            }
+            showToast("Você não está mais nesse servidor.", "warning");
+        });
+
+        socket.on('entrou_por_convite', function(dados) {
+            showToast(`Você entrou em ${dados.server_name}!`, "success");
+            fecharTodosOsModais();
+            entrarNoServidor(dados.server_id);
+        });
+
+        // ==========================================
+        // MODAIS DE SERVIDOR / CANAL / CONVITE
+        // ==========================================
+        const CORES_BAZINGA = ['#5865F2', '#23a559', '#f0b232', '#da373c',
+                               '#eb459e', '#00a8fc', '#9b59b6', '#7a7d84'];
+
+        function fecharTodosOsModais() {
+            ['channel-modal', 'server-config-modal', 'invite-modal', 'event-modal']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+            ['server-dropdown', 'channel-context-menu']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        }
+
+        // Monta a fileira de bolinhas de cor e devolve a cor escolhida via getter
+        function montarPaletaDeCores(containerId, corAtual, aoEscolher) {
+            const row = document.getElementById(containerId);
+            if (!row) return;
+            row.innerHTML = '';
+            CORES_BAZINGA.forEach(cor => {
+                const dot = document.createElement('div');
+                dot.className = 'bz-color-dot' + (cor.toLowerCase() === String(corAtual).toLowerCase() ? ' selected' : '');
+                dot.style.backgroundColor = cor;
+                dot.title = cor;
+                dot.addEventListener('click', () => {
+                    row.querySelectorAll('.bz-color-dot').forEach(d => d.classList.remove('selected'));
+                    dot.classList.add('selected');
+                    aoEscolher(cor);
+                });
+                row.appendChild(dot);
+            });
+        }
+
+        // ---------- CRIAR / EDITAR CANAL ----------
+        let canalEmEdicao = null;      // null = criando
+        let tipoCanalEscolhido = 'text';
+
+        function selecionarTipoCanal(tipo) {
+            tipoCanalEscolhido = tipo === 'voice' ? 'voice' : 'text';
+            document.querySelectorAll('#channel-type-group .bz-radio-card').forEach(card => {
+                card.classList.toggle('selected', card.getAttribute('data-tipo') === tipoCanalEscolhido);
+            });
+            document.getElementById('channel-name-prefix').textContent = tipoCanalEscolhido === 'voice' ? '🔊' : '#';
+            document.getElementById('channel-modal-sub').textContent =
+                tipoCanalEscolhido === 'voice' ? 'em Canais de Voz' : 'em Canais de Texto';
+            document.getElementById('channel-name-input').placeholder =
+                tipoCanalEscolhido === 'voice' ? 'sala-de-voz' : 'novo-canal';
+        }
+
+        function abrirModalCanal(modo, dados = {}) {
+            const srv = servidorAtivo();
+            if (!srv) { showToast("Abra um servidor primeiro.", "warning"); return; }
+            if (!souDonoDoServidor(srv)) {
+                showToast("Só o dono do servidor pode mexer nos canais.", "warning");
+                return;
             }
 
-            const srvCache = meUserServers.find(s => s.id === activeMyServerId);
-            if (srvCache) srvCache.channels.push({ id: dados.id, name: dados.name, type: dados.type });
+            const editando = modo === 'editar';
+            canalEmEdicao = editando ? dados : null;
 
-            bindChannelListeners();
-            showToast(`Canal #${dados.name} criado!`, "success");
+            document.getElementById('channel-modal-title').textContent = editando ? 'Editar canal' : 'Criar canal';
+            document.getElementById('channel-save-btn').textContent = editando ? 'Salvar' : 'Criar canal';
+            document.getElementById('channel-delete-btn').style.display = editando ? 'flex' : 'none';
+            // O tipo do canal não muda depois de criado (as mensagens já estão lá).
+            document.getElementById('channel-type-group').style.display = editando ? 'none' : 'block';
+
+            selecionarTipoCanal(editando ? dados.type : (dados.tipo || 'text'));
+            document.getElementById('channel-name-input').value = editando ? (dados.name || '') : '';
+            document.getElementById('channel-topic-input').value = editando ? (dados.topic || '') : '';
+            document.getElementById('channel-private-input').checked = editando ? !!dados.is_private : false;
+
+            document.getElementById('channel-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('channel-name-input').focus(), 50);
+        }
+
+        function fecharModalCanal() {
+            document.getElementById('channel-modal').style.display = 'none';
+            canalEmEdicao = null;
+        }
+
+        function salvarCanal() {
+            const nome = document.getElementById('channel-name-input').value.trim();
+            if (!nome) { showToast("Dá um nome pro canal.", "warning"); return; }
+
+            const topico = document.getElementById('channel-topic-input').value.trim();
+            const privado = document.getElementById('channel-private-input').checked;
+
+            if (canalEmEdicao) {
+                socket.emit('editar_canal', {
+                    canal_id: canalEmEdicao.id, nome: nome, topico: topico, privado: privado
+                });
+                showToast("Salvando canal...", "info");
+            } else {
+                socket.emit('criar_canal', {
+                    server_id: activeMyServerId, nome: nome,
+                    tipo: tipoCanalEscolhido, topico: topico, privado: privado
+                });
+                showToast("Criando canal...", "info");
+            }
+            fecharModalCanal();
+        }
+
+        function apagarCanalAtual() {
+            if (!canalEmEdicao) return;
+            const canal = canalEmEdicao;
+            openConfirmModal(
+                `Apagar #${canal.name}?`,
+                "Todas as mensagens desse canal somem junto. Isso não tem volta.",
+                () => {
+                    socket.emit('apagar_canal', { canal_id: canal.id });
+                    fecharModalCanal();
+                }
+            );
+        }
+
+        // ---------- CONFIGURAÇÕES DO SERVIDOR ----------
+        let iconeServidorNovo = undefined;  // undefined = não mexeu; '' = removeu
+        let corServidorEscolhida = null;
+
+        function abrirConfigServidor() {
+            const srv = servidorAtivo();
+            if (!srv) { showToast("Abra um servidor primeiro.", "warning"); return; }
+            if (!souDonoDoServidor(srv)) {
+                showToast("Só o dono pode abrir as configurações.", "warning");
+                return;
+            }
+
+            iconeServidorNovo = undefined;
+            corServidorEscolhida = srv.bannerColor || CORES_BAZINGA[0];
+
+            document.getElementById('cfg-server-name').value = srv.name || '';
+            document.getElementById('cfg-server-desc').value = srv.description || '';
+            pintarPreviewIcone(srv.iconUrl);
+            montarPaletaDeCores('cfg-color-row', corServidorEscolhida, cor => { corServidorEscolhida = cor; });
+
+            document.getElementById('server-config-modal').style.display = 'flex';
+        }
+
+        function pintarPreviewIcone(url) {
+            const box = document.getElementById('cfg-icon-preview');
+            const limpa = escUrl(url);
+            box.innerHTML = limpa
+                ? `<img src="${limpa}">`
+                : '<i class="fa-solid fa-camera"></i>';
+            document.getElementById('cfg-icon-remove').style.display = limpa ? 'block' : 'none';
+        }
+
+        function removerIconeServidor() {
+            iconeServidorNovo = '';   // string vazia = o backend limpa o ícone
+            pintarPreviewIcone(null);
+            showToast("O ícone some quando você salvar.", "info");
+        }
+
+        function fecharConfigServidor() {
+            document.getElementById('server-config-modal').style.display = 'none';
+        }
+
+        function salvarConfigServidor() {
+            const nome = document.getElementById('cfg-server-name').value.trim();
+            if (!nome) { showToast("O servidor precisa de um nome.", "warning"); return; }
+
+            const payload = {
+                server_id: activeMyServerId,
+                nome: nome,
+                descricao: document.getElementById('cfg-server-desc').value.trim(),
+                banner_color: corServidorEscolhida
+            };
+            // Só manda icon_url se a pessoa realmente mexeu na foto.
+            if (iconeServidorNovo !== undefined) payload.icon_url = iconeServidorNovo;
+
+            socket.emit('editar_servidor', payload);
+            showToast("Salvando servidor...", "info");
+            fecharConfigServidor();
+        }
+
+        function apagarServidorAtual() {
+            const srv = servidorAtivo();
+            if (!srv) return;
+            openConfirmModal(
+                `Apagar ${srv.name}?`,
+                "Canais, mensagens, convites e eventos somem junto, pra todo mundo. Isso não tem volta.",
+                () => {
+                    socket.emit('apagar_servidor', { server_id: srv.id });
+                    fecharConfigServidor();
+                }
+            );
+        }
+
+        // Upload do ícone do servidor (comprime antes de mandar)
+        document.getElementById('cfg-icon-file')?.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                showToast("Enviando ícone...", "info");
+                const url = await uploadMidia(file);
+                iconeServidorNovo = url;
+                pintarPreviewIcone(url);
+                showToast("Ícone pronto! Clica em Salvar.", "success");
+            } catch (err) {
+                showToast(err.message || "Não deu pra enviar o ícone.", "error");
+            }
+            e.target.value = '';
+        });
+
+        // ---------- CONVITES ----------
+        let conviteAtual = null;
+
+        function abrirModalConvite() {
+            const srv = servidorAtivo();
+            document.getElementById('invite-server-name').textContent = srv ? srv.name : 'o servidor';
+
+            // Quem não é dono não gera convite, mas ainda pode colar um código.
+            const souDono = souDonoDoServidor(srv);
+            document.getElementById('invite-owner-area').style.display = souDono ? 'block' : 'none';
+            document.getElementById('invite-result').style.display = 'none';
+            document.getElementById('invite-code-input').value = '';
+            conviteAtual = null;
+
+            document.getElementById('invite-modal').style.display = 'flex';
+        }
+
+        function fecharModalConvite() {
+            document.getElementById('invite-modal').style.display = 'none';
+        }
+
+        function gerarConvite() {
+            if (!activeMyServerId) { showToast("Abra um servidor primeiro.", "warning"); return; }
+            socket.emit('criar_convite', {
+                server_id: activeMyServerId,
+                duracao: document.getElementById('invite-duracao').value,
+                max_usos: document.getElementById('invite-usos').value
+            });
+            showToast("Gerando convite...", "info");
+        }
+
+        socket.on('convite_criado', function(cv) {
+            conviteAtual = cv;
+            const link = `${window.location.origin}/convite/${cv.code}`;
+            document.getElementById('invite-link').value = link;
+            document.getElementById('invite-result').style.display = 'block';
+
+            const meta = [];
+            meta.push(cv.expira_em ? `Expira em ${cv.expira_em}` : 'Nunca expira');
+            meta.push(cv.max_usos ? `${cv.max_usos} uso(s)` : 'Usos ilimitados');
+            document.getElementById('invite-meta').textContent = meta.join(' · ');
+
+            // QR gerado no próprio navegador
+            const caixa = document.getElementById('invite-qr');
+            caixa.innerHTML = '';
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(caixa, { text: link, width: 124, height: 124,
+                                    colorDark: '#000000', colorLight: '#ffffff' });
+            } else {
+                caixa.innerHTML = '<span style="color:#666; font-size:11px; padding:8px; text-align:center;">QR indisponível<br>(use o link)</span>';
+            }
+            showToast("Convite pronto!", "success");
+        });
+
+        function copiarConvite() {
+            const campo = document.getElementById('invite-link');
+            navigator.clipboard.writeText(campo.value)
+                .then(() => showToast("Link copiado!", "success"))
+                .catch(() => { campo.select(); showToast("Copia aí com Ctrl+C", "info"); });
+        }
+
+        function entrarPorCodigo() {
+            const valor = document.getElementById('invite-code-input').value.trim();
+            if (!valor) { showToast("Cola o código ou o link do convite.", "warning"); return; }
+            socket.emit('entrar_por_convite', { code: valor });
+            showToast("Entrando...", "info");
+        }
+
+        // ---------- MENU DO SERVIDOR (clique no nome) ----------
+        function posicionarMenu(menu, x, y) {
+            menu.style.display = 'flex';
+            let top = y, left = x;
+            if (top + menu.offsetHeight > window.innerHeight) top = window.innerHeight - menu.offsetHeight - 8;
+            if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 8;
+            menu.style.top = `${Math.max(8, top)}px`;
+            menu.style.left = `${Math.max(8, left)}px`;
+        }
+
+        document.getElementById('bazinga-sidebar')?.querySelector('.channels-header')
+            ?.addEventListener('click', function(e) {
+                const srv = servidorAtivo();
+                if (!srv) return;
+                const menu = document.getElementById('server-dropdown');
+                menu.classList.toggle('nao-sou-dono', !souDonoDoServidor(srv));
+                const r = this.getBoundingClientRect();
+                posicionarMenu(menu, r.left + 8, r.bottom + 6);
+                e.stopPropagation();
+            });
+
+        document.getElementById('srv-menu-invite')?.addEventListener('click', () => { fecharTodosOsModais(); abrirModalConvite(); });
+        document.getElementById('srv-menu-calendar')?.addEventListener('click', () => { fecharTodosOsModais(); abrirCalendario(); });
+        document.getElementById('srv-menu-config')?.addEventListener('click', () => { fecharTodosOsModais(); abrirConfigServidor(); });
+        document.getElementById('srv-menu-new-text')?.addEventListener('click', () => { fecharTodosOsModais(); abrirModalCanal('criar', { tipo: 'text' }); });
+        document.getElementById('srv-menu-new-voice')?.addEventListener('click', () => { fecharTodosOsModais(); abrirModalCanal('criar', { tipo: 'voice' }); });
+        document.getElementById('srv-menu-leave')?.addEventListener('click', () => {
+            const srv = servidorAtivo();
+            if (!srv) return;
+            fecharTodosOsModais();
+            if (souDonoDoServidor(srv)) {
+                showToast("Você é o dono — use Configurações > Apagar servidor.", "warning");
+                return;
+            }
+            openConfirmModal(`Sair de ${srv.name}?`,
+                "Você para de ver os canais e as mensagens desse servidor.",
+                () => socket.emit('sair_do_servidor', { server_id: srv.id }));
+        });
+
+        // ---------- MENU DE CONTEXTO DO CANAL (botão direito) ----------
+        let canalDoContexto = null;
+
+        document.getElementById('bazinga-sidebar')?.addEventListener('contextmenu', function(e) {
+            const linha = e.target.closest('.channel-item');
+            if (!linha) return;
+            e.preventDefault();
+
+            canalDoContexto = acharCanal(Number(linha.getAttribute('data-id')));
+            if (!canalDoContexto) return;
+
+            const menu = document.getElementById('channel-context-menu');
+            menu.classList.toggle('nao-sou-dono', !souDonoDoServidor(servidorAtivo()));
+            posicionarMenu(menu, e.clientX, e.clientY);
+        });
+
+        document.getElementById('ch-ctx-copy')?.addEventListener('click', () => {
+            if (canalDoContexto) {
+                navigator.clipboard.writeText(canalDoContexto.name);
+                showToast("Nome do canal copiado", "success");
+            }
+            document.getElementById('channel-context-menu').style.display = 'none';
+        });
+
+        document.getElementById('ch-ctx-edit')?.addEventListener('click', () => {
+            document.getElementById('channel-context-menu').style.display = 'none';
+            if (canalDoContexto) abrirModalCanal('editar', canalDoContexto);
+        });
+
+        document.getElementById('ch-ctx-delete')?.addEventListener('click', () => {
+            document.getElementById('channel-context-menu').style.display = 'none';
+            if (!canalDoContexto) return;
+            const canal = canalDoContexto;
+            openConfirmModal(`Apagar #${canal.name}?`,
+                "Todas as mensagens desse canal somem junto. Isso não tem volta.",
+                () => socket.emit('apagar_canal', { canal_id: canal.id }));
+        });
+
+        // Clique fora fecha os menus suspensos
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#server-dropdown') && !e.target.closest('.channels-header')) {
+                const m = document.getElementById('server-dropdown');
+                if (m) m.style.display = 'none';
+            }
+            if (!e.target.closest('#channel-context-menu')) {
+                const m = document.getElementById('channel-context-menu');
+                if (m) m.style.display = 'none';
+            }
+        });
+
+        // Os cartões de tipo de canal viram "radio"
+        document.querySelectorAll('#channel-type-group .bz-radio-card').forEach(card => {
+            card.addEventListener('click', () => selecionarTipoCanal(card.getAttribute('data-tipo')));
+        });
+
+        // Esc fecha qualquer modal aberto
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fecharTodosOsModais();
+        });
+
+        // ==========================================
+        // CALENDÁRIO DE EVENTOS (aba própria)
+        // ==========================================
+        const MESES = ['janeiro','fevereiro','março','abril','maio','junho',
+                       'julho','agosto','setembro','outubro','novembro','dezembro'];
+
+        let calendarioRef = new Date();      // mês mostrado
+        let eventosDoServidor = [];
+        let podeGerenciarEventos = false;
+        let eventoEmEdicao = null;
+        let corEventoEscolhida = CORES_BAZINGA[0];
+        let emojiEventoEscolhido = '🎉';
+
+        function abrirCalendario() {
+            if (!activeMyServerId) {
+                showToast("Abra um servidor pra ver o calendário dele.", "warning");
+                return;
+            }
+            switchMainView('calendar');
+            socket.emit('listar_eventos', { server_id: activeMyServerId });
+            desenharCalendario();
+        }
+
+        function mudarMesCalendario(delta) {
+            calendarioRef = new Date(calendarioRef.getFullYear(), calendarioRef.getMonth() + delta, 1);
+            desenharCalendario();
+        }
+
+        function irParaHojeCalendario() {
+            calendarioRef = new Date();
+            desenharCalendario();
+        }
+
+        // Compara só a parte da data (dia/mês/ano), ignorando a hora
+        function mesmaData(a, b) {
+            return a.getFullYear() === b.getFullYear()
+                && a.getMonth() === b.getMonth()
+                && a.getDate() === b.getDate();
+        }
+
+        function eventosDoDia(data) {
+            return eventosDoServidor.filter(ev => {
+                if (!ev.inicio) return false;
+                return mesmaData(new Date(ev.inicio), data);
+            });
+        }
+
+        function desenharCalendario() {
+            const grade = document.getElementById('cal-grade');
+            if (!grade) return;
+
+            const ano = calendarioRef.getFullYear();
+            const mes = calendarioRef.getMonth();
+            const hoje = new Date();
+
+            document.getElementById('cal-mes-ano').textContent = `${MESES[mes]} de ${ano}`;
+            const srv = servidorAtivo();
+            document.getElementById('cal-subtitulo').textContent = srv
+                ? `${eventosDoServidor.length} evento(s) em ${srv.name}`
+                : 'Eventos do servidor';
+
+            // Quem não pode gerenciar não vê o botão de criar
+            document.getElementById('cal-novo-evento').style.display =
+                podeGerenciarEventos ? 'inline-flex' : 'none';
+
+            // A grade começa no domingo da semana do dia 1
+            const primeiroDia = new Date(ano, mes, 1);
+            const inicioGrade = new Date(primeiroDia);
+            inicioGrade.setDate(1 - primeiroDia.getDay());
+
+            grade.innerHTML = '';
+            for (let i = 0; i < 42; i++) {
+                const dia = new Date(inicioGrade);
+                dia.setDate(inicioGrade.getDate() + i);
+
+                const doMes = dia.getMonth() === mes;
+                const ehHoje = mesmaData(dia, hoje);
+                const doDia = eventosDoDia(dia);
+
+                const cel = document.createElement('div');
+                cel.className = 'cal-dia'
+                    + (doMes ? '' : ' fora-do-mes')
+                    + (ehHoje ? ' hoje' : '')
+                    + (podeGerenciarEventos ? ' pode-criar' : '');
+
+                const visiveis = doDia.slice(0, 3);
+                const resto = doDia.length - visiveis.length;
+
+                cel.innerHTML = `<div class="cal-dia-numero">${dia.getDate()}</div>`
+                    + visiveis.map(ev => `
+                        <div class="cal-evento" data-id="${Number(ev.id)}"
+                             style="background:${esc(ev.cor || '#5865F2')};"
+                             title="${esc(ev.titulo)}">
+                            <span class="cal-evento-emoji">${esc(ev.emoji || '🎉')}</span>
+                            <span class="cal-evento-titulo">${esc(ev.titulo)}</span>
+                        </div>`).join('')
+                    + (resto > 0 ? `<div class="cal-mais">+${resto} mais</div>` : '');
+
+                // Clicar no quadradinho do evento abre ele; clicar no vazio cria
+                cel.querySelectorAll('.cal-evento').forEach(box => {
+                    box.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const ev = eventosDoServidor.find(x => Number(x.id) === Number(box.getAttribute('data-id')));
+                        if (ev) abrirModalEvento(podeGerenciarEventos ? 'editar' : 'ver', ev);
+                    });
+                });
+
+                if (podeGerenciarEventos) {
+                    cel.addEventListener('click', () => abrirModalEvento('criar', { data: dia }));
+                }
+
+                grade.appendChild(cel);
+            }
+
+            desenharProximosEventos();
+        }
+
+        function formatarQuando(ev) {
+            if (!ev.inicio) return '';
+            const d = new Date(ev.inicio);
+            const dia = String(d.getDate()).padStart(2, '0');
+            const hora = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            return `${dia} de ${MESES[d.getMonth()]} às ${hora}`;
+        }
+
+        function desenharProximosEventos() {
+            const lista = document.getElementById('cal-lista-proximos');
+            if (!lista) return;
+
+            const agora = new Date();
+            const proximos = eventosDoServidor
+                .filter(ev => ev.inicio && new Date(ev.inicio) >= agora)
+                .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+                .slice(0, 5);
+
+            if (proximos.length === 0) {
+                lista.innerHTML = `<div class="cal-vazio">Nenhum evento marcado${podeGerenciarEventos ? ' — clica num dia pra criar o primeiro.' : '.'}</div>`;
+                return;
+            }
+
+            lista.innerHTML = proximos.map(ev => `
+                <div class="cal-card" data-id="${Number(ev.id)}" style="border-left-color:${esc(ev.cor || '#5865F2')};">
+                    <div class="cal-card-emoji">${esc(ev.emoji || '🎉')}</div>
+                    <div style="flex-grow:1; min-width:0;">
+                        <div class="cal-card-titulo">${esc(ev.titulo)}</div>
+                        <div class="cal-card-quando">${esc(formatarQuando(ev))} · por ${esc(ev.criador)}</div>
+                        ${ev.descricao ? `<div class="cal-card-quando">${esc(ev.descricao)}</div>` : ''}
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);"></i>
+                </div>`).join('');
+
+            lista.querySelectorAll('.cal-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const ev = eventosDoServidor.find(x => Number(x.id) === Number(card.getAttribute('data-id')));
+                    if (ev) abrirModalEvento(podeGerenciarEventos ? 'editar' : 'ver', ev);
+                });
+            });
+        }
+
+        // Converte Date -> 'YYYY-MM-DDTHH:MM' (formato do input datetime-local)
+        function paraInputData(d) {
+            const p = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+        }
+
+        function abrirModalEvento(modo, dados = {}) {
+            if (modo !== 'ver' && !podeGerenciarEventos) {
+                showToast("Você não tem permissão para mexer nos eventos deste servidor.", "warning");
+                return;
+            }
+
+            const editando = modo === 'editar';
+            eventoEmEdicao = editando ? dados : null;
+
+            document.getElementById('event-modal-title').textContent = editando ? 'Editar evento' : 'Novo evento';
+            document.getElementById('event-save-btn').textContent = editando ? 'Salvar' : 'Criar evento';
+            document.getElementById('event-delete-btn').style.display = editando ? 'flex' : 'none';
+
+            if (editando) {
+                document.getElementById('event-title').value = dados.titulo || '';
+                document.getElementById('event-desc').value = dados.descricao || '';
+                document.getElementById('event-start').value = dados.inicio ? paraInputData(new Date(dados.inicio)) : '';
+                document.getElementById('event-end').value = dados.fim ? paraInputData(new Date(dados.fim)) : '';
+                emojiEventoEscolhido = dados.emoji || '🎉';
+                corEventoEscolhida = dados.cor || CORES_BAZINGA[0];
+            } else {
+                // Clicou num dia da grade: já vem com aquele dia às 20h
+                const base = dados.data ? new Date(dados.data) : new Date();
+                base.setHours(20, 0, 0, 0);
+                document.getElementById('event-title').value = '';
+                document.getElementById('event-desc').value = '';
+                document.getElementById('event-start').value = paraInputData(base);
+                document.getElementById('event-end').value = '';
+                emojiEventoEscolhido = '🎉';
+                corEventoEscolhida = CORES_BAZINGA[0];
+            }
+
+            document.getElementById('event-emoji-btn').textContent = emojiEventoEscolhido;
+            montarPaletaDeCores('event-color-row', corEventoEscolhida, cor => { corEventoEscolhida = cor; });
+
+            document.getElementById('event-modal').style.display = 'flex';
+        }
+
+        function fecharModalEvento() {
+            document.getElementById('event-modal').style.display = 'none';
+            eventoEmEdicao = null;
+        }
+
+        function salvarEvento() {
+            const titulo = document.getElementById('event-title').value.trim();
+            const inicio = document.getElementById('event-start').value;
+            if (!titulo) { showToast("Dá um título pro evento.", "warning"); return; }
+            if (!inicio) { showToast("Escolhe quando o evento começa.", "warning"); return; }
+
+            const payload = {
+                server_id: activeMyServerId,
+                titulo: titulo,
+                descricao: document.getElementById('event-desc').value.trim(),
+                inicio: inicio,
+                fim: document.getElementById('event-end').value || null,
+                emoji: emojiEventoEscolhido,
+                cor: corEventoEscolhida
+            };
+
+            if (eventoEmEdicao) {
+                payload.id = eventoEmEdicao.id;
+                socket.emit('editar_evento', payload);
+            } else {
+                socket.emit('criar_evento', payload);
+            }
+            showToast("Salvando evento...", "info");
+            fecharModalEvento();
+        }
+
+        function apagarEventoAtual() {
+            if (!eventoEmEdicao) return;
+            const ev = eventoEmEdicao;
+            openConfirmModal(`Apagar "${ev.titulo}"?`,
+                "O evento some do calendário de todo mundo.",
+                () => { socket.emit('apagar_evento', { id: ev.id }); fecharModalEvento(); });
+        }
+
+        // Seletor de emoji do evento (reaproveita o painel que o mapa já usa)
+        document.getElementById('event-emoji-btn')?.addEventListener('click', function() {
+            abrirEmojiPicker(this, {
+                set value(v) {
+                    // O picker escreve em .value; aqui a gente intercepta e
+                    // guarda só o último emoji clicado.
+                    emojiEventoEscolhido = v.slice(-2);
+                    document.getElementById('event-emoji-btn').textContent = emojiEventoEscolhido;
+                },
+                get value() { return ''; },
+                focus() {}
+            });
+        });
+
+        // --- eventos vindos do servidor ---
+        socket.on('eventos_do_servidor', function(dados) {
+            if (dados.server_id !== activeMyServerId) return;
+            eventosDoServidor = dados.eventos || [];
+            podeGerenciarEventos = !!dados.pode_gerenciar;
+            desenharCalendario();
+        });
+
+        socket.on('evento_criado', function(ev) {
+            if (ev.server_id !== activeMyServerId) return;
+            eventosDoServidor.push(ev);
+            desenharCalendario();
+            showToast(`Evento "${ev.titulo}" marcado!`, "success");
+        });
+
+        socket.on('evento_editado', function(ev) {
+            if (ev.server_id !== activeMyServerId) return;
+            eventosDoServidor = eventosDoServidor.map(x => x.id === ev.id ? ev : x);
+            desenharCalendario();
+            showToast("Evento atualizado!", "success");
+        });
+
+        socket.on('evento_apagado', function(dados) {
+            if (dados.server_id !== activeMyServerId) return;
+            eventosDoServidor = eventosDoServidor.filter(x => x.id !== dados.id);
+            desenharCalendario();
+            showToast("Evento apagado.", "warning");
         });
 
         // ==========================================
