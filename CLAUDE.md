@@ -153,6 +153,28 @@ SQLite descartável e uma rota `/debug-login/<nome>` temporária que seta a
 sessão direto (sem passar pelo OAuth do Google) — só usar em script de
 teste fora do repo, nunca commitar essa rota.
 
+## Mídia (foto, GIF, vídeo)
+
+A compressão é **no navegador, antes do upload** (`comprimirImagem()` em
+`chat.html`): redimensiona pro máximo de 1600px no maior lado e exporta em
+WebP (ou JPEG se o navegador não suportar). Uma foto de 7 MB vira ~180 KB.
+
+Dois cuidados que não são óbvios:
+- **GIF passa direto**, sem canvas. O canvas só captura o primeiro quadro,
+  então comprimir um GIF mata a animação.
+- **Vídeo não é recomprimido** — o navegador não faz isso de forma
+  confiável. É só validado (25 MB no `/api/upload`, com checagem da
+  assinatura real do arquivo) e renderizado com `preload="metadata"`, senão
+  abrir o canal baixaria todos os vídeos de uma vez.
+
+O upload começa quando o arquivo entra na fila, não no Enter — quando a
+pessoa termina de digitar, o arquivo já está no servidor. O socket só
+recebe a URL, e `enviar_mensagem` recusa qualquer `anexo_url` que não comece
+com `/` (nada de `blob:` nem link externo).
+
+Lembre que `app/static/uploads/` é efêmero no Render free: as fotos somem no
+restart. Para valer, precisa de storage externo.
+
 ## Convenções
 
 - Nomes de eventos de socket, funções e variáveis em **português** (`criar_servidor_discord`, `plantar_servidor`, `apagar_geonote`...). Siga o padrão existente.
@@ -182,6 +204,15 @@ mesmo, precisaria de um storage externo (S3/Cloudinary).
   **Precisa rodar `python atualizar_banco.py` depois do merge.**
 - Compra na loja grava um `Purchase` e existe `/api/inventario`, mas **não há
   UI de inventário** — o usuário compra e não vê o que tem.
+- Servidores têm configurações (ícone/nome/descrição/cor), canais com tópico
+  e flag `is_private`, convites por link/QR, calendário de eventos, reações
+  de emoji e anexos de foto/GIF/vídeo.
+- `is_private` do canal **só esconde da UI de quem não é dono** — a checagem
+  real está em `pode_ver_canal()`, que hoje libera todo membro do servidor.
+  Se for usar canal privado pra valer, é lá que precisa entrar a lista de
+  quem foi convidado.
+- Não existe cargo por servidor ainda: `pode_gerenciar_servidor()` devolve
+  True só pro dono. É o único ponto a mudar quando os cargos existirem.
 - Posição dos amigos no radar (`atualizar_localizacao`) não é persistida: só
   é retransmitida para as salas dos Servidores em que o usuário é membro
   (`srv_<id>`), nunca em broadcast — é coordenada de GPS real.
