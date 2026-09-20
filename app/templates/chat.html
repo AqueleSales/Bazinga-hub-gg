@@ -474,6 +474,69 @@
         .context-menu.nao-sou-dono .owner-only { display: none; }
 
         /* ==========================================
+           MENSAGENS: barra de ações, reações e anexos
+           ========================================== */
+        /* Barra que aparece no canto quando o mouse passa na mensagem */
+        .msg-actions { position: absolute; top: -16px; right: 16px; display: none; background: var(--bg-secondary); border: 1px solid rgba(0,0,0,.25); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.3); overflow: hidden; z-index: 5; }
+        .message:hover .msg-actions { display: flex; }
+        .msg-action-btn { width: 34px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; background: none; border: none; font-size: 15px; transition: .12s; }
+        .msg-action-btn:hover { background: rgba(255,255,255,.06); color: var(--text-header); }
+        .msg-action-btn.danger:hover { color: var(--red-color); }
+
+        .msg-editada { font-size: 10px; color: var(--text-muted); margin-left: 4px; font-weight: 500; }
+
+        /* Chips de reação embaixo da mensagem */
+        .msg-reacoes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .msg-reacao { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.06); border: 1px solid transparent; border-radius: 8px; padding: 2px 7px; font-size: 13px; cursor: pointer; transition: .12s; user-select: none; }
+        .msg-reacao:hover { border-color: rgba(255,255,255,.2); }
+        .msg-reacao.minha { background: rgba(88,101,242,.22); border-color: var(--brand-color); }
+        .msg-reacao-total { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+        .msg-reacao.minha .msg-reacao-total { color: var(--brand-color); }
+        .msg-add-reacao { opacity: 0; display: flex; align-items: center; padding: 2px 7px; border-radius: 8px; background: rgba(255,255,255,.06); cursor: pointer; color: var(--text-muted); font-size: 12px; transition: .12s; }
+        .message:hover .msg-add-reacao { opacity: .8; }
+        .msg-add-reacao:hover { opacity: 1 !important; color: var(--text-header); }
+
+        /* Anexos */
+        .msg-anexo { margin-top: 6px; border-radius: 8px; overflow: hidden; max-width: 420px; }
+        .msg-anexo img, .msg-anexo video { display: block; max-width: 100%; max-height: 340px; border-radius: 8px; background: #000; }
+        .msg-anexo img { cursor: zoom-in; }
+
+        /* Edição inline da mensagem */
+        .msg-edit-input { width: 100%; background: var(--bg-tertiary); border: 1px solid var(--brand-color); border-radius: 6px; padding: 8px 10px; color: var(--text-header); font-size: 15px; outline: none; font-family: inherit; }
+        .msg-edit-dica { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Paleta de reações */
+        #reaction-picker { display: none; position: fixed; background: var(--bg-quaternary); border: 1px solid var(--bg-tertiary); border-radius: 10px; padding: 8px; box-shadow: 0 8px 20px rgba(0,0,0,.55); z-index: 6200; width: 268px; }
+        .reaction-picker-linha { display: flex; flex-wrap: wrap; gap: 2px; max-height: 168px; overflow-y: auto; }
+        .reaction-picker-sep { height: 1px; background: var(--bg-tertiary); margin: 6px 0; }
+        .reaction-op { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 19px; border-radius: 6px; cursor: pointer; transition: .1s; }
+        .reaction-op:hover { background: var(--brand-hover); transform: scale(1.1); }
+
+        /* Fila de anexos antes de enviar */
+        #anexos-pendentes { display: flex; gap: 10px; flex-wrap: wrap; padding: 12px 16px; background: var(--bg-secondary); border-radius: 8px 8px 0 0; margin: 0 16px; border-bottom: 1px solid rgba(0,0,0,.2); }
+        .anexo-chip { position: relative; width: 94px; }
+        .anexo-chip .miniatura { width: 94px; height: 94px; border-radius: 8px; object-fit: cover; background: var(--bg-tertiary); display: block; }
+        .anexo-chip .nome { font-size: 10px; color: var(--text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .anexo-chip .remover { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; background: var(--bg-quaternary); color: var(--text-normal); border: none; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+        .anexo-chip .remover:hover { background: var(--red-color); color: #fff; }
+        .anexo-chip .enviando { position: absolute; inset: 0; background: rgba(0,0,0,.6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700; }
+
+        /* Arrastar arquivo por cima do chat */
+        #drop-overlay { display: none; position: absolute; inset: 0; background: rgba(88,101,242,.88); z-index: 400; align-items: center; justify-content: center; text-align: center; color: #fff; border-radius: 8px; pointer-events: none; }
+        #drop-overlay i { font-size: 54px; margin-bottom: 12px; }
+        #drop-overlay h2 { font-size: 26px; font-weight: 800; }
+        #drop-overlay p { font-size: 14px; opacity: .85; margin-top: 4px; }
+
+        /* Visualizador de imagem em tela cheia */
+        #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 8000; align-items: center; justify-content: center; cursor: zoom-out; }
+        #lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 8px; }
+        #lightbox .lb-baixar { position: absolute; top: 20px; right: 24px; color: #fff; font-size: 15px; background: rgba(0,0,0,.5); padding: 10px 16px; border-radius: 8px; text-decoration: none; cursor: pointer; }
+        #lightbox .lb-baixar:hover { background: var(--brand-color); }
+
+        .context-menu.nao-sou-autor .autor-only { display: none; }
+        .context-menu.nao-posso-apagar .apagar-only { display: none; }
+
+        /* ==========================================
            CALENDÁRIO DO SERVIDOR
            ========================================== */
         .cal-topo { display: flex; justify-content: space-between; align-items: flex-end; padding: 24px 28px 18px; gap: 16px; flex-wrap: wrap; }
@@ -993,15 +1056,26 @@
                     <div id="text-view" class="chat-view">
                         <div class="chat-messages" id="messages-container"></div>
                         <div class="chat-input-wrapper">
+                            <!-- Fila de anexos escolhidos, antes de enviar -->
+                            <div id="anexos-pendentes" style="display:none;"></div>
+
                             <div class="chat-input-container">
-                                <button class="chat-input-btn" title="Enviar arquivo"><i class="fa-solid fa-circle-plus"></i></button>
+                                <button class="chat-input-btn" id="btn-anexar" title="Enviar foto, GIF ou vídeo"><i class="fa-solid fa-circle-plus"></i></button>
+                                <input type="file" id="input-anexo" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none;">
                                 <input type="text" class="chat-input" id="message-input" placeholder="Conversar em #geral" autocomplete="off">
                                 <div class="chat-input-actions">
-                                    <button class="chat-input-btn" title="Dar Presente Nitro"><i class="fa-solid fa-gift"></i></button>
-                                    <button class="chat-input-btn" title="GIFs"><i class="fa-solid fa-file-video"></i></button>
-                                    <button class="chat-input-btn" title="Figurinhas"><i class="fa-solid fa-note-sticky"></i></button>
-                                    <button class="chat-input-btn" title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
+                                    <button class="chat-input-btn" id="btn-anexar-gif" title="Enviar GIF"><i class="fa-solid fa-file-video"></i></button>
+                                    <button class="chat-input-btn" id="btn-emoji-mensagem" title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Cobre a área do chat enquanto arrasta um arquivo por cima -->
+                        <div id="drop-overlay">
+                            <div>
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <h2>Solta aqui</h2>
+                                <p>Foto, GIF ou vídeo — a gente comprime antes de mandar</p>
                             </div>
                         </div>
                     </div>
@@ -1546,6 +1620,12 @@
         <div class="context-menu-item danger owner-only" id="ch-ctx-delete">Apagar canal <i class="fa-solid fa-trash"></i></div>
     </div>
 
+    <!-- Visualizador de imagem em tela cheia -->
+    <div id="lightbox" onclick="fecharLightbox(event)">
+        <a class="lb-baixar" id="lb-baixar" download><i class="fa-solid fa-download"></i> Baixar</a>
+        <img id="lb-img" src="" alt="">
+    </div>
+
     <!-- Container de Notificações Toast -->
     <div id="bazinga-toast-container" style="position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 9999;"></div>
 
@@ -1606,10 +1686,23 @@
     </div>
 
     <!-- Menus de Contexto (Clique Direito) -->
+    <!-- Menu da mensagem: abre no botão direito E nos 3 pontinhos -->
     <div id="msg-context-menu" class="context-menu">
-        <div class="context-menu-item" id="ctx-copy">Copiar Texto <i class="fa-solid fa-copy"></i></div>
+        <div class="context-menu-item" id="ctx-react">Reagir <i class="fa-solid fa-face-smile"></i></div>
+        <div class="context-menu-item autor-only" id="ctx-edit">Editar mensagem <i class="fa-solid fa-pen"></i></div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item danger" id="ctx-delete">Excluir Mensagem <i class="fa-solid fa-trash"></i></div>
+        <div class="context-menu-item" id="ctx-copy">Copiar texto <i class="fa-solid fa-copy"></i></div>
+        <div class="context-menu-item" id="ctx-copy-link">Copiar link do anexo <i class="fa-solid fa-link"></i></div>
+        <div class="context-menu-item" id="ctx-copy-id">Copiar ID da mensagem <i class="fa-solid fa-hashtag"></i></div>
+        <div class="context-menu-separator apagar-only"></div>
+        <div class="context-menu-item danger apagar-only" id="ctx-delete">Excluir mensagem <i class="fa-solid fa-trash"></i></div>
+    </div>
+
+    <!-- Paleta rápida de reações -->
+    <div id="reaction-picker">
+        <div class="reaction-picker-linha" id="reaction-picker-rapidas"></div>
+        <div class="reaction-picker-sep"></div>
+        <div class="reaction-picker-linha" id="reaction-picker-todas"></div>
     </div>
 
     <div id="video-context-menu" class="context-menu">
@@ -3948,7 +4041,7 @@
                             `;
                         } else {
                             mensagens.forEach(msg => {
-                                appendMessageGrouped(container, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor);
+                                appendMessageGrouped(container, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor, msg);
                             });
                         }
                     } catch(err) {
@@ -4088,7 +4181,7 @@
                 // 1. Renderiza a mensagem se a pessoa for a que estamos com o chat aberto ou se fomos nós que mandamos
                 if (currentDmUserId == dados.usuario_id || currentUserName == dados.usuario) {
                     const container = document.getElementById('dm-messages-container');
-                    appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
+                    appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor, dados);
                 }
 
                 // 2. Lógica de Pular para o Topo (LIFO) e Notificação Badge
@@ -4133,7 +4226,53 @@
         }
 
         // FUNÇÃO DE RENDERIZAÇÃO CENTRAL (Agrupa as mensagens do mesmo autor em sequencia)
-        function appendMessageGrouped(container, id, autor, avatar, texto, hora, cor) {
+        // Monta o HTML do anexo (foto/gif/vídeo) de uma mensagem.
+        function htmlDoAnexo(url, tipo, nome) {
+            const limpa = escUrl(url);
+            if (!limpa) return '';
+            if (tipo === 'video') {
+                // preload="metadata": carrega só o primeiro frame, não o vídeo
+                // inteiro - senão abrir o canal baixaria tudo de uma vez.
+                return `<div class="msg-anexo">
+                            <video controls preload="metadata" src="${limpa}"></video>
+                        </div>`;
+            }
+            return `<div class="msg-anexo">
+                        <img src="${limpa}" alt="${esc(nome || 'anexo')}"
+                             loading="lazy" onclick="abrirLightbox('${limpa}')">
+                    </div>`;
+        }
+
+        // Chips de reação. `reacoes` = [{emoji, total, quem:[ids]}]
+        function htmlDasReacoes(msgId, reacoes) {
+            const lista = reacoes || [];
+            const chips = lista.map(r => {
+                const euReagi = (r.quem || []).map(Number).includes(Number(currentUserId));
+                return `<div class="msg-reacao ${euReagi ? 'minha' : ''}"
+                             data-emoji="${esc(r.emoji)}" title="${r.total} reação(ões)">
+                            <span>${esc(r.emoji)}</span>
+                            <span class="msg-reacao-total">${Number(r.total) || 0}</span>
+                        </div>`;
+            }).join('');
+
+            return `<div class="msg-reacoes" data-msg-id="${Number(msgId)}">
+                        ${chips}
+                        <div class="msg-add-reacao" title="Adicionar reação">
+                            <i class="fa-solid fa-face-smile"></i><i class="fa-solid fa-plus" style="font-size:8px; margin-left:2px;"></i>
+                        </div>
+                    </div>`;
+        }
+
+        // Barra de ações que aparece no hover (reagir / editar / 3 pontinhos)
+        function htmlDasAcoes(souAutor) {
+            return `<div class="msg-actions">
+                        <button class="msg-action-btn btn-msg-react" title="Reagir"><i class="fa-regular fa-face-smile"></i></button>
+                        ${souAutor ? `<button class="msg-action-btn btn-msg-edit" title="Editar"><i class="fa-solid fa-pen"></i></button>` : ''}
+                        <button class="msg-action-btn btn-msg-more" title="Mais"><i class="fa-solid fa-ellipsis"></i></button>
+                    </div>`;
+        }
+
+        function appendMessageGrouped(container, id, autor, avatar, texto, hora, cor, extras = {}) {
             const welcomeBox = container.querySelector('.dm-welcome-box');
             if(welcomeBox) welcomeBox.remove();
             if(container.innerHTML.includes('Bem-vindo ao início do canal')) container.innerHTML = '';
@@ -4156,6 +4295,16 @@
             div.setAttribute('data-autor', autor);
             div.setAttribute('data-hora', hora);
 
+            // Quem é o autor decide o que aparece no menu; por id, não por nome.
+            // Canal manda `autor_id`; DM manda `usuario_id` - aceita os dois.
+            const autorId = extras.autor_id ?? extras.usuario_id;
+            const souAutor = autorId !== undefined && autorId !== null
+                ? Number(autorId) === Number(currentUserId)
+                : autor === currentUserName;
+            div.setAttribute('data-autor-id', autorId ?? '');
+            div.setAttribute('data-sou-autor', souAutor ? '1' : '0');
+            if (extras.anexo_url) div.setAttribute('data-anexo', extras.anexo_url);
+
             // Tudo abaixo vem de outro usuário: sempre passar por esc()/escUrl().
             const avatarSeguro = escUrl(avatar);
             const corSegura = esc(cor);
@@ -4163,30 +4312,48 @@
                 ? `<img src="${avatarSeguro}">`
                 : `<span>${esc((autor || '?')[0].toUpperCase())}</span>`;
 
+            const marcaEditada = extras.editada
+                ? `<span class="msg-editada">(editada)</span>` : '';
+            const anexoHtml = htmlDoAnexo(extras.anexo_url, extras.anexo_tipo, extras.anexo_nome);
+            const reacoesHtml = htmlDasReacoes(id, extras.reacoes);
+            const acoesHtml = htmlDasAcoes(souAutor);
+
+            // Mensagem só de anexo não mostra o parágrafo de texto vazio
+            const textoHtml = texto
+                ? `<p class="message-text">${esc(texto)}${marcaEditada}</p>`
+                : (marcaEditada ? `<p class="message-text">${marcaEditada}</p>` : '');
+
             if (isGrouped) {
                 // Pega só o horário limpo (ex: extrai "19:34" da string "Hoje às 19:34")
                 const timeOnly = hora.includes('às') ? hora.split('às')[1].trim() : hora;
                 div.innerHTML = `
+                    ${acoesHtml}
                     <div class="grouped-timestamp">${esc(timeOnly)}</div>
                     <div class="message-content">
-                        <p class="message-text">${esc(texto)}</p>
+                        ${textoHtml}
+                        ${anexoHtml}
+                        ${reacoesHtml}
                     </div>
                 `;
             } else {
                 div.innerHTML = `
+                    ${acoesHtml}
                     <div class="chat-avatar" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${avatarHtml}</div>
                     <div class="message-content">
                         <div class="message-header">
                             <span class="message-author" style="color: ${corSegura};">${esc(autor)}</span>
                             <span class="message-timestamp">${esc(hora)}</span>
                         </div>
-                        <p class="message-text">${esc(texto)}</p>
+                        ${textoHtml}
+                        ${anexoHtml}
+                        ${reacoesHtml}
                     </div>
                 `;
             }
 
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+            return div;
         }
 
         // --- CANAIS PÚBLICOS ---
@@ -4235,52 +4402,454 @@
                 }
 
                 if(data.length === 0) msgContainer.innerHTML = '<div style="flex-grow: 1; display: flex; align-items: flex-end; padding: 16px; font-size: 24px; font-weight: bold; color: white;">Bem-vindo ao início do canal!</div>';
-                else data.forEach(msg => appendMessageGrouped(msgContainer, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor));
+                else data.forEach(msg => appendMessageGrouped(msgContainer, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor, msg));
             } catch(e) {
                 msgContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">Erro de conexão ao carregar o histórico.</p>';
             }
         }
 
+        function enviarMensagemDoCanal() {
+            const input = document.getElementById('message-input');
+            const texto = input.value.trim();
+
+            // Anexo ainda subindo: espera, senão a mensagem sairia sem ele.
+            if (anexosPendentes.some(a => a.subindo)) {
+                showToast("Ainda estou enviando o arquivo, só um segundo...", "info");
+                return;
+            }
+
+            const prontos = anexosPendentes.filter(a => a.url);
+            if (!texto && prontos.length === 0) return;
+
+            if (prontos.length === 0) {
+                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: texto });
+            } else {
+                // O texto vai junto do primeiro anexo; os outros vão sozinhos,
+                // um por mensagem (é assim que o modelo guarda).
+                prontos.forEach((a, i) => {
+                    socket.emit('enviar_mensagem', {
+                        canal_id: currentChannelId,
+                        texto: i === 0 ? texto : '',
+                        anexo_url: a.url, anexo_tipo: a.tipo, anexo_nome: a.nome
+                    });
+                });
+            }
+
+            prontos.forEach(a => { if (a.previa.startsWith('blob:')) URL.revokeObjectURL(a.previa); });
+            anexosPendentes = [];
+            desenharAnexosPendentes();
+            input.value = '';
+        }
+
         document.getElementById('message-input').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter' && this.value.trim() !== '') {
-                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: this.value });
-                this.value = '';
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                enviarMensagemDoCanal();
             }
         });
 
         socket.on('receber_mensagem', function(dados) {
             const container = document.getElementById('messages-container');
-            appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor);
+            appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto,
+                                 dados.hora, dados.cor, dados);
         });
 
         // 4. MENUS DE CONTEXTO E MODAIS GERAIS
-        let targetMsgId = null; let targetMsgElement = null;
-
-        document.getElementById('messages-container').addEventListener('contextmenu', (e) => {
+        // Botão direito em qualquer mensagem (canal ou DM). Antes só funcionava
+        // no #messages-container e o menu podia abrir fora da tela.
+        document.addEventListener('contextmenu', (e) => {
             const msgElement = e.target.closest('.message');
-            if(msgElement) {
-                e.preventDefault();
-                targetMsgId = msgElement.getAttribute('data-msg-id'); targetMsgElement = msgElement;
-                const menu = document.getElementById('msg-context-menu');
-                menu.style.display = 'flex';
-                let top = e.clientY; let left = e.clientX;
-                if(top + menu.offsetHeight > window.innerHeight) top -= menu.offsetHeight;
-                if(left + menu.offsetWidth > window.innerWidth) left -= menu.offsetWidth;
-                menu.style.top = `${top}px`; menu.style.left = `${left}px`;
+            if (!msgElement) return;
+            e.preventDefault();
+            abrirMenuMensagem(e.clientX, e.clientY, msgElement);
+        });
+
+        // ==========================================
+        // AÇÕES DA MENSAGEM (reagir / editar / 3 pontinhos / anexos)
+        // ==========================================
+        const REACOES_RAPIDAS = ['👍', '❤️', '😂', '🔥', '😮', '😢', '🎉', '👀'];
+        const REACOES_TODAS = ['👍','👎','❤️','🔥','😂','😅','😭','😮','😡','🤔','👏','🙏',
+                               '🎉','🚀','💀','🤡','🧠','💩','👀','✅','❌','⭐','💎','⚡',
+                               '🍕','🎮','🏆','😎','🤝','🫡','🥶','🤯'];
+
+        let msgAlvo = null;          // elemento .message em foco
+        let msgAlvoId = null;
+
+        function dadosDaMensagem(el) {
+            if (!el) return null;
+            return {
+                el: el,
+                id: el.getAttribute('data-msg-id'),
+                souAutor: el.getAttribute('data-sou-autor') === '1',
+                anexo: el.getAttribute('data-anexo') || null,
+                texto: el.querySelector('.message-text')?.innerText.replace(/\(editada\)$/, '').trim() || ''
+            };
+        }
+
+        // ---------- PALETA DE REAÇÕES ----------
+        function montarPaletaReacoes() {
+            const rapidas = document.getElementById('reaction-picker-rapidas');
+            const todas = document.getElementById('reaction-picker-todas');
+            if (!rapidas || rapidas.children.length) return;
+
+            const criar = (emoji, destino) => {
+                const b = document.createElement('div');
+                b.className = 'reaction-op';
+                b.textContent = emoji;
+                b.addEventListener('click', () => {
+                    if (msgAlvoId) socket.emit('reagir_mensagem', { msg_id: Number(msgAlvoId), emoji: emoji });
+                    document.getElementById('reaction-picker').style.display = 'none';
+                });
+                destino.appendChild(b);
+            };
+            REACOES_RAPIDAS.forEach(e => criar(e, rapidas));
+            REACOES_TODAS.forEach(e => criar(e, todas));
+        }
+
+        function abrirPaletaReacoes(x, y, msgId) {
+            montarPaletaReacoes();
+            msgAlvoId = msgId;
+            const p = document.getElementById('reaction-picker');
+            p.style.display = 'block';
+            let top = y, left = x;
+            if (top + p.offsetHeight > window.innerHeight) top = window.innerHeight - p.offsetHeight - 8;
+            if (left + p.offsetWidth > window.innerWidth) left = window.innerWidth - p.offsetWidth - 8;
+            p.style.top = `${Math.max(8, top)}px`;
+            p.style.left = `${Math.max(8, left)}px`;
+        }
+
+        // ---------- EDIÇÃO INLINE ----------
+        function iniciarEdicao(el) {
+            const dados = dadosDaMensagem(el);
+            if (!dados || !dados.souAutor) return;
+
+            const alvo = el.querySelector('.message-text');
+            const conteudo = el.querySelector('.message-content');
+            if (!conteudo) return;
+            if (conteudo.querySelector('.msg-edit-input')) return;  // já editando
+
+            const textoAtual = dados.texto;
+            const caixa = document.createElement('div');
+            caixa.innerHTML = `<textarea class="msg-edit-input" rows="2"></textarea>
+                               <div class="msg-edit-dica">Enter para salvar · Esc para cancelar</div>`;
+
+            if (alvo) alvo.style.display = 'none';
+            conteudo.insertBefore(caixa, conteudo.firstChild.nextSibling || null);
+
+            const input = caixa.querySelector('.msg-edit-input');
+            input.value = textoAtual;
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+
+            const encerrar = () => { caixa.remove(); if (alvo) alvo.style.display = ''; };
+
+            input.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Escape') { ev.preventDefault(); encerrar(); }
+                if (ev.key === 'Enter' && !ev.shiftKey) {
+                    ev.preventDefault();
+                    const novo = input.value.trim();
+                    if (novo && novo !== textoAtual) {
+                        socket.emit('editar_mensagem', { msg_id: Number(dados.id), texto: novo });
+                    }
+                    encerrar();
+                }
+            });
+            input.addEventListener('blur', encerrar);
+        }
+
+        // ---------- MENU (botão direito e 3 pontinhos) ----------
+        function abrirMenuMensagem(x, y, el) {
+            const dados = dadosDaMensagem(el);
+            if (!dados) return;
+
+            msgAlvo = el;
+            msgAlvoId = dados.id;
+
+            const menu = document.getElementById('msg-context-menu');
+            menu.classList.toggle('nao-sou-autor', !dados.souAutor);
+            // Apagar: o autor sempre pode; o dono do servidor também.
+            const podeApagar = dados.souAutor || souDonoDoServidor(servidorAtivo());
+            menu.classList.toggle('nao-posso-apagar', !podeApagar);
+            document.getElementById('ctx-copy-link').style.display = dados.anexo ? 'flex' : 'none';
+            document.getElementById('ctx-copy').style.display = dados.texto ? 'flex' : 'none';
+
+            posicionarMenu(menu, x, y);
+        }
+
+        // Delegação: vale pro chat de canal E pro de DM, inclusive em mensagens
+        // que ainda nem foram renderizadas.
+        document.addEventListener('click', (e) => {
+            const botaoReagir = e.target.closest('.btn-msg-react');
+            const botaoEditar = e.target.closest('.btn-msg-edit');
+            const botaoMais = e.target.closest('.btn-msg-more');
+            const chipReacao = e.target.closest('.msg-reacao');
+            const addReacao = e.target.closest('.msg-add-reacao');
+
+            if (botaoReagir) {
+                const msg = botaoReagir.closest('.message');
+                const r = botaoReagir.getBoundingClientRect();
+                abrirPaletaReacoes(r.left - 240, r.bottom + 6, msg.getAttribute('data-msg-id'));
+                e.stopPropagation();
+                return;
+            }
+            if (addReacao) {
+                const msg = addReacao.closest('.message');
+                const r = addReacao.getBoundingClientRect();
+                abrirPaletaReacoes(r.left, r.bottom + 6, msg.getAttribute('data-msg-id'));
+                e.stopPropagation();
+                return;
+            }
+            if (botaoEditar) {
+                iniciarEdicao(botaoEditar.closest('.message'));
+                return;
+            }
+            if (botaoMais) {
+                const r = botaoMais.getBoundingClientRect();
+                abrirMenuMensagem(r.left - 200, r.bottom + 6, botaoMais.closest('.message'));
+                e.stopPropagation();
+                return;
+            }
+            if (chipReacao) {
+                // Clicar no chip liga/desliga a sua própria reação
+                const msg = chipReacao.closest('.message');
+                socket.emit('reagir_mensagem', {
+                    msg_id: Number(msg.getAttribute('data-msg-id')),
+                    emoji: chipReacao.getAttribute('data-emoji')
+                });
+                return;
+            }
+
+            if (!e.target.closest('#reaction-picker')) {
+                const p = document.getElementById('reaction-picker');
+                if (p) p.style.display = 'none';
             }
         });
 
-        document.getElementById('ctx-copy').addEventListener('click', () => {
-            if(targetMsgElement) navigator.clipboard.writeText(targetMsgElement.querySelector('.message-text').innerText);
+        // Duplo clique na própria mensagem edita (atalho igual ao Discord)
+        document.addEventListener('dblclick', (e) => {
+            const msg = e.target.closest('.message');
+            if (msg && msg.getAttribute('data-sou-autor') === '1' && !e.target.closest('.msg-anexo')) {
+                iniciarEdicao(msg);
+            }
+        });
+
+        // ---------- REAÇÕES VINDAS DO SERVIDOR ----------
+        socket.on('reacoes_atualizadas', function(dados) {
+            const msg = document.querySelector(`.message[data-msg-id="${dados.msg_id}"]`);
+            if (!msg) return;
+            const antiga = msg.querySelector('.msg-reacoes');
+            if (!antiga) return;
+            antiga.outerHTML = htmlDasReacoes(dados.msg_id, dados.reacoes);
+        });
+
+        socket.on('mensagem_editada', function(dados) {
+            const msg = document.querySelector(`.message[data-msg-id="${dados.msg_id}"]`);
+            if (!msg) return;
+            let p = msg.querySelector('.message-text');
+            if (!p) {
+                p = document.createElement('p');
+                p.className = 'message-text';
+                msg.querySelector('.message-content')?.prepend(p);
+            }
+            p.innerHTML = `${esc(dados.texto)}<span class="msg-editada">(editada)</span>`;
+            p.style.display = '';
+        });
+
+        // ---------- LIGHTBOX ----------
+        function abrirLightbox(url) {
+            const box = document.getElementById('lightbox');
+            document.getElementById('lb-img').src = url;
+            document.getElementById('lb-baixar').href = url;
+            box.style.display = 'flex';
+        }
+
+        function fecharLightbox(e) {
+            // Não fecha se o clique foi no botão de baixar
+            if (e && e.target.closest('.lb-baixar')) return;
+            document.getElementById('lightbox').style.display = 'none';
+            document.getElementById('lb-img').src = '';
+        }
+
+        // ==========================================
+        // ANEXOS: escolher, arrastar, colar e enviar
+        // ==========================================
+        let anexosPendentes = [];   // [{ id, file, url, tipo, nome, subindo }]
+
+        function desenharAnexosPendentes() {
+            const area = document.getElementById('anexos-pendentes');
+            if (!area) return;
+
+            if (anexosPendentes.length === 0) {
+                area.style.display = 'none';
+                area.innerHTML = '';
+                return;
+            }
+
+            area.style.display = 'flex';
+            area.innerHTML = anexosPendentes.map(a => `
+                <div class="anexo-chip" data-id="${a.id}">
+                    ${a.tipo === 'video'
+                        ? `<video class="miniatura" src="${escUrl(a.previa)}" muted></video>`
+                        : `<img class="miniatura" src="${escUrl(a.previa)}" alt="">`}
+                    ${a.subindo ? '<div class="enviando">enviando...</div>' : ''}
+                    <button class="remover" title="Tirar">✕</button>
+                    <div class="nome">${esc(a.nome)}</div>
+                </div>`).join('');
+
+            area.querySelectorAll('.remover').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.closest('.anexo-chip').getAttribute('data-id');
+                    const alvo = anexosPendentes.find(a => String(a.id) === String(id));
+                    if (alvo && alvo.previa.startsWith('blob:')) URL.revokeObjectURL(alvo.previa);
+                    anexosPendentes = anexosPendentes.filter(a => String(a.id) !== String(id));
+                    desenharAnexosPendentes();
+                });
+            });
+        }
+
+        async function adicionarAnexos(arquivos) {
+            const lista = Array.from(arquivos || []).slice(0, 5);   // no máximo 5 por vez
+            for (const file of lista) {
+                const ehVideo = file.type.startsWith('video/');
+                if (!file.type.startsWith('image/') && !ehVideo) {
+                    showToast(`"${file.name}" não é foto nem vídeo.`, "warning");
+                    continue;
+                }
+
+                const item = {
+                    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                    previa: URL.createObjectURL(file),   // só pra mostrar aqui na tela
+                    tipo: ehVideo ? 'video' : 'image',
+                    nome: file.name || (ehVideo ? 'video' : 'foto'),
+                    subindo: true,
+                    url: null
+                };
+                anexosPendentes.push(item);
+                desenharAnexosPendentes();
+
+                try {
+                    // O upload já acontece aqui, enquanto a pessoa digita o texto -
+                    // quando ela apertar Enter, o arquivo já está no servidor.
+                    const res = await uploadMidiaCompleto(file);
+                    item.url = res.url;
+                    item.tipo = res.tipo;
+                    item.subindo = false;
+                } catch (err) {
+                    showToast(err.message || "Não deu pra enviar o arquivo.", "error");
+                    anexosPendentes = anexosPendentes.filter(a => a.id !== item.id);
+                }
+                desenharAnexosPendentes();
+            }
+        }
+
+        document.getElementById('btn-anexar')?.addEventListener('click', () => {
+            document.getElementById('input-anexo').click();
+        });
+        document.getElementById('btn-anexar-gif')?.addEventListener('click', () => {
+            const input = document.getElementById('input-anexo');
+            input.setAttribute('accept', 'image/gif');
+            input.click();
+            // Volta a aceitar tudo depois de abrir o seletor
+            setTimeout(() => input.setAttribute('accept', 'image/*,video/mp4,video/webm,video/quicktime'), 500);
+        });
+        document.getElementById('input-anexo')?.addEventListener('change', function(e) {
+            adicionarAnexos(e.target.files);
+            e.target.value = '';
+        });
+
+        document.getElementById('btn-emoji-mensagem')?.addEventListener('click', function() {
+            abrirEmojiPicker(this, document.getElementById('message-input'));
+        });
+
+        // Colar imagem direto do Ctrl+V
+        document.getElementById('message-input')?.addEventListener('paste', function(e) {
+            const arquivos = Array.from(e.clipboardData?.files || []);
+            if (arquivos.length) {
+                e.preventDefault();
+                adicionarAnexos(arquivos);
+            }
+        });
+
+        // Arrastar arquivo por cima do chat
+        (function ligarArrastarESoltar() {
+            const view = document.getElementById('text-view');
+            const overlay = document.getElementById('drop-overlay');
+            if (!view || !overlay) return;
+
+            let contador = 0;   // dragenter/dragleave disparam nos filhos também
+            view.addEventListener('dragenter', (e) => {
+                if (!e.dataTransfer?.types.includes('Files')) return;
+                e.preventDefault();
+                contador++;
+                overlay.style.display = 'flex';
+            });
+            view.addEventListener('dragover', (e) => {
+                if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+            });
+            view.addEventListener('dragleave', () => {
+                contador = Math.max(0, contador - 1);
+                if (contador === 0) overlay.style.display = 'none';
+            });
+            view.addEventListener('drop', (e) => {
+                if (!e.dataTransfer?.files.length) return;
+                e.preventDefault();
+                contador = 0;
+                overlay.style.display = 'none';
+                adicionarAnexos(e.dataTransfer.files);
+            });
+        })();
+
+        function fecharMenuMensagem() {
             document.getElementById('msg-context-menu').style.display = 'none';
-            showToast("Texto copiado para a área de transferência", "success");
+        }
+
+        document.getElementById('ctx-react').addEventListener('click', () => {
+            const menu = document.getElementById('msg-context-menu');
+            const r = menu.getBoundingClientRect();
+            fecharMenuMensagem();
+            if (msgAlvoId) abrirPaletaReacoes(r.left, r.top, msgAlvoId);
+        });
+
+        document.getElementById('ctx-edit').addEventListener('click', () => {
+            fecharMenuMensagem();
+            if (msgAlvo) iniciarEdicao(msgAlvo);
+        });
+
+        document.getElementById('ctx-copy').addEventListener('click', () => {
+            const dados = dadosDaMensagem(msgAlvo);
+            if (dados && dados.texto) {
+                navigator.clipboard.writeText(dados.texto);
+                showToast("Texto copiado", "success");
+            }
+            fecharMenuMensagem();
+        });
+
+        document.getElementById('ctx-copy-link').addEventListener('click', () => {
+            const dados = dadosDaMensagem(msgAlvo);
+            if (dados && dados.anexo) {
+                navigator.clipboard.writeText(window.location.origin + dados.anexo);
+                showToast("Link do anexo copiado", "success");
+            }
+            fecharMenuMensagem();
+        });
+
+        document.getElementById('ctx-copy-id').addEventListener('click', () => {
+            if (msgAlvoId) {
+                navigator.clipboard.writeText(String(msgAlvoId));
+                showToast("ID copiado", "success");
+            }
+            fecharMenuMensagem();
         });
 
         document.getElementById('ctx-delete').addEventListener('click', () => {
             // Não remove na hora: espera o 'mensagem_apagada' voltar do servidor.
-            // Agora o backend recusa apagar mensagem dos outros, e sumir o
-            // elemento antes da confirmação mentia pro usuário.
-            if(targetMsgId) { socket.emit('apagar_mensagem', { msg_id: targetMsgId }); document.getElementById('msg-context-menu').style.display = 'none'; }
+            // O backend recusa apagar mensagem dos outros, e sumir o elemento
+            // antes da confirmação mentia pro usuário.
+            const id = msgAlvoId;
+            fecharMenuMensagem();
+            if (!id) return;
+            openConfirmModal("Apagar mensagem?", "Ela some pra todo mundo do canal.",
+                () => socket.emit('apagar_mensagem', { msg_id: Number(id) }));
         });
 
         socket.on('mensagem_apagada', function(dados) {

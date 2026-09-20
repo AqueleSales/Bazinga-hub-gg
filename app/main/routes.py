@@ -213,6 +213,7 @@ def get_dms(target_id):
         dados.append({
             'id': msg.id,
             'autor': msg.sender.name,
+            'autor_id': msg.sender_id,
             'avatar': msg.sender.avatar,
             'texto': msg.content,
             'hora': formatar_data(msg.timestamp),
