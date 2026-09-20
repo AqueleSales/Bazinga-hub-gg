@@ -4,7 +4,8 @@ from sqlalchemy import or_, and_
 from werkzeug.utils import secure_filename
 import os
 import uuid
-from ..models import Person, Channel, Message, DirectMessage, Product, GeoNote, MapServer, br_now, db
+from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
+                      GeoNote, MapServer, br_now, db)
 from ..utils import com_retry, comitar_com_retry, canal_permitido
 
 main_bp = Blueprint("main", __name__)
@@ -216,24 +217,62 @@ def comprar_produto(produto_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Acesso negado'}), 401
 
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'error': 'Acesso negado'}), 401
+
     try:
-        usuario = Person.query.get(session['user_id'])
-        produto = Product.query.get(produto_id)
+        produto = com_retry(lambda: Product.query.get(produto_id))
 
         if not produto or not produto.is_official or produto.price_bzc is None:
             return jsonify({'error': 'Este item não pode ser comprado com Bazinga Coins aqui.'}), 400
 
-        if usuario.bazinga_coins < produto.price_bzc:
+        if (usuario.bazinga_coins or 0) < produto.price_bzc:
             return jsonify({'error': 'Você não tem Bazinga Coins suficientes.'}), 400
 
-        usuario.bazinga_coins -= produto.price_bzc
-        db.session.commit()
+        # Registra a compra: antes as moedas eram descontadas e nada era
+        # guardado, então o usuário pagava e não recebia nada.
+        def preparar():
+            usuario.bazinga_coins = (usuario.bazinga_coins or 0) - produto.price_bzc
+            db.session.add(Purchase(
+                buyer_id=usuario.id,
+                product_id=produto.id,
+                price_paid_bzc=produto.price_bzc
+            ))
+
+        comitar_com_retry(preparar)
 
         return jsonify({'saldo': usuario.bazinga_coins, 'produto': produto.name})
     except Exception as e:
         db.session.rollback()
         print("Erro ao comprar produto:", e)
-        return jsonify({'error': 'Erro ao processar a compra.'}), 500
+        return jsonify({'error': f'Erro ao processar a compra: {e}'}), 500
+
+
+# ==========================================
+# INVENTÁRIO: o que o usuário já comprou
+# ==========================================
+@main_bp.route("/api/inventario")
+def get_inventario():
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    try:
+        compras = com_retry(lambda: Purchase.query.filter_by(buyer_id=usuario.id)
+                            .order_by(Purchase.created_at.desc()).all())
+        return jsonify([{
+            'id': c.id,
+            'produto_id': c.product_id,
+            'nome': c.product.name if c.product else 'Item removido',
+            'image_url': c.product.image_url if c.product else None,
+            'preco_pago': c.price_paid_bzc,
+            'comprado_em': formatar_data(c.created_at)
+        } for c in compras])
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO INVENTARIO] (rode atualizar_banco.py se for erro de tabela): {e}")
+        return jsonify([])
 
 
 # ==========================================

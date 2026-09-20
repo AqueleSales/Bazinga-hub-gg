@@ -53,6 +53,11 @@ def atualizar_banco():
             add_column_se_nao_existir("map_server", "expires_at TIMESTAMP")
             add_column_se_nao_existir("map_server", "server_id INTEGER REFERENCES server(id)")
 
+            # 7. Compras da loja (tabela nova - o db.create_all() acima já cria,
+            # isso aqui é só a rede de segurança se a tabela tiver vindo
+            # incompleta de uma versão anterior)
+            add_column_se_nao_existir("purchase", "price_paid_bzc INTEGER")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

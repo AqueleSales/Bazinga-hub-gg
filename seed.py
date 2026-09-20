@@ -16,12 +16,17 @@ with app.app_context():
         c4 = Channel(name="LOBBY", channel_type="voice")
         db.session.add_all([c1, c2, c3, c4])
 
-    # Cria os cargos com as cores em Hexadecimal
-    if not Role.query.first():
-        print("Criando cargos...")
-        r1 = Role(name="MODERADORES", color="#F1C40F") # Amarelo ouro
-        r2 = Role(name="MEMBROS", color="#23a559")     # Verde clássico
-        db.session.add_all([r1, r2])
+    # Cria os cargos com as cores em Hexadecimal.
+    # Checa cargo por cargo (e não `if not Role.query.first()`): se só um deles
+    # existisse, o outro nunca era criado - e o login procura MEMBROS pelo nome.
+    cargos = [
+        ("MODERADORES", "#F1C40F"),  # Amarelo ouro
+        ("MEMBROS", "#23a559"),      # Verde clássico
+    ]
+    for nome, cor in cargos:
+        if not Role.query.filter_by(name=nome).first():
+            print(f"Criando cargo {nome}...")
+            db.session.add(Role(name=nome, color=cor))
 
     db.session.commit()
     print("Banco de dados Neon populado com sucesso!")

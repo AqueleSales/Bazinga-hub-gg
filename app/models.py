@@ -119,6 +119,26 @@ class DirectMessage(db.Model):
     receiver = db.relationship('Person', foreign_keys=[receiver_id])
 
 
+class Purchase(db.Model):
+    """Compra efetivada na loja.
+
+    Sem isso a rota de compra só descontava as Bazinga Coins e não registrava
+    nada - o usuário pagava e não recebia (nem dava pra auditar depois).
+    """
+    __tablename__ = 'purchase'
+    id = db.Column(db.Integer, primary_key=True)
+
+    buyer_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+
+    # Quanto custou no momento da compra (o preço do produto pode mudar depois)
+    price_paid_bzc = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    buyer = db.relationship('Person', backref='purchases', foreign_keys=[buyer_id])
+    product = db.relationship('Product', backref='purchases')
+
+
 class Product(db.Model):
     __tablename__ = 'product'
     id = db.Column(db.Integer, primary_key=True)
