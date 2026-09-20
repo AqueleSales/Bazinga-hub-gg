@@ -1,10 +1,29 @@
-from flask import Blueprint, render_template, session, jsonify, redirect, url_for
-from sqlalchemy.exc import OperationalError, PendingRollbackError
+from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app
+from sqlalchemy.exc import OperationalError, PendingRollbackError, SQLAlchemyError
 from datetime import datetime
 from sqlalchemy import or_, and_
-from ..models import Person, Channel, Message, DirectMessage, Product, db
+from werkzeug.utils import secure_filename
+import os
+import time
+import uuid
+from ..models import Person, Channel, Message, DirectMessage, Product, GeoNote, MapServer, br_now, db
 
 main_bp = Blueprint("main", __name__)
+
+EXTENSOES_PERMITIDAS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+
+def com_retry(fn, tentativas=3, espera=0.8):
+    """Roda fn() e tenta de novo se o Neon estiver 'acordando' de um cold start
+    (com NullPool toda query abre conexão nova, então isso pode acontecer em qualquer rota)."""
+    for tentativa in range(tentativas):
+        try:
+            return fn()
+        except OperationalError:
+            db.session.rollback()
+            if tentativa == tentativas - 1:
+                raise
+            time.sleep(espera * (tentativa + 1))
 
 
 @main_bp.context_processor
@@ -13,9 +32,10 @@ def inject_user():
     # Procura pelo 'user_id' que a nossa nova rota do Google salvou na Sessão
     if 'user_id' in session:
         try:
-            user = Person.query.get(session['user_id'])
-        except (OperationalError, PendingRollbackError):
+            user = com_retry(lambda: Person.query.get(session['user_id']))
+        except SQLAlchemyError as e:
             db.session.rollback()
+            print(f"[ERRO BANCO] inject_user: {e}")
     return dict(user=user)
 
 
@@ -45,26 +65,37 @@ def chat():
         return redirect(url_for('main.index'))
 
     try:
-        usuario_atual = Person.query.get(session['user_id'])
-        if not usuario_atual:
+        def carregar():
+            usuario_atual = Person.query.get(session['user_id'])
+            if not usuario_atual:
+                return None
+
+            # Canais padrão do "Bazinga Hub" global (server_id nulo = não pertence a
+            # nenhum Servidor criado por usuário)
+            text_channels = Channel.query.filter_by(channel_type="text", server_id=None).all()
+            voice_channels = Channel.query.filter_by(channel_type="voice", server_id=None).all()
+            default_channel = Channel.query.filter_by(name="geral", server_id=None).first()
+
+            messages = []
+            if default_channel:
+                messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(50).all()
+                for m in messages:
+                    m.formatada = formatar_data(m.timestamp)
+
+            # Busca todas as pessoas no banco (exceto você) para simular sua lista de amigos
+            amigos = Person.query.filter(Person.id != usuario_atual.id).all()
+
+            return usuario_atual, text_channels, voice_channels, default_channel, messages, amigos
+
+        resultado = com_retry(carregar)
+        if resultado is None:
             session.pop('user_id', None)
             return redirect(url_for('main.index'))
+        usuario_atual, text_channels, voice_channels, default_channel, messages, amigos = resultado
 
-        text_channels = Channel.query.filter_by(channel_type="text").all()
-        voice_channels = Channel.query.filter_by(channel_type="voice").all()
-        default_channel = Channel.query.filter_by(name="geral").first()
-
-        messages = []
-        if default_channel:
-            messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(50).all()
-            for m in messages:
-                m.formatada = formatar_data(m.timestamp)
-
-        # Busca todas as pessoas no banco (exceto você) para simular sua lista de amigos
-        amigos = Person.query.filter(Person.id != usuario_atual.id).all()
-
-    except (OperationalError, PendingRollbackError):
+    except SQLAlchemyError as e:
         db.session.rollback()
+        print(f"[ERRO BANCO] rota /chat: {e}")
         return "Erro de conexão com o banco. Recarregue a página."
 
     return render_template(
@@ -163,3 +194,100 @@ def get_produtos():
         db.session.rollback()
         print("Erro na rota de produtos:", e)
         return jsonify([])
+
+
+# ==========================================
+# COMPRAR PRODUTO OFICIAL (paga com Bazinga Coins)
+# ==========================================
+@main_bp.route("/api/produtos/<int:produto_id>/comprar", methods=["POST"])
+def comprar_produto(produto_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    try:
+        usuario = Person.query.get(session['user_id'])
+        produto = Product.query.get(produto_id)
+
+        if not produto or not produto.is_official or produto.price_bzc is None:
+            return jsonify({'error': 'Este item não pode ser comprado com Bazinga Coins aqui.'}), 400
+
+        if usuario.bazinga_coins < produto.price_bzc:
+            return jsonify({'error': 'Você não tem Bazinga Coins suficientes.'}), 400
+
+        usuario.bazinga_coins -= produto.price_bzc
+        db.session.commit()
+
+        return jsonify({'saldo': usuario.bazinga_coins, 'produto': produto.name})
+    except Exception as e:
+        db.session.rollback()
+        print("Erro ao comprar produto:", e)
+        return jsonify({'error': 'Erro ao processar a compra.'}), 500
+
+
+# ==========================================
+# MAPA: Carregar Notas HQ e Servidores plantados (ignora itens expirados)
+# ==========================================
+@main_bp.route("/api/mapa/dados")
+def dados_do_mapa():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    try:
+        agora = br_now()
+
+        def buscar():
+            notas_db = GeoNote.query.filter(
+                or_(GeoNote.expires_at == None, GeoNote.expires_at > agora)
+            ).all()
+            servers_db = MapServer.query.filter(
+                or_(MapServer.expires_at == None, MapServer.expires_at > agora)
+            ).all()
+
+            notas = [{
+                'id': n.id, 'lat': n.lat, 'lng': n.lng,
+                'texto': n.text, 'autor': n.author.name if n.author else '???',
+                'cor': n.color
+            } for n in notas_db]
+
+            servers = [{
+                'id': s.id, 'lat': s.lat, 'lng': s.lng,
+                'name': s.name, 'owner': s.owner.name if s.owner else '???',
+                'vagas': s.max_tickets if s.max_tickets else 'ilimitado',
+                'server_id': s.server_id
+            } for s in servers_db]
+
+            return notas, servers
+
+        notas, servers = com_retry(buscar)
+        return jsonify({'notas': notas, 'servers': servers})
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MAPA] Falha ao carregar notas/servidores (rode atualizar_banco.py se for erro de coluna): {e}")
+        return jsonify({'notas': [], 'servers': []})
+
+
+# ==========================================
+# UPLOAD DE IMAGENS (Avatar de usuário / Ícone de servidor)
+# ==========================================
+@main_bp.route("/api/upload", methods=["POST"])
+def upload_imagem():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    arquivo = request.files.get('file')
+    if not arquivo or arquivo.filename == '':
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+
+    extensao = arquivo.filename.rsplit('.', 1)[-1].lower() if '.' in arquivo.filename else ''
+    if extensao not in EXTENSOES_PERMITIDAS:
+        return jsonify({'error': 'Formato de imagem não permitido'}), 400
+
+    pasta_uploads = os.path.join(current_app.static_folder, 'uploads')
+    os.makedirs(pasta_uploads, exist_ok=True)
+
+    nome_seguro = f"{uuid.uuid4().hex}.{extensao}"
+    caminho_completo = os.path.join(pasta_uploads, secure_filename(nome_seguro))
+    arquivo.save(caminho_completo)
+
+    url = url_for('static', filename=f'uploads/{nome_seguro}')
+    return jsonify({'url': url})

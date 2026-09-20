@@ -9,3 +9,6 @@ env/
 # Arquivos de Cache do Python
 __pycache__/
 *.pyc
+
+# Uploads de usuários (avatar, ícone de servidor)
+app/static/uploads/
