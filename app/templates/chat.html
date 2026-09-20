@@ -607,7 +607,7 @@
                     <!-- BOTÃO HOME/AMIGOS (O Infinito) -->
                     <div class="server-wrapper">
                         <div class="server-icon home-icon active" id="btn-home-view" title="Radar Bazinga (Mensagens Diretas)" style="background-color: var(--bg-primary); padding: 10px;">
-                            <img src="{{ url_for('static', filename='img/icone_home.png') }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-infinity\' style=\'font-size: 24px;\'></i>';">
+                            <img src="{{ url_for('static', filename='css/img/bazinga_logo.png') }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-infinity\' style=\'font-size: 24px;\'></i>';">
                         </div>
                     </div>
 
@@ -917,7 +917,7 @@
                     </div>
                     <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
                         <!-- DINÂMICO: PUXANDO DO BANCO DE DADOS -->
-                        <div class="price-bzc" title="Seus Bazinga Coins"><img src="{{ url_for('static', filename='img/icone_home.png') }}" style="width: 16px; filter: brightness(0) saturate(100%) invert(77%) sepia(50%) saturate(1048%) hue-rotate(345deg) brightness(101%) contrast(92%);"> <span id="meu-saldo-bzc">{{ usuario_atual.bazinga_coins }}</span></div>
+                        <div class="price-bzc" title="Seus Bazinga Coins"><img src="{{ url_for('static', filename='css/img/bazinga_logo.png') }}" style="width: 16px; filter: brightness(0) saturate(100%) invert(77%) sepia(50%) saturate(1048%) hue-rotate(345deg) brightness(101%) contrast(92%);"> <span id="meu-saldo-bzc">{{ usuario_atual.bazinga_coins }}</span></div>
                     </div>
                 </header>
 
@@ -1775,8 +1775,10 @@
             const formData = new FormData();
             formData.append('file', file);
             const resp = await fetch('/api/upload', { method: 'POST', body: formData });
-            if (!resp.ok) throw new Error('Falha no upload');
-            const data = await resp.json();
+            const data = await resp.json().catch(() => ({}));
+            // Mostra o motivo real (formato inválido, imagem acima de 5 MB...)
+            // em vez de um "Falha no upload" genérico.
+            if (!resp.ok) throw new Error(data.error || 'Falha no upload');
             return data.url;
         }
 
@@ -1785,7 +1787,7 @@
             if (file) {
                 tempServerIconFile = file;
                 tempUploadedServerIcon = URL.createObjectURL(file);
-                document.getElementById('new-server-icon-preview').innerHTML = `<img src="${tempUploadedServerIcon}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                document.getElementById('new-server-icon-preview').innerHTML = `<img src="${escUrl(tempUploadedServerIcon)}" style="width: 100%; height: 100%; object-fit: cover;">`;
                 document.getElementById('new-server-icon-preview').style.border = 'none';
             }
         });
@@ -2692,8 +2694,15 @@
                     container.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">Carregando histórico de DMs...</p>';
                     try {
                         const resp = await fetch(`/api/dms/${currentDmUserId}`);
-                        const mensagens = await resp.json();
+                        const mensagens = await resp.json().catch(() => null);
                         container.innerHTML = '';
+
+                        // A rota responde 401 se a sessão caiu - sem isso
+                        // `mensagens.length` estourava e a tela ficava vazia.
+                        if (!resp.ok || !Array.isArray(mensagens)) {
+                            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">Não foi possível carregar a conversa.</p>';
+                            return;
+                        }
 
                         if(mensagens.length === 0) {
                             container.innerHTML = `
@@ -2979,11 +2988,23 @@
             msgContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">Carregando histórico...</p>';
             try {
                 const resp = await fetch(`/api/mensagens/${currentChannelId}`);
-                const data = await resp.json();
+                const data = await resp.json().catch(() => null);
                 msgContainer.innerHTML = '';
+
+                // A rota agora pode responder 401/403 (sem login / sem acesso
+                // ao canal), e aí `data` é um objeto de erro, não uma lista -
+                // sem isso a tela ficava travada em "Carregando histórico...".
+                if (!resp.ok || !Array.isArray(data)) {
+                    const motivo = (data && data.error) || 'Não foi possível carregar as mensagens.';
+                    msgContainer.innerHTML = `<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">${esc(motivo)}</p>`;
+                    return;
+                }
+
                 if(data.length === 0) msgContainer.innerHTML = '<div style="flex-grow: 1; display: flex; align-items: flex-end; padding: 16px; font-size: 24px; font-weight: bold; color: white;">Bem-vindo ao início do canal!</div>';
                 else data.forEach(msg => appendMessageGrouped(msgContainer, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor));
-            } catch(e) {}
+            } catch(e) {
+                msgContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 16px;">Erro de conexão ao carregar o histórico.</p>';
+            }
         }
 
         document.getElementById('message-input').addEventListener('keypress', function(event) {
@@ -3196,11 +3217,11 @@
                 const formData = new FormData();
                 formData.append('file', blob, 'avatar.png');
                 const resp = await fetch('/api/upload', { method: 'POST', body: formData });
-                if (!resp.ok) throw new Error('Falha no upload');
-                const data = await resp.json();
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(data.error || 'Falha no upload');
                 const url = data.url;
 
-                const htmlToInject = `<img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                const htmlToInject = `<img src="${escUrl(url)}" style="width: 100%; height: 100%; object-fit: cover;">`;
                 const ids = ['editor-avatar-container', 'preview-avatar-container', 'popout-avatar-container', 'conta-avatar-img', 'bottom-avatar-container', 'sidebar-avatar-container'];
                 ids.forEach(id => {
                     const el = document.getElementById(id);

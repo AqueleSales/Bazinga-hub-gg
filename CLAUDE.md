@@ -19,6 +19,7 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 | Arquivo | O quê |
 |---|---|
 | `app/models.py` | Todos os modelos SQLAlchemy |
+| `app/utils.py` | `com_retry()`, `comitar_com_retry()` e as checagens de permissão de canal |
 | `app/events.py` | Todos os handlers de Socket.IO (`@socketio.on(...)`) |
 | `app/main/routes.py` | Rotas REST (`/chat`, `/api/...`) |
 | `app/auth/routes.py` | Login Google OAuth, tem o `com_retry()` original |
@@ -47,15 +48,17 @@ Depois de qualquer mudança em `models.py`:
 python atualizar_banco.py
 ```
 
-## `com_retry()` — repetido em 3 arquivos
+## `com_retry()` / `comitar_com_retry()` — em `app/utils.py`
 
-`auth/routes.py`, `events.py` e `main/routes.py` têm cada um sua própria
-cópia de um helper `com_retry(fn, tentativas=3-4, espera=...)` que reexecuta
-uma query se ela lançar `OperationalError` (cold start do Neon). Isso existia
-só no login originalmente; foi estendido para os handlers de mapa/servidor/
-perfil porque com `NullPool` qualquer operação pode sofrer cold start, não
-só a primeira. Se for adicionar um novo handler que grava no banco, **use
-`com_retry()` para o `db.session.commit()`**, não só faça a query direta.
+Os dois vivem em `app/utils.py` (antes cada um dos três arquivos tinha a sua
+cópia). `com_retry(fn)` reexecuta uma query se ela lançar `OperationalError`
+(cold start do Neon). Com `NullPool` qualquer operação pode sofrer cold start,
+não só a primeira, então **todo handler que toca o banco deve usar**.
+
+Para **escritas**, use `comitar_com_retry(preparar)`: a função `preparar`
+monta as alterações e o helper comita. Nunca faça
+`com_retry(db.session.commit)` — se o commit falha, o `rollback()` do retry
+descarta as alterações e a tentativa seguinte comita uma sessão vazia.
 
 ## Erros de banco não podem falhar em silêncio
 
@@ -75,6 +78,33 @@ O frontend escuta `socket.on('erro_bazinga', ...)` e mostra um toast vermelho
 com a mensagem real. **Mantenha esse padrão** em qualquer handler novo —
 incluir `{e}` na mensagem pro usuário (não só no log) foi o que permitiu
 diagnosticar o bug do parágrafo acima sem acesso ao terminal do usuário.
+
+## Permissões — todo handler novo precisa checar
+
+Canal não é público: `app/utils.py` tem `canal_permitido(usuario, canal_id)`
+(devolve o `Channel` só se o usuário for membro do Servidor dono dele) e
+`pode_ver_canal(usuario, canal)`. Use nos handlers de socket e nas rotas REST
+que recebem um `canal_id` do cliente — `entrar_canal`, `enviar_mensagem`,
+`entrar_call` e `/api/mensagens/<id>` já usam.
+
+Apagar/editar qualquer coisa exige conferir o dono (`author_id`, `owner_id`,
+`person_id`) contra o usuário da sessão. Nunca confie em um id que veio do
+cliente.
+
+## XSS — nunca jogue dado de usuário cru em `innerHTML`
+
+`chat.html` tem três helpers, definidos logo antes de `showToast()`:
+
+- `esc(valor)` — texto (mensagem, nome, nota do mapa, descrição de produto)
+- `escUrl(url)` — para `src=""`/`href=""`; só deixa passar `http(s)` e
+  caminhos do próprio site, barrando `javascript:` e `data:`
+- `escJs(valor)` — para valores que entram dentro de um `onclick="..."`
+
+**Isso já causou um bug real**: `appendMessageGrouped()` interpolava
+`texto`/`autor`/`avatar` direto no `innerHTML`, então uma mensagem
+`<img src=x onerror=...>` executava script no navegador de todo mundo que
+abrisse o canal. O mesmo valia para nota do mapa, nome de servidor, nome de
+participante de call e produtos do bazar.
 
 ## Arquitetura do frontend (`chat.html`)
 
@@ -130,12 +160,31 @@ teste fora do repo, nunca commitar essa rota.
 - `br_now()` em `models.py` — sempre usar em vez de `datetime.utcnow()` pra
   timestamps mostrados ao usuário (fuso de Brasília).
 
+## Deploy (Render)
+
+`Procfile`: `gunicorn -k eventlet -w 1 run:app`. O `-k eventlet` **não é
+opcional** — com o worker sync padrão do gunicorn o WebSocket não sobe e o
+Socket.IO cai para long-polling degradado. Mantenha `-w 1`: com mais de um
+worker as salas do Socket.IO ficariam divididas entre processos (precisaria
+de um message queue tipo Redis).
+
+`SECRET_KEY` é obrigatória em produção — `config.py` levanta erro no boot se
+ela faltar, em vez de cair num valor fixo que tornaria as sessões forjáveis.
+
+Uploads vão para `app/static/uploads/`, que é **efêmero no Render free**:
+avatar e ícone de servidor somem quando o container reinicia. Para valer
+mesmo, precisaria de um storage externo (S3/Cloudinary).
+
 ## Estado atual
 
 - PR aberto: https://github.com/AqueleSales/Bazinga-hub-gg/pull/1 — persistência
   de mapa/servidores/canais/perfil, várias correções de bugs herdados.
   **Precisa rodar `python atualizar_banco.py` depois do merge.**
-- Funcionalidades sem persistência real ainda: edição de nota/servidor no
-  mapa não atualiza visualmente em outros clientes já conectados (só no
-  reload); posição dos amigos no radar (`atualizar_localizacao`) é
-  retransmitida mas não desenhada no mapa do lado de quem recebe.
+- Compra na loja grava um `Purchase` e existe `/api/inventario`, mas **não há
+  UI de inventário** — o usuário compra e não vê o que tem.
+- Posição dos amigos no radar (`atualizar_localizacao`) não é persistida: só
+  é retransmitida para as salas dos Servidores em que o usuário é membro
+  (`srv_<id>`), nunca em broadcast — é coordenada de GPS real.
+- Os canais globais (`server_id=NULL`) continuam liberados para qualquer
+  logado em `pode_ver_canal()`, por compatibilidade. Se um dia forem
+  removidos de vez, dá pra apertar essa checagem.

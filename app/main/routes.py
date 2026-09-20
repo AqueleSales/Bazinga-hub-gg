@@ -34,6 +34,13 @@ def usuario_da_sessao():
         return None
 
 
+@main_bp.app_errorhandler(413)
+def arquivo_grande_demais(e):
+    """Com MAX_CONTENT_LENGTH o Flask corta o request sozinho e devolve uma
+    página HTML de erro - o fetch() do upload esperava JSON e quebrava."""
+    return jsonify({'error': 'Imagem grande demais (máximo 5 MB)'}), 413
+
+
 @main_bp.context_processor
 def inject_user():
     # Procura pelo 'user_id' que a nossa rota do Google salvou na Sessão
