@@ -299,25 +299,36 @@
         .chat-messages::-webkit-scrollbar-thumb { background-color: #1a1b1e; border-radius: 4px; }
 
         /* NOVA LÓGICA DE AGRUPAMENTO (FLUIDEZ) */
-        .message { display: flex; padding: 2px 16px 2px 72px; position: relative; margin-top: 0; }
-        .message.first { margin-top: 1.0625rem; }
-        .message:hover { background-color: rgba(0,0,0,0.06); }
+        /* Densidade das mensagens: linha agrupada cola na anterior (só 1px de
+           respiro), e o espaço maior fica só entre blocos de autores
+           diferentes. É o que dá a leitura compacta do Discord. */
+        .message { display: flex; padding: 1px 48px 1px 72px; position: relative; margin-top: 0; }
+        .message.first { margin-top: 16px; padding-top: 3px; padding-bottom: 3px; }
+        .message:hover { background-color: rgba(0,0,0,0.055); }
+        /* Primeira mensagem da lista não precisa do respiro de cima */
+        .message.first:first-child { margin-top: 8px; }
 
-        .message .chat-avatar { position: absolute; left: 16px; top: 2px; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; cursor: pointer; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 18px;}
+        .message .chat-avatar { position: absolute; left: 16px; top: 2px; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; cursor: pointer; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 18px; transition: transform .15s cubic-bezier(.16,.84,.44,1); }
+        .message .chat-avatar:hover { transform: scale(1.06); }
         .message .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .message.grouped .chat-avatar { display: none; }
 
-        .message-content { display: flex; flex-direction: column; width: 100%; }
-        .message-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+        .message-content { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+        .message-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
         .message.grouped .message-header { display: none; }
 
-        .message-author { font-size: 16px; font-weight: 500; cursor: pointer; color: var(--text-header); }
+        .message-author { font-size: 15px; font-weight: 600; cursor: pointer; color: var(--text-header); }
         .message-author:hover { text-decoration: underline; }
-        .message-timestamp { font-size: 12px; color: var(--text-muted); font-weight: 400; }
-        .message-text { color: var(--text-normal); font-size: 16px; line-height: 1.375rem; word-wrap: break-word; white-space: pre-wrap;}
+        .message-timestamp { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .message-text { color: var(--text-normal); font-size: 15px; line-height: 1.375rem; word-wrap: break-word; overflow-wrap: anywhere; white-space: pre-wrap; }
 
-        .grouped-timestamp { display: none; position: absolute; left: 16px; top: 2px; font-size: 10px; color: var(--text-muted); width: 48px; text-align: right; line-height: 1.375rem; user-select: none; font-weight: 600;}
+        .grouped-timestamp { display: none; position: absolute; left: 16px; top: 1px; font-size: 10px; color: var(--text-muted); width: 48px; text-align: right; line-height: 1.375rem; user-select: none; font-weight: 600;}
         .message.grouped:hover .grouped-timestamp { display: block; }
+
+        /* Entrada suave de mensagem nova, sem empurrar o resto da lista */
+        @keyframes msgEntra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .message.nova { animation: msgEntra .18s cubic-bezier(.16,.84,.44,1) both; }
+        @media (prefers-reduced-motion: reduce) { .message.nova { animation: none; } }
 
         .chat-input-wrapper { padding: 0 16px 24px 16px; flex-shrink: 0;}
         .chat-input-container { background-color: var(--bg-secondary); border-radius: 8px; padding: 0 16px; display: flex; align-items: center; min-height: 44px; gap: 8px;}
@@ -550,8 +561,11 @@
 
         .msg-editada { font-size: 10px; color: var(--text-muted); margin-left: 4px; font-weight: 500; }
 
-        /* Chips de reação embaixo da mensagem */
+        /* Chips de reação embaixo da mensagem.
+           Sem reação nenhuma o container fica vazio e some por completo -
+           senão cada mensagem carregaria uma faixa invisível de ~20px. */
         .msg-reacoes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .msg-reacoes:empty { display: none; margin: 0; }
         .msg-reacao { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.06); border: 1px solid transparent; border-radius: 8px; padding: 2px 7px; font-size: 13px; cursor: pointer; transition: .12s; user-select: none; }
         .msg-reacao:hover { border-color: rgba(255,255,255,.2); }
         .msg-reacao.minha { background: rgba(88,101,242,.22); border-color: var(--brand-color); }
@@ -4468,7 +4482,7 @@
                 // 1. Renderiza a mensagem se a pessoa for a que estamos com o chat aberto ou se fomos nós que mandamos
                 if (currentDmUserId == dados.usuario_id || currentUserName == dados.usuario) {
                     const container = document.getElementById('dm-messages-container');
-                    appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor, dados);
+                    appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto, dados.hora, dados.cor, { ...dados, animar: true });
                 }
 
                 // 2. Lógica de Pular para o Topo (LIFO) e Notificação Badge
@@ -4533,6 +4547,15 @@
         // Chips de reação. `reacoes` = [{emoji, total, quem:[ids]}]
         function htmlDasReacoes(msgId, reacoes) {
             const lista = reacoes || [];
+
+            // Sem reação, a linha fica VAZIA de propósito: o CSS esconde o
+            // container com :empty. Se ela sempre trouxesse o botão de "+",
+            // toda mensagem ganharia ~20px de altura à toa - foi o que deixou
+            // o chat com aquele espaçamento estranho entre as linhas.
+            if (lista.length === 0) {
+                return `<div class="msg-reacoes" data-msg-id="${Number(msgId)}"></div>`;
+            }
+
             const chips = lista.map(r => {
                 const euReagi = (r.quem || []).map(Number).includes(Number(currentUserId));
                 return `<div class="msg-reacao ${euReagi ? 'minha' : ''}"
@@ -4638,6 +4661,10 @@
                 `;
             }
 
+            // Só anima quem chega com o canal já aberto; no carregamento do
+            // histórico isso viraria 50 animações ao mesmo tempo.
+            if (extras.animar) div.classList.add('nova');
+
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
             return div;
@@ -4738,7 +4765,7 @@
         socket.on('receber_mensagem', function(dados) {
             const container = document.getElementById('messages-container');
             appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto,
-                                 dados.hora, dados.cor, dados);
+                                 dados.hora, dados.cor, { ...dados, animar: true });
         });
 
         // 4. MENUS DE CONTEXTO E MODAIS GERAIS
@@ -5761,8 +5788,27 @@
             btn.setAttribute('data-listener', 'true');
 
             btn.addEventListener('click', async () => {
-                if(inCall) { textView.classList.add('hidden'); textView.classList.remove('sidebar-mode'); videoView.classList.add('active'); return; }
                 const voiceId = btn.getAttribute('data-id'); const voiceName = btn.getAttribute('data-name');
+
+                if (inCall) {
+                    // Clicou no canal em que já está: só volta pra tela da call.
+                    if (String(currentVoiceChannelId) === String(voiceId)) {
+                        textView.classList.add('hidden');
+                        textView.classList.remove('sidebar-mode');
+                        videoView.classList.add('active');
+                        return;
+                    }
+
+                    // Clicou em OUTRO canal: antes isso caía no return acima e
+                    // não acontecia nada - só dava pra trocar desconectando na
+                    // mão. Agora sai do atual e entra no novo.
+                    disconnectCall();
+                    // Espera o peer fechar de verdade antes de abrir outro,
+                    // senão o servidor de sinalização recusa a nova conexão.
+                    await new Promise(r => setTimeout(r, 350));
+                    showToast(`Mudando para ${voiceName}...`, "info");
+                }
+
                 currentVoiceChannelId = voiceId;
 
                 try {
@@ -5781,7 +5827,8 @@
                     inCall = true;
 
                     voicePanel.classList.add('active');
-                    document.getElementById('connected-voice-name').innerText = `${voiceName} / Bazinga Hub`;
+                    document.getElementById('connected-voice-name').innerText =
+                        `${voiceName} / ${(servidorAtivo() || {}).name || 'Bazinga'}`;
                     document.getElementById(`voice-users-${voiceId}`).style.display = 'block';
 
                     const avatarMiniHtml = currentUserAvatar ? `<img src="${currentUserAvatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : currentUserName[0].toUpperCase();
