@@ -1,10 +1,9 @@
-from flask import Blueprint, redirect, url_for, session, request
+from flask import Blueprint, redirect, url_for, session
 from authlib.integrations.flask_client import OAuth
 from app import db
-from app.models import Person
+from app.models import Person, Role
+from app.utils import com_retry, comitar_com_retry
 import os
-import time
-from sqlalchemy.exc import OperationalError
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -24,17 +23,16 @@ def init_oauth(app):
     )
 
 
-def com_retry(fn, tentativas=4, espera=1.5):
-    """Roda fn() e tenta de novo se o Neon estiver 'acordando' de um cold start.
-    3 tentativas de 1s não é suficiente às vezes - isso aqui espera mais a cada vez."""
-    for tentativa in range(tentativas):
-        try:
-            return fn()
-        except OperationalError:
-            db.session.rollback()
-            if tentativa == tentativas - 1:
-                raise
-            time.sleep(espera * (tentativa + 1))  # 1.5s, 3s, 4.5s...
+def cargo_padrao_id():
+    """Cargo de quem acabou de entrar.
+
+    Antes isso era `role_id=1` fixo - e o Role 1 do seed.py é MODERADORES,
+    ou seja, todo mundo que logava com o Google virava moderador. Agora procura
+    o cargo de membro pelo nome e, se o seed nunca rodou, entra sem cargo
+    (em vez de estourar erro de chave estrangeira).
+    """
+    cargo = com_retry(lambda: Role.query.filter_by(name="MEMBROS").first())
+    return cargo.id if cargo else None
 
 
 @auth_bp.route('/login')
@@ -56,18 +54,35 @@ def callback():
     user = com_retry(lambda: Person.query.filter_by(email=email).first())
 
     if not user:
-        user = Person(name=name, email=email, avatar=avatar, provider_id=provider_id, role_id=1)
+        def criar():
+            novo = Person(name=name, email=email, avatar=avatar,
+                          provider_id=provider_id, role_id=cargo_padrao_id())
+            db.session.add(novo)
+            return novo
 
-        def salvar():
-            db.session.add(user)
-            db.session.commit()
-
-        com_retry(salvar)
+        user = comitar_com_retry(criar)
     elif user.avatar != avatar:
-        user.avatar = avatar
-        com_retry(db.session.commit)
+        # comitar_com_retry e não com_retry(db.session.commit): se o commit
+        # falha, o rollback do retry descarta a alteração e a tentativa
+        # seguinte comitaria uma sessão vazia.
+        def atualizar_avatar():
+            user.avatar = avatar
+
+        comitar_com_retry(atualizar_avatar)
 
     session['user_id'] = user.id
+
+    # Se a pessoa chegou por um link de convite antes de logar, volta pra ele
+    # em vez de jogar na home e perder o convite.
+    codigo = session.pop('convite_pendente', None)
+    if codigo:
+        return redirect(url_for('main.entrar_por_link', code=codigo))
+
+    # Quem entrou pela página /entrar não passa pela home da Bazinga:
+    # cai direto na tela de "abrir o app".
+    if session.pop('veio_do_entrar', None):
+        return redirect(url_for('main.abrir'))
+
     return redirect(url_for('main.index'))
 
 
