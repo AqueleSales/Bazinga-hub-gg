@@ -153,6 +153,23 @@ SQLite descartável e uma rota `/debug-login/<nome>` temporária que seta a
 sessão direto (sem passar pelo OAuth do Google) — só usar em script de
 teste fora do repo, nunca commitar essa rota.
 
+## Porta de entrada (`/entrar`)
+
+Fora da home da Bazinga existe uma página de login própria: `/entrar`
+(template `entrar.html`) → login Google → `/abrir` (`abrir.html`). É o link
+pra mandar pra quem é de fora do grupo. O callback do OAuth olha
+`session['veio_do_entrar']` pra decidir se volta pra home ou pra `/abrir`.
+
+Na tela `/abrir`, o que é honesto em cada botão:
+- **Instalar app** nasce escondido e só aparece quando o navegador dispara
+  `beforeinstallprompt`. Para isso existem `/manifest.webmanifest` e
+  `/sw.js`. O service worker não faz cache de propósito (app dinâmico);
+  ele existe só porque o navegador exige um registrado pra permitir a
+  instalação.
+- **Abrir no Chrome** usa `intent://` no Android. No desktop **não existe**
+  jeito de uma página abrir outro navegador — lá ele copia o link e
+  explica, em vez de fingir.
+
 ## Mídia (foto, GIF, vídeo)
 
 A compressão é **no navegador, antes do upload** (`comprimirImagem()` em
@@ -174,6 +191,21 @@ com `/` (nada de `blob:` nem link externo).
 
 Lembre que `app/static/uploads/` é efêmero no Render free: as fotos somem no
 restart. Para valer, precisa de storage externo.
+
+## Editor de imagem
+
+`abrirEditorImagem(file, { formato, titulo, aoConfirmar })` em `chat.html` —
+usado pelo avatar (`circulo`) e pelo ícone do servidor (`quadrado`). Corta,
+gira 90°, espelha, dá zoom, arrasta com mouse ou dedo.
+
+Como funciona, porque não é óbvio:
+- A imagem girada/espelhada vira um canvas offscreen (`corrigida`), e o
+  corte é calculado em cima dele. Assim o recorte continua sendo só
+  "desenhar um retângulo reto".
+- **O preview e a exportação chamam a mesma função** (`desenharEditor`),
+  mudando só o tamanho. É o que garante que o que aparece é o que sai.
+- GIF não passa pelo canvas: aparece o aviso e o botão "Usar como está",
+  que envia o arquivo original.
 
 ## Convenções
 
@@ -207,10 +239,9 @@ mesmo, precisaria de um storage externo (S3/Cloudinary).
 - Servidores têm configurações (ícone/nome/descrição/cor), canais com tópico
   e flag `is_private`, convites por link/QR, calendário de eventos, reações
   de emoji e anexos de foto/GIF/vídeo.
-- `is_private` do canal **só esconde da UI de quem não é dono** — a checagem
-  real está em `pode_ver_canal()`, que hoje libera todo membro do servidor.
-  Se for usar canal privado pra valer, é lá que precisa entrar a lista de
-  quem foi convidado.
+- Canal privado vale de verdade: a tabela `channel_members` diz quem entra,
+  `pode_ver_canal()` exige estar nela, e o canal nem é anunciado pra quem
+  não tem acesso. O dono do servidor sempre entra.
 - Não existe cargo por servidor ainda: `pode_gerenciar_servidor()` devolve
   True só pro dono. É o único ponto a mudar quando os cargos existirem.
 - Posição dos amigos no radar (`atualizar_localizacao`) não é persistida: só
