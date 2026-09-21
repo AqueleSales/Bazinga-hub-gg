@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0c10">
+  <title>Abrir · Bazinga</title>
+
+  <link rel="manifest" href="{{ url_for('main.manifest') }}">
+  <link rel="icon" href="{{ url_for('static', filename='css/img/bazinga_logo.png') }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --brand: #5865F2;
+      --brand-2: #23a559;
+      --bg: #0b0c10;
+      --texto: #f2f3f5;
+      --texto-fraco: #9aa0a6;
+      --borda: rgba(255,255,255,.1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--texto);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+      display: grid; place-items: center; padding: 24px;
+      overflow: hidden; position: relative;
+    }
+
+    .aurora { position: fixed; border-radius: 50%; filter: blur(90px); opacity: .45; pointer-events: none; }
+    .aurora.a1 { width: 50vmax; height: 50vmax; background: radial-gradient(circle, var(--brand) 0%, transparent 68%); top: -18vmax; right: -14vmax; animation: flutuar 21s ease-in-out infinite; }
+    .aurora.a2 { width: 42vmax; height: 42vmax; background: radial-gradient(circle, var(--brand-2) 0%, transparent 68%); bottom: -14vmax; left: -12vmax; animation: flutuar 25s ease-in-out infinite reverse; }
+    @keyframes flutuar { 0%,100% { transform: none; } 50% { transform: translate(6vmax, 5vmax) scale(1.12); } }
+
+    .cartao {
+      position: relative; width: 100%; max-width: 460px;
+      background: rgba(20,21,26,.74);
+      backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+      border: 1px solid var(--borda); border-radius: 22px;
+      padding: 36px 32px 28px;
+      box-shadow: 0 28px 70px rgba(0,0,0,.6);
+      animation: subir .6s cubic-bezier(.16,.84,.44,1) both;
+    }
+    @keyframes subir { from { opacity: 0; transform: translateY(20px) scale(.98); } to { opacity: 1; transform: none; } }
+
+    /* ---- Cabeçalho com o usuário logado ---- */
+    .quem { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+    .avatar {
+      width: 54px; height: 54px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+      background: linear-gradient(140deg, var(--brand), var(--brand-2));
+      display: grid; place-items: center; font-weight: 700; font-size: 21px;
+      box-shadow: 0 0 0 3px rgba(88,101,242,.28);
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .quem .ok { font-size: 12px; color: var(--brand-2); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .quem h2 { font-family: "Space Grotesk", Inter, sans-serif; font-size: 20px; font-weight: 700; margin-top: 2px; }
+    .quem p { font-size: 13px; color: var(--texto-fraco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+
+    .titulo { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--texto-fraco); margin-bottom: 12px; }
+
+    /* ---- Opções ---- */
+    .opcao {
+      display: flex; align-items: center; gap: 14px;
+      width: 100%; padding: 15px 16px; margin-bottom: 9px;
+      background: rgba(255,255,255,.045);
+      border: 1px solid var(--borda); border-radius: 13px;
+      color: var(--texto); text-decoration: none; cursor: pointer;
+      font-family: inherit; text-align: left;
+      transition: transform .16s cubic-bezier(.16,.84,.44,1), background .16s, border-color .16s;
+    }
+    .opcao:hover { transform: translateY(-2px); background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
+    .opcao:active { transform: translateY(0); }
+    .opcao.principal { background: var(--brand); border-color: transparent; }
+    .opcao.principal:hover { background: #4752c4; }
+    .opcao .ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: rgba(0,0,0,.28); flex-shrink: 0; font-size: 18px; }
+    .opcao .txt strong { display: block; font-size: 15px; font-weight: 600; }
+    .opcao .txt small { display: block; font-size: 12px; color: var(--texto-fraco); margin-top: 2px; }
+    .opcao.principal .txt small { color: rgba(255,255,255,.72); }
+    .opcao .seta { margin-left: auto; color: var(--texto-fraco); font-size: 18px; }
+
+    .opcao[hidden] { display: none; }
+
+    .rodape-acoes { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--borda); }
+    .rodape-acoes a { font-size: 13px; color: var(--texto-fraco); text-decoration: none; }
+    .rodape-acoes a:hover { color: var(--texto); }
+
+    .dica { font-size: 12px; color: var(--texto-fraco); line-height: 1.5; margin-top: 10px; display: none; background: rgba(255,255,255,.04); padding: 11px 13px; border-radius: 10px; }
+    .dica.visivel { display: block; animation: subir .3s both; }
+
+    @media (max-width: 460px) { .cartao { padding: 28px 22px 22px; } }
+    @media (prefers-reduced-motion: reduce) { .aurora, .cartao, .opcao { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="aurora a1"></div>
+  <div class="aurora a2"></div>
+
+  <main class="cartao">
+    <div class="quem">
+      <div class="avatar">
+        {% if usuario_atual.avatar %}
+          <img src="{{ usuario_atual.avatar }}" alt="">
+        {% else %}
+          {{ usuario_atual.name[0]|upper }}
+        {% endif %}
+      </div>
+      <div style="min-width:0;">
+        <div class="ok">✓ Conectado</div>
+        <h2>{{ usuario_atual.name.split(' ')[0] }}</h2>
+        <p>{{ usuario_atual.email }}</p>
+      </div>
+    </div>
+
+    <div class="titulo">Como você quer abrir</div>
+
+    <a class="opcao principal" href="{{ url_for('main.chat') }}">
+      <span class="ico">💬</span>
+      <span class="txt">
+        <strong>Continuar aqui</strong>
+        <small>Abre o Bazinga nesta aba mesmo</small>
+      </span>
+      <span class="seta">›</span>
+    </a>
+
+    <!-- Só aparece quando o navegador realmente oferece instalação -->
+    <button class="opcao" id="btn-instalar" hidden>
+      <span class="ico">📲</span>
+      <span class="txt">
+        <strong>Instalar o app</strong>
+        <small>Vira um aplicativo de verdade, sem barra de navegador</small>
+      </span>
+      <span class="seta">›</span>
+    </button>
+
+    <button class="opcao" id="btn-chrome">
+      <span class="ico">🌐</span>
+      <span class="txt">
+        <strong>Abrir no Chrome</strong>
+        <small>Recomendado — é onde voz e vídeo funcionam melhor</small>
+      </span>
+      <span class="seta">›</span>
+    </button>
+
+    <div class="dica" id="dica-chrome"></div>
+
+    <div class="rodape-acoes">
+      <a href="{{ url_for('main.index') }}">Ir para a home da Bazinga</a>
+      <a href="{{ url_for('auth.logout') }}">Sair</a>
+    </div>
+  </main>
+
+  <script>
+    const URL_APP = "{{ url_for('main.chat', _external=True) }}";
+
+    // ---- Instalar como app (PWA) ----
+    // O navegador dispara 'beforeinstallprompt' só quando o site é mesmo
+    // instalável (manifesto + service worker + https). Por isso o botão nasce
+    // escondido: mostrar um "instalar" que não instala nada seria mentira.
+    let promptInstalacao = null;
+    const btnInstalar = document.getElementById('btn-instalar');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      promptInstalacao = e;
+      btnInstalar.hidden = false;
+    });
+
+    btnInstalar.addEventListener('click', async () => {
+      if (!promptInstalacao) return;
+      promptInstalacao.prompt();
+      const { outcome } = await promptInstalacao.userChoice;
+      promptInstalacao = null;
+      if (outcome === 'accepted') {
+        btnInstalar.hidden = true;
+        window.location.href = "{{ url_for('main.chat') }}";
+      }
+    });
+
+    // Se já está rodando instalado, não faz sentido oferecer nada disso
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      btnInstalar.hidden = true;
+      document.getElementById('btn-chrome').hidden = true;
+    }
+
+    // ---- Abrir no Chrome ----
+    // No Android dá pra pedir pro sistema abrir o Chrome via intent://.
+    // No desktop NÃO existe jeito de uma página abrir outro navegador - então
+    // aqui a gente copia o link e explica, em vez de fingir que abriu.
+    const ehAndroid = /Android/i.test(navigator.userAgent);
+    const jaEhChrome = /Chrome|CriOS/i.test(navigator.userAgent) && !/Edg|OPR|Opera/i.test(navigator.userAgent);
+
+    document.getElementById('btn-chrome').addEventListener('click', async () => {
+      const dica = document.getElementById('dica-chrome');
+
+      if (jaEhChrome) {
+        window.location.href = "{{ url_for('main.chat') }}";
+        return;
+      }
+
+      if (ehAndroid) {
+        const semEsquema = URL_APP.replace(/^https?:\/\//, '');
+        window.location.href =
+          `intent://${semEsquema}#Intent;scheme=https;package=com.android.chrome;end`;
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(URL_APP);
+        dica.textContent = 'Link copiado! Abre o Chrome e cola na barra de endereço — o navegador não deixa uma página abrir outro navegador sozinha.';
+      } catch {
+        dica.textContent = 'Copia este endereço e cola no Chrome: ' + URL_APP;
+      }
+      dica.classList.add('visivel');
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

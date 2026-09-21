@@ -85,6 +85,68 @@ def index():
     return render_template("index.html")
 
 
+# ==========================================
+# PORTA DE ENTRADA INDEPENDENTE (/entrar)
+# ------------------------------------------------------------------
+# Página própria de login, sem passar pela home da Bazinga. É o link que dá
+# pra mandar pra alguém de fora do grupo.
+# ==========================================
+@main_bp.route("/entrar")
+def entrar():
+    if usuario_da_sessao():
+        return redirect(url_for('main.abrir'))
+    # Marca que o login começou por aqui, para o callback do Google saber
+    # que a pessoa deve cair em /abrir e não na home.
+    session['veio_do_entrar'] = True
+    return render_template("entrar.html")
+
+
+@main_bp.route("/abrir")
+def abrir():
+    """Tela pós-login: continuar no navegador, abrir no Chrome ou instalar o app."""
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return redirect(url_for('main.entrar'))
+    return render_template("abrir.html", usuario_atual=usuario)
+
+
+@main_bp.route("/manifest.webmanifest")
+def manifest():
+    """Manifesto do PWA - é o que faz o botão 'Instalar app' existir de verdade
+    (o navegador só oferece a instalação se achar este arquivo + service worker)."""
+    return jsonify({
+        "name": "Bazinga Hub",
+        "short_name": "Bazinga",
+        "description": "Chat, mapa e eventos da Bazinga.",
+        "start_url": "/chat",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#0b0c10",
+        "theme_color": "#5865F2",
+        "orientation": "any",
+        "icons": [
+            {"src": url_for('static', filename='css/img/bazinga_logo.png'),
+             "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+        ]
+    })
+
+
+@main_bp.route("/sw.js")
+def service_worker():
+    """Service worker mínimo.
+
+    Não faz cache de nada de propósito: o app é todo dinâmico (socket, banco),
+    e um cache agressivo só serviria pra servir tela velha. Ele existe porque
+    o navegador exige um service worker registrado para permitir instalar o PWA.
+    """
+    js = (
+        "self.addEventListener('install', () => self.skipWaiting());\n"
+        "self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\n"
+        "self.addEventListener('fetch', () => {});\n"
+    )
+    return current_app.response_class(js, mimetype='application/javascript')
+
+
 @main_bp.route("/chat")
 def chat():
     if 'user_id' not in session:

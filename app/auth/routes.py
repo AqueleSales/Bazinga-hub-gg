@@ -78,6 +78,11 @@ def callback():
     if codigo:
         return redirect(url_for('main.entrar_por_link', code=codigo))
 
+    # Quem entrou pela página /entrar não passa pela home da Bazinga:
+    # cai direto na tela de "abrir o app".
+    if session.pop('veio_do_entrar', None):
+        return redirect(url_for('main.abrir'))
+
     return redirect(url_for('main.index'))
 
 
