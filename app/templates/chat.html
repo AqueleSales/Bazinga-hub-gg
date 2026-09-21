@@ -467,7 +467,7 @@
            ========================================== */
         .pino-servidor { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: transform .18s cubic-bezier(.16,.84,.44,1); }
         .pino-servidor:hover { transform: translateY(-3px) scale(1.06); }
-        .pino-foto { width: 48px; height: 48px; border-radius: 14px; overflow: hidden; background: var(--brand-color); display: grid; place-items: center; border: 3px solid var(--bg-primary); box-shadow: 0 5px 16px rgba(0,0,0,.55); }
+        .pino-foto { width: 48px; height: 48px; border-radius: 14px; overflow: hidden; background: var(--brand-color); display: grid; place-items: center; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 5px 16px rgba(0,0,0,.6); }
         .pino-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .pino-iniciais { color: #fff; font-weight: 800; font-size: 17px; letter-spacing: .02em; }
         .pino-nome { max-width: 92px; font-size: 10px; font-weight: 800; color: #fff; background: rgba(0,0,0,.72); padding: 2px 7px; border-radius: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
@@ -514,6 +514,56 @@
 
         #editor-img-aviso-gif { display: none; align-items: flex-start; gap: 9px; background: rgba(240,178,50,.12); border: 1px solid rgba(240,178,50,.35); color: var(--yellow-color); font-size: 12px; line-height: 1.45; padding: 10px 12px; border-radius: 8px; width: 100%; }
         #editor-img-aviso-gif.visivel { display: flex; }
+
+        /* ==========================================
+           CONFIGURAÇÕES COMPLETAS DO SERVIDOR (tela cheia)
+           ========================================== */
+        #server-full-settings { display: none; position: fixed; inset: 0; z-index: 7000; background: var(--bg-primary); }
+        #server-full-settings.aberto { display: flex; animation: sfEntra .18s cubic-bezier(.16,.84,.44,1) both; }
+        @keyframes sfEntra { from { opacity: 0; transform: scale(1.02); } to { opacity: 1; transform: none; } }
+
+        .sf-menu { width: 232px; background: var(--bg-secondary); padding: 60px 10px 20px; overflow-y: auto; flex-shrink: 0; }
+        .sf-menu-titulo { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); padding: 0 10px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sf-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 2px; border-radius: 5px; color: var(--text-muted); font-size: 15px; font-weight: 500; cursor: pointer; transition: background .12s, color .12s; }
+        .sf-item i { width: 17px; text-align: center; font-size: 14px; }
+        .sf-item:hover { background: rgba(255,255,255,.05); color: var(--text-header); }
+        .sf-item.ativo { background: rgba(255,255,255,.08); color: var(--text-header); }
+        .sf-item.perigo { color: var(--red-color); }
+        .sf-item.perigo:hover { background: var(--red-color); color: #fff; }
+        .sf-sep { height: 1px; background: rgba(255,255,255,.07); margin: 10px 8px; }
+
+        .sf-conteudo { flex-grow: 1; overflow-y: auto; padding: 60px 40px 60px; position: relative; max-width: 780px; }
+        .sf-fechar { position: fixed; top: 56px; right: 44px; width: 38px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--text-muted); cursor: pointer; transition: color .12s; }
+        .sf-fechar:hover { color: var(--text-header); }
+        .sf-fechar i { width: 34px; height: 34px; border: 2px solid currentColor; border-radius: 50%; display: grid; place-items: center; font-size: 15px; }
+        .sf-fechar span { font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+
+        .sf-secao { display: none; }
+        .sf-secao.ativa { display: block; animation: sfEntra .16s both; }
+        .sf-secao h2 { color: var(--text-header); font-size: 21px; font-weight: 700; margin-bottom: 4px; }
+        .sf-contador { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+        .sf-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+        .sf-campo { margin-bottom: 22px; }
+
+        .sf-lista { display: flex; flex-direction: column; gap: 6px; }
+        .sf-linha { display: flex; align-items: center; gap: 12px; background: var(--bg-secondary); border-radius: 9px; padding: 11px 14px; }
+        .sf-linha .av { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; background: var(--brand-color); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+        .sf-linha .av img { width: 100%; height: 100%; object-fit: cover; }
+        .sf-linha .txt { flex-grow: 1; min-width: 0; }
+        .sf-linha .nm { color: var(--text-header); font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sf-linha .sub { color: var(--text-muted); font-size: 12px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sf-linha .acoes { display: flex; gap: 6px; flex-shrink: 0; }
+        .sf-mini { background: rgba(255,255,255,.06); border: none; color: var(--text-muted); border-radius: 6px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: .12s; }
+        .sf-mini:hover { background: rgba(255,255,255,.12); color: var(--text-header); }
+        .sf-mini.perigo:hover { background: var(--red-color); color: #fff; }
+        .sf-etiqueta { font-size: 10px; font-weight: 800; text-transform: uppercase; background: var(--brand-color); color: #fff; padding: 2px 7px; border-radius: 10px; flex-shrink: 0; }
+        .sf-vazio { color: var(--text-muted); font-size: 14px; background: var(--bg-secondary); border-radius: 9px; padding: 18px; text-align: center; }
+
+        @media (max-width: 760px) {
+            .sf-menu { width: 168px; padding-top: 52px; }
+            .sf-conteudo { padding: 52px 20px 40px; }
+            .sf-fechar { display: none; }
+        }
 
         /* Lista de quem pode entrar num canal privado */
         .bz-membros-lista { max-height: 168px; overflow-y: auto; background: var(--bg-tertiary); border-radius: 6px; padding: 6px; }
@@ -1548,9 +1598,12 @@
                     <div style="flex-grow:1;">
                         <label class="bz-label">Ícone do servidor</label>
                         <div class="bz-radio-desc" style="margin-bottom:10px;">PNG, JPG, GIF ou WebP. A gente encolhe pra não pesar.</div>
-                        <div style="display:flex; gap:8px;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button class="btn-cancel" style="padding:8px 12px; font-size:13px;" onclick="document.getElementById('cfg-icon-file').click()">
                                 <i class="fa-solid fa-arrow-up-from-bracket"></i> Trocar foto
+                            </button>
+                            <button class="btn-cancel" id="cfg-icon-editar" style="padding:8px 12px; font-size:13px;" onclick="editarIconeAtual()">
+                                <i class="fa-solid fa-crop-simple"></i> Editar foto
                             </button>
                             <button class="btn-cancel" id="cfg-icon-remove" style="padding:8px 12px; font-size:13px; color:var(--red-color);" onclick="removerIconeServidor()">
                                 Remover
@@ -1578,12 +1631,122 @@
                 </div>
             </div>
             <div class="modal-footer" style="justify-content: space-between;">
-                <button class="btn btn-danger" onclick="apagarServidorAtual()"><i class="fa-solid fa-trash"></i> Apagar servidor</button>
+                <button class="btn-cancel" onclick="abrirConfigCompleta()">
+                    <i class="fa-solid fa-up-right-and-down-left-from-center"></i> Configurações completas
+                </button>
                 <div style="display:flex; gap:12px;">
                     <button class="btn-cancel" onclick="fecharConfigServidor()">Cancelar</button>
                     <button class="btn btn-primary" onclick="salvarConfigServidor()">Salvar</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         CONFIGURAÇÕES COMPLETAS DO SERVIDOR (tela cheia)
+         ========================================== -->
+    <div id="server-full-settings">
+        <aside class="sf-menu">
+            <div class="sf-menu-titulo" id="sf-nome-servidor">Servidor</div>
+            <div class="sf-item ativo" data-secao="perfil"><i class="fa-solid fa-image"></i> Perfil do servidor</div>
+            <div class="sf-item" data-secao="canais"><i class="fa-solid fa-hashtag"></i> Canais</div>
+            <div class="sf-item" data-secao="membros"><i class="fa-solid fa-users"></i> Membros</div>
+            <div class="sf-item" data-secao="convites"><i class="fa-solid fa-link"></i> Convites</div>
+            <div class="sf-item" data-secao="eventos"><i class="fa-solid fa-calendar-days"></i> Eventos</div>
+            <div class="sf-sep"></div>
+            <div class="sf-item perigo" id="sf-apagar"><i class="fa-solid fa-trash"></i> Excluir servidor</div>
+        </aside>
+
+        <div class="sf-conteudo">
+            <button class="sf-fechar" onclick="fecharConfigCompleta()" title="Fechar (Esc)">
+                <i class="fa-solid fa-xmark"></i><span>ESC</span>
+            </button>
+
+            <!-- PERFIL -->
+            <section class="sf-secao ativa" data-secao="perfil">
+                <h2>Perfil do servidor</h2>
+                <p class="sf-desc">É assim que o servidor aparece nos convites e no mapa.</p>
+
+                <div class="sf-campo">
+                    <label class="bz-label">Ícone</label>
+                    <div style="display:flex; gap:18px; align-items:center;">
+                        <div id="sf-icon-preview" class="bz-icon-preview" onclick="document.getElementById('cfg-icon-file').click()">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn-cancel" style="padding:8px 12px; font-size:13px;" onclick="document.getElementById('cfg-icon-file').click()">
+                                <i class="fa-solid fa-arrow-up-from-bracket"></i> Trocar
+                            </button>
+                            <button class="btn-cancel" style="padding:8px 12px; font-size:13px;" onclick="editarIconeAtual()">
+                                <i class="fa-solid fa-crop-simple"></i> Editar
+                            </button>
+                            <button class="btn-cancel" style="padding:8px 12px; font-size:13px; color:var(--red-color);" onclick="removerIconeServidor()">
+                                Remover
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sf-campo">
+                    <label class="bz-label">Nome do servidor</label>
+                    <input type="text" id="sf-nome" class="bz-input" maxlength="100" style="padding-left:12px;">
+                </div>
+
+                <div class="sf-campo">
+                    <label class="bz-label">Descrição</label>
+                    <textarea id="sf-desc" class="bz-input" maxlength="1000" rows="3"
+                              style="padding:12px; resize:vertical; font-family:inherit;"
+                              placeholder="Do que é esse servidor?"></textarea>
+                </div>
+
+                <div class="sf-campo">
+                    <label class="bz-label">Cor do servidor</label>
+                    <div id="sf-color-row" class="bz-color-row"></div>
+                </div>
+
+                <button class="btn btn-primary" onclick="salvarPerfilCompleto()">Salvar alterações</button>
+            </section>
+
+            <!-- CANAIS -->
+            <section class="sf-secao" data-secao="canais">
+                <h2>Canais</h2>
+                <p class="sf-desc">Crie, renomeie e defina quem entra em cada canal.</p>
+                <div style="display:flex; gap:8px; margin-bottom:18px;">
+                    <button class="btn btn-primary" style="font-size:13px;" onclick="fecharConfigCompleta(); abrirModalCanal('criar', { tipo: 'text' })">
+                        <i class="fa-solid fa-hashtag"></i> Novo canal de texto
+                    </button>
+                    <button class="btn-cancel" style="font-size:13px;" onclick="fecharConfigCompleta(); abrirModalCanal('criar', { tipo: 'voice' })">
+                        <i class="fa-solid fa-volume-high"></i> Novo canal de voz
+                    </button>
+                </div>
+                <div id="sf-lista-canais" class="sf-lista"></div>
+            </section>
+
+            <!-- MEMBROS -->
+            <section class="sf-secao" data-secao="membros">
+                <h2>Membros <span id="sf-total-membros" class="sf-contador"></span></h2>
+                <p class="sf-desc">Quem está no servidor. Você pode passar a posse ou remover alguém.</p>
+                <div id="sf-lista-membros" class="sf-lista"></div>
+            </section>
+
+            <!-- CONVITES -->
+            <section class="sf-secao" data-secao="convites">
+                <h2>Convites</h2>
+                <p class="sf-desc">Links ativos. Revogue o que não deve mais funcionar.</p>
+                <button class="btn btn-primary" style="font-size:13px; margin-bottom:18px;" onclick="fecharConfigCompleta(); abrirModalConvite()">
+                    <i class="fa-solid fa-plus"></i> Criar convite
+                </button>
+                <div id="sf-lista-convites" class="sf-lista"></div>
+            </section>
+
+            <!-- EVENTOS -->
+            <section class="sf-secao" data-secao="eventos">
+                <h2>Eventos</h2>
+                <p class="sf-desc">O calendário do servidor fica numa aba própria.</p>
+                <button class="btn btn-primary" onclick="fecharConfigCompleta(); abrirCalendario()">
+                    <i class="fa-solid fa-calendar-days"></i> Abrir o calendário
+                </button>
+            </section>
         </div>
     </div>
 
@@ -2799,7 +2962,10 @@
             mudanca(srvCache);
             // Redesenhar a lista inteira é mais simples (e menos sujeito a bug)
             // do que inserir/remover nós na mão em 3 lugares diferentes.
-            if (serverId === activeMyServerId) entrarNoServidor(serverId);
+            if (serverId === activeMyServerId) {
+                entrarNoServidor(serverId, vistaAtual !== 'server');
+                if (configCompletaAberta()) desenharCanaisDaConfig();
+            }
         }
 
         socket.on('canal_criado', function(dados) {
@@ -2936,6 +3102,9 @@
             if (dados.server_id !== activeMyServerId) return;
             membrosDoServidor = dados.membros || [];
             desenharMembrosDoCanal();
+            if (typeof configCompletaAberta === 'function' && configCompletaAberta()) {
+                desenharMembrosDaConfig();
+            }
         });
 
         document.getElementById('channel-private-input')?.addEventListener('change', alternarAreaDePrivado);
@@ -3038,12 +3207,58 @@
         }
 
         function pintarPreviewIcone(url) {
-            const box = document.getElementById('cfg-icon-preview');
             const limpa = escUrl(url);
-            box.innerHTML = limpa
-                ? `<img src="${limpa}">`
-                : '<i class="fa-solid fa-camera"></i>';
-            document.getElementById('cfg-icon-remove').style.display = limpa ? 'block' : 'none';
+            const html = limpa ? `<img src="${limpa}">` : '<i class="fa-solid fa-camera"></i>';
+
+            // Os dois previews (popup rápido e tela cheia) mostram a mesma foto
+            ['cfg-icon-preview', 'sf-icon-preview'].forEach(id => {
+                const box = document.getElementById(id);
+                if (box) box.innerHTML = html;
+            });
+
+            const temFoto = !!limpa;
+            ['cfg-icon-remove', 'cfg-icon-editar'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) b.style.display = temFoto ? 'block' : 'none';
+            });
+        }
+
+        // Reabre o editor com a foto que o servidor JÁ tem, sem precisar
+        // escolher o arquivo de novo só pra cortar ou girar.
+        async function editarIconeAtual() {
+            const srv = servidorAtivo();
+            // Pode ser a foto recém-enviada (ainda não salva) ou a que está no banco.
+            const atual = (iconeServidorNovo !== undefined && iconeServidorNovo)
+                ? iconeServidorNovo
+                : (srv && srv.iconUrl);
+
+            if (!atual) { showToast("Esse servidor ainda não tem foto.", "warning"); return; }
+
+            try {
+                // Mesma origem, então dá pra buscar o arquivo e devolver pro editor.
+                const resp = await fetch(atual);
+                if (!resp.ok) throw new Error('A foto atual não está mais no servidor.');
+                const blob = await resp.blob();
+                const nome = atual.split('/').pop() || 'icone';
+
+                abrirEditorImagem(new File([blob], nome, { type: blob.type }), {
+                    formato: 'quadrado',
+                    titulo: 'Editar o ícone do servidor',
+                    aoConfirmar: async (arquivo) => {
+                        try {
+                            showToast("Enviando ícone...", "info");
+                            const url = await uploadMidia(arquivo);
+                            iconeServidorNovo = url;
+                            pintarPreviewIcone(url);
+                            showToast("Pronto! Clica em Salvar.", "success");
+                        } catch (err) {
+                            showToast(err.message || "Não deu pra enviar o ícone.", "error");
+                        }
+                    }
+                });
+            } catch (e) {
+                showToast(e.message || "Não consegui abrir a foto atual.", "error");
+            }
         }
 
         function removerIconeServidor() {
@@ -3073,6 +3288,210 @@
             showToast("Salvando servidor...", "info");
             fecharConfigServidor();
         }
+
+        // ==========================================
+        // CONFIGURAÇÕES COMPLETAS (tela cheia)
+        // ------------------------------------------------------------------
+        // O popup rápido resolve o dia a dia (nome, foto, cor). Isso aqui é o
+        // lugar das coisas que precisam de espaço: canais, membros, convites.
+        // ==========================================
+        function abrirConfigCompleta() {
+            const srv = servidorAtivo();
+            if (!srv || !souDonoDoServidor(srv)) {
+                showToast("Só o dono abre as configurações.", "warning");
+                return;
+            }
+
+            fecharConfigServidor();
+
+            iconeServidorNovo = undefined;
+            corServidorEscolhida = srv.bannerColor || CORES_BAZINGA[0];
+
+            document.getElementById('sf-nome-servidor').textContent = srv.name;
+            document.getElementById('sf-nome').value = srv.name || '';
+            document.getElementById('sf-desc').value = srv.description || '';
+            pintarPreviewIcone(srv.iconUrl);
+            montarPaletaDeCores('sf-color-row', corServidorEscolhida, cor => { corServidorEscolhida = cor; });
+
+            desenharCanaisDaConfig();
+            socket.emit('listar_membros_servidor', { server_id: srv.id });
+            socket.emit('listar_convites', { server_id: srv.id });
+
+            trocarSecaoConfig('perfil');
+            document.getElementById('server-full-settings').classList.add('aberto');
+        }
+
+        function fecharConfigCompleta() {
+            document.getElementById('server-full-settings').classList.remove('aberto');
+        }
+
+        function configCompletaAberta() {
+            return document.getElementById('server-full-settings').classList.contains('aberto');
+        }
+
+        function trocarSecaoConfig(secao) {
+            document.querySelectorAll('#server-full-settings .sf-item[data-secao]')
+                .forEach(i => i.classList.toggle('ativo', i.getAttribute('data-secao') === secao));
+            document.querySelectorAll('#server-full-settings .sf-secao')
+                .forEach(s => s.classList.toggle('ativa', s.getAttribute('data-secao') === secao));
+        }
+
+        document.querySelectorAll('#server-full-settings .sf-item[data-secao]').forEach(item => {
+            item.addEventListener('click', () => trocarSecaoConfig(item.getAttribute('data-secao')));
+        });
+        document.getElementById('sf-apagar')?.addEventListener('click', () => apagarServidorAtual());
+
+        function salvarPerfilCompleto() {
+            const nome = document.getElementById('sf-nome').value.trim();
+            if (!nome) { showToast("O servidor precisa de um nome.", "warning"); return; }
+
+            const payload = {
+                server_id: activeMyServerId,
+                nome: nome,
+                descricao: document.getElementById('sf-desc').value.trim(),
+                banner_color: corServidorEscolhida
+            };
+            if (iconeServidorNovo !== undefined) payload.icon_url = iconeServidorNovo;
+
+            socket.emit('editar_servidor', payload);
+            showToast("Salvando servidor...", "info");
+            document.getElementById('sf-nome-servidor').textContent = nome;
+        }
+
+        function desenharCanaisDaConfig() {
+            const srv = servidorAtivo();
+            const lista = document.getElementById('sf-lista-canais');
+            if (!lista || !srv) return;
+
+            if (!srv.channels.length) {
+                lista.innerHTML = '<div class="sf-vazio">Nenhum canal ainda.</div>';
+                return;
+            }
+
+            lista.innerHTML = srv.channels.map(c => `
+                <div class="sf-linha">
+                    <div class="av" style="background:rgba(255,255,255,.07); border-radius:9px;">
+                        <i class="fa-solid ${c.type === 'voice' ? 'fa-volume-high' : 'fa-hashtag'}" style="color:var(--text-muted); font-size:13px;"></i>
+                    </div>
+                    <div class="txt">
+                        <div class="nm">${esc(c.name)}</div>
+                        <div class="sub">${c.topic ? esc(c.topic) : (c.type === 'voice' ? 'Canal de voz' : 'Canal de texto')}</div>
+                    </div>
+                    ${c.is_private ? '<span class="sf-etiqueta"><i class="fa-solid fa-lock"></i> privado</span>' : ''}
+                    <div class="acoes">
+                        <button class="sf-mini" data-editar="${Number(c.id)}">Editar</button>
+                    </div>
+                </div>`).join('');
+
+            lista.querySelectorAll('[data-editar]').forEach(b => {
+                b.addEventListener('click', () => {
+                    const canal = acharCanal(Number(b.getAttribute('data-editar')));
+                    if (!canal) return;
+                    fecharConfigCompleta();
+                    abrirModalCanal('editar', canal);
+                });
+            });
+        }
+
+        function desenharMembrosDaConfig() {
+            const lista = document.getElementById('sf-lista-membros');
+            const srv = servidorAtivo();
+            if (!lista || !srv) return;
+
+            document.getElementById('sf-total-membros').textContent = `— ${membrosDoServidor.length}`;
+
+            lista.innerHTML = membrosDoServidor.map(m => {
+                const av = escUrl(m.avatar);
+                const souEu = Number(m.id) === Number(currentUserId);
+                return `<div class="sf-linha">
+                    <div class="av">${av ? `<img src="${av}">` : esc((m.nome || '?')[0].toUpperCase())}</div>
+                    <div class="txt">
+                        <div class="nm">${esc(m.nome)}${souEu ? ' <span style="color:var(--text-muted); font-weight:500;">(você)</span>' : ''}</div>
+                        <div class="sub">${m.dono ? 'Dono do servidor' : 'Membro'}</div>
+                    </div>
+                    ${m.dono ? '<span class="sf-etiqueta">👑 dono</span>' : `
+                    <div class="acoes">
+                        <button class="sf-mini" data-posse="${Number(m.id)}" title="Passar a posse do servidor">Passar posse</button>
+                        <button class="sf-mini perigo" data-expulsar="${Number(m.id)}">Remover</button>
+                    </div>`}
+                </div>`;
+            }).join('');
+
+            lista.querySelectorAll('[data-expulsar]').forEach(b => {
+                b.addEventListener('click', () => {
+                    const id = Number(b.getAttribute('data-expulsar'));
+                    const m = membrosDoServidor.find(x => Number(x.id) === id);
+                    openConfirmModal(`Remover ${m ? m.nome : 'este membro'}?`,
+                        "A pessoa perde acesso aos canais e some do servidor. Ela pode voltar com um convite novo.",
+                        () => socket.emit('expulsar_membro', { server_id: activeMyServerId, person_id: id }));
+                });
+            });
+
+            lista.querySelectorAll('[data-posse]').forEach(b => {
+                b.addEventListener('click', () => {
+                    const id = Number(b.getAttribute('data-posse'));
+                    const m = membrosDoServidor.find(x => Number(x.id) === id);
+                    openConfirmModal(`Passar a posse para ${m ? m.nome : 'esta pessoa'}?`,
+                        "Ela vira dona do servidor e você vira membro comum. Só ela poderá desfazer isso.",
+                        () => socket.emit('transferir_posse', { server_id: activeMyServerId, person_id: id }));
+                });
+            });
+        }
+
+        function desenharConvitesDaConfig(convites) {
+            const lista = document.getElementById('sf-lista-convites');
+            if (!lista) return;
+
+            if (!convites || !convites.length) {
+                lista.innerHTML = '<div class="sf-vazio">Nenhum convite ativo.</div>';
+                return;
+            }
+
+            lista.innerHTML = convites.map(c => `
+                <div class="sf-linha">
+                    <div class="av" style="background:rgba(255,255,255,.07); border-radius:9px;">
+                        <i class="fa-solid fa-link" style="color:var(--text-muted); font-size:12px;"></i>
+                    </div>
+                    <div class="txt">
+                        <div class="nm">${esc(c.code)}</div>
+                        <div class="sub">${c.expira_em ? 'Expira em ' + esc(c.expira_em) : 'Nunca expira'} · ${c.max_usos ? `${c.usos}/${c.max_usos} usos` : `${c.usos} usos`} · por ${esc(c.criado_por)}</div>
+                    </div>
+                    <div class="acoes">
+                        <button class="sf-mini" data-copiar="${esc(c.code)}">Copiar</button>
+                        <button class="sf-mini perigo" data-revogar="${esc(c.code)}">Revogar</button>
+                    </div>
+                </div>`).join('');
+
+            lista.querySelectorAll('[data-copiar]').forEach(b => {
+                b.addEventListener('click', () => {
+                    navigator.clipboard.writeText(`${window.location.origin}/convite/${b.getAttribute('data-copiar')}`);
+                    showToast("Link copiado!", "success");
+                });
+            });
+            lista.querySelectorAll('[data-revogar]').forEach(b => {
+                b.addEventListener('click', () => {
+                    socket.emit('apagar_convite', { code: b.getAttribute('data-revogar') });
+                    b.closest('.sf-linha').remove();
+                    showToast("Convite revogado.", "warning");
+                });
+            });
+        }
+
+        socket.on('convites_do_servidor', function(dados) {
+            if (dados.server_id !== activeMyServerId) return;
+            desenharConvitesDaConfig(dados.convites);
+        });
+
+        socket.on('membro_removido', function(dados) {
+            if (dados.server_id !== activeMyServerId) return;
+            membrosDoServidor = membrosDoServidor.filter(m => Number(m.id) !== Number(dados.person_id));
+            if (configCompletaAberta()) desenharMembrosDaConfig();
+        });
+
+        socket.on('posse_transferida', function(dados) {
+            showToast(`${dados.novo_dono} agora é dono do servidor.`, "info");
+            fecharConfigCompleta();
+        });
 
         function apagarServidorAtual() {
             const srv = servidorAtivo();
@@ -3283,6 +3702,7 @@
 
             if (algumModalAberto) { fecharTodosOsModais(); return; }
             if (document.getElementById('lightbox')?.style.display === 'flex') { fecharLightbox(); return; }
+            if (configCompletaAberta()) { fecharConfigCompleta(); return; }
             if (typeof vistaAtual !== 'undefined' && vistaAtual === 'calendar') fecharCalendario();
         });
 
@@ -4167,12 +4587,18 @@
 
         // Renderiza os Servidores Plantados (Com Vagas)
         function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "ilimitado", online = 1, serverId = null, ownerId = null, iconUrl = null) {
-            // Foto de verdade do servidor quando existir; só cai nas iniciais
-            // quando o servidor não tem ícone.
+            // Foto de verdade do servidor quando existir; cai nas iniciais
+            // quando não tem ícone OU quando o arquivo não carrega.
+            //
+            // O onerror não é firula: a pasta de uploads é efêmera no Render,
+            // então uma foto enviada semana passada pode ter sumido do disco.
+            // Sem isso, o <img> quebrado deixava só o quadrado colorido do
+            // fundo, que foi exatamente o "a imagem não aparece no mapa".
             const foto = escUrl(iconUrl);
+            const iniciais = esc(iniciaisServidor(nome || '?'));
             const miolo = foto
-                ? `<img src="${foto}" alt="">`
-                : `<span class="pino-iniciais">${esc(iniciaisServidor(nome || '?'))}</span>`;
+                ? `<img src="${foto}" alt="" onerror="this.parentElement.innerHTML='&lt;span class=&quot;pino-iniciais&quot;&gt;${iniciais}&lt;/span&gt;'">`
+                : `<span class="pino-iniciais">${iniciais}</span>`;
 
             const serverIcon = L.divIcon({
                 className: '',   // sem classe do Leaflet pra não brigar com o CSS
@@ -4195,12 +4621,12 @@
                 ? Number(ownerId) === Number(currentUserId)
                 : (owner === currentUserName);
 
+            // Só editar vagas e tirar do mapa. Configuração do servidor mora
+            // nas Configurações, não no balão do pino.
             const acoesOwner = isDono ? `
                 <div class="balao-acoes">
                     <i class="fa-solid fa-pen" style="color:var(--text-muted);" title="Editar vagas e duração"
                        onclick="abrirModalServidor('edit', ${Number(id)}, ${vagas === 'ilimitado' ? 'null' : Number(vagas)})"></i>
-                    <i class="fa-solid fa-gear" style="color:var(--text-muted);" title="Configurações do servidor"
-                       onclick="abrirConfigDoPino(${serverId ?? 'null'})"></i>
                     <i class="fa-solid fa-trash" style="color:var(--red-color);" title="Tirar do mapa"
                        onclick="apagarItem('server', ${Number(id)})"></i>
                 </div>` : '';
@@ -4226,13 +4652,6 @@
                                        nome: nome, owner: owner, ownerId: ownerId,
                                        vagas: vagas, online: online, serverId: serverId,
                                        iconUrl: iconUrl });
-        }
-
-        // Engrenagem no balao do pino: leva direto pras configuracoes do servidor
-        function abrirConfigDoPino(serverId) {
-            if (!serverId) { showToast("Esse pino nao esta ligado a um servidor.", "warning"); return; }
-            entrarNoServidor(serverId);
-            setTimeout(abrirConfigServidor, 220);
         }
 
         async function carregarDadosDoMapa() {

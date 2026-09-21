@@ -661,6 +661,78 @@ def apagar_servidor(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível apagar o servidor: {e}'})
 
 
+@socketio.on('expulsar_membro')
+def expulsar_membro(dados):
+    """Tira alguém do servidor. Só o dono, e o dono não pode se expulsar."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        if not srv:
+            emit('erro_bazinga', {'msg': 'Só o dono pode remover membros.'})
+            return
+
+        alvo = com_retry(lambda: Person.query.get(int(dados.get('person_id'))))
+        if not alvo or alvo not in srv.members:
+            return
+        if alvo.id == srv.owner_id:
+            emit('erro_bazinga', {'msg': 'O dono não pode se remover do próprio servidor.'})
+            return
+
+        def preparar():
+            srv.members.remove(alvo)
+            # Também sai dos canais privados em que estava liberado
+            for canal in srv.channels:
+                if canal.is_private and alvo in canal.allowed_members:
+                    canal.allowed_members.remove(alvo)
+
+        comitar_com_retry(preparar)
+
+        # Some da sidebar de quem foi removido, na hora
+        emit('servidor_apagado', {'server_id': srv.id}, to=sala_pessoal(alvo.id))
+        emit('membro_removido', {'server_id': srv.id, 'person_id': alvo.id},
+             to=sala_servidor(srv.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO EXPULSAR MEMBRO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível remover o membro: {e}'})
+
+
+@socketio.on('transferir_posse')
+def transferir_posse(dados):
+    """Passa a posse do servidor pra outro membro."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        if not srv:
+            emit('erro_bazinga', {'msg': 'Só o dono pode passar a posse.'})
+            return
+
+        novo_dono = com_retry(lambda: Person.query.get(int(dados.get('person_id'))))
+        if not novo_dono or novo_dono not in srv.members:
+            emit('erro_bazinga', {'msg': 'Essa pessoa não está no servidor.'})
+            return
+        if novo_dono.id == srv.owner_id:
+            return
+
+        def preparar():
+            srv.owner_id = novo_dono.id
+
+        comitar_com_retry(preparar)
+        avisar_servidor(srv)
+        emit('posse_transferida', {'server_id': srv.id, 'novo_dono': novo_dono.name},
+             to=sala_servidor(srv.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO TRANSFERIR POSSE] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível passar a posse: {e}'})
+
+
 @socketio.on('sair_do_servidor')
 def sair_do_servidor(dados):
     usuario = usuario_logado()
