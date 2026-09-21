@@ -452,6 +452,37 @@
         .bz-switch input:checked + .bz-switch-slider::before { transform: translateX(18px); }
 
         /* ==========================================
+           PINO DO SERVIDOR NO MAPA E O BALÃO
+           ========================================== */
+        .pino-servidor { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: transform .18s cubic-bezier(.16,.84,.44,1); }
+        .pino-servidor:hover { transform: translateY(-3px) scale(1.06); }
+        .pino-foto { width: 48px; height: 48px; border-radius: 14px; overflow: hidden; background: var(--brand-color); display: grid; place-items: center; border: 3px solid var(--bg-primary); box-shadow: 0 5px 16px rgba(0,0,0,.55); }
+        .pino-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .pino-iniciais { color: #fff; font-weight: 800; font-size: 17px; letter-spacing: .02em; }
+        .pino-nome { max-width: 92px; font-size: 10px; font-weight: 800; color: #fff; background: rgba(0,0,0,.72); padding: 2px 7px; border-radius: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+
+        /* O balão do Leaflet vem com fundo branco e padding próprios */
+        .balao-wrap .leaflet-popup-content-wrapper { background: var(--bg-secondary); border-radius: 14px; padding: 0; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.08); }
+        .balao-wrap .leaflet-popup-content { margin: 0; width: 100% !important; }
+        .balao-wrap .leaflet-popup-tip { background: var(--bg-secondary); }
+        .balao-wrap .leaflet-popup-close-button { color: rgba(255,255,255,.75); top: 7px; right: 8px; font-size: 18px; z-index: 5; }
+        .balao-wrap .leaflet-popup-close-button:hover { color: #fff; }
+
+        .balao-servidor { font-family: 'gg sans', Inter, sans-serif; }
+        .balao-capa { height: 58px; background: linear-gradient(135deg, var(--brand-color), var(--green-color)); position: relative; }
+        .balao-foto { position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%); width: 56px; height: 56px; border-radius: 16px; overflow: hidden; background: var(--brand-color); display: grid; place-items: center; border: 4px solid var(--bg-secondary); }
+        .balao-foto img { width: 100%; height: 100%; object-fit: cover; }
+        .balao-corpo { padding: 34px 16px 16px; text-align: center; }
+        .balao-corpo h3 { color: var(--text-header); font-size: 17px; font-weight: 800; margin-bottom: 2px; word-break: break-word; }
+        .balao-dono { font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 12px; }
+        .balao-numeros { display: flex; gap: 8px; margin-bottom: 14px; }
+        .balao-numeros div { flex: 1; background: rgba(0,0,0,.3); border-radius: 8px; padding: 8px 4px; font-size: 11px; color: var(--text-muted); }
+        .balao-numeros b { display: block; color: var(--text-header); font-size: 14px; margin-top: 2px; }
+        .balao-acoes { display: flex; justify-content: center; gap: 22px; margin-top: 13px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,.08); }
+        .balao-acoes i { cursor: pointer; font-size: 15px; transition: .15s; }
+        .balao-acoes i:hover { transform: scale(1.2); }
+
+        /* ==========================================
            EDITOR DE IMAGEM
            ========================================== */
         #crop-viewport { width: 260px; height: 260px; position: relative; background: #0a0a0c; cursor: grab; border-radius: 8px; overflow: hidden; touch-action: none; }
@@ -2220,7 +2251,10 @@
         const dmsSidebar = document.getElementById('dms-sidebar');
         const bazingaSidebar = document.getElementById('bazinga-sidebar');
 
+        let vistaAtual = 'home';   // home | dm | server | market | calendar
+
         function switchMainView(viewName) {
+            vistaAtual = viewName;
             // Hide all main containers
             const homeContent = document.getElementById('home-content-wrapper');
             const serverContent = document.getElementById('server-content-wrapper');
@@ -2525,12 +2559,24 @@
         });
 
         socket.on('servidor_discord_criado', function(srv) {
+            // Este evento serve pra duas coisas: servidor NOVO (criado ou
+            // entrou agora) e servidor ATUALIZADO (dono mexeu no nome, ícone
+            // ou canais). Só o primeiro caso deve puxar você pra dentro dele -
+            // antes qualquer edição arrastava todo mundo pro servidor, mesmo
+            // quem estava no mapa ou numa DM.
             const jaExiste = meUserServers.some(s => s.id === srv.id);
             if (!jaExiste) meUserServers.push(srv);
             else meUserServers = meUserServers.map(s => s.id === srv.id ? srv : s);
+
             renderizarMeusServidores();
             if (typeof atualizarCarrossel === 'function') atualizarCarrossel();
-            entrarNoServidor(srv.id);
+
+            if (!jaExiste) {
+                entrarNoServidor(srv.id);
+            } else if (activeMyServerId === srv.id) {
+                // Já estou neste servidor: redesenha a sidebar sem trocar de aba
+                entrarNoServidor(srv.id, true);
+            }
         });
 
         socket.on('erro_bazinga', function(dados) {
@@ -2612,7 +2658,7 @@
             return srv.channels.find(c => Number(c.id) === Number(canalId)) || null;
         }
 
-        function entrarNoServidor(id) {
+        function entrarNoServidor(id, manterVista = false) {
             resetSidebars();
             activeMyServerId = id;
             const srv = meUserServers.find(s => s.id === id);
@@ -2643,7 +2689,9 @@
 
             ligarBotoesDeCanal(channelsList);
 
-            switchMainView('server');
+            // Redesenho por atualizacao nao deve arrancar a pessoa da aba em
+            // que ela esta (calendario, mapa, mercado...).
+            if (!manterVista) switchMainView('server');
 
             const msgContainer = document.getElementById('messages-container');
             msgContainer.innerHTML = `
@@ -2682,9 +2730,13 @@
 
             bindChannelListeners();
 
-            // Entra de fato no primeiro canal de texto do servidor (junta a sala do socket)
-            const primeiroCanalTexto = channelsList.querySelector('.text-channel');
-            if (primeiroCanalTexto) primeiroCanalTexto.click();
+            // Entra de fato no primeiro canal de texto do servidor (junta a sala
+            // do socket). Num simples redesenho, mantem o canal que ja estava
+            // aberto em vez de jogar a pessoa de volta pro primeiro.
+            const canais = Array.from(channelsList.querySelectorAll('.text-channel'));
+            const atual = canais.find(c => Number(c.getAttribute('data-id')) === Number(currentChannelId));
+            const alvo = (manterVista && atual) ? atual : canais[0];
+            if (alvo) alvo.click();
         }
 
         function bindChannelListeners() {
@@ -4048,11 +4100,21 @@
         }
 
         // Renderiza os Servidores Plantados (Com Vagas)
-        function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "ilimitado", online = 1, serverId = null, ownerId = null) {
+        function renderizarServidorMapa(id, lat, lng, nome, owner, vagas = "ilimitado", online = 1, serverId = null, ownerId = null, iconUrl = null) {
+            // Foto de verdade do servidor quando existir; só cai nas iniciais
+            // quando o servidor não tem ícone.
+            const foto = escUrl(iconUrl);
+            const miolo = foto
+                ? `<img src="${foto}" alt="">`
+                : `<span class="pino-iniciais">${esc(iniciaisServidor(nome || '?'))}</span>`;
+
             const serverIcon = L.divIcon({
-                className: 'server-marker',
-                html: `<img src="https://ui-avatars.com/api/?name=${encodeURIComponent(nome || '?')}&background=5865F2&color=fff" style="width:100%;height:100%;object-fit:cover;">`,
-                iconSize: [48, 48], iconAnchor: [24, 48]
+                className: '',   // sem classe do Leaflet pra não brigar com o CSS
+                html: `<div class="pino-servidor">
+                           <div class="pino-foto">${miolo}</div>
+                           <div class="pino-nome">${esc(nome)}</div>
+                       </div>`,
+                iconSize: [56, 70], iconAnchor: [28, 70]
             });
             const srv = L.marker([lat, lng], {icon: serverIcon}).addTo(bazingaMap);
 
@@ -4068,26 +4130,43 @@
                 : (owner === currentUserName);
 
             const acoesOwner = isDono ? `
-                <div style="display:flex; justify-content:center; gap:24px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
-                    <i class="fa-solid fa-pen" style="color:var(--text-muted); cursor:pointer; font-size:16px; transition:0.2s;" title="Editar Servidor" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'" onclick="abrirModalServidor('edit', ${id}, ${vagas === 'ilimitado' ? 'null' : vagas})"></i>
-                    <i class="fa-solid fa-trash" style="color:var(--red-color); cursor:pointer; font-size:16px; transition:0.2s;" title="Apagar Servidor" onmouseover="this.style.color='#ff4444'" onmouseout="this.style.color='var(--red-color)'" onclick="apagarItem('server', ${id})"></i>
+                <div class="balao-acoes">
+                    <i class="fa-solid fa-pen" style="color:var(--text-muted);" title="Editar vagas e duração"
+                       onclick="abrirModalServidor('edit', ${Number(id)}, ${vagas === 'ilimitado' ? 'null' : Number(vagas)})"></i>
+                    <i class="fa-solid fa-gear" style="color:var(--text-muted);" title="Configurações do servidor"
+                       onclick="abrirConfigDoPino(${serverId ?? 'null'})"></i>
+                    <i class="fa-solid fa-trash" style="color:var(--red-color);" title="Tirar do mapa"
+                       onclick="apagarItem('server', ${Number(id)})"></i>
                 </div>` : '';
 
             srv.bindPopup(`
-                <div style='text-align:center; min-width: 200px; font-family: gg sans;'>
-                    <h3 style='color:var(--text-header); font-size: 18px; font-weight:800; margin-bottom: 4px;'>${esc(nome)}</h3>
-                    <p style='font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; margin-bottom: 12px;'>👑 Dono: ${esc(owner)}</p>
-                    <div style='display:flex; justify-content:center; gap:16px; font-size: 12px; font-weight:600; color:var(--text-header); margin-bottom: 16px; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;'>
-                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-users" style="color:var(--green-color); font-size:18px; margin-bottom:6px;"></i> ${Number(online) || 0} Online</span>
-                        <span style="display:flex; flex-direction:column; align-items:center;"><i class="fa-solid fa-ticket" style="color:var(--yellow-color); font-size:18px; margin-bottom:6px;"></i> ${esc(vagasTexto)}</span>
+                <div class="balao-servidor">
+                    <div class="balao-capa">
+                        <div class="balao-foto">${miolo}</div>
                     </div>
-                    ${btnHtml}
-                    ${acoesOwner}
+                    <div class="balao-corpo">
+                        <h3>${esc(nome)}</h3>
+                        <p class="balao-dono">👑 ${esc(owner)}</p>
+                        <div class="balao-numeros">
+                            <div><i class="fa-solid fa-users" style="color:var(--green-color);"></i> <b>${Number(online) || 0}</b> online</div>
+                            <div><i class="fa-solid fa-ticket" style="color:var(--yellow-color);"></i> <b>${esc(vagasTexto)}</b></div>
+                        </div>
+                        ${btnHtml}
+                        ${acoesOwner}
+                    </div>
                 </div>
-            `);
+            `, { minWidth: 232, maxWidth: 232, closeButton: true, className: 'balao-wrap' });
             serverMarkersAtivos.push({ id: id, lat: lat, lng: lng, marker: srv,
                                        nome: nome, owner: owner, ownerId: ownerId,
-                                       vagas: vagas, online: online, serverId: serverId });
+                                       vagas: vagas, online: online, serverId: serverId,
+                                       iconUrl: iconUrl });
+        }
+
+        // Engrenagem no balao do pino: leva direto pras configuracoes do servidor
+        function abrirConfigDoPino(serverId) {
+            if (!serverId) { showToast("Esse pino nao esta ligado a um servidor.", "warning"); return; }
+            entrarNoServidor(serverId);
+            setTimeout(abrirConfigServidor, 220);
         }
 
         async function carregarDadosDoMapa() {
@@ -4096,7 +4175,8 @@
                 const dados = await resp.json();
                 dados.notas.forEach(n => renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.cor || '#5865F2', n.autor_id));
                 dados.servers.forEach(s => renderizarServidorMapa(s.id, s.lat, s.lng, s.name, s.owner,
-                                                                  s.vagas || "ilimitado", s.online || 1, s.server_id, s.owner_id));
+                                                                  s.vagas || "ilimitado", s.online || 1,
+                                                                  s.server_id, s.owner_id, s.icon_url));
             } catch(e) { console.log("Carregando mapa limpo."); }
         }
 
@@ -4287,7 +4367,8 @@
 
             socket.on('novo_servidor_mapa', function(dados) {
                 renderizarServidorMapa(dados.id, dados.lat, dados.lng, dados.nome, dados.owner,
-                                       dados.vagas, dados.online || 1, dados.server_id, dados.owner_id);
+                                       dados.vagas, dados.online || 1, dados.server_id,
+                                       dados.owner_id, dados.icon_url);
                 if (Number(dados.owner_id) === Number(currentUserId)) showToast(`O servidor "${dados.nome}" foi salvo e plantado!`, "success");
             });
 
@@ -4307,8 +4388,17 @@
                 if (!pino) return;
                 bazingaMap.removeLayer(pino.marker);
                 serverMarkersAtivos = serverMarkersAtivos.filter(s => s.id !== dados.id);
-                renderizarServidorMapa(dados.id, pino.lat, pino.lng, pino.nome, pino.owner,
-                                       dados.vagas, pino.online, pino.serverId, pino.ownerId);
+                // Nome e foto podem ter mudado (o dono mexeu nas configurações
+                // do servidor), então usa o que veio e só cai no cache local
+                // quando o evento não trouxe o campo.
+                renderizarServidorMapa(
+                    dados.id, pino.lat, pino.lng,
+                    dados.nome ?? pino.nome, pino.owner,
+                    dados.vagas ?? pino.vagas,
+                    dados.online ?? pino.online,
+                    pino.serverId, pino.ownerId,
+                    dados.icon_url !== undefined ? dados.icon_url : pino.iconUrl
+                );
             });
 
             socket.on('geonote_apagada', function(dados) {

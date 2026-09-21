@@ -614,6 +614,18 @@ def editar_servidor(dados):
 
         comitar_com_retry(preparar)
         avisar_servidor(srv)
+
+        # O pino no mapa mostra o nome e a foto do servidor, então precisa
+        # acompanhar a mudança - antes só atualizava depois de dar F5.
+        pino = MapServer.query.filter_by(server_id=srv.id).first()
+        if pino:
+            emit('servidor_mapa_editado', {
+                'id': pino.id,
+                'nome': srv.name,
+                'icon_url': srv.icon_url,
+                'vagas': pino.max_tickets if pino.max_tickets else 'ilimitado',
+                'online': len(srv.members)
+            }, broadcast=True)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO EDITAR SERVIDOR] {e}")
@@ -843,7 +855,8 @@ def plantar_servidor(dados):
 
         emit('novo_servidor_mapa', {
             'id': pino.id, 'lat': pino.lat, 'lng': pino.lng,
-            'nome': pino.name, 'owner': usuario.name, 'owner_id': usuario.id,
+            'nome': srv.name, 'icon_url': srv.icon_url,
+            'owner': usuario.name, 'owner_id': usuario.id,
             'vagas': vagas if vagas else 'ilimitado',
             'online': len(srv.members),
             'server_id': srv.id
@@ -875,8 +888,13 @@ def editar_servidor_mapa(dados):
 
         comitar_com_retry(preparar)
 
+        srv = Server.query.get(pino.server_id) if pino.server_id else None
         emit('servidor_mapa_editado', {
-            'id': pino.id, 'vagas': vagas if vagas else 'ilimitado'
+            'id': pino.id,
+            'nome': srv.name if srv else pino.name,
+            'icon_url': srv.icon_url if srv else None,
+            'vagas': vagas if vagas else 'ilimitado',
+            'online': len(srv.members) if srv else 1
         }, broadcast=True)
     except Exception as e:
         db.session.rollback()

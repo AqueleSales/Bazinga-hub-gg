@@ -409,9 +409,13 @@ def dados_do_mapa():
                 'autor_id': n.author_id, 'cor': n.color
             } for n in notas_db]
 
+            # Nome e ícone vêm do Servidor ligado, não da cópia feita na hora
+            # de plantar: senão renomear o servidor não mudava nada no mapa.
             servers = [{
                 'id': s.id, 'lat': s.lat, 'lng': s.lng,
-                'name': s.name, 'owner': s.owner.name if s.owner else '???',
+                'name': (s.server.name if s.server else s.name),
+                'icon_url': (s.server.icon_url if s.server else None),
+                'owner': s.owner.name if s.owner else '???',
                 'owner_id': s.owner_id,
                 'vagas': s.max_tickets if s.max_tickets else 'ilimitado',
                 'online': len(s.server.members) if s.server else 1,
