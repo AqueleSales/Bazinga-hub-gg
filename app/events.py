@@ -53,13 +53,22 @@ def canal_para_json(c):
         'name': c.name,
         'type': c.channel_type,
         'topic': c.topic,
-        'is_private': bool(c.is_private)
+        'is_private': bool(c.is_private),
+        'membros': [p.id for p in c.allowed_members] if c.is_private else []
     }
 
 
-def servidor_para_json(srv):
+def servidor_para_json(srv, usuario=None):
+    """Servidor + canais. Canal privado só entra na lista de quem tem acesso.
+
+    Sem o `usuario`, devolve todos os canais - use só quando o destinatário
+    for o próprio dono.
+    """
     canais = Channel.query.filter_by(server_id=srv.id).order_by(
         Channel.position.asc(), Channel.id.asc()).all()
+    if usuario is not None:
+        canais = [c for c in canais if pode_ver_canal(usuario, c)]
+
     return {
         'id': srv.id,
         'name': srv.name,
@@ -75,10 +84,13 @@ def servidor_para_json(srv):
 def avisar_servidor(srv):
     """Reenvia o servidor inteiro para todos os membros conectados.
 
-    Usado depois de qualquer mudança estrutural (nome, ícone, canais) - o
-    frontend já sabe substituir o servidor pelo id em 'servidor_discord_criado'.
+    Usado depois de qualquer mudança estrutural (nome, ícone, canais). Cada
+    membro recebe a sua própria versão, porque a lista de canais depende de
+    quais canais privados a pessoa pode ver.
     """
-    emit('servidor_discord_criado', servidor_para_json(srv), to=sala_servidor(srv.id))
+    for membro in srv.members:
+        emit('servidor_discord_criado', servidor_para_json(srv, membro),
+             to=sala_pessoal(membro.id))
 
 
 # ==========================================
@@ -94,7 +106,7 @@ def handle_connect():
     try:
         join_room(sala_pessoal(usuario.id))
 
-        servidores = [servidor_para_json(srv) for srv in usuario.servers]
+        servidores = [servidor_para_json(srv, usuario) for srv in usuario.servers]
         for srv in usuario.servers:
             join_room(sala_servidor(srv.id))
 
@@ -382,7 +394,7 @@ def criar_servidor(dados):
 
         novo_srv = comitar_com_retry(preparar)
         join_room(sala_servidor(novo_srv.id))
-        emit('servidor_discord_criado', servidor_para_json(novo_srv))
+        emit('servidor_discord_criado', servidor_para_json(novo_srv, usuario))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO CRIAR SERVIDOR] {e}")
@@ -409,23 +421,78 @@ def criar_canal(dados):
 
         topico = (dados.get('topico') or '').strip()[:255] or None
         privado = bool(dados.get('privado'))
+        escolhidos = _membros_escolhidos(srv, dados.get('membros'))
 
         def preparar():
             ultimo = Channel.query.filter_by(server_id=srv.id).count()
             novo = Channel(name=nome, channel_type=tipo, server_id=srv.id,
                            topic=topico, is_private=privado, position=ultimo)
+            if privado:
+                novo.allowed_members = escolhidos
             db.session.add(novo)
             return novo
 
         novo_canal = comitar_com_retry(preparar)
 
-        payload = canal_para_json(novo_canal)
-        payload['server_id'] = srv.id
-        emit('canal_criado', payload, to=sala_servidor(srv.id))
+        # Canal privado não pode ser anunciado pra sala inteira do servidor -
+        # quem não tem acesso nem deve saber que ele existe.
+        _anunciar_canal('canal_criado', srv, novo_canal)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO CRIAR CANAL] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível criar o canal: {e}'})
+
+
+def _membros_escolhidos(srv, ids):
+    """Converte a lista de ids que veio do cliente em Persons.
+
+    Só aceita quem já é membro do servidor - senão dava pra "adicionar"
+    qualquer usuário do banco a um canal mandando um id qualquer.
+    """
+    if not ids:
+        return []
+    try:
+        pedidos = {int(i) for i in ids}
+    except (TypeError, ValueError):
+        return []
+    return [p for p in srv.members if p.id in pedidos]
+
+
+def _anunciar_canal(evento, srv, canal):
+    """Manda o canal só pra quem pode vê-lo.
+
+    Canal privado não pode ir pra sala do servidor inteiro: quem não tem
+    acesso nem deveria saber que ele existe.
+    """
+    payload = canal_para_json(canal)
+    payload['server_id'] = srv.id
+    for membro in srv.members:
+        if pode_ver_canal(membro, canal):
+            emit(evento, payload, to=sala_pessoal(membro.id))
+
+
+@socketio.on('listar_membros_servidor')
+def listar_membros_servidor(dados):
+    """Lista de membros, pra montar o seletor de quem entra num canal privado."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        srv = com_retry(lambda: Server.query.get(int(dados.get('server_id'))))
+        if not srv or usuario not in srv.members:
+            return
+
+        emit('membros_do_servidor', {
+            'server_id': srv.id,
+            'membros': [{
+                'id': m.id, 'nome': m.name, 'avatar': m.avatar,
+                'dono': m.id == srv.owner_id
+            } for m in srv.members]
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO LISTAR MEMBROS] {e}")
 
 
 @socketio.on('editar_canal')
@@ -444,6 +511,10 @@ def editar_canal(dados):
             emit('erro_bazinga', {'msg': 'Só o dono do servidor pode editar canais.'})
             return
 
+        # Quem via o canal ANTES da mudança: se ele virar privado (ou alguém
+        # for removido), essas pessoas precisam ser avisadas que o canal sumiu.
+        viam_antes = {m.id for m in srv.members if pode_ver_canal(m, canal)}
+
         def preparar():
             if 'nome' in dados:
                 nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:100]
@@ -453,12 +524,19 @@ def editar_canal(dados):
                 canal.topic = (dados.get('topico') or '').strip()[:255] or None
             if 'privado' in dados:
                 canal.is_private = bool(dados.get('privado'))
+            if 'membros' in dados or 'privado' in dados:
+                canal.allowed_members = (_membros_escolhidos(srv, dados.get('membros'))
+                                         if canal.is_private else [])
 
         comitar_com_retry(preparar)
 
-        payload = canal_para_json(canal)
-        payload['server_id'] = srv.id
-        emit('canal_editado', payload, to=sala_servidor(srv.id))
+        _anunciar_canal('canal_editado', srv, canal)
+
+        # Pra quem perdeu o acesso, o canal simplesmente desaparece da lista.
+        for membro in srv.members:
+            if membro.id in viam_antes and not pode_ver_canal(membro, canal):
+                emit('canal_apagado', {'server_id': srv.id, 'canal_id': canal.id},
+                     to=sala_pessoal(membro.id))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO EDITAR CANAL] {e}")
@@ -625,7 +703,7 @@ def entrar_servidor_pin(dados):
             comitar_com_retry(preparar)
 
         join_room(sala_servidor(srv.id))
-        emit('servidor_discord_criado', servidor_para_json(srv))
+        emit('servidor_discord_criado', servidor_para_json(srv, usuario))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ENTRAR SERVIDOR] {e}")
@@ -1097,7 +1175,7 @@ def entrar_por_convite(dados):
 
         if usuario in srv.members:
             join_room(sala_servidor(srv.id))
-            emit('servidor_discord_criado', servidor_para_json(srv))
+            emit('servidor_discord_criado', servidor_para_json(srv, usuario))
             emit('erro_bazinga', {'msg': f'Você já está em {srv.name}.'})
             return
 
@@ -1108,7 +1186,7 @@ def entrar_por_convite(dados):
         comitar_com_retry(preparar)
 
         join_room(sala_servidor(srv.id))
-        emit('servidor_discord_criado', servidor_para_json(srv))
+        emit('servidor_discord_criado', servidor_para_json(srv, usuario))
         emit('entrou_por_convite', {'server_id': srv.id, 'server_name': srv.name})
     except Exception as e:
         db.session.rollback()

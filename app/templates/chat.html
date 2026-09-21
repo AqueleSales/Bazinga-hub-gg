@@ -451,6 +451,18 @@
         .bz-switch input:checked + .bz-switch-slider { background: var(--green-color); }
         .bz-switch input:checked + .bz-switch-slider::before { transform: translateX(18px); }
 
+        /* Lista de quem pode entrar num canal privado */
+        .bz-membros-lista { max-height: 168px; overflow-y: auto; background: var(--bg-tertiary); border-radius: 6px; padding: 6px; }
+        .bz-membro { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 5px; cursor: pointer; transition: background .12s; }
+        .bz-membro:hover { background: rgba(255,255,255,.05); }
+        .bz-membro.dono { opacity: .6; cursor: default; }
+        .bz-membro .av { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: var(--brand-color); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+        .bz-membro .av img { width: 100%; height: 100%; object-fit: cover; }
+        .bz-membro .nm { flex-grow: 1; font-size: 14px; color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bz-membro .marca { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--text-muted); display: grid; place-items: center; font-size: 10px; color: transparent; flex-shrink: 0; transition: .12s; }
+        .bz-membro.marcado .marca { background: var(--brand-color); border-color: var(--brand-color); color: #fff; }
+        .bz-membro-vazio { color: var(--text-muted); font-size: 13px; padding: 12px; text-align: center; }
+
         /* Preview do ícone do servidor nas configurações */
         .bz-icon-preview { width: 92px; height: 92px; border-radius: 50%; background: var(--bg-tertiary); border: 2px dashed rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 26px; cursor: pointer; overflow: hidden; flex-shrink: 0; transition: border-color .15s; position: relative; }
         .bz-icon-preview:hover { border-color: var(--brand-color); color: var(--text-header); }
@@ -1400,12 +1412,18 @@
                 <div class="bz-switch-row">
                     <div>
                         <div class="bz-radio-title" style="font-size:14px;"><i class="fa-solid fa-lock" style="font-size:12px;"></i> Canal privado</div>
-                        <div class="bz-radio-desc">Só o dono do servidor vê e escreve neste canal.</div>
+                        <div class="bz-radio-desc">Só quem você escolher (e você) vê este canal.</div>
                     </div>
                     <label class="bz-switch">
                         <input type="checkbox" id="channel-private-input">
                         <span class="bz-switch-slider"></span>
                     </label>
+                </div>
+
+                <!-- Aparece só quando o canal é privado -->
+                <div id="channel-members-area" style="display:none;">
+                    <label class="bz-label">Quem pode entrar</label>
+                    <div class="bz-membros-lista" id="channel-members-list"></div>
                 </div>
             </div>
             <div class="modal-footer" style="justify-content: space-between;">
@@ -2711,6 +2729,54 @@
                 tipoCanalEscolhido === 'voice' ? 'sala-de-voz' : 'novo-canal';
         }
 
+        // ---- Seletor de quem entra num canal privado ----
+        let membrosDoServidor = [];
+        let membrosMarcados = new Set();
+
+        function desenharMembrosDoCanal() {
+            const lista = document.getElementById('channel-members-list');
+            if (!lista) return;
+
+            if (membrosDoServidor.length <= 1) {
+                lista.innerHTML = `<div class="bz-membro-vazio">Você ainda é o único aqui. Convide gente e depois escolha quem entra.</div>`;
+                return;
+            }
+
+            lista.innerHTML = membrosDoServidor.map(m => {
+                // O dono sempre tem acesso, então aparece travado e marcado.
+                const marcado = m.dono || membrosMarcados.has(m.id);
+                const av = escUrl(m.avatar);
+                return `<div class="bz-membro ${marcado ? 'marcado' : ''} ${m.dono ? 'dono' : ''}" data-id="${Number(m.id)}">
+                            <div class="av">${av ? `<img src="${av}">` : esc((m.nome || '?')[0].toUpperCase())}</div>
+                            <div class="nm">${esc(m.nome)}${m.dono ? ' <span style="font-size:11px;opacity:.7;">(dono)</span>' : ''}</div>
+                            <div class="marca"><i class="fa-solid fa-check"></i></div>
+                        </div>`;
+            }).join('');
+
+            lista.querySelectorAll('.bz-membro:not(.dono)').forEach(linha => {
+                linha.addEventListener('click', () => {
+                    const id = Number(linha.getAttribute('data-id'));
+                    if (membrosMarcados.has(id)) membrosMarcados.delete(id);
+                    else membrosMarcados.add(id);
+                    linha.classList.toggle('marcado');
+                });
+            });
+        }
+
+        function alternarAreaDePrivado() {
+            const privado = document.getElementById('channel-private-input').checked;
+            document.getElementById('channel-members-area').style.display = privado ? 'block' : 'none';
+            if (privado) desenharMembrosDoCanal();
+        }
+
+        socket.on('membros_do_servidor', function(dados) {
+            if (dados.server_id !== activeMyServerId) return;
+            membrosDoServidor = dados.membros || [];
+            desenharMembrosDoCanal();
+        });
+
+        document.getElementById('channel-private-input')?.addEventListener('change', alternarAreaDePrivado);
+
         function abrirModalCanal(modo, dados = {}) {
             const srv = servidorAtivo();
             if (!srv) { showToast("Abra um servidor primeiro.", "warning"); return; }
@@ -2733,6 +2799,11 @@
             document.getElementById('channel-topic-input').value = editando ? (dados.topic || '') : '';
             document.getElementById('channel-private-input').checked = editando ? !!dados.is_private : false;
 
+            // Quem já estava no canal privado vem marcado
+            membrosMarcados = new Set((editando && dados.membros ? dados.membros : []).map(Number));
+            socket.emit('listar_membros_servidor', { server_id: activeMyServerId });
+            alternarAreaDePrivado();
+
             document.getElementById('channel-modal').style.display = 'flex';
             setTimeout(() => document.getElementById('channel-name-input').focus(), 50);
         }
@@ -2748,16 +2819,19 @@
 
             const topico = document.getElementById('channel-topic-input').value.trim();
             const privado = document.getElementById('channel-private-input').checked;
+            const membros = privado ? Array.from(membrosMarcados) : [];
 
             if (canalEmEdicao) {
                 socket.emit('editar_canal', {
-                    canal_id: canalEmEdicao.id, nome: nome, topico: topico, privado: privado
+                    canal_id: canalEmEdicao.id, nome: nome, topico: topico,
+                    privado: privado, membros: membros
                 });
                 showToast("Salvando canal...", "info");
             } else {
                 socket.emit('criar_canal', {
                     server_id: activeMyServerId, nome: nome,
-                    tipo: tipoCanalEscolhido, topico: topico, privado: privado
+                    tipo: tipoCanalEscolhido, topico: topico,
+                    privado: privado, membros: membros
                 });
                 showToast("Criando canal...", "info");
             }

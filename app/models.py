@@ -96,6 +96,14 @@ class Server(db.Model):
     owner = db.relationship('Person', foreign_keys=[owner_id])
 
 
+# Quem pode entrar num canal PRIVADO. Canal público ignora esta tabela.
+# O dono do servidor sempre tem acesso, esteja aqui ou não.
+channel_members = db.Table('channel_members',
+                           db.Column('channel_id', db.Integer, db.ForeignKey('channel.id'), primary_key=True),
+                           db.Column('person_id', db.Integer, db.ForeignKey('person.id'), primary_key=True)
+                           )
+
+
 class Channel(db.Model):
     __tablename__ = 'channel'
     id = db.Column(db.Integer, primary_key=True)
@@ -113,6 +121,10 @@ class Channel(db.Model):
 
     # Relacionamento: Um canal tem várias mensagens
     messages = db.relationship('Message', backref='channel', lazy=True, cascade="all, delete-orphan")
+
+    # Só vale quando is_private=True
+    allowed_members = db.relationship('Person', secondary=channel_members, lazy='subquery',
+                                      backref=db.backref('canais_privados', lazy=True))
 
 
 class Message(db.Model):

@@ -55,15 +55,28 @@ def pode_ver_canal(usuario, canal):
 
     Canal com server_id nulo é um canal global antigo (legado, sem UI) e fica
     liberado pra qualquer logado. Canal de Servidor exige ser membro dele.
+
+    Canal PRIVADO exige, além disso, estar na lista `allowed_members` - ou ser
+    o dono do servidor, que sempre entra. Antes o `is_private` só escondia o
+    canal na tela, e quem chutasse o id entrava do mesmo jeito.
     """
     if usuario is None or canal is None:
         return False
     if canal.server_id is None:
         return True
+
     servidor = Server.query.get(canal.server_id)
     if servidor is None:
         return False
-    return usuario in servidor.members
+    if usuario not in servidor.members:
+        return False
+
+    if canal.is_private:
+        if servidor.owner_id == usuario.id:
+            return True
+        return usuario in canal.allowed_members
+
+    return True
 
 
 def canal_permitido(usuario, canal_id):

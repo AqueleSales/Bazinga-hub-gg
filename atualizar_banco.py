@@ -86,6 +86,16 @@ def atualizar_banco():
             add_column_se_nao_existir("event", "emoji VARCHAR(16)")
             add_column_se_nao_existir("event", "color VARCHAR(20)")
 
+            # 11. Canal privado de verdade: tabela de quem tem acesso.
+            # O db.create_all() acima cria; isso aqui só avisa se faltar.
+            try:
+                db.session.execute(text("SELECT 1 FROM channel_members LIMIT 1"))
+                db.session.commit()
+                print("✅ Tabela 'channel_members' (acesso a canal privado) presente.")
+            except Exception:
+                db.session.rollback()
+                print("⚠️ Tabela 'channel_members' não encontrada - canal privado não vai funcionar.")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)
