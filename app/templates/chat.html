@@ -451,6 +451,28 @@
         .bz-switch input:checked + .bz-switch-slider { background: var(--green-color); }
         .bz-switch input:checked + .bz-switch-slider::before { transform: translateX(18px); }
 
+        /* ==========================================
+           EDITOR DE IMAGEM
+           ========================================== */
+        #crop-viewport { width: 260px; height: 260px; position: relative; background: #0a0a0c; cursor: grab; border-radius: 8px; overflow: hidden; touch-action: none; }
+        #crop-viewport:active { cursor: grabbing; }
+        #crop-canvas { display: block; }
+        /* A máscara mostra o recorte final por cima do canvas, sem cortar nada:
+           assim dá pra ver o que fica de fora enquanto arrasta. */
+        #crop-mascara { position: absolute; inset: 0; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.75); }
+        #crop-viewport.circulo #crop-mascara { border-radius: 50%; }
+        #crop-viewport.quadrado #crop-mascara { border-radius: 16px; }
+
+        .editor-img-barra { display: flex; align-items: center; gap: 4px; background: var(--bg-tertiary); padding: 5px; border-radius: 10px; }
+        .editor-img-btn { width: 38px; height: 34px; border: none; background: none; color: var(--text-muted); border-radius: 7px; cursor: pointer; font-size: 14px; transition: .12s; }
+        .editor-img-btn:hover { background: rgba(255,255,255,.08); color: var(--text-header); }
+        .editor-img-btn:active { transform: scale(.92); }
+        .editor-img-btn.ativo { background: var(--brand-color); color: #fff; }
+        .editor-img-sep { width: 1px; height: 20px; background: rgba(255,255,255,.12); margin: 0 3px; }
+
+        #editor-img-aviso-gif { display: none; align-items: flex-start; gap: 9px; background: rgba(240,178,50,.12); border: 1px solid rgba(240,178,50,.35); color: var(--yellow-color); font-size: 12px; line-height: 1.45; padding: 10px 12px; border-radius: 8px; width: 100%; }
+        #editor-img-aviso-gif.visivel { display: flex; }
+
         /* Lista de quem pode entrar num canal privado */
         .bz-membros-lista { max-height: 168px; overflow-y: auto; background: var(--bg-tertiary); border-radius: 6px; padding: 6px; }
         .bz-membro { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 5px; cursor: pointer; transition: background .12s; }
@@ -1770,25 +1792,49 @@
     </div>
 
     <!-- Modal Ajustar Imagem (Crop) -->
+    <!-- ==========================================
+         EDITOR DE IMAGEM (avatar e ícone de servidor)
+         ========================================== -->
     <div class="modal-overlay" id="avatar-crop-modal">
-        <div class="bazinga-modal" style="width: 400px;">
-            <div class="modal-header">
-                <h2>Ajustar imagem</h2>
-                <p>Arraste a foto para posicionar e use o zoom para ajustar o corte.</p>
+        <div class="bazinga-modal" style="width: 420px;">
+            <div class="modal-header" style="position: relative;">
+                <h2 id="editor-img-titulo">Ajustar imagem</h2>
+                <p>Arraste pra posicionar. Gire, espelhe e dê zoom até ficar bom.</p>
+                <i class="fa-solid fa-xmark modal-close-x" id="btn-crop-x"></i>
             </div>
-            <div class="modal-content" style="align-items: center;">
-                <div id="crop-viewport" style="width: 240px; height: 240px; border-radius: 50%; overflow: hidden; position: relative; background: #000; cursor: grab;">
-                    <img id="crop-image" style="position: absolute; top: 0; left: 0; user-select: none; -webkit-user-drag: none; max-width: none;">
+            <div class="modal-content" style="align-items: center; gap: 14px;">
+                <div id="crop-viewport">
+                    <canvas id="crop-canvas" width="260" height="260"></canvas>
+                    <div id="crop-mascara"></div>
                 </div>
-                <div style="width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 16px;">
+
+                <div id="editor-img-aviso-gif">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Isso é um GIF. Se você editar, ele vira imagem parada. Dá pra usar do jeito que está.</span>
+                </div>
+
+                <div class="editor-img-barra">
+                    <button class="editor-img-btn" data-acao="girar-esq" title="Girar à esquerda"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button class="editor-img-btn" data-acao="girar-dir" title="Girar à direita"><i class="fa-solid fa-rotate-right"></i></button>
+                    <div class="editor-img-sep"></div>
+                    <button class="editor-img-btn" data-acao="espelhar-h" title="Espelhar na horizontal"><i class="fa-solid fa-left-right"></i></button>
+                    <button class="editor-img-btn" data-acao="espelhar-v" title="Espelhar na vertical"><i class="fa-solid fa-up-down"></i></button>
+                    <div class="editor-img-sep"></div>
+                    <button class="editor-img-btn" data-acao="centralizar" title="Voltar ao original"><i class="fa-solid fa-arrows-rotate"></i></button>
+                </div>
+
+                <div style="width: 100%; display: flex; align-items: center; gap: 12px;">
                     <i class="fa-solid fa-magnifying-glass-minus" style="color: var(--text-muted);"></i>
-                    <input type="range" class="discord-slider" id="crop-zoom" min="100" max="300" value="100" style="flex: 1;">
+                    <input type="range" class="discord-slider" id="crop-zoom" min="100" max="400" value="100" style="flex: 1;">
                     <i class="fa-solid fa-magnifying-glass-plus" style="color: var(--text-muted);"></i>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" id="btn-crop-cancel">Cancelar</button>
-                <button class="btn btn-primary" id="btn-crop-confirm">Usar imagem</button>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn-cancel" id="btn-crop-original" style="display:none;">Usar como está</button>
+                <div style="display:flex; gap:12px; margin-left:auto;">
+                    <button class="btn-cancel" id="btn-crop-cancel">Cancelar</button>
+                    <button class="btn btn-primary" id="btn-crop-confirm">Usar imagem</button>
+                </div>
             </div>
         </div>
     </div>
@@ -2394,12 +2440,29 @@
 
         document.getElementById('new-server-file').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (file) {
-                tempServerIconFile = file;
-                tempUploadedServerIcon = URL.createObjectURL(file);
-                document.getElementById('new-server-icon-preview').innerHTML = `<img src="${escUrl(tempUploadedServerIcon)}" style="width: 100%; height: 100%; object-fit: cover;">`;
-                document.getElementById('new-server-icon-preview').style.border = 'none';
-            }
+            e.target.value = '';
+            if (!file) return;
+
+            // Mesmo editor do avatar: cortar, girar, espelhar e dar zoom.
+            abrirEditorImagem(file, {
+                formato: 'quadrado',
+                titulo: 'Ajustar o ícone do servidor',
+                aoConfirmar: (arquivo) => {
+                    tempServerIconFile = arquivo;
+                    if (tempUploadedServerIcon) URL.revokeObjectURL(tempUploadedServerIcon);
+                    tempUploadedServerIcon = URL.createObjectURL(arquivo);
+
+                    // src por propriedade, e não dentro de innerHTML: escUrl()
+                    // barra blob: de propósito, e o preview ficava vazio.
+                    const box = document.getElementById('new-server-icon-preview');
+                    box.innerHTML = '';
+                    const img = document.createElement('img');
+                    img.src = tempUploadedServerIcon;
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    box.appendChild(img);
+                    box.style.border = 'none';
+                }
+            });
         });
 
         document.getElementById('btn-confirm-create-server').addEventListener('click', async () => {
@@ -2925,19 +2988,27 @@
         }
 
         // Upload do ícone do servidor (comprime antes de mandar)
-        document.getElementById('cfg-icon-file')?.addEventListener('change', async function(e) {
+        document.getElementById('cfg-icon-file')?.addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (!file) return;
-            try {
-                showToast("Enviando ícone...", "info");
-                const url = await uploadMidia(file);
-                iconeServidorNovo = url;
-                pintarPreviewIcone(url);
-                showToast("Ícone pronto! Clica em Salvar.", "success");
-            } catch (err) {
-                showToast(err.message || "Não deu pra enviar o ícone.", "error");
-            }
             e.target.value = '';
+            if (!file) return;
+
+            // Passa pelo editor antes de subir: dá pra cortar, girar e espelhar.
+            abrirEditorImagem(file, {
+                formato: 'quadrado',
+                titulo: 'Ajustar o ícone do servidor',
+                aoConfirmar: async (arquivo) => {
+                    try {
+                        showToast("Enviando ícone...", "info");
+                        const url = await uploadMidia(arquivo);
+                        iconeServidorNovo = url;
+                        pintarPreviewIcone(url);
+                        showToast("Ícone pronto! Clica em Salvar.", "success");
+                    } catch (err) {
+                        showToast(err.message || "Não deu pra enviar o ícone.", "error");
+                    }
+                }
+            });
         });
 
         // ---------- CONVITES ----------
@@ -5038,61 +5109,223 @@
         // AJUSTAR IMAGEM (CROP) + UPLOAD REAL DO AVATAR
         // ==========================================
         const cropViewport = document.getElementById('crop-viewport');
-        const cropImage = document.getElementById('crop-image');
+        const cropCanvas = document.getElementById('crop-canvas');
         const cropZoom = document.getElementById('crop-zoom');
-        const CROP_VIEWPORT_SIZE = 240;
-        let cropState = { baseScale: 1, scale: 1, offsetX: 0, offsetY: 0, naturalW: 0, naturalH: 0, dragging: false, startX: 0, startY: 0 };
+        const TAM_PREVIEW = 260;    // lado do quadrado de preview, em px
+        const TAM_SAIDA = 512;      // lado da imagem final gerada
 
-        function aplicarTransformCrop() {
-            const totalScale = cropState.baseScale * cropState.scale;
-            const w = cropState.naturalW * totalScale;
-            const h = cropState.naturalH * totalScale;
-            cropImage.style.width = w + 'px';
-            cropImage.style.height = h + 'px';
-            const minX = CROP_VIEWPORT_SIZE - w, minY = CROP_VIEWPORT_SIZE - h;
-            cropState.offsetX = Math.min(0, Math.max(minX, cropState.offsetX));
-            cropState.offsetY = Math.min(0, Math.max(minY, cropState.offsetY));
-            cropImage.style.left = cropState.offsetX + 'px';
-            cropImage.style.top = cropState.offsetY + 'px';
+        // `fonte` é a imagem original; `corrigida` é ela já girada/espelhada.
+        // Separar as duas mantém a conta do corte simples: depois da correção
+        // é sempre "desenhar um retângulo reto".
+        let editorImg = {
+            fonte: null, corrigida: null,
+            escala: 1, offsetX: 0, offsetY: 0,
+            giro: 0, espelhoH: false, espelhoV: false,
+            arrastando: false, inicioX: 0, inicioY: 0,
+            ehGif: false, arquivoOriginal: null,
+            aoConfirmar: null
+        };
+
+        // Aplica giro/espelho numa cópia offscreen da imagem.
+        function gerarCorrigida() {
+            const src = editorImg.fonte;
+            if (!src) return;
+
+            const trocaLados = editorImg.giro === 90 || editorImg.giro === 270;
+            const lw = trocaLados ? src.naturalHeight : src.naturalWidth;
+            const lh = trocaLados ? src.naturalWidth : src.naturalHeight;
+
+            const c = document.createElement('canvas');
+            c.width = lw; c.height = lh;
+            const ctx = c.getContext('2d');
+
+            ctx.translate(lw / 2, lh / 2);
+            ctx.rotate(editorImg.giro * Math.PI / 180);
+            ctx.scale(editorImg.espelhoH ? -1 : 1, editorImg.espelhoV ? -1 : 1);
+            ctx.drawImage(src, -src.naturalWidth / 2, -src.naturalHeight / 2);
+
+            editorImg.corrigida = c;
         }
 
-        function abrirCropModal(file) {
+        // Mesmo desenho pro preview e pra saída final: o que você vê é o que sai.
+        function desenharEditor(ctx, tamanho) {
+            const bm = editorImg.corrigida;
+            if (!bm) return;
+
+            const k = tamanho / TAM_PREVIEW;   // preview -> saída
+            // "cover": a imagem sempre cobre o quadrado inteiro
+            const base = TAM_PREVIEW / Math.min(bm.width, bm.height);
+            const s = base * editorImg.escala;
+
+            ctx.clearRect(0, 0, tamanho, tamanho);
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(bm,
+                editorImg.offsetX * k, editorImg.offsetY * k,
+                bm.width * s * k, bm.height * s * k);
+        }
+
+        // Não deixa sobrar buraco preto: prende o offset dentro da imagem.
+        function limitarOffset() {
+            const bm = editorImg.corrigida;
+            if (!bm) return;
+            const base = TAM_PREVIEW / Math.min(bm.width, bm.height);
+            const s = base * editorImg.escala;
+            const minX = TAM_PREVIEW - bm.width * s;
+            const minY = TAM_PREVIEW - bm.height * s;
+            editorImg.offsetX = Math.min(0, Math.max(minX, editorImg.offsetX));
+            editorImg.offsetY = Math.min(0, Math.max(minY, editorImg.offsetY));
+        }
+
+        function atualizarPreview() {
+            limitarOffset();
+            desenharEditor(cropCanvas.getContext('2d'), TAM_PREVIEW);
+        }
+
+        function centralizarEditor() {
+            const bm = editorImg.corrigida;
+            if (!bm) return;
+            const base = TAM_PREVIEW / Math.min(bm.width, bm.height);
+            const s = base * editorImg.escala;
+            editorImg.offsetX = (TAM_PREVIEW - bm.width * s) / 2;
+            editorImg.offsetY = (TAM_PREVIEW - bm.height * s) / 2;
+        }
+
+        /**
+         * Abre o editor de imagem.
+         * opcoes: { formato: 'circulo'|'quadrado', titulo, aoConfirmar(arquivo, ehOriginal) }
+         */
+        function abrirEditorImagem(file, opcoes = {}) {
+            const formato = opcoes.formato === 'quadrado' ? 'quadrado' : 'circulo';
+            cropViewport.classList.remove('circulo', 'quadrado');
+            cropViewport.classList.add(formato);
+            document.getElementById('editor-img-titulo').textContent = opcoes.titulo || 'Ajustar imagem';
+
+            editorImg.aoConfirmar = opcoes.aoConfirmar || null;
+            editorImg.arquivoOriginal = file;
+            editorImg.ehGif = file.type === 'image/gif';
+            editorImg.giro = 0;
+            editorImg.espelhoH = editorImg.espelhoV = false;
+            editorImg.escala = 1;
+            cropZoom.value = 100;
+
+            // GIF editado perde a animação, então quem escolhe é a pessoa.
+            document.getElementById('editor-img-aviso-gif').classList.toggle('visivel', editorImg.ehGif);
+            document.getElementById('btn-crop-original').style.display = editorImg.ehGif ? 'block' : 'none';
+            document.querySelectorAll('.editor-img-btn').forEach(b => b.classList.remove('ativo'));
+
             const url = URL.createObjectURL(file);
-            cropImage.onload = () => {
-                cropState.naturalW = cropImage.naturalWidth;
-                cropState.naturalH = cropImage.naturalHeight;
-                cropState.baseScale = CROP_VIEWPORT_SIZE / Math.min(cropState.naturalW, cropState.naturalH);
-                cropState.scale = 1; cropState.offsetX = 0; cropState.offsetY = 0;
-                cropZoom.value = 100;
-                aplicarTransformCrop();
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                editorImg.fonte = img;
+                gerarCorrigida();
+                centralizarEditor();
+                atualizarPreview();
                 document.getElementById('avatar-crop-modal').style.display = 'flex';
             };
-            cropImage.src = url;
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                showToast("Não consegui abrir essa imagem.", "error");
+            };
+            img.src = url;
         }
 
-        cropZoom.addEventListener('input', () => { cropState.scale = cropZoom.value / 100; aplicarTransformCrop(); });
-        cropViewport.addEventListener('mousedown', (e) => {
-            cropState.dragging = true;
-            cropState.startX = e.clientX - cropState.offsetX;
-            cropState.startY = e.clientY - cropState.offsetY;
-            cropViewport.style.cursor = 'grabbing';
-        });
-        window.addEventListener('mousemove', (e) => {
-            if (!cropState.dragging) return;
-            cropState.offsetX = e.clientX - cropState.startX;
-            cropState.offsetY = e.clientY - cropState.startY;
-            aplicarTransformCrop();
-        });
-        window.addEventListener('mouseup', () => { cropState.dragging = false; cropViewport.style.cursor = 'grab'; });
+        // Mantido: o código do avatar já chamava por este nome
+        function abrirCropModal(file) {
+            abrirEditorImagem(file, {
+                formato: 'circulo',
+                titulo: 'Ajustar sua foto',
+                aoConfirmar: (arquivo) => finalizarUploadAvatar(arquivo)
+            });
+        }
 
-        document.getElementById('btn-crop-cancel').addEventListener('click', () => {
+        // ---- controles ----
+        cropZoom.addEventListener('input', () => {
+            const antes = editorImg.escala;
+            editorImg.escala = cropZoom.value / 100;
+            // Dá zoom mirando o centro, não o canto de cima
+            const bm = editorImg.corrigida;
+            if (bm) {
+                const meio = TAM_PREVIEW / 2;
+                editorImg.offsetX = meio - (meio - editorImg.offsetX) * (editorImg.escala / antes);
+                editorImg.offsetY = meio - (meio - editorImg.offsetY) * (editorImg.escala / antes);
+            }
+            atualizarPreview();
+        });
+
+        document.querySelectorAll('.editor-img-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const acao = btn.getAttribute('data-acao');
+                if (acao === 'girar-esq') editorImg.giro = (editorImg.giro + 270) % 360;
+                if (acao === 'girar-dir') editorImg.giro = (editorImg.giro + 90) % 360;
+                if (acao === 'espelhar-h') editorImg.espelhoH = !editorImg.espelhoH;
+                if (acao === 'espelhar-v') editorImg.espelhoV = !editorImg.espelhoV;
+                if (acao === 'centralizar') {
+                    editorImg.giro = 0; editorImg.espelhoH = editorImg.espelhoV = false;
+                    editorImg.escala = 1; cropZoom.value = 100;
+                }
+                gerarCorrigida();
+                centralizarEditor();
+                atualizarPreview();
+
+                document.querySelector('[data-acao="espelhar-h"]').classList.toggle('ativo', editorImg.espelhoH);
+                document.querySelector('[data-acao="espelhar-v"]').classList.toggle('ativo', editorImg.espelhoV);
+            });
+        });
+
+        // Arrastar (mouse e toque)
+        function iniciarArrasto(x, y) {
+            editorImg.arrastando = true;
+            editorImg.inicioX = x - editorImg.offsetX;
+            editorImg.inicioY = y - editorImg.offsetY;
+        }
+        function moverArrasto(x, y) {
+            if (!editorImg.arrastando) return;
+            editorImg.offsetX = x - editorImg.inicioX;
+            editorImg.offsetY = y - editorImg.inicioY;
+            atualizarPreview();
+        }
+        cropViewport.addEventListener('mousedown', e => iniciarArrasto(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => moverArrasto(e.clientX, e.clientY));
+        window.addEventListener('mouseup', () => { editorImg.arrastando = false; });
+        cropViewport.addEventListener('touchstart', e => {
+            const t = e.touches[0]; iniciarArrasto(t.clientX, t.clientY);
+        }, { passive: true });
+        cropViewport.addEventListener('touchmove', e => {
+            const t = e.touches[0]; e.preventDefault(); moverArrasto(t.clientX, t.clientY);
+        }, { passive: false });
+        window.addEventListener('touchend', () => { editorImg.arrastando = false; });
+
+        // Zoom com a roda do mouse
+        cropViewport.addEventListener('wheel', e => {
+            e.preventDefault();
+            const passo = e.deltaY < 0 ? 10 : -10;
+            cropZoom.value = Math.min(400, Math.max(100, Number(cropZoom.value) + passo));
+            cropZoom.dispatchEvent(new Event('input'));
+        }, { passive: false });
+
+        function fecharEditorImagem() {
             document.getElementById('avatar-crop-modal').style.display = 'none';
+            editorImg.aoConfirmar = null;
+        }
+        document.getElementById('btn-crop-cancel').addEventListener('click', fecharEditorImagem);
+        document.getElementById('btn-crop-x').addEventListener('click', fecharEditorImagem);
+
+        // GIF: manda o arquivo original, sem passar pelo canvas (senão não anima)
+        document.getElementById('btn-crop-original').addEventListener('click', () => {
+            const cb = editorImg.aoConfirmar;
+            const original = editorImg.arquivoOriginal;
+            fecharEditorImagem();
+            if (cb) cb(original, true);
         });
 
-        async function finalizarUploadAvatar(blob) {
+        async function finalizarUploadAvatar(arquivo) {
             try {
+                showToast("Enviando sua foto...", "info");
                 const formData = new FormData();
-                formData.append('file', blob, 'avatar.png');
+                // O editor já devolve um File com nome e tipo certos (webp, ou
+                // o gif original quando a pessoa escolhe "usar como está").
+                formData.append('file', arquivo, arquivo.name || 'avatar.webp');
                 const resp = await fetch('/api/upload', { method: 'POST', body: formData });
                 const data = await resp.json().catch(() => ({}));
                 if (!resp.ok) throw new Error(data.error || 'Falha no upload');
@@ -5116,21 +5349,21 @@
                 }
                 showToast("Avatar atualizado e salvo no banco de dados!", "success");
             } catch (e) {
-                showToast("Não foi possível enviar a imagem.", "error");
+                showToast(e.message || "Não foi possível enviar a imagem.", "error");
             }
         }
 
         document.getElementById('btn-crop-confirm').addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            const totalScale = cropState.baseScale * cropState.scale;
-            const sx = -cropState.offsetX / totalScale;
-            const sy = -cropState.offsetY / totalScale;
-            const sSize = CROP_VIEWPORT_SIZE / totalScale;
-            ctx.drawImage(cropImage, sx, sy, sSize, sSize, 0, 0, 256, 256);
-            document.getElementById('avatar-crop-modal').style.display = 'none';
-            canvas.toBlob((blob) => { if (blob) finalizarUploadAvatar(blob); }, 'image/png', 0.92);
+            // Desenha na saída exatamente como está no preview, só que maior.
+            const saida = document.createElement('canvas');
+            saida.width = saida.height = TAM_SAIDA;
+            desenharEditor(saida.getContext('2d'), TAM_SAIDA);
+
+            const cb = editorImg.aoConfirmar;
+            fecharEditorImagem();
+            saida.toBlob(blob => {
+                if (blob && cb) cb(new File([blob], 'imagem.webp', { type: blob.type }), false);
+            }, 'image/webp', 0.92);
         });
 
         const avatarInput = document.getElementById('real-avatar-input');
