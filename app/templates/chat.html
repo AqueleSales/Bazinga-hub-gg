@@ -604,6 +604,20 @@
         /* ==========================================
            CALENDÁRIO DO SERVIDOR
            ========================================== */
+        /* Atalho "Eventos" no topo da lista de canais */
+        .atalho-servidor { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 2px; border-radius: 5px; color: var(--text-muted); font-size: 15px; font-weight: 500; cursor: pointer; transition: background .12s, color .12s; }
+        .atalho-servidor:hover { background: rgba(255,255,255,.05); color: var(--text-header); }
+        .atalho-servidor i { font-size: 16px; width: 18px; text-align: center; }
+        .atalho-badge { margin-left: auto; background: var(--brand-color); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+        .atalho-sep { height: 1px; background: rgba(255,255,255,.07); margin: 8px 4px 12px; }
+
+        /* Cabeçalho fixo do calendário, com o botão de voltar */
+        .cal-header { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 18px 0 22px; border-bottom: 1px solid rgba(0,0,0,.25); flex-shrink: 0; background: var(--bg-primary); position: sticky; top: 0; z-index: 10; }
+        .cal-header-titulo { display: flex; align-items: center; gap: 9px; color: var(--text-header); font-weight: 700; font-size: 16px; }
+        .cal-header-titulo i { color: var(--text-muted); }
+        .cal-fechar { width: 32px; height: 32px; border: none; background: none; color: var(--text-muted); border-radius: 7px; cursor: pointer; font-size: 17px; transition: .12s; }
+        .cal-fechar:hover { background: rgba(255,255,255,.07); color: var(--text-header); }
+
         .cal-topo { display: flex; justify-content: space-between; align-items: flex-end; padding: 24px 28px 18px; gap: 16px; flex-wrap: wrap; }
         .cal-topo h1 { color: var(--text-header); font-size: 28px; font-weight: 800; text-transform: capitalize; }
         .cal-topo p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
@@ -1130,7 +1144,7 @@
                                 <input type="text" class="chat-input" id="message-input" placeholder="Conversar em #geral" autocomplete="off">
                                 <div class="chat-input-actions">
                                     <button class="chat-input-btn" id="btn-anexar-gif" title="Enviar GIF"><i class="fa-solid fa-file-video"></i></button>
-                                    <button class="chat-input-btn" id="btn-emoji-mensagem" title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
+                                    <button class="chat-input-btn" id="btn-emoji-mensagem" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -1196,12 +1210,21 @@
                 </div>
 
             </div>
-        </main>
-
             <!-- ==========================================
                  CALENDÁRIO DO SERVIDOR (aba própria, não pop-up)
                  ========================================== -->
             <div id="calendar-content-wrapper" style="display: none; flex-direction: column; flex-grow: 1; height: 100%; overflow-y: auto;">
+                <!-- Cabeçalho fixo, com o jeito de voltar pro chat -->
+                <header class="cal-header">
+                    <div class="cal-header-titulo">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span>Eventos</span>
+                    </div>
+                    <button class="cal-fechar" onclick="fecharCalendario()" title="Voltar pro chat (Esc)">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </header>
+
                 <div class="cal-topo">
                     <div>
                         <h1 id="cal-mes-ano">Calendário</h1>
@@ -1227,6 +1250,8 @@
                     <div id="cal-lista-proximos"></div>
                 </div>
             </div>
+
+        </main>
 
         <!-- SIDEBAR DE MEMBROS DIREITA -->
         <aside class="members-sidebar" id="server-members-sidebar" style="display: none;">
@@ -1629,7 +1654,7 @@
                 <div style="display:flex; gap:12px;">
                     <div style="width:88px;">
                         <label class="bz-label">Emoji</label>
-                        <div id="event-emoji-btn" class="bz-emoji-btn">🎉</div>
+                        <div id="event-emoji-btn" class="bz-emoji-btn" data-abre-emoji>🎉</div>
                     </div>
                     <div style="flex-grow:1;">
                         <label class="bz-label">Título</label>
@@ -2680,7 +2705,14 @@
                  </h3>`;
 
             const channelsList = serverSidebar.querySelector('.channels-list');
-            channelsList.innerHTML = htmlCategoria('CANAIS DE TEXTO', 'text', souDono)
+            // Atalho de Eventos logo abaixo do nome do servidor, igual ao Discord
+            channelsList.innerHTML = `
+                <div class="atalho-servidor" id="atalho-eventos">
+                    <i class="fa-solid fa-calendar-days"></i> Eventos
+                    <span class="atalho-badge" id="atalho-eventos-badge" style="display:none;">0</span>
+                </div>
+                <div class="atalho-sep"></div>`
+                + htmlCategoria('CANAIS DE TEXTO', 'text', souDono)
                 + srv.channels.filter(c => c.type === 'text')
                     .map((c, i) => htmlDoCanal(c, i === 0, souDono)).join('')
                 + htmlCategoria('CANAIS DE VOZ', 'voice', souDono, true)
@@ -2688,6 +2720,8 @@
                     .map(c => htmlDoCanal(c, false, souDono)).join('');
 
             ligarBotoesDeCanal(channelsList);
+            channelsList.querySelector('#atalho-eventos')
+                ?.addEventListener('click', () => abrirCalendario());
 
             // Redesenho por atualizacao nao deve arrancar a pessoa da aba em
             // que ela esta (calendario, mapa, mercado...).
@@ -3225,9 +3259,17 @@
             card.addEventListener('click', () => selecionarTipoCanal(card.getAttribute('data-tipo')));
         });
 
-        // Esc fecha qualquer modal aberto
+        // Esc fecha o que estiver aberto: primeiro os modais, depois o calendário
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') fecharTodosOsModais();
+            if (e.key !== 'Escape') return;
+
+            const algumModalAberto = ['channel-modal', 'server-config-modal', 'invite-modal',
+                                      'event-modal', 'avatar-crop-modal']
+                .some(id => (document.getElementById(id) || {}).style?.display === 'flex');
+
+            if (algumModalAberto) { fecharTodosOsModais(); return; }
+            if (document.getElementById('lightbox')?.style.display === 'flex') { fecharLightbox(); return; }
+            if (typeof vistaAtual !== 'undefined' && vistaAtual === 'calendar') fecharCalendario();
         });
 
         // ==========================================
@@ -3251,6 +3293,12 @@
             switchMainView('calendar');
             socket.emit('listar_eventos', { server_id: activeMyServerId });
             desenharCalendario();
+        }
+
+        function fecharCalendario() {
+            // Volta pro servidor que estava aberto; se não tiver, pro radar.
+            if (activeMyServerId) switchMainView('server');
+            else document.getElementById('btn-home-view')?.click();
         }
 
         function mudarMesCalendario(delta) {
@@ -3473,16 +3521,11 @@
         }
 
         // Seletor de emoji do evento (reaproveita o painel que o mapa já usa)
-        document.getElementById('event-emoji-btn')?.addEventListener('click', function() {
-            abrirEmojiPicker(this, {
-                set value(v) {
-                    // O picker escreve em .value; aqui a gente intercepta e
-                    // guarda só o último emoji clicado.
-                    emojiEventoEscolhido = v.slice(-2);
-                    document.getElementById('event-emoji-btn').textContent = emojiEventoEscolhido;
-                },
-                get value() { return ''; },
-                focus() {}
+        document.getElementById('event-emoji-btn')?.addEventListener('click', function(e) {
+            e.stopPropagation();
+            abrirEmojiPicker(this, (emoji) => {
+                emojiEventoEscolhido = emoji;
+                document.getElementById('event-emoji-btn').textContent = emoji;
             });
         });
 
@@ -3699,7 +3742,12 @@
             el.addEventListener('mouseenter', () => el.style.backgroundColor = 'rgba(255,255,255,0.1)');
             el.addEventListener('mouseleave', () => el.style.backgroundColor = 'transparent');
             el.addEventListener('click', () => {
-                if (emojiTargetInput) {
+                // Dois modos: escrever num <input> ou devolver o emoji por
+                // callback (usado pelo evento do calendário, que não tem campo
+                // de texto pro emoji, só um botão).
+                if (typeof emojiTargetInput === 'function') {
+                    emojiTargetInput(el.textContent);
+                } else if (emojiTargetInput) {
                     emojiTargetInput.value += el.textContent;
                     emojiTargetInput.dispatchEvent(new Event('input', { bubbles: true }));
                     emojiTargetInput.focus();
@@ -3727,9 +3775,13 @@
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('#emoji-picker-panel') && !e.target.closest('#note-emoji-btn') && !e.target.closest('.emoji-picker-btn')) {
-                emojiPanel.style.display = 'none';
-            }
+            if (e.target.closest('#emoji-picker-panel')) return;
+            // Qualquer botão que abre o painel precisa ser ignorado aqui, senão
+            // o mesmo clique que abre já fecha. Era o que travava o emoji do
+            // evento do calendário.
+            if (e.target.closest('[data-abre-emoji]')) return;
+            if (e.target.closest('#note-emoji-btn') || e.target.closest('.emoji-picker-btn')) return;
+            emojiPanel.style.display = 'none';
         });
 
         // Modal de NOTA
