@@ -232,8 +232,9 @@ def lidar_com_mensagem(dados):
     anexo_url = dados.get('anexo_url')
     anexo_tipo = dados.get('anexo_tipo') if dados.get('anexo_tipo') in ('image', 'video') else None
     anexo_nome = (dados.get('anexo_nome') or '').strip()[:255] or None
-    if anexo_url and (str(anexo_url).startswith('blob:') or not str(anexo_url).startswith('/')):
-        anexo_url = None  # só aceita caminho do próprio site devolvido pelo upload
+    anexo_url_str = str(anexo_url) if anexo_url else ''
+    if anexo_url and not (anexo_url_str.startswith('/') or anexo_url_str.startswith('https://res.cloudinary.com/')):
+        anexo_url = None  # só aceita caminho do próprio site ou do Cloudinary, devolvidos pelo upload
     if not anexo_url:
         anexo_tipo = anexo_nome = None
 

@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app
 from sqlalchemy.exc import OperationalError, PendingRollbackError, SQLAlchemyError
 from sqlalchemy import or_, and_
-from werkzeug.utils import secure_filename
 import os
 import uuid
+import cloudinary
+import cloudinary.uploader
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
 from ..utils import com_retry, comitar_com_retry, canal_permitido
@@ -479,14 +480,22 @@ def upload_imagem():
         if tamanho > LIMITE_IMAGEM:
             return jsonify({'error': 'Imagem muito pesada (máximo 8 MB)'}), 400
 
-    pasta_uploads = os.path.join(current_app.static_folder, 'uploads')
-    os.makedirs(pasta_uploads, exist_ok=True)
+    # Vai pro Cloudinary, não pro disco local: o disco do Render free é
+    # efêmero e some a cada restart/redeploy (avatar, ícone de servidor e
+    # anexo de mensagem desapareciam sempre que o container reiniciava).
+    nome_seguro = uuid.uuid4().hex
+    try:
+        resultado = cloudinary.uploader.upload(
+            arquivo,
+            public_id=nome_seguro,
+            resource_type='video' if e_video else 'image',
+            folder='bazinga',
+        )
+    except Exception as e:
+        print(f"[ERRO UPLOAD] Falha ao enviar pro Cloudinary: {e}")
+        return jsonify({'error': f'Não foi possível enviar o arquivo: {e}'}), 500
 
-    nome_seguro = f"{uuid.uuid4().hex}.{extensao}"
-    caminho_completo = os.path.join(pasta_uploads, secure_filename(nome_seguro))
-    arquivo.save(caminho_completo)
-
-    url = url_for('static', filename=f'uploads/{nome_seguro}')
+    url = resultado.get('secure_url')
     return jsonify({'url': url, 'tipo': 'video' if e_video else 'image', 'tamanho': tamanho})
 
 
