@@ -25,7 +25,6 @@
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     html, body { height: 100%; }
 
     body {
@@ -44,7 +43,7 @@
       position: fixed;
       border-radius: 50%;
       filter: blur(90px);
-      opacity: .5;
+      opacity: .45;
       pointer-events: none;
       will-change: transform;
     }
@@ -69,7 +68,6 @@
       50%      { transform: translate(-7vmax, -5vmax) scale(1.15); }
     }
 
-    /* Grade sutil por cima, dá profundidade sem pesar */
     .grade {
       position: fixed; inset: 0; pointer-events: none;
       background-image:
@@ -80,19 +78,35 @@
       -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 78%);
     }
 
-    /* ---- Cartão ---- */
-    .cartao {
+    /* ---- Seta de voltar pra home ---- */
+    .voltar {
+      position: fixed; top: 22px; left: 22px; z-index: 30;
+      width: 44px; height: 44px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: rgba(20,21,26,.6);
+      border: 1px solid var(--borda);
+      backdrop-filter: blur(12px);
+      color: var(--texto);
+      text-decoration: none;
+      font-size: 18px;
+      transition: transform .16s cubic-bezier(.16,.84,.44,1), background .16s;
+    }
+    .voltar:hover { transform: translateX(-3px); background: rgba(255,255,255,.1); }
+
+    /* ---- Cartão principal: duas colunas + divisor ---- */
+    .porta {
       position: relative;
       width: 100%;
-      max-width: 420px;
+      max-width: 940px;
+      height: min(560px, 88vh);
+      display: flex;
       background: rgba(20, 21, 26, .72);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
       border: 1px solid var(--borda);
-      border-radius: 22px;
-      padding: 44px 36px 32px;
-      text-align: center;
+      border-radius: 26px;
       box-shadow: 0 28px 70px rgba(0,0,0,.6);
+      overflow: hidden;
       animation: subir .7s cubic-bezier(.16,.84,.44,1) both;
     }
     @keyframes subir {
@@ -100,10 +114,32 @@
       to   { opacity: 1; transform: none; }
     }
 
+    .lado {
+      flex: 1;
+      min-width: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 44px 42px;
+      text-align: center;
+      position: relative;
+    }
+    .lado-login { background: radial-gradient(120% 100% at 0% 0%, rgba(88,101,242,.14), transparent 60%); }
+    .lado-download { background: radial-gradient(120% 100% at 100% 100%, rgba(35,165,89,.14), transparent 60%); }
+
+    /* ---- Divisor "de água" entre as duas colunas ---- */
+    .divisor {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 64px; height: 100%; z-index: 5; pointer-events: none;
+    }
+    .divisor svg { width: 100%; height: 100%; display: block; animation: ondular 7s ease-in-out infinite; }
+    @keyframes ondular {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+
     .logo {
-      width: 78px; height: 78px;
-      margin: 0 auto 22px;
-      border-radius: 22px;
+      width: 70px; height: 70px;
+      margin: 0 auto 20px;
+      border-radius: 20px;
       display: grid; place-items: center;
       background: linear-gradient(140deg, var(--brand), var(--brand-2));
       box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 14px 34px rgba(88,101,242,.34);
@@ -116,17 +152,29 @@
       50%      { transform: translateY(-6px); box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 22px 46px rgba(88,101,242,.5); }
     }
 
-    h1 {
+    .icone-download {
+      width: 70px; height: 70px; margin: 0 auto 20px; border-radius: 20px;
+      display: grid; place-items: center; font-size: 30px;
+      background: linear-gradient(140deg, var(--brand-2), #1b7d45);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 14px 34px rgba(35,165,89,.34);
+      animation: pulsarVerde 4.5s ease-in-out infinite;
+    }
+    @keyframes pulsarVerde {
+      0%, 100% { transform: translateY(0); box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 14px 34px rgba(35,165,89,.34); }
+      50%      { transform: translateY(-6px); box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 22px 46px rgba(35,165,89,.5); }
+    }
+
+    h1, h2.titulo-lado {
       font-family: "Space Grotesk", Inter, sans-serif;
-      font-size: 29px; font-weight: 700; letter-spacing: -.02em;
+      font-size: 25px; font-weight: 700; letter-spacing: -.02em;
       margin-bottom: 8px;
     }
-    .sub { color: var(--texto-fraco); font-size: 15px; line-height: 1.5; margin-bottom: 30px; }
+    .sub { color: var(--texto-fraco); font-size: 14px; line-height: 1.5; margin-bottom: 26px; max-width: 300px; }
 
     /* ---- Botão Google ---- */
     .btn-google {
       display: flex; align-items: center; justify-content: center; gap: 12px;
-      width: 100%; padding: 14px 18px;
+      width: 100%; max-width: 280px; padding: 14px 18px;
       background: #fff; color: #1f1f1f;
       border: none; border-radius: 12px;
       font: 600 15px/1 Inter, sans-serif;
@@ -138,75 +186,192 @@
     .btn-google:active { transform: translateY(0); }
     .btn-google svg { width: 19px; height: 19px; flex-shrink: 0; }
 
-    .aviso {
-      margin-top: 18px;
-      font-size: 12px; line-height: 1.5;
-      color: var(--texto-fraco);
-    }
-    .aviso a { color: var(--texto-fraco); }
+    .aviso { margin-top: 16px; font-size: 11.5px; line-height: 1.5; color: var(--texto-fraco); max-width: 280px; }
 
-    /* ---- Tirinha de recursos ---- */
-    .recursos {
-      display: flex; gap: 8px; margin-top: 28px;
-      padding-top: 22px; border-top: 1px solid var(--borda);
+    /* ---- Lado do download ---- */
+    .btn-instalar {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; max-width: 280px; padding: 14px 18px;
+      background: var(--brand-2); color: #fff;
+      border: none; border-radius: 12px;
+      font: 600 15px/1 Inter, sans-serif;
+      cursor: pointer;
+      transition: transform .16s cubic-bezier(.16,.84,.44,1), box-shadow .16s, background .16s;
+      box-shadow: 0 6px 18px rgba(0,0,0,.3);
     }
-    .recurso { flex: 1; }
-    .recurso .ico { font-size: 19px; margin-bottom: 5px; display: block; }
-    .recurso span.txt { font-size: 11px; color: var(--texto-fraco); font-weight: 500; }
+    .btn-instalar:hover { transform: translateY(-2px); background: #1b7d45; }
+    .btn-instalar[hidden] { display: none; }
+
+    .btn-secundario {
+      margin-top: 12px;
+      background: rgba(255,255,255,.06); color: var(--texto);
+      border: 1px solid var(--borda); border-radius: 12px;
+      padding: 12px 16px; font: 500 13.5px Inter, sans-serif;
+      cursor: pointer; width: 100%; max-width: 280px;
+      transition: background .16s, transform .16s;
+    }
+    .btn-secundario:hover { background: rgba(255,255,255,.1); transform: translateY(-1px); }
+
+    .alt-instalar { display: flex; flex-direction: column; align-items: center; }
+    .alt-instalar[hidden] { display: none; }
+    .alt-instalar p { font-size: 12px; color: var(--texto-fraco); margin-bottom: 4px; max-width: 280px; }
+
+    .dica {
+      margin-top: 14px; font-size: 12px; line-height: 1.5; color: var(--texto-fraco);
+      max-width: 280px; display: none; background: rgba(255,255,255,.05); padding: 10px 13px; border-radius: 10px;
+    }
+    .dica.visivel { display: block; animation: subir .3s both; }
 
     .rodape {
       position: fixed; bottom: 18px; left: 0; right: 0;
       text-align: center; font-size: 12px; color: rgba(255,255,255,.26);
     }
 
-    @media (max-width: 420px) {
-      .cartao { padding: 34px 24px 26px; border-radius: 18px; }
-      h1 { font-size: 25px; }
+    @media (max-width: 820px) {
+      body { padding: 16px; overflow-y: auto; }
+      .porta { flex-direction: column; height: auto; max-height: none; }
+      .divisor { display: none; }
+      .lado { padding: 34px 26px; }
+      .lado-login::after {
+        content: ''; position: absolute; left: 12%; right: 12%; bottom: 0; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--borda), transparent);
+      }
+      .voltar { top: 14px; left: 14px; }
     }
 
-    /* Respeita quem pediu menos movimento no sistema */
     @media (prefers-reduced-motion: reduce) {
-      .aurora, .logo, .cartao { animation: none !important; }
+      .aurora, .logo, .icone-download, .porta, .divisor svg { animation: none !important; }
     }
   </style>
 </head>
 <body>
+  <a class="voltar" href="{{ url_for('main.index') }}" title="Voltar pra Bazinga Hub" aria-label="Voltar pra Bazinga Hub">←</a>
+
   <div class="aurora a1"></div>
   <div class="aurora a2"></div>
   <div class="grade"></div>
 
-  <main class="cartao">
-    <div class="logo">
-      <img src="{{ url_for('static', filename='css/img/bazinga_logo.png') }}" alt="Bazinga">
-    </div>
+  <main class="porta">
+    <section class="lado lado-login">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='css/img/bazinga_logo.png') }}" alt="Bazinga">
+      </div>
+      <h1>Entra na Bazinga</h1>
+      <p class="sub">Chat, mapa com servidores plantados e calendário de eventos. Sem cadastro — usa a sua conta do Google.</p>
 
-    <h1>Entra na Bazinga</h1>
-    <p class="sub">Chat, mapa com servidores plantados e calendário de eventos. Sem cadastro — usa a sua conta do Google.</p>
+      <a class="btn-google" href="{{ url_for('auth.login') }}">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Continuar com Google
+      </a>
 
-    <a class="btn-google" href="{{ url_for('auth.login') }}">
-      <svg viewBox="0 0 48 48" aria-hidden="true">
-        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      <p class="aviso">Ao entrar você concorda em se comportar. A gente guarda só nome, e-mail e foto do seu perfil Google.</p>
+    </section>
+
+    <div class="divisor" aria-hidden="true">
+      <svg viewBox="0 0 64 560" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gradDivisor" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5865F2"/>
+            <stop offset="1" stop-color="#23a559"/>
+          </linearGradient>
+        </defs>
+        <path d="M32 0
+                 C 58 35, 6 70, 32 105
+                 C 58 140, 6 175, 32 210
+                 C 58 245, 6 280, 32 315
+                 C 58 350, 6 385, 32 420
+                 C 58 455, 6 490, 32 525
+                 C 46 542, 20 552, 32 560
+                 L 64 560 L 64 0 Z" fill="url(#gradDivisor)" opacity=".16"/>
+        <path d="M32 0
+                 C 58 35, 6 70, 32 105
+                 C 58 140, 6 175, 32 210
+                 C 58 245, 6 280, 32 315
+                 C 58 350, 6 385, 32 420
+                 C 58 455, 6 490, 32 525
+                 C 46 542, 20 552, 32 560"
+              fill="none" stroke="url(#gradDivisor)" stroke-width="2.5" stroke-linecap="round"/>
       </svg>
-      Continuar com Google
-    </a>
-
-    <p class="aviso">Ao entrar você concorda em se comportar. A gente guarda só nome, e-mail e foto do seu perfil Google.</p>
-
-    <div class="recursos">
-      <div class="recurso"><span class="ico">💬</span><span class="txt">Chat e voz</span></div>
-      <div class="recurso"><span class="ico">🗺️</span><span class="txt">Mapa ao vivo</span></div>
-      <div class="recurso"><span class="ico">📅</span><span class="txt">Eventos</span></div>
     </div>
+
+    <section class="lado lado-download">
+      <div class="icone-download">📲</div>
+      <h2 class="titulo-lado">Leve a Bazinga com você</h2>
+      <p class="sub">Instale como app: sem barra de navegador, ícone na tela inicial, abre rapidinho.</p>
+
+      <button class="btn-instalar" id="btn-instalar" hidden>Instalar o app</button>
+
+      <div class="alt-instalar" id="alt-instalar">
+        <p>Seu navegador ainda não liberou instalar por aqui.</p>
+        <button class="btn-secundario" id="btn-copiar-link">Copiar link pra abrir no Chrome</button>
+      </div>
+
+      <div class="dica" id="dica-link"></div>
+    </section>
   </main>
 
   <p class="rodape">Bazinga Hub</p>
 
   <script>
-    // Registra o service worker aqui já: assim, quando a pessoa chegar na
-    // tela seguinte, o navegador já sabe que o site é instalável.
+    // ---- Instalar como app (PWA) ----
+    // O navegador dispara 'beforeinstallprompt' só quando o site é mesmo
+    // instalável (manifesto + service worker + https). Por isso o botão nasce
+    // escondido: mostrar um "instalar" que não instala nada seria mentira.
+    let promptInstalacao = null;
+    const btnInstalar = document.getElementById('btn-instalar');
+    const altInstalar = document.getElementById('alt-instalar');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      promptInstalacao = e;
+      btnInstalar.hidden = false;
+      altInstalar.hidden = true;
+    });
+
+    btnInstalar.addEventListener('click', async () => {
+      if (!promptInstalacao) return;
+      promptInstalacao.prompt();
+      const { outcome } = await promptInstalacao.userChoice;
+      promptInstalacao = null;
+      if (outcome === 'accepted') btnInstalar.hidden = true;
+    });
+
+    // Já rodando instalado: não faz sentido oferecer nada disso
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      btnInstalar.hidden = true;
+      altInstalar.hidden = true;
+    }
+
+    // ---- Fallback: copiar link / abrir no Chrome no Android ----
+    const ehAndroid = /Android/i.test(navigator.userAgent);
+    const URL_APP = "{{ url_for('main.index', _external=True) }}";
+
+    document.getElementById('btn-copiar-link').addEventListener('click', async () => {
+      const dica = document.getElementById('dica-link');
+
+      if (ehAndroid) {
+        const semEsquema = URL_APP.replace(/^https?:\/\//, '');
+        window.location.href =
+          `intent://${semEsquema}#Intent;scheme=https;package=com.android.chrome;end`;
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(URL_APP);
+        dica.textContent = 'Link copiado! Abre o Chrome e cola na barra de endereço pra instalar de lá.';
+      } catch {
+        dica.textContent = 'Copia este endereço e cola no Chrome: ' + URL_APP;
+      }
+      dica.classList.add('visivel');
+    });
+
+    // Registra o service worker aqui já: assim, quando a pessoa entrar,
+    // o navegador já sabe que o site é instalável.
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }

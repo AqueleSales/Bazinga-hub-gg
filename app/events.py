@@ -1,10 +1,11 @@
 from flask import session
 from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_, and_
 from datetime import timedelta
 from . import socketio
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
-                     GeoNote, MapServer, Reaction, Invite, Event)
+                     GeoNote, MapServer, Reaction, Invite, Event, Friendship)
 from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite)
 
@@ -34,6 +35,49 @@ def sala_servidor(server_id):
     """Sala de todos os membros conectados de um Servidor. Usada para coisas
     que só interessam a quem está no servidor (ex: posição no radar)."""
     return f"srv_{int(server_id)}"
+
+
+# ==========================================
+# PRESENÇA: quem está com socket aberto agora
+# ------------------------------------------------------------
+# Em memória, não banco - é efêmero por natureza (reinicia zerado a cada
+# deploy, o que é aceitável). Conta sockets por pessoa em vez de um booleano
+# pra não "piscar" offline quando ela só fecha uma aba/dispositivo e continua
+# conectada em outro.
+# ==========================================
+usuarios_conectados = {}
+
+
+def esta_online(person_id):
+    return usuarios_conectados.get(person_id, 0) > 0
+
+
+def amigos_de(pessoa):
+    """Lista de Person que são amizade aceita com `pessoa` (nos dois sentidos -
+    quem pediu e quem recebeu viram "amigos" iguais depois do aceite)."""
+    aceitas = Friendship.query.filter(
+        Friendship.status == 'accepted',
+        or_(Friendship.requester_id == pessoa.id, Friendship.addressee_id == pessoa.id)
+    ).all()
+    ids = [f.addressee_id if f.requester_id == pessoa.id else f.requester_id for f in aceitas]
+    if not ids:
+        return []
+    return Person.query.filter(Person.id.in_(ids)).all()
+
+
+def sao_amigos(id1, id2):
+    return Friendship.query.filter(
+        Friendship.status == 'accepted',
+        or_(and_(Friendship.requester_id == id1, Friendship.addressee_id == id2),
+            and_(Friendship.requester_id == id2, Friendship.addressee_id == id1))
+    ).first() is not None
+
+
+def sala_dm(id1, id2):
+    """Sala de call 1-a-1, sempre com o menor id primeiro pra ficar igual dos
+    dois lados sem precisar combinar quem liga pra quem."""
+    a, b = sorted([int(id1), int(id2)])
+    return f"dm_{a}_{b}"
 
 
 def hora_formatada(ts):
@@ -111,9 +155,43 @@ def handle_connect():
             join_room(sala_servidor(srv.id))
 
         emit('carregar_meus_servidores', servidores)
+
+        # Só avisa quem divide servidor com ela quando é o PRIMEIRO socket
+        # dela (outra aba/dispositivo já conectado não deve gerar aviso de novo).
+        era_offline = not esta_online(usuario.id)
+        usuarios_conectados[usuario.id] = usuarios_conectados.get(usuario.id, 0) + 1
+        amigos = amigos_de(usuario)
+        if era_offline:
+            for srv in usuario.servers:
+                emit('usuario_ficou_online', {'usuario_id': usuario.id}, to=sala_servidor(srv.id), include_self=False)
+            for amigo in amigos:
+                emit('usuario_ficou_online', {'usuario_id': usuario.id}, to=sala_pessoal(amigo.id))
+
+        # Snapshot de quem já tá online agora, pra corrigir a lista de amigos
+        # que a página carregou "todo mundo offline" por padrão.
+        emit('status_amigos_ao_conectar', {'online_ids': [a.id for a in amigos if esta_online(a.id)]})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO CONNECT] {e}")
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    usuario = usuario_logado()
+    if not usuario or usuario.id not in usuarios_conectados:
+        return
+
+    try:
+        usuarios_conectados[usuario.id] -= 1
+        if usuarios_conectados[usuario.id] <= 0:
+            del usuarios_conectados[usuario.id]
+            for srv in usuario.servers:
+                emit('usuario_ficou_offline', {'usuario_id': usuario.id}, to=sala_servidor(srv.id), include_self=False)
+            for amigo in amigos_de(usuario):
+                emit('usuario_ficou_offline', {'usuario_id': usuario.id}, to=sala_pessoal(amigo.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO DISCONNECT] {e}")
 
 
 @socketio.on('entrar_canal')
@@ -328,19 +406,98 @@ def lidar_com_exclusao(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível apagar a mensagem: {e}'})
 
 
+@socketio.on('fixar_mensagem')
+def fixar_mensagem(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        msg = com_retry(lambda: Message.query.get(dados.get('msg_id')))
+        if not msg:
+            return
+
+        canal = Channel.query.get(msg.channel_id)
+        if not pode_ver_canal(usuario, canal):
+            return
+
+        nova_fixada = not msg.is_pinned
+
+        def preparar():
+            msg.is_pinned = nova_fixada
+
+        comitar_com_retry(preparar)
+        emit('mensagem_fixada', {'msg_id': msg.id, 'fixada': nova_fixada}, to=str(msg.channel_id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO FIXAR MENSAGEM] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível fixar a mensagem: {e}'})
+
+
+@socketio.on('listar_fixadas')
+def listar_fixadas(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        canal_id = dados.get('canal_id')
+        canal = Channel.query.get(canal_id)
+        if not canal or not pode_ver_canal(usuario, canal):
+            return
+
+        fixadas = com_retry(lambda: Message.query.filter_by(
+            channel_id=canal_id, is_pinned=True).order_by(Message.timestamp.desc()).all())
+
+        emit('fixadas_do_canal', {
+            'canal_id': canal_id,
+            'mensagens': [{
+                'id': m.id, 'autor': m.author.name, 'avatar': m.author.avatar,
+                'texto': m.text or '', 'anexo_url': m.attachment_url, 'anexo_tipo': m.attachment_type
+            } for m in fixadas]
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO LISTAR FIXADAS] {e}")
+
+
 @socketio.on('entrar_call')
 def lidar_entrar_call(dados):
     usuario = usuario_logado()
     if not usuario:
         return
 
-    canal = canal_permitido(usuario, dados.get('canal_id'))
-    if not canal:
-        emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal de voz.'})
-        return
-
     peer_id = dados.get('peer_id')
     if not peer_id:
+        return
+
+    canal_id_bruto = dados.get('canal_id')
+
+    # Chamada 1-a-1 por DM: a "sala" é "dm_<menorId>_<maiorId>", não um
+    # Channel de verdade - checa amizade em vez de canal_permitido.
+    if isinstance(canal_id_bruto, str) and canal_id_bruto.startswith('dm_'):
+        try:
+            _, id_a, id_b = canal_id_bruto.split('_')
+            id_a, id_b = int(id_a), int(id_b)
+        except ValueError:
+            return
+        if usuario.id not in (id_a, id_b):
+            return
+        outro_id = id_b if usuario.id == id_a else id_a
+        if not sao_amigos(usuario.id, outro_id):
+            return
+
+        sala_call = f"voz_{canal_id_bruto}"
+        join_room(sala_call)
+        emit('novo_usuario_call', {
+            'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
+            'canal_id': canal_id_bruto
+        }, to=sala_call, include_self=False)
+        return
+
+    canal = canal_permitido(usuario, canal_id_bruto)
+    if not canal:
+        emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal de voz.'})
         return
 
     sala_call = f"voz_{canal.id}"
@@ -364,6 +521,100 @@ def lidar_sair_call(dados):
     sala_call = f"voz_{canal_id}"
     leave_room(sala_call)
     emit('usuario_saiu_call', {'peer_id': peer_id}, to=sala_call, include_self=False)
+
+
+# ==========================================
+# CHAMADA 1-A-1 POR DM (toque + aceitar, igual Discord)
+# ------------------------------------------------------------
+# Só o "toque": avisa o amigo e espera ele aceitar/recusar. A call em si (depois
+# de aceita) reaproveita entrar_call/sair_call de cima, com canal_id no formato
+# "dm_<menorId>_<maiorId>" (ver sala_dm()).
+# ==========================================
+@socketio.on('chamar_amigo')
+def chamar_amigo(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        amigo_id = int(dados.get('amigo_id'))
+    except (TypeError, ValueError):
+        return
+
+    tipo = dados.get('tipo') if dados.get('tipo') in ('voz', 'video') else 'voz'
+
+    if not sao_amigos(usuario.id, amigo_id):
+        emit('erro_bazinga', {'msg': 'Vocês precisam ser amigos pra poder se ligar.'})
+        return
+
+    emit('chamada_recebida', {
+        'de_id': usuario.id, 'de_nome': usuario.name, 'de_avatar': usuario.avatar, 'tipo': tipo
+    }, to=sala_pessoal(amigo_id))
+
+
+@socketio.on('aceitar_chamada')
+def aceitar_chamada(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        de_id = int(dados.get('de_id'))
+    except (TypeError, ValueError):
+        return
+
+    sala = sala_dm(usuario.id, de_id)
+    # Avisa os dois lados (quem aceitou também precisa do nome da sala pra entrar).
+    emit('chamada_aceita', {'com_id': de_id, 'sala': sala}, include_self=True)
+    emit('chamada_aceita', {'com_id': usuario.id, 'sala': sala}, to=sala_pessoal(de_id))
+
+
+@socketio.on('recusar_chamada')
+def recusar_chamada(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        de_id = int(dados.get('de_id'))
+    except (TypeError, ValueError):
+        return
+    emit('chamada_recusada', {'por_nome': usuario.name}, to=sala_pessoal(de_id))
+
+
+@socketio.on('cancelar_chamada')
+def cancelar_chamada(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        para_id = int(dados.get('para_id'))
+    except (TypeError, ValueError):
+        return
+    emit('chamada_cancelada', {}, to=sala_pessoal(para_id))
+
+
+# Só avisa quem mais está na call - não grava nada no servidor. A gravação em
+# si acontece 100% no navegador de quem clicou (ver iniciarGravacao no chat.html).
+@socketio.on('iniciar_gravacao')
+def lidar_iniciar_gravacao(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    canal = canal_permitido(usuario, dados.get('canal_id'))
+    if not canal:
+        return
+    emit('usuario_gravando', {'usuario': usuario.name}, to=f"voz_{canal.id}", include_self=False)
+
+
+@socketio.on('parar_gravacao')
+def lidar_parar_gravacao(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    canal = canal_permitido(usuario, dados.get('canal_id'))
+    if not canal:
+        return
+    emit('usuario_parou_gravacao', {'usuario': usuario.name}, to=f"voz_{canal.id}", include_self=False)
 
 
 # ==========================================
@@ -487,7 +738,9 @@ def listar_membros_servidor(dados):
             'server_id': srv.id,
             'membros': [{
                 'id': m.id, 'nome': m.name, 'avatar': m.avatar,
-                'dono': m.id == srv.owner_id
+                'dono': m.id == srv.owner_id,
+                'status': m.status or 'online',
+                'online': esta_online(m.id)
             } for m in srv.members]
         })
     except Exception as e:
@@ -659,6 +912,78 @@ def apagar_servidor(dados):
         db.session.rollback()
         print(f"[ERRO APAGAR SERVIDOR] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível apagar o servidor: {e}'})
+
+
+@socketio.on('expulsar_membro')
+def expulsar_membro(dados):
+    """Tira alguém do servidor. Só o dono, e o dono não pode se expulsar."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        if not srv:
+            emit('erro_bazinga', {'msg': 'Só o dono pode remover membros.'})
+            return
+
+        alvo = com_retry(lambda: Person.query.get(int(dados.get('person_id'))))
+        if not alvo or alvo not in srv.members:
+            return
+        if alvo.id == srv.owner_id:
+            emit('erro_bazinga', {'msg': 'O dono não pode se remover do próprio servidor.'})
+            return
+
+        def preparar():
+            srv.members.remove(alvo)
+            # Também sai dos canais privados em que estava liberado
+            for canal in srv.channels:
+                if canal.is_private and alvo in canal.allowed_members:
+                    canal.allowed_members.remove(alvo)
+
+        comitar_com_retry(preparar)
+
+        # Some da sidebar de quem foi removido, na hora
+        emit('servidor_apagado', {'server_id': srv.id}, to=sala_pessoal(alvo.id))
+        emit('membro_removido', {'server_id': srv.id, 'person_id': alvo.id},
+             to=sala_servidor(srv.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO EXPULSAR MEMBRO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível remover o membro: {e}'})
+
+
+@socketio.on('transferir_posse')
+def transferir_posse(dados):
+    """Passa a posse do servidor pra outro membro."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        if not srv:
+            emit('erro_bazinga', {'msg': 'Só o dono pode passar a posse.'})
+            return
+
+        novo_dono = com_retry(lambda: Person.query.get(int(dados.get('person_id'))))
+        if not novo_dono or novo_dono not in srv.members:
+            emit('erro_bazinga', {'msg': 'Essa pessoa não está no servidor.'})
+            return
+        if novo_dono.id == srv.owner_id:
+            return
+
+        def preparar():
+            srv.owner_id = novo_dono.id
+
+        comitar_com_retry(preparar)
+        avisar_servidor(srv)
+        emit('posse_transferida', {'server_id': srv.id, 'novo_dono': novo_dono.name},
+             to=sala_servidor(srv.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO TRANSFERIR POSSE] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível passar a posse: {e}'})
 
 
 @socketio.on('sair_do_servidor')
@@ -964,6 +1289,10 @@ def atualizar_perfil(dados):
 
     try:
         def preparar():
+            if 'name' in dados:
+                nome_novo = (dados.get('name') or '').strip()[:100]
+                if nome_novo:
+                    usuario.name = nome_novo
             if 'custom_status' in dados:
                 usuario.custom_status = (dados.get('custom_status') or '').strip()[:128] or None
             if 'bio' in dados:
@@ -977,6 +1306,7 @@ def atualizar_perfil(dados):
 
         comitar_com_retry(preparar)
         emit('perfil_atualizado', {
+            'name': usuario.name,
             'custom_status': usuario.custom_status,
             'bio': usuario.bio,
             'banner_color': usuario.banner_color,
@@ -1007,6 +1337,144 @@ def mudar_status(dados):
         db.session.rollback()
         print(f"[ERRO MUDAR STATUS] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível mudar seu status: {e}'})
+
+
+# ==========================================
+# AMIZADES DE VERDADE
+# ------------------------------------------------------------
+# Antes /chat mostrava TODO MUNDO que existe no banco como "amigo" e o botão
+# de pedido só dava um toast de sucesso sem salvar nada. Agora é uma
+# Friendship (pending -> accepted) de verdade.
+# ==========================================
+def pessoa_para_json_amigo(p):
+    return {'id': p.id, 'nome': p.name, 'avatar': p.avatar,
+            'status': p.status or 'online', 'online': esta_online(p.id)}
+
+
+@socketio.on('enviar_pedido_amizade')
+def enviar_pedido_amizade(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    busca = (dados.get('busca') or '').strip()
+    if not busca:
+        return
+
+    try:
+        alvo = com_retry(lambda: Person.query.filter(
+            or_(Person.name == busca, Person.email == busca)
+        ).first())
+
+        if not alvo:
+            emit('erro_bazinga', {'msg': f'Não achei ninguém com "{busca}" na Bazinga.'})
+            return
+        if alvo.id == usuario.id:
+            emit('erro_bazinga', {'msg': 'Você não pode adicionar a si mesmo.'})
+            return
+
+        existente = com_retry(lambda: Friendship.query.filter(
+            or_(and_(Friendship.requester_id == usuario.id, Friendship.addressee_id == alvo.id),
+                and_(Friendship.requester_id == alvo.id, Friendship.addressee_id == usuario.id))
+        ).first())
+        if existente:
+            if existente.status == 'accepted':
+                emit('erro_bazinga', {'msg': f'Você já é amigo de {alvo.name}.'})
+            else:
+                emit('erro_bazinga', {'msg': f'Já existe um pedido pendente com {alvo.name}.'})
+            return
+
+        def preparar():
+            db.session.add(Friendship(requester_id=usuario.id, addressee_id=alvo.id, status='pending'))
+
+        comitar_com_retry(preparar)
+
+        emit('pedido_amizade_enviado', {'para': alvo.name})
+        emit('pedido_amizade_recebido', {
+            'de_id': usuario.id, 'de_nome': usuario.name, 'de_avatar': usuario.avatar
+        }, to=sala_pessoal(alvo.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO PEDIDO AMIZADE] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível enviar o pedido: {e}'})
+
+
+@socketio.on('listar_pedidos_pendentes')
+def listar_pedidos_pendentes(dados=None):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        pedidos = com_retry(lambda: Friendship.query.filter_by(
+            addressee_id=usuario.id, status='pending').all())
+        emit('pedidos_pendentes', {
+            'pedidos': [{'id': f.id, 'de_id': f.requester_id,
+                        'de_nome': f.requester.name, 'de_avatar': f.requester.avatar} for f in pedidos]
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO LISTAR PEDIDOS] {e}")
+
+
+@socketio.on('responder_pedido_amizade')
+def responder_pedido_amizade(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        pedido = com_retry(lambda: Friendship.query.get(dados.get('pedido_id')))
+        if not pedido or pedido.addressee_id != usuario.id or pedido.status != 'pending':
+            return
+
+        aceitar = bool(dados.get('aceitar'))
+        solicitante_id = pedido.requester_id
+        solicitante_nome = pedido.requester.name
+
+        if aceitar:
+            def preparar():
+                pedido.status = 'accepted'
+            comitar_com_retry(preparar)
+            emit('pedido_amizade_respondido', {'aceito': True, 'amigo': pessoa_para_json_amigo(pedido.requester)})
+            emit('pedido_amizade_respondido', {'aceito': True, 'amigo': pessoa_para_json_amigo(usuario)},
+                 to=sala_pessoal(solicitante_id))
+        else:
+            def preparar():
+                db.session.delete(pedido)
+            comitar_com_retry(preparar)
+            emit('pedido_amizade_respondido', {'aceito': False})
+
+        print(f"[AMIZADE] {usuario.name} {'aceitou' if aceitar else 'recusou'} o pedido de {solicitante_nome}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO RESPONDER PEDIDO] {e}")
+
+
+@socketio.on('remover_amigo')
+def remover_amigo(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        amigo_id = int(dados.get('amigo_id'))
+        pedido = com_retry(lambda: Friendship.query.filter(
+            Friendship.status == 'accepted',
+            or_(and_(Friendship.requester_id == usuario.id, Friendship.addressee_id == amigo_id),
+                and_(Friendship.requester_id == amigo_id, Friendship.addressee_id == usuario.id))
+        ).first())
+        if not pedido:
+            return
+
+        def preparar():
+            db.session.delete(pedido)
+
+        comitar_com_retry(preparar)
+        emit('amigo_removido', {'amigo_id': amigo_id})
+        emit('amigo_removido', {'amigo_id': usuario.id}, to=sala_pessoal(amigo_id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO REMOVER AMIGO] {e}")
 
 
 # ==========================================

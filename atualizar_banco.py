@@ -96,6 +96,19 @@ def atualizar_banco():
                 db.session.rollback()
                 print("⚠️ Tabela 'channel_members' não encontrada - canal privado não vai funcionar.")
 
+            # 12. Mensagens fixadas
+            add_column_se_nao_existir("message", "is_pinned BOOLEAN DEFAULT FALSE")
+
+            # 13. Amizades de verdade (tabela nova - o db.create_all() acima já
+            # cria; isso aqui só avisa se faltar).
+            try:
+                db.session.execute(text("SELECT 1 FROM friendship LIMIT 1"))
+                db.session.commit()
+                print("✅ Tabela 'friendship' (pedidos de amizade) presente.")
+            except Exception:
+                db.session.rollback()
+                print("⚠️ Tabela 'friendship' não encontrada - sistema de amigos não vai funcionar.")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)
