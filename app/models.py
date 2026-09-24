@@ -142,6 +142,7 @@ class Message(db.Model):
     attachment_name = db.Column(db.String(255), nullable=True)
 
     edited_at = db.Column(db.DateTime, nullable=True)
+    is_pinned = db.Column(db.Boolean, default=False)
 
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'), nullable=False)
@@ -219,6 +220,27 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=br_now)
 
     creator = db.relationship('Person', foreign_keys=[creator_id])
+
+
+class Friendship(db.Model):
+    """Uma linha por par (quem pediu -> quem recebeu). Aceita vira amizade nos
+    dois sentidos - quem consulta procura o outro id tanto em requester_id
+    quanto em addressee_id (ver amigos_de() em events.py)."""
+    __tablename__ = 'friendship'
+    id = db.Column(db.Integer, primary_key=True)
+
+    requester_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    addressee_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted
+
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    requester = db.relationship('Person', foreign_keys=[requester_id])
+    addressee = db.relationship('Person', foreign_keys=[addressee_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('requester_id', 'addressee_id', name='uq_pedido_unico'),
+    )
 
 
 class DirectMessage(db.Model):

@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
-                      GeoNote, MapServer, Server, Invite, Reaction, br_now, db)
+                      GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
 from ..utils import com_retry, comitar_com_retry, canal_permitido
 
 main_bp = Blueprint("main", __name__)
@@ -93,10 +93,12 @@ def index():
 # ==========================================
 @main_bp.route("/entrar")
 def entrar():
+    # Já logado (veio da home ou de uma sessão anterior): entra direto no
+    # Bazingacord, sem passar por essa página de bloqueio.
     if usuario_da_sessao():
-        return redirect(url_for('main.abrir'))
+        return redirect(url_for('main.chat'))
     # Marca que o login começou por aqui, para o callback do Google saber
-    # que a pessoa deve cair em /abrir e não na home.
+    # que a pessoa deve cair direto no chat.
     session['veio_do_entrar'] = True
     return render_template("entrar.html")
 
@@ -150,7 +152,9 @@ def service_worker():
 @main_bp.route("/chat")
 def chat():
     if 'user_id' not in session:
-        return redirect(url_for('main.index'))
+        # Sem login e tentando entrar direto no chat: cai na página de
+        # bloqueio (/entrar), não silenciosamente de volta pra home.
+        return redirect(url_for('main.entrar'))
 
     try:
         def carregar():
@@ -170,8 +174,14 @@ def chat():
                 for m in messages:
                     m.formatada = formatar_data(m.timestamp)
 
-            # Busca todas as pessoas no banco (exceto você) para simular sua lista de amigos
-            amigos = Person.query.filter(Person.id != usuario_atual.id).all()
+            # Amizades aceitas de verdade (antes isso pegava TODO MUNDO do banco
+            # e chamava de "amigo" - só decoração, não vinha de pedido nenhum).
+            aceitas = Friendship.query.filter(
+                Friendship.status == 'accepted',
+                or_(Friendship.requester_id == usuario_atual.id, Friendship.addressee_id == usuario_atual.id)
+            ).all()
+            ids_amigos = [f.addressee_id if f.requester_id == usuario_atual.id else f.requester_id for f in aceitas]
+            amigos = Person.query.filter(Person.id.in_(ids_amigos)).all() if ids_amigos else []
 
             return usuario_atual, text_channels, voice_channels, default_channel, messages, amigos
 
@@ -241,6 +251,7 @@ def pegar_mensagens(canal_id):
             'anexo_tipo': msg.attachment_type,
             'anexo_nome': msg.attachment_name,
             'editada': msg.edited_at is not None,
+            'fixada': bool(msg.is_pinned),
             'reacoes': list(reacoes_por_msg.get(msg.id, {}).values()),
             'hora': formatar_data(msg.timestamp),
             'cor': msg.author.role.color if msg.author.role else '#23a559'

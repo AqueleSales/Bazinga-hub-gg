@@ -79,9 +79,9 @@ def callback():
         return redirect(url_for('main.entrar_por_link', code=codigo))
 
     # Quem entrou pela página /entrar não passa pela home da Bazinga:
-    # cai direto na tela de "abrir o app".
+    # cai direto no Bazingacord.
     if session.pop('veio_do_entrar', None):
-        return redirect(url_for('main.abrir'))
+        return redirect(url_for('main.chat'))
 
     return redirect(url_for('main.index'))
 
@@ -89,4 +89,6 @@ def callback():
 @auth_bp.route('/logout')
 def logout():
     session.pop('user_id', None)
-    return redirect(url_for('main.index'))
+    # Volta pra página de bloqueio, não pra home: é de lá que se entra de
+    # novo no Bazingacord.
+    return redirect(url_for('main.entrar'))
