@@ -8,6 +8,8 @@ import cloudinary.uploader
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
 from ..utils import com_retry, comitar_com_retry, canal_permitido
+from .. import socketio
+from ..events import sala_servidor
 
 main_bp = Blueprint("main", __name__)
 
@@ -208,8 +210,20 @@ def chat():
         voice_channels=voice_channels,
         default_channel=default_channel,
         messages=messages,
-        amigos=amigos
+        amigos=amigos,
+        membro_desde_texto=membro_desde_texto(usuario_atual.created_at)
     )
+
+
+MESES_ABREVIADOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+
+def membro_desde_texto(criado_em):
+    """'Set. 2026', ou None se a conta é antiga e não tem essa data guardada."""
+    if not criado_em:
+        return None
+    return f"{MESES_ABREVIADOS[criado_em.month - 1]}. {criado_em.year}"
 
 
 @main_bp.route("/api/mensagens/<int:canal_id>")
@@ -527,6 +541,13 @@ def entrar_por_link(code):
                 convite.uses = (convite.uses or 0) + 1
 
             comitar_com_retry(preparar)
+            # Rota HTTP pura (sem contexto de socket): o navegador de quem
+            # entrou ainda nem conectou no socket nesse momento (só conecta
+            # depois do redirect pra /chat), então não tem "self" pra excluir.
+            socketio.emit('membro_entrou_servidor', {
+                'server_id': servidor.id,
+                'membro': {'id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar}
+            }, to=sala_servidor(servidor.id))
             session['aviso_convite'] = f'Você entrou em {servidor.name}!'
         else:
             session['aviso_convite'] = f'Você já estava em {servidor.name}.'

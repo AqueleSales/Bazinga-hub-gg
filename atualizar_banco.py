@@ -109,6 +109,11 @@ def atualizar_banco():
                 db.session.rollback()
                 print("⚠️ Tabela 'friendship' não encontrada - sistema de amigos não vai funcionar.")
 
+            # 14. "Membro desde" de verdade no card de perfil - antes era um
+            # texto fixo ("Set. 2026") igual pra todo mundo. Conta antiga
+            # fica NULL (não dá pra saber a data real dela).
+            add_column_se_nao_existir("person", "created_at TIMESTAMP")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)
