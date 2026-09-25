@@ -5,6 +5,7 @@ import os
 import uuid
 import cloudinary
 import cloudinary.uploader
+import requests
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
 from ..utils import com_retry, comitar_com_retry, canal_permitido
@@ -224,6 +225,49 @@ def membro_desde_texto(criado_em):
     if not criado_em:
         return None
     return f"{MESES_ABREVIADOS[criado_em.month - 1]}. {criado_em.year}"
+
+
+GIPHY_API_KEY = os.getenv('GIPHY_API_KEY')
+
+
+@main_bp.route("/api/gifs")
+def buscar_gifs():
+    """Busca de GIF pro compose bar (painel ao lado do emoji), igual ao
+    Discord - a key fica só aqui no servidor, o navegador nunca vê ela."""
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    if not GIPHY_API_KEY:
+        return jsonify({'error': 'Busca de GIF não configurada (falta GIPHY_API_KEY no servidor).'}), 503
+
+    busca = (request.args.get('q') or '').strip()[:100]
+    endpoint = 'search' if busca else 'trending'
+    params = {'api_key': GIPHY_API_KEY, 'limit': 24, 'rating': 'pg-13', 'lang': 'pt'}
+    if busca:
+        params['q'] = busca
+
+    try:
+        resp = requests.get(f'https://api.giphy.com/v1/gifs/{endpoint}', params=params, timeout=6)
+        resp.raise_for_status()
+        dados = resp.json().get('data', [])
+    except Exception as e:
+        print(f"[ERRO BUSCA GIF] {e}")
+        return jsonify({'error': 'Não consegui buscar GIFs agora, tenta de novo.'}), 502
+
+    # Só o que a gente usa - a resposta do Giphy vem enorme (dezenas de
+    # variações de tamanho, links de embed, estatística) e não interessa nada
+    # disso pro cliente.
+    gifs = []
+    for g in dados:
+        imagens = g.get('images', {})
+        preview = imagens.get('fixed_width_small', {}).get('url')
+        envio = imagens.get('fixed_height', {}).get('url')
+        if preview and envio:
+            gifs.append({'id': g.get('id'), 'preview': preview, 'url': envio,
+                         'nome': (g.get('title') or 'GIF')[:255]})
+
+    return jsonify(gifs)
 
 
 @main_bp.route("/api/mensagens/<int:canal_id>")

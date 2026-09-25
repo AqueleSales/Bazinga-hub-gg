@@ -1346,7 +1346,7 @@
                                 <input type="file" id="input-anexo" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none;">
                                 <input type="text" class="chat-input" id="message-input" placeholder="Conversar em #geral" autocomplete="off">
                                 <div class="chat-input-actions">
-                                    <button class="chat-input-btn" id="btn-anexar-gif" title="Enviar GIF"><i class="fa-solid fa-file-video"></i></button>
+                                    <button class="chat-input-btn" id="btn-anexar-gif" title="Buscar GIF" style="font-size: 11px; font-weight: 800; letter-spacing: .3px;">GIF</button>
                                     <button class="chat-input-btn" id="btn-emoji-mensagem" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
                                 </div>
                             </div>
@@ -2049,6 +2049,14 @@
 
     <!-- Painel de Emojis (reutilizado no "Deixar Nota" e no Status Personalizado) -->
     <div id="emoji-picker-panel" style="position: fixed; display: none; flex-wrap: wrap; gap: 2px; width: 260px; max-height: 220px; overflow-y: auto; background-color: var(--bg-quaternary); border-radius: 8px; padding: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); z-index: 6100; border: 1px solid var(--bg-tertiary);"></div>
+
+    <!-- Painel de busca de GIF (Giphy) -->
+    <div id="gif-picker-panel" style="position: fixed; display: none; flex-direction: column; width: 320px; max-height: 380px; background-color: var(--bg-quaternary); border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); z-index: 6100; border: 1px solid var(--bg-tertiary); overflow: hidden;">
+        <div style="padding: 8px;">
+            <input type="text" id="gif-picker-search" class="discord-input" placeholder="Buscar GIF..." autocomplete="off" style="width: 100%;">
+        </div>
+        <div id="gif-picker-grid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 0 8px 8px;"></div>
+    </div>
 
     <!-- Menu de Status -->
     <div id="status-picker-menu">
@@ -6076,13 +6084,82 @@
         document.getElementById('btn-anexar')?.addEventListener('click', () => {
             document.getElementById('input-anexo').click();
         });
-        document.getElementById('btn-anexar-gif')?.addEventListener('click', () => {
-            const input = document.getElementById('input-anexo');
-            input.setAttribute('accept', 'image/gif');
-            input.click();
-            // Volta a aceitar tudo depois de abrir o seletor
-            setTimeout(() => input.setAttribute('accept', 'image/*,video/mp4,video/webm,video/quicktime'), 500);
+
+        // ==========================================
+        // BUSCA DE GIF (Giphy) - igual ao painel de emoji, mas com busca
+        // ------------------------------------------------------------
+        // O botão "GIF" abria um seletor de arquivo do PC filtrado por GIF -
+        // redundante com o "+" de anexo geral (que já aceita image/gif).
+        // Virou busca de verdade, igual ao Discord.
+        // ==========================================
+        const gifPanel = document.getElementById('gif-picker-panel');
+        const gifSearchInput = document.getElementById('gif-picker-search');
+        const gifGrid = document.getElementById('gif-picker-grid');
+        let gifBuscaTimeout = null;
+
+        async function carregarGifs(busca) {
+            gifGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">Carregando...</div>';
+            try {
+                const resp = await fetch(`/api/gifs?q=${encodeURIComponent(busca)}`);
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok || !Array.isArray(data)) {
+                    const motivo = (data && data.error) || 'Não consegui buscar GIFs.';
+                    gifGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">${esc(motivo)}</div>`;
+                    return;
+                }
+                if (!data.length) {
+                    gifGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">Nada encontrado.</div>';
+                    return;
+                }
+                gifGrid.innerHTML = data.map(g => `<img src="${escUrl(g.preview)}" data-url="${escUrl(g.url)}" data-nome="${esc(g.nome)}" title="${esc(g.nome)}" loading="lazy" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:4px; cursor:pointer;">`).join('');
+            } catch (e) {
+                gifGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">Erro de conexão.</div>';
+            }
+        }
+
+        function abrirGifPicker(btnEl) {
+            const rect = btnEl.getBoundingClientRect();
+            const ALTURA_PAINEL = 380;
+            gifPanel.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 330))}px`;
+            const espacoAbaixo = window.innerHeight - rect.bottom - 8;
+            gifPanel.style.top = (espacoAbaixo < ALTURA_PAINEL && rect.top > ALTURA_PAINEL)
+                ? `${rect.top - ALTURA_PAINEL - 8}px`
+                : `${rect.bottom + 8}px`;
+            gifPanel.style.display = 'flex';
+            gifSearchInput.value = '';
+            gifSearchInput.focus();
+            carregarGifs('');
+        }
+
+        document.getElementById('btn-anexar-gif')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (gifPanel.style.display === 'flex') { gifPanel.style.display = 'none'; return; }
+            abrirGifPicker(e.currentTarget);
         });
+
+        gifSearchInput.addEventListener('input', () => {
+            clearTimeout(gifBuscaTimeout);
+            gifBuscaTimeout = setTimeout(() => carregarGifs(gifSearchInput.value.trim()), 400);
+        });
+
+        gifGrid.addEventListener('click', (e) => {
+            const img = e.target.closest('img[data-url]');
+            if (!img || !currentChannelId) return;
+            const url = img.getAttribute('data-url');
+            const nome = img.getAttribute('data-nome') || 'gif.gif';
+            const tempId = enviarMensagemOtimista('', { anexo_url: url, anexo_tipo: 'image', anexo_nome: nome });
+            socket.emit('enviar_mensagem', {
+                canal_id: currentChannelId, texto: '',
+                anexo_url: url, anexo_tipo: 'image', anexo_nome: nome, temp_id: tempId
+            });
+            gifPanel.style.display = 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#gif-picker-panel') || e.target.closest('#btn-anexar-gif')) return;
+            gifPanel.style.display = 'none';
+        });
+
         document.getElementById('input-anexo')?.addEventListener('change', function(e) {
             adicionarAnexos(e.target.files);
             e.target.value = '';
