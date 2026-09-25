@@ -59,6 +59,9 @@ class Person(db.Model):
     custom_status = db.Column(db.String(128), nullable=True)
     banner_color = db.Column(db.String(50), nullable=True)
     status = db.Column(db.String(20), default="online")  # online, idle, dnd, invisible
+    # Conta antiga (de antes dessa coluna existir) fica None de propósito -
+    # não dá pra inventar uma data de quando a pessoa entrou de verdade.
+    created_at = db.Column(db.DateTime, default=br_now, nullable=True)
 
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=True)
 

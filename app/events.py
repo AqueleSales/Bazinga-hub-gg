@@ -1,8 +1,9 @@
-from flask import session
+from flask import session, request
 from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_, and_
 from datetime import timedelta
+import re
 from . import socketio
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship)
@@ -35,6 +36,49 @@ def sala_servidor(server_id):
     """Sala de todos os membros conectados de um Servidor. Usada para coisas
     que só interessam a quem está no servidor (ex: posição no radar)."""
     return f"srv_{int(server_id)}"
+
+
+_TEMP_ID_VALIDO = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
+
+
+# Quem está numa call agora, pra mostrar uma prévia (tipo Discord) de quem já
+# está na call ANTES de entrar - antes só quem já tinha entrado descobria
+# quem mais estava lá, e só depois de entrar. Chave é a mesma string usada em
+# sala_call ("<canal_id>" ou "dm_<menorId>_<maiorId>").
+participantes_call = {}
+# sid -> (chave_da_call, peer_id), só pra limpar certo se a conexão cair sem
+# passar por sair_call (fechar o navegador manda sair_call via beforeunload,
+# mas queda de rede não).
+_call_por_sid = {}
+
+
+def _entrar_em_call(chave, peer_id, usuario):
+    lista = participantes_call.setdefault(chave, [])
+    lista[:] = [p for p in lista if p['peer_id'] != peer_id]
+    lista.append({'peer_id': peer_id, 'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar})
+    _call_por_sid[request.sid] = (chave, peer_id)
+
+
+def _sair_de_call(chave, peer_id):
+    lista = participantes_call.get(chave)
+    if lista is not None:
+        lista[:] = [p for p in lista if p['peer_id'] != peer_id]
+        if not lista:
+            participantes_call.pop(chave, None)
+    _call_por_sid.pop(request.sid, None)
+
+
+def temp_id_seguro(dados):
+    """Valida o temp_id que o cliente manda pra reconciliar a bolha otimista.
+
+    Nunca ecoa de volta um valor cru do cliente pro resto do canal - um
+    temp_id malicioso (aspas, colchetes) quebraria o querySelector no
+    receber_mensagem de todo mundo que está no canal, não só de quem mandou.
+    """
+    valor = dados.get('temp_id')
+    if isinstance(valor, str) and _TEMP_ID_VALIDO.match(valor):
+        return valor
+    return None
 
 
 # ==========================================
@@ -177,6 +221,32 @@ def handle_connect():
 
 @socketio.on('disconnect')
 def handle_disconnect():
+    # Queda de rede/aba fechada à força não passa por sair_call (só o
+    # beforeunload do navegador manda isso, e ele nem sempre roda a tempo) -
+    # sem isso, quem caiu ficava "fantasma" na prévia de participantes da
+    # call pro resto da sessão de todo mundo.
+    call_info = _call_por_sid.pop(request.sid, None)
+    if call_info:
+        chave, peer_id = call_info
+        sala_call = f"voz_{chave}"
+        leave_room(sala_call)
+        _sair_de_call(chave, peer_id)
+        emit('usuario_saiu_call', {'peer_id': peer_id}, to=sala_call, include_self=False)
+        try:
+            if isinstance(chave, str) and chave.startswith('dm_'):
+                _, id_a, id_b = chave.split('_')
+                payload = {'canal_id': chave, 'participantes': participantes_call.get(chave, [])}
+                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_a)))
+                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_b)))
+            else:
+                canal = com_retry(lambda: Channel.query.get(int(chave)))
+                if canal and canal.server_id:
+                    emit('participantes_call_mudou',
+                         {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
+                         to=sala_servidor(canal.server_id))
+        except Exception as e:
+            print(f"[ERRO LIMPAR CALL NO DISCONNECT] {e}")
+
     usuario = usuario_logado()
     if not usuario or usuario.id not in usuarios_conectados:
         return
@@ -229,12 +299,19 @@ def lidar_com_mensagem(dados):
     texto = (dados.get('texto') or '').strip()[:2000]
 
     # Anexo (foto/vídeo/gif) já subiu por /api/upload e chega aqui só como URL.
+    # GIF escolhido no painel de busca (/api/gifs) manda direto o link do
+    # CDN do Giphy, sem passar pelo upload - por isso o domínio deles também
+    # entra na lista de permitidos.
     anexo_url = dados.get('anexo_url')
     anexo_tipo = dados.get('anexo_tipo') if dados.get('anexo_tipo') in ('image', 'video') else None
     anexo_nome = (dados.get('anexo_nome') or '').strip()[:255] or None
     anexo_url_str = str(anexo_url) if anexo_url else ''
-    if anexo_url and not (anexo_url_str.startswith('/') or anexo_url_str.startswith('https://res.cloudinary.com/')):
-        anexo_url = None  # só aceita caminho do próprio site ou do Cloudinary, devolvidos pelo upload
+    if anexo_url and not (
+        anexo_url_str.startswith('/')
+        or anexo_url_str.startswith('https://res.cloudinary.com/')
+        or re.match(r'^https://media\d*\.giphy\.com/', anexo_url_str)
+    ):
+        anexo_url = None  # só aceita caminho do próprio site, Cloudinary ou Giphy
     if not anexo_url:
         anexo_tipo = anexo_nome = None
 
@@ -269,7 +346,10 @@ def lidar_com_mensagem(dados):
         'anexo_tipo': nova_msg.attachment_type,
         'anexo_nome': nova_msg.attachment_name,
         'hora': hora_formatada(nova_msg.timestamp),
-        'cor': cor
+        'cor': cor,
+        # Ecoa de volta pra quem mandou trocar a bolha otimista pela real
+        # sem duplicar (ver enviarMensagemOtimista() no chat.html).
+        'temp_id': temp_id_seguro(dados)
     }, to=str(canal.id))
 
 
@@ -490,10 +570,14 @@ def lidar_entrar_call(dados):
 
         sala_call = f"voz_{canal_id_bruto}"
         join_room(sala_call)
+        _entrar_em_call(canal_id_bruto, peer_id, usuario)
         emit('novo_usuario_call', {
             'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
             'canal_id': canal_id_bruto
         }, to=sala_call, include_self=False)
+        payload = {'canal_id': canal_id_bruto, 'participantes': participantes_call.get(canal_id_bruto, [])}
+        emit('participantes_call_mudou', payload, to=sala_pessoal(usuario.id))
+        emit('participantes_call_mudou', payload, to=sala_pessoal(outro_id))
         return
 
     canal = canal_permitido(usuario, canal_id_bruto)
@@ -501,15 +585,51 @@ def lidar_entrar_call(dados):
         emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal de voz.'})
         return
 
-    sala_call = f"voz_{canal.id}"
+    chave = str(canal.id)
+    sala_call = f"voz_{chave}"
     join_room(sala_call)
+    _entrar_em_call(chave, peer_id, usuario)
 
     emit('novo_usuario_call', {
         'peer_id': peer_id,
         'usuario': usuario.name,
         'avatar': usuario.avatar,
-        'canal_id': str(canal.id)
+        'canal_id': chave
     }, to=sala_call, include_self=False)
+
+    # Pra quem está com o servidor aberto mas ainda não entrou na call -
+    # é isso que dá a prévia de "fulano já está na call" antes de entrar.
+    if canal.server_id:
+        emit('participantes_call_mudou',
+             {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
+             to=sala_servidor(canal.server_id))
+
+
+@socketio.on('listar_participantes_call')
+def listar_participantes_call(dados):
+    """Prévia sob demanda: chamado ao abrir um servidor/DM, sem esperar
+    alguém entrar ou sair de uma call pra saber quem já está nela."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    canal_id_bruto = dados.get('canal_id')
+    if isinstance(canal_id_bruto, str) and canal_id_bruto.startswith('dm_'):
+        try:
+            _, id_a, id_b = canal_id_bruto.split('_')
+            id_a, id_b = int(id_a), int(id_b)
+        except ValueError:
+            return
+        if usuario.id not in (id_a, id_b):
+            return
+        chave = canal_id_bruto
+    else:
+        canal = canal_permitido(usuario, canal_id_bruto)
+        if not canal:
+            return
+        chave = str(canal.id)
+
+    emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, [])})
 
 
 @socketio.on('sair_call')
@@ -519,9 +639,26 @@ def lidar_sair_call(dados):
     if canal_id is None:
         return
 
-    sala_call = f"voz_{canal_id}"
+    chave = str(canal_id) if not (isinstance(canal_id, str) and canal_id.startswith('dm_')) else canal_id
+    sala_call = f"voz_{chave}"
     leave_room(sala_call)
+    _sair_de_call(chave, peer_id)
     emit('usuario_saiu_call', {'peer_id': peer_id}, to=sala_call, include_self=False)
+
+    try:
+        if isinstance(chave, str) and chave.startswith('dm_'):
+            _, id_a, id_b = chave.split('_')
+            payload = {'canal_id': chave, 'participantes': participantes_call.get(chave, [])}
+            emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_a)))
+            emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_b)))
+        else:
+            canal = com_retry(lambda: Channel.query.get(canal_id))
+            if canal and canal.server_id:
+                emit('participantes_call_mudou',
+                     {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
+                     to=sala_servidor(canal.server_id))
+    except Exception as e:
+        print(f"[ERRO SAIR CALL] {e}")
 
 
 # ==========================================
@@ -1313,6 +1450,14 @@ def atualizar_perfil(dados):
             'banner_color': usuario.banner_color,
             'avatar': usuario.avatar
         })
+
+        # Nome/avatar aparecem em telas de quem não é "eu": lista de membros
+        # de cada servidor. Sem isso, só quem editou via as próprias
+        # (várias abas dele) via perfil_atualizado; o resto via F5.
+        if 'name' in dados or dados.get('avatar'):
+            payload_publico = {'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar}
+            for srv in usuario.servers:
+                emit('perfil_membro_mudou', payload_publico, to=sala_servidor(srv.id), include_self=False)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ATUALIZAR PERFIL] {e}")
@@ -1675,6 +1820,10 @@ def entrar_por_convite(dados):
         join_room(sala_servidor(srv.id))
         emit('servidor_discord_criado', servidor_para_json(srv, usuario))
         emit('entrou_por_convite', {'server_id': srv.id, 'server_name': srv.name})
+        emit('membro_entrou_servidor', {
+            'server_id': srv.id,
+            'membro': {'id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar}
+        }, to=sala_servidor(srv.id), include_self=False)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ENTRAR POR CONVITE] {e}")

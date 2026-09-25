@@ -18,6 +18,10 @@
          recebe o link do servidor) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+    <!-- Emoji desenhado (vetor), igual ao Discord/Twitter, em vez de depender
+         da fonte de emoji do sistema operacional de cada um -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" crossorigin="anonymous"></script>
+
     <style>
         /* ==========================================================================
            1. VARIÁVEIS E BASE (Cores exatas do Discord e Temas Dinâmicos)
@@ -335,6 +339,12 @@
         .message.nova { animation: msgEntra .18s cubic-bezier(.16,.84,.44,1) both; }
         @media (prefers-reduced-motion: reduce) { .message.nova { animation: none; } }
 
+        /* Mensagem otimista: aparece na hora, opaca até o servidor confirmar */
+        .message.pendente { opacity: .55; }
+        .message.falha-envio { opacity: .75; }
+        .message.falha-envio .message-text { color: var(--red-color); }
+        .message.falha-envio::after { content: "Falha ao enviar"; display: block; font-size: 11px; color: var(--red-color); margin-top: 2px; }
+
         .chat-input-wrapper { padding: 0 16px 24px 16px; flex-shrink: 0;}
         .chat-input-container { background-color: var(--bg-secondary); border-radius: 8px; padding: 0 16px; display: flex; align-items: center; min-height: 44px; gap: 8px;}
         .chat-input-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
@@ -389,6 +399,15 @@
         .video-card.focused { grid-column: 1 / -1; height: 60vh; max-height: none; width: 100%; order: -10; }
         .video-grid.focused-mode .video-card:not(.focused) { height: 140px; flex: none; aspect-ratio: 16/9; }
         .video-card.is-speaking { box-shadow: 0 0 0 3px var(--green-color) !important; order: -1; }
+
+        .call-switch-overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(0,0,0,0.78); color: #fff; font-size: 16px; font-weight: 600; z-index: 50; }
+        .call-switch-overlay.active { display: flex; }
+        .call-switch-overlay i { font-size: 32px; color: var(--brand-color); }
+        /* Foco manual sempre manda na posição - sem isso, toda vez que a
+           pessoa em foco falava, o "order:-1" de is-speaking (mesma
+           especificidade, declarado depois) vencia o "order:-10" do foco e
+           ela saía/voltava do topo a cada pausa na fala. */
+        .video-card.focused.is-speaking { order: -10; }
 
         .video-card video { width: 100%; height: 100%; object-fit: contain; background-color: #000; }
         .video-avatar { width: 80px; height: 80px; border-radius: 50%; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; transition: 0.3s; overflow: hidden;}
@@ -921,6 +940,7 @@
 
         .color-picker-wrapper { display: flex; gap: 12px; align-items: center; }
         .color-preview-box { width: 60px; height: 40px; border-radius: 4px; border: 2px solid var(--bg-quaternary); cursor: pointer; transition: 0.2s; background: var(--nitro-gradient); box-shadow: 0 4px 8px rgba(0,0,0,0.3);}
+        .color-preview-box.selected { border-color: #fff; }
         .color-preview-box:hover { transform: scale(1.05); }
 
         .custom-status-row { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -931,6 +951,15 @@
         .nitro-preview-card { background-color: var(--bg-quaternary); border-radius: 8px; overflow: hidden; border: 1px solid var(--bg-tertiary); box-shadow: 0 8px 24px rgba(0,0,0,0.6); position: relative; }
         @keyframes bg-spin { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .npc-banner { height: 120px; background-color: var(--brand-color); position: relative; transition: background 0.3s ease;}
+        /* Faixa animada: o "background-size: 400% 400%" já existia espalhado
+           pelo código (fallback de quando não tinha cor escolhida) mas nunca
+           tinha animation nenhuma - só ficava parado, um gradiente grande
+           parado. Reaproveita o @keyframes bg-spin que já existe aí em cima. */
+        .npc-banner.banner-animado, .account-banner.banner-animado {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab) !important;
+            background-size: 400% 400%;
+            animation: bg-spin 8s ease infinite;
+        }
         .npc-avatar-wrapper { position: absolute; top: 76px; left: 16px; width: 84px; height: 84px; border-radius: 50%; background-color: var(--bg-quaternary); display: flex; justify-content: center; align-items: center; padding: 6px; z-index: 2;}
         .npc-avatar-inner { width: 100%; height: 100%; border-radius: 50%; background-color: var(--green-color); display: flex; justify-content: center; align-items: center; font-size: 28px; font-weight: bold; color: white; overflow: hidden; position: relative; }
         .npc-avatar-inner img { width: 100%; height: 100%; object-fit: cover; }
@@ -1265,6 +1294,12 @@
                             </div>
                         </div>
 
+                        <!-- Trocar de call: fica por cima em vez de fechar pro chat e reabrir -->
+                        <div class="call-switch-overlay" id="call-switch-overlay">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                            <span id="call-switch-overlay-texto">Mudando de call...</span>
+                        </div>
+
                         <!-- Aviso de clipe automático encontrado -->
                         <div class="clip-alerta" id="clip-alerta" title="Achei um momento pra clipar">
                             <i class="fa-solid fa-exclamation"></i>
@@ -1311,7 +1346,7 @@
                                 <input type="file" id="input-anexo" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none;">
                                 <input type="text" class="chat-input" id="message-input" placeholder="Conversar em #geral" autocomplete="off">
                                 <div class="chat-input-actions">
-                                    <button class="chat-input-btn" id="btn-anexar-gif" title="Enviar GIF"><i class="fa-solid fa-file-video"></i></button>
+                                    <button class="chat-input-btn" id="btn-anexar-gif" title="Buscar GIF" style="font-size: 11px; font-weight: 800; letter-spacing: .3px;">GIF</button>
                                     <button class="chat-input-btn" id="btn-emoji-mensagem" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
                                 </div>
                             </div>
@@ -2015,6 +2050,14 @@
     <!-- Painel de Emojis (reutilizado no "Deixar Nota" e no Status Personalizado) -->
     <div id="emoji-picker-panel" style="position: fixed; display: none; flex-wrap: wrap; gap: 2px; width: 260px; max-height: 220px; overflow-y: auto; background-color: var(--bg-quaternary); border-radius: 8px; padding: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); z-index: 6100; border: 1px solid var(--bg-tertiary);"></div>
 
+    <!-- Painel de busca de GIF (Giphy) -->
+    <div id="gif-picker-panel" style="position: fixed; display: none; flex-direction: column; width: 320px; max-height: 380px; background-color: var(--bg-quaternary); border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); z-index: 6100; border: 1px solid var(--bg-tertiary); overflow: hidden;">
+        <div style="padding: 8px;">
+            <input type="text" id="gif-picker-search" class="discord-input" placeholder="Buscar GIF..." autocomplete="off" style="width: 100%;">
+        </div>
+        <div id="gif-picker-grid" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 0 8px 8px;"></div>
+    </div>
+
     <!-- Menu de Status -->
     <div id="status-picker-menu">
         <div class="status-option" data-status="online" data-text="Disponível"><div class="status-icon" style="background: var(--green-color);"></div> Disponível</div>
@@ -2028,7 +2071,7 @@
     <!-- Mini Perfil Popout (Ao clicar no nome) -->
     <div class="user-popout-overlay" id="user-popout-overlay"></div>
     <div class="user-popout" id="user-popout">
-        <div class="npc-banner" id="popout-banner-bg" style="background: {{ usuario_atual.banner_color or 'linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)' }}; background-size: 400% 400%;"></div>
+        <div class="npc-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="popout-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
         <div class="popout-header">
             <div class="npc-avatar-wrapper" style="top: -45px; width: 92px; height: 92px; border: 6px solid var(--bg-quaternary);">
                 <div class="npc-avatar-inner" id="popout-avatar-container"></div>
@@ -2049,22 +2092,11 @@
             <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Sobre mim</div>
             <div style="color: var(--text-normal); font-size: 14px; line-height: 1.4; margin-bottom: 16px;" id="popout-bio-text">{{ usuario_atual.bio or "Use as configurações para me editar!" }}</div>
 
+            {% if membro_desde_texto %}
             <div class="npc-divider"></div>
             <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Membro desde</div>
-            <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">Set. 2026</div>
-
-            <div class="widget-card" style="margin-top: 12px;">
-                <div class="widget-title"><i class="fa-solid fa-gamepad"></i> Jogando no momento</div>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <div style="width: 60px; height: 60px; border-radius: 8px; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-size: 24px;">
-                        <i class="fa-solid fa-gamepad"></i>
-                    </div>
-                    <div>
-                        <div style="font-weight: 700; color: var(--text-header); font-size: 14px;">Marvel Rivals</div>
-                        <div style="color: var(--text-normal); font-size: 13px;">Season 9.5: Gold</div>
-                    </div>
-                </div>
-            </div>
+            <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">{{ membro_desde_texto }}</div>
+            {% endif %}
         </div>
     </div>
 
@@ -2240,15 +2272,16 @@
             <div class="modal-content" style="align-items: center; gap: 14px;">
                 <div id="crop-viewport">
                     <canvas id="crop-canvas" width="260" height="260"></canvas>
+                    <img id="gif-preview-img" style="display:none; width:260px; height:260px; object-fit:cover;">
                     <div id="crop-mascara"></div>
                 </div>
 
                 <div id="editor-img-aviso-gif">
                     <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span>Isso é um GIF. Se você editar, ele vira imagem parada. Dá pra usar do jeito que está.</span>
+                    <span>GIF anima aqui do jeito que vai ficar - ainda não dá pra cortar mantendo a animação, então ele vai inteiro (sem corte).</span>
                 </div>
 
-                <div class="editor-img-barra">
+                <div class="editor-img-barra" id="editor-img-controles">
                     <button class="editor-img-btn" data-acao="girar-esq" title="Girar à esquerda"><i class="fa-solid fa-rotate-left"></i></button>
                     <button class="editor-img-btn" data-acao="girar-dir" title="Girar à direita"><i class="fa-solid fa-rotate-right"></i></button>
                     <div class="editor-img-sep"></div>
@@ -2258,15 +2291,14 @@
                     <button class="editor-img-btn" data-acao="centralizar" title="Voltar ao original"><i class="fa-solid fa-arrows-rotate"></i></button>
                 </div>
 
-                <div style="width: 100%; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 100%; display: flex; align-items: center; gap: 12px;" id="editor-img-zoom-row">
                     <i class="fa-solid fa-magnifying-glass-minus" style="color: var(--text-muted);"></i>
                     <input type="range" class="discord-slider" id="crop-zoom" min="100" max="400" value="100" style="flex: 1;">
                     <i class="fa-solid fa-magnifying-glass-plus" style="color: var(--text-muted);"></i>
                 </div>
             </div>
-            <div class="modal-footer" style="justify-content: space-between;">
-                <button class="btn-cancel" id="btn-crop-original" style="display:none;">Usar como está</button>
-                <div style="display:flex; gap:12px; margin-left:auto;">
+            <div class="modal-footer" style="justify-content: flex-end;">
+                <div style="display:flex; gap:12px;">
                     <button class="btn-cancel" id="btn-crop-cancel">Cancelar</button>
                     <button class="btn btn-primary" id="btn-crop-confirm">Usar imagem</button>
                 </div>
@@ -2304,7 +2336,7 @@
                 <div class="set-section" id="set-conta">
                     <h2 class="set-title">Minha Conta</h2>
                     <div class="account-card">
-                        <div class="account-banner" id="conta-banner-bg" style="background: {{ usuario_atual.banner_color or 'linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)' }}; background-size: 400% 400%;"></div>
+                        <div class="account-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="conta-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
                         <div class="account-info-row">
                             <div class="account-avatar-large" style="background-color: var(--green-color); overflow: hidden;" id="conta-avatar-img">
                                 <!-- Preenchido pelo JS -->
@@ -2358,8 +2390,9 @@
                                 <span class="control-label">Cor da faixa</span>
                                 <div class="color-picker-wrapper">
                                     <input type="color" id="banner-color-input" value="{{ usuario_atual.banner_color or '#e91e63' }}" style="display: none;">
-                                    <div class="color-preview-box" id="btn-open-color" title="Alterar cor do banner" style="background: {{ usuario_atual.banner_color or 'var(--nitro-gradient)' }};"></div>
-                                    <span style="font-size: 12px; color: var(--text-muted);">Escolha a cor de fundo do seu cartão de perfil.</span>
+                                    <div class="color-preview-box" id="btn-open-color" title="Alterar cor do banner" style="background: {{ usuario_atual.banner_color or '#e91e63' }};"></div>
+                                    <div class="color-preview-box banner-animado{{ ' selected' if not usuario_atual.banner_color else '' }}" id="btn-banner-animado" title="Usar faixa animada" style="cursor:pointer;"></div>
+                                    <span style="font-size: 12px; color: var(--text-muted);">Escolha a cor de fundo do seu cartão de perfil, ou deixe animada.</span>
                                 </div>
                             </div>
 
@@ -2386,7 +2419,7 @@
                             <span class="control-label">Pré-visualização</span>
 
                             <div class="nitro-preview-card">
-                                <div class="npc-banner" id="preview-banner-bg" style="background: {{ usuario_atual.banner_color or 'linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)' }}; background-size: 400% 400%;"></div>
+                                <div class="npc-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="preview-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
 
                                 <div class="npc-avatar-wrapper">
                                     <div class="npc-avatar-inner" id="preview-avatar-container"></div>
@@ -2413,21 +2446,10 @@
                                     <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Sobre mim</div>
                                     <div style="color: var(--text-normal); font-size: 14px; line-height: 1.4; margin-bottom: 16px;" id="preview-bio-text">{{ usuario_atual.bio or "Use as configurações para me editar!" }}</div>
 
+                                    {% if membro_desde_texto %}
                                     <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Membro desde</div>
-                                    <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">Hoje</div>
-
-                                    <div class="widget-card">
-                                        <div class="widget-title"><i class="fa-solid fa-gamepad"></i> Jogando no momento</div>
-                                        <div style="display: flex; gap: 12px; align-items: center;">
-                                            <div style="flex: 1;">
-                                                <div style="font-weight: 700; color: var(--text-header); font-size: 16px;">Marvel Rivals</div>
-                                                <div style="color: var(--text-muted); font-size: 12px;">Season 9.5: Gold <i class="fa-solid fa-medal" style="color: #f1c40f;"></i></div>
-                                            </div>
-                                            <div style="width: 50px; height: 50px; border-radius: 8px; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; color: white; font-size: 20px;">
-                                                <i class="fa-solid fa-gamepad"></i>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">{{ membro_desde_texto }}</div>
+                                    {% endif %}
 
                                 </div>
                             </div>
@@ -2540,7 +2562,7 @@
         const currentUserId = parseInt(rawUserId.replace(/[^0-9]/g, '')) || 0;
 
         const rawUserAvatar = "{{ usuario_atual.avatar or '' }}";
-        const currentUserAvatar = rawUserAvatar.includes("{" + "{") ? "" : rawUserAvatar;
+        let currentUserAvatar = rawUserAvatar.includes("{" + "{") ? "" : rawUserAvatar;
 
         const inicialHTML = currentUserAvatar ? `<img src="${currentUserAvatar}" style="width: 100%; height: 100%; object-fit: cover;">` : `<span style="font-size: 18px; color: white; font-weight: bold;">${currentUserName[0].toUpperCase()}</span>`;
 
@@ -2557,6 +2579,11 @@
         // trocar de avatar DENTRO da call - por isso a "bolha azul".
         document.getElementById('my-avatar-placeholder').innerHTML = inicialHTML;
         document.getElementById('my-avatar-placeholder').style.backgroundColor = currentUserAvatar ? 'transparent' : 'var(--brand-color)';
+
+        // Status/bio já chegam prontos do Jinja no primeiro carregamento -
+        // sem isso, só ficavam bonitos (vetor) depois da primeira edição.
+        ['popout-custom-status', 'preview-custom-status', 'popout-bio-text', 'preview-bio-text', 'bottom-status-text']
+            .forEach(id => emojificar(document.getElementById(id)));
 
         document.getElementById('preview-name-text').innerText = currentUserName;
         document.getElementById('preview-username-text').innerText = currentUserName.toLowerCase().replace(/\s/g, '.');
@@ -2597,6 +2624,14 @@
         // Para valores que entram dentro de um onclick="..." inline.
         function escJs(valor) {
             return esc(JSON.stringify(valor === undefined ? null : valor));
+        }
+
+        // Troca emoji de texto (que depende da fonte do sistema operacional
+        // de cada um, e varia de aparência entre Windows/Mac/Android/Linux)
+        // por SVG desenhado igual em qualquer navegador - chamar depois de
+        // colocar texto de usuário na tela (mensagem, status, bio, reação).
+        function emojificar(el) {
+            if (window.twemoji && el) twemoji.parse(el, { folder: 'svg', ext: '.svg' });
         }
 
         // --- SISTEMA DE TOASTS E MODAIS GENÉRICOS (Substitui Alert/Prompt/Confirm) ---
@@ -2990,6 +3025,17 @@
             showToast(dados.msg || "Ocorreu um erro.", "error");
         });
 
+        socket.on('membro_entrou_servidor', function(dados) {
+            // Alguém entrou no servidor (link ou código): pede a lista de novo
+            // pra quem já está com esse servidor aberto, sem precisar de F5.
+            const srv = meUserServers.find(s => s.id === dados.server_id);
+            if (!srv) return;
+            socket.emit('listar_membros_servidor', { server_id: dados.server_id });
+            if (dados.membro && dados.membro.nome) {
+                showToast(`${dados.membro.nome} entrou em ${srv.name}`, 'info');
+            }
+        });
+
         // ==========================================
         // SERVIDOR: sidebar de canais, menu e permissões
         // ==========================================
@@ -3146,6 +3192,12 @@
 
             bindChannelListeners();
             socket.emit('listar_membros_servidor', { server_id: id });
+
+            // Prévia de quem já está em cada call de voz, tipo Discord - sem
+            // isso só descobria quem estava numa call depois de entrar nela.
+            srv.channels.filter(c => c.type === 'voice').forEach(c => {
+                socket.emit('listar_participantes_call', { canal_id: Number(c.id) });
+            });
 
             // Entra de fato no primeiro canal de texto do servidor (junta a sala
             // do socket). Num simples redesenho, mantem o canal que ja estava
@@ -3341,7 +3393,7 @@
                         <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background-color:${avatarSeguro ? 'transparent' : 'var(--brand-color)'};display:flex;justify-content:center;align-items:center;">${avatarHtml}</div>
                         <div class="status-indicator ${statusClasse}"></div>
                     </div>
-                    <span style="color:#fff;font-weight:500;">${esc(m.nome)}${m.dono ? ' 👑' : ''}</span>
+                    <span style="color:#fff;font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
                 </div>`;
             };
 
@@ -4678,8 +4730,19 @@
         function abrirEmojiPicker(btnEl, inputEl) {
             emojiTargetInput = inputEl;
             const rect = btnEl.getBoundingClientRect();
-            emojiPanel.style.left = `${Math.min(rect.left, window.innerWidth - 270)}px`;
-            emojiPanel.style.top = `${rect.bottom + 8}px`;
+            const ALTURA_PAINEL = 220;
+            emojiPanel.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 270))}px`;
+
+            // O botão de emoji da barra de mensagem fica perto do rodapé -
+            // abrir sempre "pra baixo" jogava o painel pra fora da tela
+            // (cortado, sem dar pra rolar até o fim). Abre pra cima quando
+            // não sobra altura suficiente embaixo.
+            const espacoAbaixo = window.innerHeight - rect.bottom - 8;
+            if (espacoAbaixo < ALTURA_PAINEL && rect.top > ALTURA_PAINEL) {
+                emojiPanel.style.top = `${rect.top - ALTURA_PAINEL - 8}px`;
+            } else {
+                emojiPanel.style.top = `${rect.bottom + 8}px`;
+            }
             emojiPanel.style.display = 'flex';
         }
 
@@ -5304,6 +5367,16 @@
 
             // --- EVENTOS DO RADAR (GPS) ---
             socket.on('posicao_amigo_atualizada', function(dados) {
+                // Eco da minha própria posição vindo de outra aba/dispositivo
+                // logado na mesma conta: nunca vira um pino de "amigo" sobre
+                // mim mesmo (senão minha localização "pisca" como se fosse de
+                // outra pessoa).
+                if (Number(dados.usuario_id) === Number(currentUserId)) return;
+                // Mapa ainda não terminou de inicializar (abre ~200ms depois
+                // do carregamento) - o próximo ping de posição corrige sozinho
+                // em poucos segundos; sem essa guarda o marcador nem chegava a
+                // ser criado e o amigo sumia do mapa pro resto da sessão.
+                if (!bazingaMap) return;
                 if (!mapMarkers[dados.usuario_id]) {
                     const avatarSeguro = escUrl(dados.avatar);
                     const avatarHtml = avatarSeguro
@@ -5523,6 +5596,7 @@
             div.setAttribute('data-sou-autor', souAutor ? '1' : '0');
             if (extras.anexo_url) div.setAttribute('data-anexo', extras.anexo_url);
             if (extras.fixada) div.classList.add('fixada');
+            if (extras.pendente) div.classList.add('pendente');
 
             // Tudo abaixo vem de outro usuário: sempre passar por esc()/escUrl().
             const avatarSeguro = escUrl(avatar);
@@ -5574,6 +5648,7 @@
             // histórico isso viraria 50 animações ao mesmo tempo.
             if (extras.animar) div.classList.add('nova');
 
+            emojificar(div);
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
             return div;
@@ -5631,6 +5706,36 @@
             }
         }
 
+        // Formata igual ao `hora_formatada()` do servidor (app/events.py), só pra
+        // não haver salto visual entre a bolha otimista e a que volta confirmada.
+        function horaAgoraCliente() {
+            const d = new Date();
+            return `Hoje às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function gerarTempId() {
+            return 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        }
+
+        // Mostra a mensagem na hora, antes da confirmação do servidor - a
+        // demora sentida antes (esperar o round-trip pra ver a própria
+        // mensagem) era o maior motivo de "chat lento". Se o servidor não
+        // confirmar em 8s (erro/queda), marca como falha em vez de sumir.
+        function enviarMensagemOtimista(texto, extrasAnexo) {
+            const tempId = gerarTempId();
+            const container = document.getElementById('messages-container');
+            appendMessageGrouped(container, tempId, currentUserName, currentUserAvatar, texto,
+                horaAgoraCliente(), 'var(--brand-color)',
+                { ...extrasAnexo, autor_id: currentUserId, animar: true, pendente: true });
+
+            setTimeout(() => {
+                const el = document.querySelector(`.message.pendente[data-msg-id="${tempId}"]`);
+                if (el) { el.classList.remove('pendente'); el.classList.add('falha-envio'); }
+            }, 8000);
+
+            return tempId;
+        }
+
         function enviarMensagemDoCanal() {
             const input = document.getElementById('message-input');
             const texto = input.value.trim();
@@ -5645,15 +5750,20 @@
             if (!texto && prontos.length === 0) return;
 
             if (prontos.length === 0) {
-                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: texto });
+                const tempId = enviarMensagemOtimista(texto, {});
+                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: texto, temp_id: tempId });
             } else {
                 // O texto vai junto do primeiro anexo; os outros vão sozinhos,
                 // um por mensagem (é assim que o modelo guarda).
                 prontos.forEach((a, i) => {
+                    const textoDoAnexo = i === 0 ? texto : '';
+                    const tempId = enviarMensagemOtimista(textoDoAnexo,
+                        { anexo_url: a.url, anexo_tipo: a.tipo, anexo_nome: a.nome });
                     socket.emit('enviar_mensagem', {
                         canal_id: currentChannelId,
-                        texto: i === 0 ? texto : '',
-                        anexo_url: a.url, anexo_tipo: a.tipo, anexo_nome: a.nome
+                        texto: textoDoAnexo,
+                        anexo_url: a.url, anexo_tipo: a.tipo, anexo_nome: a.nome,
+                        temp_id: tempId
                     });
                 });
             }
@@ -5673,6 +5783,12 @@
 
         socket.on('receber_mensagem', function(dados) {
             const container = document.getElementById('messages-container');
+            // Eco da própria mensagem que já foi mostrada otimista: troca a
+            // bolha "pendente" pela confirmada em vez de duplicar.
+            if (dados.temp_id) {
+                const pendente = container.querySelector(`[data-msg-id="${dados.temp_id}"]`);
+                if (pendente) pendente.remove();
+            }
             appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto,
                                  dados.hora, dados.cor, { ...dados, animar: true });
         });
@@ -5968,13 +6084,82 @@
         document.getElementById('btn-anexar')?.addEventListener('click', () => {
             document.getElementById('input-anexo').click();
         });
-        document.getElementById('btn-anexar-gif')?.addEventListener('click', () => {
-            const input = document.getElementById('input-anexo');
-            input.setAttribute('accept', 'image/gif');
-            input.click();
-            // Volta a aceitar tudo depois de abrir o seletor
-            setTimeout(() => input.setAttribute('accept', 'image/*,video/mp4,video/webm,video/quicktime'), 500);
+
+        // ==========================================
+        // BUSCA DE GIF (Giphy) - igual ao painel de emoji, mas com busca
+        // ------------------------------------------------------------
+        // O botão "GIF" abria um seletor de arquivo do PC filtrado por GIF -
+        // redundante com o "+" de anexo geral (que já aceita image/gif).
+        // Virou busca de verdade, igual ao Discord.
+        // ==========================================
+        const gifPanel = document.getElementById('gif-picker-panel');
+        const gifSearchInput = document.getElementById('gif-picker-search');
+        const gifGrid = document.getElementById('gif-picker-grid');
+        let gifBuscaTimeout = null;
+
+        async function carregarGifs(busca) {
+            gifGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">Carregando...</div>';
+            try {
+                const resp = await fetch(`/api/gifs?q=${encodeURIComponent(busca)}`);
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok || !Array.isArray(data)) {
+                    const motivo = (data && data.error) || 'Não consegui buscar GIFs.';
+                    gifGrid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">${esc(motivo)}</div>`;
+                    return;
+                }
+                if (!data.length) {
+                    gifGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">Nada encontrado.</div>';
+                    return;
+                }
+                gifGrid.innerHTML = data.map(g => `<img src="${escUrl(g.preview)}" data-url="${escUrl(g.url)}" data-nome="${esc(g.nome)}" title="${esc(g.nome)}" loading="lazy" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:4px; cursor:pointer;">`).join('');
+            } catch (e) {
+                gifGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px; font-size:12px;">Erro de conexão.</div>';
+            }
+        }
+
+        function abrirGifPicker(btnEl) {
+            const rect = btnEl.getBoundingClientRect();
+            const ALTURA_PAINEL = 380;
+            gifPanel.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 330))}px`;
+            const espacoAbaixo = window.innerHeight - rect.bottom - 8;
+            gifPanel.style.top = (espacoAbaixo < ALTURA_PAINEL && rect.top > ALTURA_PAINEL)
+                ? `${rect.top - ALTURA_PAINEL - 8}px`
+                : `${rect.bottom + 8}px`;
+            gifPanel.style.display = 'flex';
+            gifSearchInput.value = '';
+            gifSearchInput.focus();
+            carregarGifs('');
+        }
+
+        document.getElementById('btn-anexar-gif')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (gifPanel.style.display === 'flex') { gifPanel.style.display = 'none'; return; }
+            abrirGifPicker(e.currentTarget);
         });
+
+        gifSearchInput.addEventListener('input', () => {
+            clearTimeout(gifBuscaTimeout);
+            gifBuscaTimeout = setTimeout(() => carregarGifs(gifSearchInput.value.trim()), 400);
+        });
+
+        gifGrid.addEventListener('click', (e) => {
+            const img = e.target.closest('img[data-url]');
+            if (!img || !currentChannelId) return;
+            const url = img.getAttribute('data-url');
+            const nome = img.getAttribute('data-nome') || 'gif.gif';
+            const tempId = enviarMensagemOtimista('', { anexo_url: url, anexo_tipo: 'image', anexo_nome: nome });
+            socket.emit('enviar_mensagem', {
+                canal_id: currentChannelId, texto: '',
+                anexo_url: url, anexo_tipo: 'image', anexo_nome: nome, temp_id: tempId
+            });
+            gifPanel.style.display = 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#gif-picker-panel') || e.target.closest('#btn-anexar-gif')) return;
+            gifPanel.style.display = 'none';
+        });
+
         document.getElementById('input-anexo')?.addEventListener('change', function(e) {
             adicionarAnexos(e.target.files);
             e.target.value = '';
@@ -6183,36 +6368,61 @@
 
         const colorInput = document.getElementById('banner-color-input');
         const colorBtn = document.getElementById('btn-open-color');
+        const btnBannerAnimado = document.getElementById('btn-banner-animado');
         const previewBanner = document.getElementById('preview-banner-bg');
         const popoutBanner = document.getElementById('popout-banner-bg');
         const contaBanner = document.getElementById('conta-banner-bg');
+        // Guarda o que vai de verdade pro servidor ao salvar: string vazia
+        // pede pro backend limpar banner_color e voltar pro gradiente
+        // animado (mesma regra que já valia pra conta nova, sem cor escolhida).
+        let bannerAnimadoEscolhido = !document.getElementById('banner-color-input').value ||
+            popoutBanner.classList.contains('banner-animado');
 
         colorBtn.addEventListener('click', () => colorInput.click());
         colorInput.addEventListener('input', (e) => {
             const color = e.target.value;
+            bannerAnimadoEscolhido = false;
             colorBtn.style.background = color;
-            previewBanner.style.background = color;
-            popoutBanner.style.background = color;
-            contaBanner.style.background = color;
-            previewBanner.style.animation = 'none'; popoutBanner.style.animation = 'none'; contaBanner.style.animation = 'none';
+            colorBtn.classList.add('selected'); btnBannerAnimado.classList.remove('selected');
+            [previewBanner, popoutBanner, contaBanner].forEach(el => {
+                el.classList.remove('banner-animado');
+                el.style.background = color;
+            });
+        });
+
+        btnBannerAnimado.addEventListener('click', () => {
+            bannerAnimadoEscolhido = true;
+            btnBannerAnimado.classList.add('selected'); colorBtn.classList.remove('selected');
+            [previewBanner, popoutBanner, contaBanner].forEach(el => {
+                el.style.background = '';
+                el.classList.add('banner-animado');
+            });
         });
 
         document.getElementById('status-input').addEventListener('input', (e) => {
             const text = e.target.value || "Sem status";
-            document.getElementById('preview-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
-            document.getElementById('popout-custom-status').innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
+            const previewStatus = document.getElementById('preview-custom-status');
+            const popoutStatus = document.getElementById('popout-custom-status');
+            previewStatus.innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
+            popoutStatus.innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
+            emojificar(previewStatus); emojificar(popoutStatus);
         });
 
         document.getElementById('bio-input').addEventListener('input', (e) => {
             const text = e.target.value || "Conte um pouco sobre você...";
-            document.getElementById('preview-bio-text').innerText = text;
-            document.getElementById('popout-bio-text').innerText = text;
+            const previewBio = document.getElementById('preview-bio-text');
+            const popoutBio = document.getElementById('popout-bio-text');
+            previewBio.innerText = text;
+            popoutBio.innerText = text;
+            emojificar(previewBio); emojificar(popoutBio);
         });
 
         document.getElementById('btn-save-profile').addEventListener('click', () => {
             const novoStatus = document.getElementById('status-input').value;
             const novaBio = document.getElementById('bio-input').value;
-            const novaCor = document.getElementById('banner-color-input').value;
+            // String vazia = "sem cor escolhida", que o backend entende como
+            // "usa o gradiente animado padrão".
+            const novaCor = bannerAnimadoEscolhido ? '' : document.getElementById('banner-color-input').value;
 
             if (typeof socket !== 'undefined' && socket.connected) {
                 socket.emit('atualizar_perfil', { custom_status: novoStatus, bio: novaBio, banner_color: novaCor });
@@ -6234,7 +6444,57 @@
                 const usuarioEl = document.getElementById('placa-usuario-atual');
                 if (usuarioEl) usuarioEl.textContent = currentUserName.toLowerCase().replace(/\s/g, '.');
             }
+            // Confirma (de novo) o que já tinha sido aplicado na hora em
+            // finalizarUploadAvatar - garante que fica certo mesmo se algum
+            // elemento tiver ficado de fora do patch otimista.
+            if (dados.avatar) aplicarAvatarNaTela(dados.avatar);
+
+            // Status/bio/cor só atualizavam dentro do popup de configurações
+            // (só o preview ao vivo enquanto digitava) - a barra inferior e o
+            // cartão de perfil continuavam com o valor antigo até dar F5.
+            if ('custom_status' in dados) {
+                const statusHtml = dados.custom_status
+                    ? `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(dados.custom_status)}`
+                    : `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> Sem status`;
+                const popoutStatus = document.getElementById('popout-custom-status');
+                if (popoutStatus) { popoutStatus.innerHTML = statusHtml; emojificar(popoutStatus); }
+                const bottomStatus = document.getElementById('bottom-status-text');
+                if (bottomStatus) { bottomStatus.textContent = dados.custom_status || 'Disponível'; emojificar(bottomStatus); }
+            }
+            if ('bio' in dados) {
+                const bioTexto = dados.bio || 'Use as configurações para me editar!';
+                const popoutBio = document.getElementById('popout-bio-text');
+                if (popoutBio) { popoutBio.innerText = bioTexto; emojificar(popoutBio); }
+            }
+            if ('banner_color' in dados) {
+                ['popout-banner-bg', 'conta-banner-bg', 'preview-banner-bg'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (dados.banner_color) { el.classList.remove('banner-animado'); el.style.background = dados.banner_color; }
+                    else { el.style.background = ''; el.classList.add('banner-animado'); }
+                });
+                const colorBtn = document.getElementById('btn-open-color');
+                const animBtn = document.getElementById('btn-banner-animado');
+                if (colorBtn && animBtn) {
+                    colorBtn.classList.toggle('selected', !!dados.banner_color);
+                    animBtn.classList.toggle('selected', !dados.banner_color);
+                    if (dados.banner_color) colorBtn.style.background = dados.banner_color;
+                }
+            }
+
             showToast("Perfil atualizado!", "success");
+        });
+
+        // Outro membro do servidor mudou nome/avatar: corrige a lista de
+        // membros e a sidebar sem precisar de F5.
+        socket.on('perfil_membro_mudou', (dados) => {
+            const membro = membrosDoServidor.find(m => Number(m.id) === Number(dados.usuario_id));
+            if (membro) {
+                membro.nome = dados.nome;
+                membro.avatar = dados.avatar;
+                desenharMembrosSidebar();
+                if (typeof desenharMembrosDoCanal === 'function') desenharMembrosDoCanal();
+            }
         });
 
         document.getElementById('btn-editar-nome').addEventListener('click', () => {
@@ -6351,11 +6611,33 @@
             editorImg.espelhoH = editorImg.espelhoV = false;
             editorImg.escala = 1;
             cropZoom.value = 100;
-
-            // GIF editado perde a animação, então quem escolhe é a pessoa.
-            document.getElementById('editor-img-aviso-gif').classList.toggle('visivel', editorImg.ehGif);
-            document.getElementById('btn-crop-original').style.display = editorImg.ehGif ? 'block' : 'none';
             document.querySelectorAll('.editor-img-btn').forEach(b => b.classList.remove('ativo'));
+
+            const gifImg = document.getElementById('gif-preview-img');
+            const canvas = document.getElementById('crop-canvas');
+
+            if (editorImg.ehGif) {
+                // GIF: sem corte (mata a animação), então nada de canvas/
+                // controles de girar-espelhar-zoom - só o preview animado de
+                // verdade (a msm imagem que vai ser enviada) e um botão só,
+                // já que "estática ou como está" deixou de ser uma escolha.
+                document.getElementById('editor-img-aviso-gif').classList.add('visivel');
+                document.getElementById('editor-img-controles').style.display = 'none';
+                document.getElementById('editor-img-zoom-row').style.display = 'none';
+                canvas.style.display = 'none';
+                gifImg.style.display = 'block';
+                gifImg.src = URL.createObjectURL(file);
+                document.getElementById('btn-crop-confirm').textContent = 'Usar GIF';
+                document.getElementById('avatar-crop-modal').style.display = 'flex';
+                return;
+            }
+
+            document.getElementById('editor-img-aviso-gif').classList.remove('visivel');
+            document.getElementById('editor-img-controles').style.display = 'flex';
+            document.getElementById('editor-img-zoom-row').style.display = 'flex';
+            gifImg.style.display = 'none';
+            canvas.style.display = 'block';
+            document.getElementById('btn-crop-confirm').textContent = 'Usar imagem';
 
             const url = URL.createObjectURL(file);
             const img = new Image();
@@ -6450,18 +6732,28 @@
 
         function fecharEditorImagem() {
             document.getElementById('avatar-crop-modal').style.display = 'none';
+            const gifImg = document.getElementById('gif-preview-img');
+            if (gifImg.src) { URL.revokeObjectURL(gifImg.src); gifImg.src = ''; }
             editorImg.aoConfirmar = null;
         }
         document.getElementById('btn-crop-cancel').addEventListener('click', fecharEditorImagem);
         document.getElementById('btn-crop-x').addEventListener('click', fecharEditorImagem);
 
-        // GIF: manda o arquivo original, sem passar pelo canvas (senão não anima)
-        document.getElementById('btn-crop-original').addEventListener('click', () => {
-            const cb = editorImg.aoConfirmar;
-            const original = editorImg.arquivoOriginal;
-            fecharEditorImagem();
-            if (cb) cb(original, true);
-        });
+        function aplicarAvatarNaTela(url) {
+            currentUserAvatar = url;
+            const htmlToInject = `<img src="${escUrl(url)}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            const ids = ['editor-avatar-container', 'preview-avatar-container', 'popout-avatar-container', 'conta-avatar-img', 'bottom-avatar-container', 'sidebar-avatar-container'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.innerHTML = htmlToInject; el.style.backgroundColor = 'transparent'; }
+            });
+
+            const myVideoAvatar = document.getElementById('my-avatar-placeholder');
+            if(myVideoAvatar && myVideoAvatar.style.display !== 'none') {
+                myVideoAvatar.innerHTML = `<img src="${escUrl(url)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                myVideoAvatar.style.backgroundColor = 'transparent';
+            }
+        }
 
         async function finalizarUploadAvatar(arquivo) {
             try {
@@ -6475,35 +6767,38 @@
                 if (!resp.ok) throw new Error(data.error || 'Falha no upload');
                 const url = data.url;
 
-                const htmlToInject = `<img src="${escUrl(url)}" style="width: 100%; height: 100%; object-fit: cover;">`;
-                const ids = ['editor-avatar-container', 'preview-avatar-container', 'popout-avatar-container', 'conta-avatar-img', 'bottom-avatar-container', 'sidebar-avatar-container'];
-                ids.forEach(id => {
-                    const el = document.getElementById(id);
-                    if(el) { el.innerHTML = htmlToInject; el.style.backgroundColor = 'transparent'; }
-                });
-
-                const myVideoAvatar = document.getElementById('my-avatar-placeholder');
-                if(myVideoAvatar && myVideoAvatar.style.display !== 'none') {
-                    myVideoAvatar.innerHTML = `<img src="${url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                    myVideoAvatar.style.backgroundColor = 'transparent';
-                }
+                // Aplica na hora (percebido como instantâneo), mas o toast de
+                // sucesso só vem com a confirmação em perfil_atualizado -
+                // senão a tela mostra "salvo" mesmo se o commit falhar.
+                aplicarAvatarNaTela(url);
 
                 if (typeof socket !== 'undefined' && socket.connected) {
                     socket.emit('atualizar_perfil', { avatar: url });
+                } else {
+                    showToast("Sem conexão - a foto não foi salva. Tente de novo.", "error");
                 }
-                showToast("Avatar atualizado e salvo no banco de dados!", "success");
             } catch (e) {
                 showToast(e.message || "Não foi possível enviar a imagem.", "error");
             }
         }
 
         document.getElementById('btn-crop-confirm').addEventListener('click', () => {
+            const cb = editorImg.aoConfirmar;
+
+            // GIF: manda o arquivo original direto, sem passar pelo canvas
+            // (canvas só captura um quadro e mataria a animação).
+            if (editorImg.ehGif) {
+                const original = editorImg.arquivoOriginal;
+                fecharEditorImagem();
+                if (cb) cb(original, true);
+                return;
+            }
+
             // Desenha na saída exatamente como está no preview, só que maior.
             const saida = document.createElement('canvas');
             saida.width = saida.height = TAM_SAIDA;
             desenharEditor(saida.getContext('2d'), TAM_SAIDA);
 
-            const cb = editorImg.aoConfirmar;
             fecharEditorImagem();
             saida.toBlob(blob => {
                 if (blob && cb) cb(new File([blob], 'imagem.webp', { type: blob.type }), false);
@@ -6799,7 +7094,67 @@
                     const sender = senders.find(s => s.track && s.track.kind === novaTrack.kind);
                     if(sender) sender.replaceTrack(novaTrack);
                 }
+                monitorarEAjustarBitrate(call, 'video');
             });
+        }
+
+        // ==========================================
+        // QUALIDADE AUTOMÁTICA (sem escolha manual de fps/resolução)
+        // ------------------------------------------------------------
+        // Em vez de perguntar "qualidade alta/média/baixa" e deixar quem não
+        // tem banda travado numa escolha que a rede não aguenta, cada envio
+        // de vídeo já nasce com um teto de bitrate e, a cada 5s, mede a
+        // perda de pacote reportada pelo outro lado (RTCP) pra subir ou
+        // descer um degrau - sem isso, uma call P2P com alguém em rede ruim
+        // travava/engasgava pra ela E pra quem estava do outro lado.
+        // ==========================================
+        const NIVEIS_BITRATE = { tela: [1500000, 800000, 350000], video: [900000, 500000, 250000] };
+        const monitoresBitrate = new Map();
+
+        function monitorarEAjustarBitrate(call, tipo) {
+            if (!call || !call.peerConnection || monitoresBitrate.has(call)) return;
+            const niveis = NIVEIS_BITRATE[tipo] || NIVEIS_BITRATE.video;
+            let nivelAtual = 0;
+
+            const aplicarNivel = async (i) => {
+                const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (!sender) return;
+                try {
+                    const params = sender.getParameters();
+                    if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+                    params.encodings[0].maxBitrate = niveis[i];
+                    await sender.setParameters(params);
+                } catch(e) {}
+            };
+            aplicarNivel(0);
+
+            let ultimoPerdidos = 0, ultimoEnviados = 0;
+            const intervalId = setInterval(async () => {
+                if (!call.peerConnection || call.peerConnection.connectionState === 'closed') {
+                    clearInterval(intervalId); monitoresBitrate.delete(call); return;
+                }
+                try {
+                    const stats = await call.peerConnection.getStats();
+                    let perdidos = null, enviados = null;
+                    stats.forEach(r => {
+                        if (r.type === 'remote-inbound-rtp' && r.kind === 'video' && typeof r.packetsLost === 'number') perdidos = r.packetsLost;
+                        if (r.type === 'outbound-rtp' && r.kind === 'video' && typeof r.packetsSent === 'number') enviados = r.packetsSent;
+                    });
+                    if (perdidos === null || enviados === null) return;
+
+                    const deltaEnviados = enviados - ultimoEnviados;
+                    const deltaPerdidos = Math.max(0, perdidos - ultimoPerdidos);
+                    ultimoEnviados = enviados; ultimoPerdidos = perdidos;
+                    if (deltaEnviados <= 0) return;
+
+                    const perda = deltaPerdidos / (deltaEnviados + deltaPerdidos);
+                    if (perda > 0.05 && nivelAtual < niveis.length - 1) { nivelAtual++; aplicarNivel(nivelAtual); }
+                    else if (perda < 0.01 && nivelAtual > 0) { nivelAtual--; aplicarNivel(nivelAtual); }
+                } catch(e) {}
+            }, 5000);
+            monitoresBitrate.set(call, intervalId);
+
+            call.on('close', () => { clearInterval(intervalId); monitoresBitrate.delete(call); });
         }
 
         // Stream usada pra ABRIR uma chamada nova (chamar alguém ou responder
@@ -6849,12 +7204,21 @@
                     return;
                 }
 
-                // Estava em OUTRA call: sai antes de entrar na nova.
+                // Estava em OUTRA call: sai antes de entrar na nova. Mantém a
+                // tela de vídeo aberta com um overlay por cima - antes isso
+                // fechava pro chat de texto e reabria a call do zero, o que
+                // parecia trocar de "feature" em vez de só trocar de sala.
+                const overlay = document.getElementById('call-switch-overlay');
+                document.getElementById('call-switch-overlay-texto').textContent = `Mudando para ${voiceName}...`;
+                overlay.classList.add('active');
+
                 disconnectCall();
+                videoView.classList.add('active');
+                textView.classList.add('hidden'); textView.classList.remove('sidebar-mode');
+
                 // Espera o peer fechar de verdade antes de abrir outro,
                 // senão o servidor de sinalização recusa a nova conexão.
                 await new Promise(r => setTimeout(r, 350));
-                showToast(`Mudando para ${voiceName}...`, "info");
             }
 
             currentVoiceChannelId = voiceId;
@@ -6886,6 +7250,11 @@
                 // sidebar) - numa call de DM esse elemento não existe.
                 const voiceUsersBox = document.getElementById(`voice-users-${voiceId}`);
                 if (voiceUsersBox) {
+                    // Limpa a prévia estática (participantes_call_mudou) antes de
+                    // trocar pra lista ao vivo desse widget - senão duplicava
+                    // todo mundo: a prévia continuava lá E cada peer ia sendo
+                    // adicionado de novo conforme a conexão WebRTC completava.
+                    voiceUsersBox.innerHTML = '';
                     voiceUsersBox.style.display = 'block';
                     const avatarMiniHtml = currentUserAvatar ? `<img src="${currentUserAvatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : currentUserName[0].toUpperCase();
                     const myPresence = document.createElement('div');
@@ -6897,6 +7266,7 @@
                 textView.classList.add('hidden'); textView.classList.remove('sidebar-mode');
                 videoView.classList.add('active');
                 document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high" style="color: var(--text-muted);"></i> ${esc(voiceName)}`;
+                document.getElementById('call-switch-overlay').classList.remove('active');
 
                 mePeer = new Peer(undefined, { host: '0.peerjs.com', port: 443, secure: true });
                 mePeer.on('open', id => {
@@ -6914,6 +7284,7 @@
                         });
                     } else {
                         call.answer(streamParaChamada());
+                        monitorarEAjustarBitrate(call, 'video');
                         call.on('stream', remoteStream => {
                             const callerName = (call.metadata && call.metadata.userName) ? call.metadata.userName : "Membro";
                             const callerAvatar = (call.metadata && call.metadata.avatar) ? call.metadata.avatar : null;
@@ -6943,7 +7314,10 @@
                 monitorarVolume(myMicStream, 'my-video-card');
                 iniciarBufferClipe();
 
-            } catch(e) { console.error("Erro crítico ao entrar na call!", e); }
+            } catch(e) {
+                console.error("Erro crítico ao entrar na call!", e);
+                document.getElementById('call-switch-overlay').classList.remove('active');
+            }
         }
 
         function initVoiceChannel(btn) {
@@ -6979,8 +7353,12 @@
                 }
             });
             peers[dados.peer_id] = call;
+            monitorarEAjustarBitrate(call, 'video');
 
-            activeScreenStreams.forEach(screenObj => { mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName } }); });
+            activeScreenStreams.forEach(screenObj => {
+                const chamadaTela = mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName } });
+                monitorarEAjustarBitrate(chamadaTela, 'tela');
+            });
         });
 
         socket.on('usuario_saiu_call', (dados) => {
@@ -6988,6 +7366,31 @@
             if(peers[dados.peer_id]) { peers[dados.peer_id].close(); delete peers[dados.peer_id]; }
             const card = document.getElementById(`vc-${dados.peer_id}`); if(card) card.remove();
             const screenCard = document.getElementById(`vc-${dados.peer_id}-screen`); if(screenCard) screenCard.remove();
+        });
+
+        // Prévia de quem já está numa call, pra quem ainda NÃO entrou (tipo
+        // Discord mostrar avatares embaixo do canal de voz). Enquanto eu
+        // mesmo estou nessa call, a lista já é mantida ao vivo por
+        // novo_usuario_call/usuario_saiu_call - não mexe aqui pra não
+        // duplicar/piscar.
+        socket.on('participantes_call_mudou', (dados) => {
+            if (inCall && String(currentVoiceChannelId) === String(dados.canal_id)) return;
+
+            const box = document.getElementById(`voice-users-${dados.canal_id}`);
+            if (!box) return;
+            const participantes = dados.participantes || [];
+            if (!participantes.length) { box.innerHTML = ''; box.style.display = 'none'; return; }
+
+            box.style.display = 'block';
+            box.innerHTML = participantes.map(p => {
+                const avatarSeguro = escUrl(p.avatar);
+                const avatarHtml = avatarSeguro
+                    ? `<img src="${avatarSeguro}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+                    : esc((p.nome || '?')[0].toUpperCase());
+                return `<div class="channel-item" style="font-size:13px;">
+                    <div class="user-avatar-wrapper" style="width:24px;height:24px;border-radius:50%;margin-right:4px;background-color:${avatarSeguro ? 'transparent' : 'var(--brand-color)'};">${avatarHtml}</div> ${esc(p.nome)}
+                </div>`;
+            }).join('');
         });
 
         function adicionarVideoCard(peerId, stream, nome, avatarUrl) {
@@ -7017,7 +7420,13 @@
                 videoCardVideo.style.display = 'none'; videoCardAvatar.style.display = 'flex';
             } else {
                 try {
-                    myCamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    // Sem teto, o navegador pode pedir a resolução nativa da
+                    // webcam (às vezes 1080p+): mais banda gasta sem ganho
+                    // real numa grade de call pequena. Automático, sem
+                    // escolha manual - mesma filosofia da tela compartilhada.
+                    myCamStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 640, max: 1280 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 } }
+                    });
                     videoCardVideo.srcObject = myCamStream; videoCardVideo.style.display = 'block'; videoCardAvatar.style.display = 'none';
                     document.getElementById('btn-main-camera').classList.add('active'); document.getElementById('btn-side-camera').classList.add('active-stream');
                     atualizarMidiaparaAmigos(myCamStream.getVideoTracks()[0]);
@@ -7027,27 +7436,35 @@
         document.getElementById('btn-side-camera').addEventListener('click', () => document.getElementById('btn-main-camera').click());
 
         // Screen Share Handlers
-        const qualityModal = document.getElementById('quality-modal-overlay');
         const streamActionModal = document.getElementById('stream-action-modal');
-        let selectedRes = 720; let selectedFps = 30;
 
-        document.querySelectorAll('#res-group .q-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('#res-group .q-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedRes = parseInt(btn.getAttribute('data-res')); }); });
-        document.querySelectorAll('#fps-group .q-btn').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('#fps-group .q-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedFps = parseInt(btn.getAttribute('data-fps')); }); });
+        // Antes a pessoa escolhia resolução/fps manualmente num modal antes
+        // de cada compartilhamento. Virou automático: um teto fixo (720p/30fps)
+        // que já cobre a maioria dos casos sem pedir decisão nenhuma - quem
+        // tem banda ruim não fica preso escolhendo "Alta" achando que precisa,
+        // e ninguém trava esperando negociar 1080p+ à toa. Ver também o ajuste
+        // de bitrate em monitorarEAjustarBitrate(), chamado logo abaixo.
+        const TELA_RES_PADRAO = 720; const TELA_FPS_PADRAO = 30;
 
         function handleScreenShareBtn() {
             if(!inCall) return;
-            if(activeScreenStreams.length > 0) streamActionModal.style.display = 'flex'; else qualityModal.style.display = 'flex';
+            if(activeScreenStreams.length > 0) streamActionModal.style.display = 'flex'; else iniciarCompartilhamentoTela();
         }
         document.getElementById('btn-main-screen').addEventListener('click', handleScreenShareBtn);
         document.getElementById('btn-side-screen').addEventListener('click', handleScreenShareBtn);
 
-        document.getElementById('btn-add-stream').addEventListener('click', () => { streamActionModal.style.display = 'none'; qualityModal.style.display = 'flex'; });
+        document.getElementById('btn-add-stream').addEventListener('click', () => { streamActionModal.style.display = 'none'; iniciarCompartilhamentoTela(); });
         document.getElementById('btn-stop-all-streams').addEventListener('click', () => { streamActionModal.style.display = 'none'; pararTodosCompartilhamentos(); });
-        document.getElementById('btn-cancel-share').addEventListener('click', () => { qualityModal.style.display = 'none'; });
 
-        document.getElementById('btn-confirm-share').addEventListener('click', async () => {
-            qualityModal.style.display = 'none';
-            const constraints = { video: { height: { ideal: selectedRes }, frameRate: { ideal: selectedFps } }, audio: true };
+        async function iniciarCompartilhamentoTela() {
+            // "ideal" sozinho deixa o navegador negociar bem mais que o
+            // pedido (ex: manda a tela em 1440p nativa); com "max" travado
+            // no mesmo valor, o encoder do WebRTC nunca sai da faixa - era um
+            // dos motivos do compartilhamento pesar mais que devia.
+            const constraints = {
+                video: { height: { ideal: TELA_RES_PADRAO, max: TELA_RES_PADRAO }, frameRate: { ideal: TELA_FPS_PADRAO, max: TELA_FPS_PADRAO } },
+                audio: true
+            };
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
                 const streamId = Date.now();
@@ -7061,10 +7478,13 @@
 
                 document.getElementById('btn-main-screen').classList.add('active-green'); document.getElementById('btn-side-screen').classList.add('active-stream');
 
-                Object.keys(peers).forEach(peerId => { mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName } }); });
+                Object.keys(peers).forEach(peerId => {
+                    const call = mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName } });
+                    monitorarEAjustarBitrate(call, 'tela');
+                });
                 newStream.getVideoTracks()[0].onended = () => pararCompartilhamento(streamId);
             } catch(e) {}
-        });
+        }
 
         function pararCompartilhamento(id) {
             const index = activeScreenStreams.findIndex(s => s.id === id);
@@ -7122,7 +7542,7 @@
         // áudio de todo mundo num único MediaStream (é isso que vira o
         // arquivo gravado/clipado - não dá pra gravar direto os <video>
         // separados). ----
-        function criarCompositor(alturaAlvo) {
+        function criarCompositor(alturaAlvo, fpsDesenho = 30) {
             const canvas = document.createElement('canvas');
             canvas.height = alturaAlvo;
             canvas.width = Math.round(alturaAlvo * 16 / 9);
@@ -7145,8 +7565,21 @@
             });
 
             let ativo = true;
-            (function desenhar() {
+            // O buffer de clipe (sempre rodando em background, ver
+            // iniciarBufferClipe) passa fpsDesenho=15: ninguém assiste em
+            // tempo real, e redesenhar a 60fps/144fps (ritmo do
+            // requestAnimationFrame da tela) só pra alimentar uma gravação
+            // que 99% das calls nunca vira clipe era o maior custo de
+            // CPU/GPU rodando a call inteira, piorando com tela
+            // compartilhada. "Gravar" manual continua em fpsDesenho=30.
+            const INTERVALO_DESENHO_MS = 1000 / fpsDesenho;
+            let ultimoDesenho = 0;
+            (function desenhar(agora) {
                 if (!ativo) return;
+                requestAnimationFrame(desenhar);
+                if (agora - ultimoDesenho < INTERVALO_DESENHO_MS) return;
+                ultimoDesenho = agora;
+
                 ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
                 const cards = Array.from(document.querySelectorAll('#video-grid .video-card'));
                 const total = cards.length || 1;
@@ -7166,11 +7599,10 @@
                         ctx.fillText(nome, x + cw / 2, y + ch / 2);
                     }
                 });
-                requestAnimationFrame(desenhar);
-            })();
+            })(0);
 
             const streamFinal = new MediaStream([
-                ...canvas.captureStream(30).getVideoTracks(),
+                ...canvas.captureStream(fpsDesenho).getVideoTracks(),
                 ...destino.stream.getAudioTracks()
             ]);
             return { stream: streamFinal, parar() { ativo = false; audioCtx.close().catch(() => {}); } };
@@ -7191,7 +7623,7 @@
 
         function iniciarBufferClipe() {
             if (compositorBuffer) return;
-            try { compositorBuffer = criarCompositor(480); }
+            try { compositorBuffer = criarCompositor(480, 15); }
             catch(e) { compositorBuffer = null; return; }
             segmentoCompleto = null; chunksSegmentoAtual = [];
             abrirNovoSegmentoBuffer();
@@ -7480,7 +7912,11 @@
             document.getElementById('video-grid').classList.remove('focused-mode');
             document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');
             document.getElementById('my-video').style.display = 'none'; document.getElementById('my-avatar-placeholder').style.display = 'flex';
-            document.querySelectorAll('[id^="voice-users-"]').forEach(el => el.innerHTML = '');
+            // Só a call que eu estava - outros canais de voz podem estar
+            // mostrando a prévia (participantes_call_mudou) de gente que não
+            // tem nada a ver com essa saída, e não fazem parte da UI "ao vivo".
+            const voiceUsersBoxAtual = currentVoiceChannelId ? document.getElementById(`voice-users-${currentVoiceChannelId}`) : null;
+            if (voiceUsersBoxAtual) voiceUsersBoxAtual.innerHTML = '';
 
             if(myMicStream) myMicStream.getTracks().forEach(t => t.stop());
             if(myCamStream) myCamStream.getTracks().forEach(t => t.stop());
