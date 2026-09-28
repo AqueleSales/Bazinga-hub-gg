@@ -554,55 +554,60 @@ def lidar_entrar_call(dados):
 
     canal_id_bruto = dados.get('canal_id')
 
-    # Chamada 1-a-1 por DM: a "sala" é "dm_<menorId>_<maiorId>", não um
-    # Channel de verdade - checa amizade em vez de canal_permitido.
-    if isinstance(canal_id_bruto, str) and canal_id_bruto.startswith('dm_'):
-        try:
-            _, id_a, id_b = canal_id_bruto.split('_')
-            id_a, id_b = int(id_a), int(id_b)
-        except ValueError:
-            return
-        if usuario.id not in (id_a, id_b):
-            return
-        outro_id = id_b if usuario.id == id_a else id_a
-        if not sao_amigos(usuario.id, outro_id):
+    try:
+        # Chamada 1-a-1 por DM: a "sala" é "dm_<menorId>_<maiorId>", não um
+        # Channel de verdade - checa amizade em vez de canal_permitido.
+        if isinstance(canal_id_bruto, str) and canal_id_bruto.startswith('dm_'):
+            try:
+                _, id_a, id_b = canal_id_bruto.split('_')
+                id_a, id_b = int(id_a), int(id_b)
+            except ValueError:
+                return
+            if usuario.id not in (id_a, id_b):
+                return
+            outro_id = id_b if usuario.id == id_a else id_a
+            if not sao_amigos(usuario.id, outro_id):
+                return
+
+            sala_call = f"voz_{canal_id_bruto}"
+            join_room(sala_call)
+            _entrar_em_call(canal_id_bruto, peer_id, usuario)
+            emit('novo_usuario_call', {
+                'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
+                'canal_id': canal_id_bruto
+            }, to=sala_call, include_self=False)
+            payload = {'canal_id': canal_id_bruto, 'participantes': participantes_call.get(canal_id_bruto, [])}
+            emit('participantes_call_mudou', payload, to=sala_pessoal(usuario.id))
+            emit('participantes_call_mudou', payload, to=sala_pessoal(outro_id))
             return
 
-        sala_call = f"voz_{canal_id_bruto}"
+        canal = canal_permitido(usuario, canal_id_bruto)
+        if not canal:
+            emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal de voz.'})
+            return
+
+        chave = str(canal.id)
+        sala_call = f"voz_{chave}"
         join_room(sala_call)
-        _entrar_em_call(canal_id_bruto, peer_id, usuario)
+        _entrar_em_call(chave, peer_id, usuario)
+
         emit('novo_usuario_call', {
-            'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
-            'canal_id': canal_id_bruto
+            'peer_id': peer_id,
+            'usuario': usuario.name,
+            'avatar': usuario.avatar,
+            'canal_id': chave
         }, to=sala_call, include_self=False)
-        payload = {'canal_id': canal_id_bruto, 'participantes': participantes_call.get(canal_id_bruto, [])}
-        emit('participantes_call_mudou', payload, to=sala_pessoal(usuario.id))
-        emit('participantes_call_mudou', payload, to=sala_pessoal(outro_id))
-        return
 
-    canal = canal_permitido(usuario, canal_id_bruto)
-    if not canal:
-        emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal de voz.'})
-        return
-
-    chave = str(canal.id)
-    sala_call = f"voz_{chave}"
-    join_room(sala_call)
-    _entrar_em_call(chave, peer_id, usuario)
-
-    emit('novo_usuario_call', {
-        'peer_id': peer_id,
-        'usuario': usuario.name,
-        'avatar': usuario.avatar,
-        'canal_id': chave
-    }, to=sala_call, include_self=False)
-
-    # Pra quem está com o servidor aberto mas ainda não entrou na call -
-    # é isso que dá a prévia de "fulano já está na call" antes de entrar.
-    if canal.server_id:
-        emit('participantes_call_mudou',
-             {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
-             to=sala_servidor(canal.server_id))
+        # Pra quem está com o servidor aberto mas ainda não entrou na call -
+        # é isso que dá a prévia de "fulano já está na call" antes de entrar.
+        if canal.server_id:
+            emit('participantes_call_mudou',
+                 {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
+                 to=sala_servidor(canal.server_id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ENTRAR CALL] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível entrar na call: {e}'})
 
 
 @socketio.on('listar_participantes_call')
@@ -614,22 +619,30 @@ def listar_participantes_call(dados):
         return
 
     canal_id_bruto = dados.get('canal_id')
-    if isinstance(canal_id_bruto, str) and canal_id_bruto.startswith('dm_'):
-        try:
-            _, id_a, id_b = canal_id_bruto.split('_')
-            id_a, id_b = int(id_a), int(id_b)
-        except ValueError:
-            return
-        if usuario.id not in (id_a, id_b):
-            return
-        chave = canal_id_bruto
-    else:
-        canal = canal_permitido(usuario, canal_id_bruto)
-        if not canal:
-            return
-        chave = str(canal.id)
+    try:
+        if isinstance(canal_id_bruto, str) and canal_id_bruto.startswith('dm_'):
+            try:
+                _, id_a, id_b = canal_id_bruto.split('_')
+                id_a, id_b = int(id_a), int(id_b)
+            except ValueError:
+                return
+            if usuario.id not in (id_a, id_b):
+                return
+            chave = canal_id_bruto
+        else:
+            canal = canal_permitido(usuario, canal_id_bruto)
+            if not canal:
+                return
+            chave = str(canal.id)
 
-    emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, [])})
+        emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, [])})
+    except Exception as e:
+        db.session.rollback()
+        # Sem toast aqui de propósito - isso roda em silêncio ao abrir um
+        # servidor, pra cada canal de voz. Um erro pontual não deve encher a
+        # tela de toast vermelho; só a prévia daquele canal fica vazia até a
+        # próxima tentativa (entrar/sair de alguém dispara de novo).
+        print(f"[ERRO LISTAR PARTICIPANTES CALL] {e}")
 
 
 @socketio.on('sair_call')
