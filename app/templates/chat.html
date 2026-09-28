@@ -19,8 +19,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <!-- Emoji desenhado (vetor), igual ao Discord/Twitter, em vez de depender
-         da fonte de emoji do sistema operacional de cada um -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" crossorigin="anonymous"></script>
+         da fonte de emoji do sistema operacional de cada um.
+         Era cdnjs, mas o pacote "twemoji" de lá foi reestruturado pra só
+         imagens (72x72 png) - twemoji.min.js sumiu de lá e voltava 404 em
+         silêncio (window.twemoji nunca existia, então emojificar() nunca
+         rodava - emoji renderizava igual, só que na fonte nativa do SO em
+         vez do desenho vetorial). jsDelivr ainda serve o pacote npm
+         original intacto (JS + SVG), confirmado funcionando. -->
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 
     <style>
         /* ==========================================================================
@@ -398,16 +404,17 @@
         .video-card:hover { border-color: var(--text-muted); }
         .video-card.focused { grid-column: 1 / -1; height: 60vh; max-height: none; width: 100%; order: -10; }
         .video-grid.focused-mode .video-card:not(.focused) { height: 140px; flex: none; aspect-ratio: 16/9; }
-        .video-card.is-speaking { box-shadow: 0 0 0 3px var(--green-color) !important; order: -1; }
+        /* Sem "order" aqui de propósito - só o contorno verde. Quando isso
+           mudava a posição do card (order: -1), o grid inteiro embaralhava
+           toda vez que alguém começava/parava de falar (fala tem pausas
+           naturais, então isso acontecia a cada poucos segundos com a call
+           cheia) - "agoniante" segundo quem testou. Igual ao Discord: falar
+           destaca o card, não move ele. */
+        .video-card.is-speaking { box-shadow: 0 0 0 3px var(--green-color) !important; }
 
         .call-switch-overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(0,0,0,0.78); color: #fff; font-size: 16px; font-weight: 600; z-index: 50; }
         .call-switch-overlay.active { display: flex; }
         .call-switch-overlay i { font-size: 32px; color: var(--brand-color); }
-        /* Foco manual sempre manda na posição - sem isso, toda vez que a
-           pessoa em foco falava, o "order:-1" de is-speaking (mesma
-           especificidade, declarado depois) vencia o "order:-10" do foco e
-           ela saía/voltava do topo a cada pausa na fala. */
-        .video-card.focused.is-speaking { order: -10; }
 
         .video-card video { width: 100%; height: 100%; object-fit: contain; background-color: #000; }
         .video-avatar { width: 80px; height: 80px; border-radius: 50%; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; transition: 0.3s; overflow: hidden;}
@@ -937,6 +944,23 @@
         .deco-card:hover { border-color: var(--text-muted); }
         .deco-card .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; opacity: 0; transition: 0.2s; color: white; font-size: 24px;}
         .deco-card:hover .overlay { opacity: 1; }
+
+        /* Aba "Minha Conta" - essas classes nunca tinham CSS nenhum (só a
+           combinação animada do banner, de carona no .npc-banner.banner-
+           animado ali em cima), então a aba inteira renderizava como divs
+           crus sem cartão, sem faixa, sem avatar redondo - era a maior
+           causa de "as configurações tão feio". Espelha o mesmo cartão de
+           perfil (.npc-*) usado no popout e no preview de Perfis. */
+        .account-card { background-color: var(--bg-quaternary); border-radius: 8px; overflow: hidden; border: 1px solid var(--bg-tertiary); }
+        .account-banner { height: 120px; background-color: var(--brand-color); position: relative; transition: background 0.3s ease; }
+        .account-info-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 0 16px 16px; margin-top: -40px; position: relative; z-index: 1; }
+        .account-avatar-large { width: 92px; height: 92px; border-radius: 50%; border: 6px solid var(--bg-quaternary); display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; flex-shrink: 0; }
+        .account-avatar-large span { font-size: 32px !important; }
+        .account-details-box { background-color: var(--bg-tertiary); margin: 0 16px 16px; border-radius: 8px; padding: 0 16px; }
+        .acc-data-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .acc-data-row:last-child { border-bottom: none; }
+        .acc-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .acc-value { font-size: 16px; color: var(--text-normal); word-break: break-all; }
 
         .color-picker-wrapper { display: flex; gap: 12px; align-items: center; }
         .color-preview-box { width: 60px; height: 40px; border-radius: 4px; border: 2px solid var(--bg-quaternary); cursor: pointer; transition: 0.2s; background: var(--nitro-gradient); box-shadow: 0 4px 8px rgba(0,0,0,0.3);}
@@ -2078,8 +2102,10 @@
                 <div class="npc-status" id="popout-status-dot"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
             </div>
             <div class="npc-badges" style="top: 12px; right: 16px; position: absolute;">
+                <!-- Tinha um segundo badge aqui, "Bazinga Hub" com o logo do
+                     Discord - mostrava a marca de um concorrente pro usuário
+                     final, sem função nenhuma por trás. Removido. -->
                 <div class="badge" title="Membro Elite"><i class="fa-solid fa-gem" style="color: #00a8fc;"></i></div>
-                <div class="badge" title="Bazinga Hub"><i class="fa-brands fa-discord" style="color: #5865F2;"></i></div>
             </div>
         </div>
         <div class="npc-body" style="padding-top: 16px;">
@@ -2379,10 +2405,10 @@
                                         <div id="editor-avatar-container" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: var(--brand-color); font-size: 24px; font-weight: bold; color: white;"></div>
                                         <div class="overlay"><i class="fa-solid fa-pen"></i></div>
                                     </div>
-                                    <div class="deco-card">
-                                        <i class="fa-brands fa-discord" style="font-size: 32px; color: #4e5058;"></i>
-                                        <div class="overlay"><i class="fa-solid fa-plus"></i></div>
-                                    </div>
+                                    <!-- Segundo deco-card removido: não tinha onclick nenhum (botão morto)
+                                         e usava o logo do Discord como ícone - a Bazinga não tem produto
+                                         de decoração pra vender ainda (ver Pendências: Decorações de
+                                         perfil). Quando existir, entra aqui de novo com ícone próprio. -->
                                 </div>
                             </div>
 
@@ -2695,6 +2721,50 @@
 
         let vistaAtual = 'home';   // home | dm | server | market | calendar
 
+        // Lembrar onde a pessoa estava ao dar F5 - antes disso, recarregar a
+        // página sempre jogava de volta pro radar (home), mesmo se ela
+        // estivesse no meio de uma conversa de servidor ou de uma DM.
+        const LS_ULTIMA_VISTA = 'bz-ultima-vista';
+        let restauracaoDeVistaFeita = false;
+
+        function salvarUltimaVista() {
+            try {
+                localStorage.setItem(LS_ULTIMA_VISTA, JSON.stringify({
+                    view: vistaAtual,
+                    serverId: activeMyServerId,
+                    channelId: currentChannelId,
+                    dmUserId: (typeof currentDmUserId !== 'undefined') ? currentDmUserId : null
+                }));
+            } catch(e) {}
+        }
+
+        // Só roda uma vez por carregamento de página (a cada reconexão do
+        // socket, 'carregar_meus_servidores' dispara novo - sem a trava,
+        // isso arrancaria a pessoa de onde ela navegou manualmente depois
+        // de uma queda e reconexão no meio da sessão).
+        function restaurarUltimaVista() {
+            if (restauracaoDeVistaFeita) return;
+            restauracaoDeVistaFeita = true;
+
+            let salvo;
+            try { salvo = JSON.parse(localStorage.getItem(LS_ULTIMA_VISTA)); } catch(e) { return; }
+            if (!salvo || !salvo.view || salvo.view === 'home') return;   // home já é o padrão
+
+            if (salvo.view === 'dm' && salvo.dmUserId) {
+                document.getElementById(`dm-${salvo.dmUserId}`)?.click();
+            } else if (salvo.view === 'market') {
+                btnMercado?.click();
+            } else if ((salvo.view === 'server' || salvo.view === 'calendar') && salvo.serverId) {
+                if (!meUserServers.some(s => s.id === salvo.serverId)) return;   // saiu do servidor nesse meio tempo
+                entrarNoServidor(salvo.serverId);
+                if (salvo.view === 'calendar') {
+                    abrirCalendario();
+                } else if (salvo.channelId) {
+                    document.querySelector(`.text-channel[data-id="${salvo.channelId}"]`)?.click();
+                }
+            }
+        }
+
         function switchMainView(viewName) {
             vistaAtual = viewName;
             // Hide all main containers
@@ -2732,6 +2802,8 @@
             } else if (viewName === 'calendar') {
                 if(calendarContent) calendarContent.style.display = 'flex';
             }
+
+            salvarUltimaVista();
         }
 
         function resetSidebars() {
@@ -2998,6 +3070,7 @@
             meUserServers = servidores;
             renderizarMeusServidores();
             if (typeof atualizarCarrossel === 'function') atualizarCarrossel();
+            restaurarUltimaVista();
         });
 
         socket.on('servidor_discord_criado', function(srv) {
@@ -3206,6 +3279,7 @@
             const atual = canais.find(c => Number(c.getAttribute('data-id')) === Number(currentChannelId));
             const alvo = (manterVista && atual) ? atual : canais[0];
             if (alvo) alvo.click();
+            salvarUltimaVista();
         }
 
         function bindChannelListeners() {
@@ -4446,7 +4520,13 @@
         });
 
         socket.on('amigo_removido', (d) => {
-            document.getElementById(`dm-${d.amigo_id}`)?.remove();
+            const card = document.getElementById(`dm-${d.amigo_id}`);
+            const nome = card?.getAttribute('data-name');
+            card?.remove();
+            if (currentDmUserId && Number(currentDmUserId) === Number(d.amigo_id)) {
+                document.getElementById('btn-home-view')?.click();
+            }
+            showToast(nome ? `Você não é mais amigo de ${nome}.` : 'Amizade desfeita.', 'info');
         });
 
         // ---- Presença dos amigos (online/offline em tempo real na lista de DMs) ----
@@ -5310,6 +5390,23 @@
                         container.innerHTML = '<p style="color: var(--red-color); text-align: center;">Erro ao carregar mensagens.</p>';
                     }
                 });
+
+                // Remover amigo - o evento remover_amigo já existia no backend
+                // (e o cliente já sabia reagir a amigo_removido), só faltava
+                // um jeito de disparar. Clique-direito porque é o mesmo padrão
+                // já usado no menu de contexto das mensagens.
+                if (dmCard.id !== 'dm-me' && !dmCard.classList.contains('temp-dm')) {
+                    dmCard.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        const amigoId = Number(this.getAttribute('data-user-id'));
+                        const nome = this.getAttribute('data-name');
+                        openConfirmModal(
+                            'Remover amigo',
+                            `Remover ${nome} da sua lista de amigos? Dá pra pedir amizade de novo depois se mudar de ideia.`,
+                            () => socket.emit('remover_amigo', { amigo_id: amigoId })
+                        );
+                    });
+                }
             });
         }
         setupDMClickListeners();
@@ -5666,6 +5763,7 @@
                 socket.emit('sair_canal', { canal_id: currentChannelId });
                 currentChannelId = btn.getAttribute('data-id');
                 socket.emit('entrar_canal', { canal_id: currentChannelId });
+                salvarUltimaVista();
 
                 const channelName = btn.getAttribute('data-name');
                 document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> ${esc(channelName)}`;
@@ -7133,6 +7231,16 @@
                 if (!call.peerConnection || call.peerConnection.connectionState === 'closed') {
                     clearInterval(intervalId); monitoresBitrate.delete(call); return;
                 }
+                // ICE 'failed' não fecha a call sozinho - ela fica pendurada
+                // com o vídeo/áudio parado pro resto da sessão (a pessoa
+                // parece "sumida" pra quem está do outro lado, mas o card
+                // continua lá, congelado). Fecha na mão pra disparar a mesma
+                // limpeza de quando alguém sai de verdade.
+                if (call.peerConnection.connectionState === 'failed') {
+                    clearInterval(intervalId); monitoresBitrate.delete(call);
+                    call.close();
+                    return;
+                }
                 try {
                     const stats = await call.peerConnection.getStats();
                     let perdidos = null, enviados = null;
@@ -7176,13 +7284,27 @@
                 source.connect(analyser); analyser.fftSize = 256;
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
+                // Acende na hora, mas só apaga depois de ~400ms sem volume -
+                // sem essa segurança, uma fala normal (que tem microrespiros)
+                // fazia a borda verde ligar/desligar várias vezes por segundo,
+                // que é boa parte do "fica mudando toda hora" reclamado.
+                let silencioDesde = 0;
+                const SEGURA_MS = 400;
                 const check = () => {
                     if(!document.getElementById(cardId)) return;
                     analyser.getByteFrequencyData(dataArray);
                     let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
                     let avg = sum / dataArray.length;
                     const card = document.getElementById(cardId);
-                    if(card) { if(avg > 15) card.classList.add('is-speaking'); else card.classList.remove('is-speaking'); }
+                    if(card) {
+                        if(avg > 15) {
+                            silencioDesde = 0;
+                            card.classList.add('is-speaking');
+                        } else {
+                            if(!silencioDesde) silencioDesde = performance.now();
+                            if(performance.now() - silencioDesde > SEGURA_MS) card.classList.remove('is-speaking');
+                        }
+                    }
                     requestAnimationFrame(check);
                 };
                 check();
@@ -7268,23 +7390,74 @@
                 document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high" style="color: var(--text-muted);"></i> ${esc(voiceName)}`;
                 document.getElementById('call-switch-overlay').classList.remove('active');
 
-                mePeer = new Peer(undefined, { host: '0.peerjs.com', port: 443, secure: true });
+                // Sem TURN, o PeerJS só tenta conexão direta (STUN) - atrás de
+                // NAT/firewall mais fechado (rede de faculdade/trabalho, 4G de
+                // operadora) isso falha e a pessoa nunca conecta com ninguém,
+                // o que parece "sumiu da call" pros outros. O TURN é o
+                // caminho de reserva (relay) quando a conexão direta não rola.
+                mePeer = new Peer(undefined, {
+                    host: '0.peerjs.com', port: 443, secure: true,
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:global.stun.twilio.com:3478' },
+                            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+                        ]
+                    }
+                });
                 mePeer.on('open', id => {
                     myPeerId = id; socket.emit('entrar_call', { canal_id: voiceId, peer_id: id, usuario: currentUserName });
+                });
+
+                // 'disconnected' é só a sinalização (o socket do PeerJS com o
+                // broker) caindo, não a call em si - reconecta sozinho em vez
+                // de deixar a pessoa "sumida" pros próximos que tentarem
+                // entrar na call (sem reconectar, quem já estava dentro
+                // continua na call, mas ninguém novo consegue chamá-la).
+                mePeer.on('disconnected', () => {
+                    if (inCall && mePeer && !mePeer.destroyed) mePeer.reconnect();
+                });
+                mePeer.on('error', (err) => {
+                    console.warn('[BAZINGA] Erro no PeerJS:', err.type, err);
+                    // peer-unavailable é normal (tentou ligar pra alguém que
+                    // já saiu da call bem nesse instante) - não é erro de verdade.
+                    if (err.type === 'peer-unavailable') return;
+                    if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(err.type)) {
+                        showToast('Conexão de voz instável - tentando reconectar...', 'warning');
+                    }
                 });
 
                 mePeer.on('call', call => {
                     if (call.metadata && call.metadata.type === 'screen') {
                         call.answer();
+                        // Chave por STREAM, não só por pessoa - com só `call.peer`
+                        // aqui, a segunda tela de quem já estava compartilhando uma
+                        // achava o card da primeira já existindo e desistia sem
+                        // avisar nada (não aparecia e não dava erro nenhum).
+                        const telaId = `${call.peer}-screen-${(call.metadata && call.metadata.streamId) || 'x'}`;
+                        // Só essa tela some (o card de voz/vídeo da pessoa e as
+                        // outras telas dela continuam) - ela pode ter parado de
+                        // compartilhar só uma delas sem sair da call.
+                        call.on('close', () => {
+                            const el = document.getElementById(`vc-${telaId}`);
+                            if(el) el.remove();
+                        });
                         call.on('stream', remoteStream => {
-                            if(!document.getElementById(`vc-${call.peer}-screen`)) {
-                                adicionarVideoCard(`${call.peer}-screen`, remoteStream, `Tela de ${call.metadata.userName}`, null);
-                                monitorarVolume(remoteStream, `vc-${call.peer}-screen`);
+                            if(!document.getElementById(`vc-${telaId}`)) {
+                                adicionarVideoCard(telaId, remoteStream, `Tela de ${call.metadata.userName}`, null);
+                                monitorarVolume(remoteStream, `vc-${telaId}`);
                             }
                         });
                     } else {
                         call.answer(streamParaChamada());
                         monitorarEAjustarBitrate(call, 'video');
+                        // Se a ligação WebRTC morrer sozinha (ICE falhou, por
+                        // exemplo) sem o servidor avisar nada, tira a pessoa da
+                        // tela mesmo assim - card congelado pra sempre é pior
+                        // que reconectar do zero na próxima vez que ela falar.
+                        call.on('close', () => removerVideoDoPeer(call.peer));
                         call.on('stream', remoteStream => {
                             const callerName = (call.metadata && call.metadata.userName) ? call.metadata.userName : "Membro";
                             const callerAvatar = (call.metadata && call.metadata.avatar) ? call.metadata.avatar : null;
@@ -7346,6 +7519,7 @@
             if(!inCall || !mePeer) return;
             // Send metadata back to the new user
             const call = mePeer.call(dados.peer_id, streamParaChamada(), { metadata: { type: 'voice', userName: currentUserName, avatar: currentUserAvatar } });
+            call.on('close', () => removerVideoDoPeer(call.peer));
             call.on('stream', remoteStream => {
                 if(!document.getElementById(`vc-${dados.peer_id}`)) {
                     adicionarVideoCard(dados.peer_id, remoteStream, dados.usuario, dados.avatar);
@@ -7356,17 +7530,12 @@
             monitorarEAjustarBitrate(call, 'video');
 
             activeScreenStreams.forEach(screenObj => {
-                const chamadaTela = mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName } });
+                const chamadaTela = mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName, streamId: screenObj.id } });
                 monitorarEAjustarBitrate(chamadaTela, 'tela');
             });
         });
 
-        socket.on('usuario_saiu_call', (dados) => {
-            const vuEl = document.getElementById(`vu-${dados.peer_id}`); if(vuEl) vuEl.remove();
-            if(peers[dados.peer_id]) { peers[dados.peer_id].close(); delete peers[dados.peer_id]; }
-            const card = document.getElementById(`vc-${dados.peer_id}`); if(card) card.remove();
-            const screenCard = document.getElementById(`vc-${dados.peer_id}-screen`); if(screenCard) screenCard.remove();
-        });
+        socket.on('usuario_saiu_call', (dados) => removerVideoDoPeer(dados.peer_id));
 
         // Prévia de quem já está numa call, pra quem ainda NÃO entrou (tipo
         // Discord mostrar avatares embaixo do canal de voz). Enquanto eu
@@ -7392,6 +7561,25 @@
                 </div>`;
             }).join('');
         });
+
+        // Limpa a UI de um peer que saiu ou cuja ligação WebRTC morreu.
+        // Compartilhada entre o aviso do servidor (usuario_saiu_call) e uma
+        // call que fechou sozinha (ICE falhou, por exemplo) - sem isso, uma
+        // conexão P2P que morre sem o socket avisar nada deixava a pessoa
+        // "sumida" (card congelado) sem que ninguém soubesse por quê.
+        // `delete` vem ANTES do `close()` de propósito: fechar a call dispara
+        // o handler de 'close' de novo (é o mesmo peers[peerId] daqui), e sem
+        // apagar primeiro isso reentraria numa segunda chamada de close().
+        function removerVideoDoPeer(peerId) {
+            const vuEl = document.getElementById(`vu-${peerId}`); if(vuEl) vuEl.remove();
+            const card = document.getElementById(`vc-${peerId}`); if(card) card.remove();
+            // Uma pessoa pode ter mais de uma tela aberta ao mesmo tempo -
+            // cada uma com seu próprio card (`vc-<peer>-screen-<streamId>`),
+            // por isso o prefixo em vez de um id fixo só.
+            document.querySelectorAll(`[id^="vc-${peerId}-screen"]`).forEach(el => el.remove());
+            const call = peers[peerId];
+            if(call) { delete peers[peerId]; call.close(); }
+        }
 
         function adicionarVideoCard(peerId, stream, nome, avatarUrl) {
             const card = document.createElement('div');
@@ -7479,7 +7667,7 @@
                 document.getElementById('btn-main-screen').classList.add('active-green'); document.getElementById('btn-side-screen').classList.add('active-stream');
 
                 Object.keys(peers).forEach(peerId => {
-                    const call = mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName } });
+                    const call = mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName, streamId } });
                     monitorarEAjustarBitrate(call, 'tela');
                 });
                 newStream.getVideoTracks()[0].onended = () => pararCompartilhamento(streamId);
@@ -7937,6 +8125,10 @@
             }
             currentVoiceChannelId = null;
             document.querySelectorAll('.video-card:not(#my-video-card)').forEach(c => c.remove());
+            // Sem isso, peer ids de calls antigas ficavam acumulados aqui pra
+            // sempre (o mePeer é destruído e recriado do zero a cada call,
+            // então nenhum desses ids serve pra mais nada).
+            Object.keys(peers).forEach(k => delete peers[k]);
         }
         document.getElementById('btn-main-disconnect').addEventListener('click', disconnectCall);
         document.getElementById('btn-side-disconnect').addEventListener('click', disconnectCall);

@@ -65,7 +65,14 @@ def pode_ver_canal(usuario, canal):
     if canal.server_id is None:
         return True
 
-    servidor = Server.query.get(canal.server_id)
+    # NullPool abre uma conexão nova por query - o com_retry() de cima (no
+    # Channel.query.get de canal_permitido) não "esquenta" esta aqui. Sem
+    # com_retry também, um cold start do Neon bem no meio de pode_ver_canal
+    # estourava OperationalError sem retry nenhum, e como quem chama esta
+    # função (entrar_call, listar_participantes_call...) não tinha
+    # try/except, o handler inteiro morria em silêncio - por isso às vezes
+    # alguém "sumia" da call ou a prévia de quem já está nela não aparecia.
+    servidor = com_retry(lambda: Server.query.get(canal.server_id))
     if servidor is None:
         return False
     if usuario not in servidor.members:
