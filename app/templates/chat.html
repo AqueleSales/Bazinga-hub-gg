@@ -19,8 +19,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <!-- Emoji desenhado (vetor), igual ao Discord/Twitter, em vez de depender
-         da fonte de emoji do sistema operacional de cada um -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" crossorigin="anonymous"></script>
+         da fonte de emoji do sistema operacional de cada um.
+         Era cdnjs, mas o pacote "twemoji" de lá foi reestruturado pra só
+         imagens (72x72 png) - twemoji.min.js sumiu de lá e voltava 404 em
+         silêncio (window.twemoji nunca existia, então emojificar() nunca
+         rodava - emoji renderizava igual, só que na fonte nativa do SO em
+         vez do desenho vetorial). jsDelivr ainda serve o pacote npm
+         original intacto (JS + SVG), confirmado funcionando. -->
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 
     <style>
         /* ==========================================================================
@@ -938,6 +944,23 @@
         .deco-card:hover { border-color: var(--text-muted); }
         .deco-card .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; opacity: 0; transition: 0.2s; color: white; font-size: 24px;}
         .deco-card:hover .overlay { opacity: 1; }
+
+        /* Aba "Minha Conta" - essas classes nunca tinham CSS nenhum (só a
+           combinação animada do banner, de carona no .npc-banner.banner-
+           animado ali em cima), então a aba inteira renderizava como divs
+           crus sem cartão, sem faixa, sem avatar redondo - era a maior
+           causa de "as configurações tão feio". Espelha o mesmo cartão de
+           perfil (.npc-*) usado no popout e no preview de Perfis. */
+        .account-card { background-color: var(--bg-quaternary); border-radius: 8px; overflow: hidden; border: 1px solid var(--bg-tertiary); }
+        .account-banner { height: 120px; background-color: var(--brand-color); position: relative; transition: background 0.3s ease; }
+        .account-info-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 0 16px 16px; margin-top: -40px; position: relative; z-index: 1; }
+        .account-avatar-large { width: 92px; height: 92px; border-radius: 50%; border: 6px solid var(--bg-quaternary); display: flex; justify-content: center; align-items: center; font-size: 32px; font-weight: bold; color: white; flex-shrink: 0; }
+        .account-avatar-large span { font-size: 32px !important; }
+        .account-details-box { background-color: var(--bg-tertiary); margin: 0 16px 16px; border-radius: 8px; padding: 0 16px; }
+        .acc-data-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .acc-data-row:last-child { border-bottom: none; }
+        .acc-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .acc-value { font-size: 16px; color: var(--text-normal); word-break: break-all; }
 
         .color-picker-wrapper { display: flex; gap: 12px; align-items: center; }
         .color-preview-box { width: 60px; height: 40px; border-radius: 4px; border: 2px solid var(--bg-quaternary); cursor: pointer; transition: 0.2s; background: var(--nitro-gradient); box-shadow: 0 4px 8px rgba(0,0,0,0.3);}
@@ -2079,8 +2102,10 @@
                 <div class="npc-status" id="popout-status-dot"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
             </div>
             <div class="npc-badges" style="top: 12px; right: 16px; position: absolute;">
+                <!-- Tinha um segundo badge aqui, "Bazinga Hub" com o logo do
+                     Discord - mostrava a marca de um concorrente pro usuário
+                     final, sem função nenhuma por trás. Removido. -->
                 <div class="badge" title="Membro Elite"><i class="fa-solid fa-gem" style="color: #00a8fc;"></i></div>
-                <div class="badge" title="Bazinga Hub"><i class="fa-brands fa-discord" style="color: #5865F2;"></i></div>
             </div>
         </div>
         <div class="npc-body" style="padding-top: 16px;">
@@ -2380,10 +2405,10 @@
                                         <div id="editor-avatar-container" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: var(--brand-color); font-size: 24px; font-weight: bold; color: white;"></div>
                                         <div class="overlay"><i class="fa-solid fa-pen"></i></div>
                                     </div>
-                                    <div class="deco-card">
-                                        <i class="fa-brands fa-discord" style="font-size: 32px; color: #4e5058;"></i>
-                                        <div class="overlay"><i class="fa-solid fa-plus"></i></div>
-                                    </div>
+                                    <!-- Segundo deco-card removido: não tinha onclick nenhum (botão morto)
+                                         e usava o logo do Discord como ícone - a Bazinga não tem produto
+                                         de decoração pra vender ainda (ver Pendências: Decorações de
+                                         perfil). Quando existir, entra aqui de novo com ícone próprio. -->
                                 </div>
                             </div>
 

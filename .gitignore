@@ -12,3 +12,7 @@ __pycache__/
 
 # Uploads de usuários (avatar, ícone de servidor)
 app/static/uploads/
+
+# Config local do Claude Code (launch.json de teste, nao faz parte do deploy)
+.claude/
+instance/_ui_test.db
