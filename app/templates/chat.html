@@ -7201,6 +7201,19 @@
             });
         }
 
+        // Desligar a câmera parava a track local e não avisava mais
+        // ninguém - o `replaceTrack(null)` é o que dispara o `mute` do
+        // WebRTC do outro lado (ouvido em adicionarVideoCard), trocando o
+        // <video> congelado de quem assiste de volta pro avatar.
+        function pararVideoParaAmigos() {
+            Object.values(peers).forEach(call => {
+                if(call.peerConnection) {
+                    const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if(sender) sender.replaceTrack(null);
+                }
+            });
+        }
+
         // ==========================================
         // QUALIDADE AUTOMÁTICA (sem escolha manual de fps/resolução)
         // ------------------------------------------------------------
@@ -7447,12 +7460,20 @@
                         // compartilhar só uma delas sem sair da call.
                         call.on('close', () => {
                             const el = document.getElementById(`vc-${telaId}`);
-                            if(el) el.remove();
+                            if(el) { if(el.classList.contains('focused')) videoGrid.classList.remove('focused-mode'); el.remove(); }
                         });
                         call.on('stream', remoteStream => {
                             if(!document.getElementById(`vc-${telaId}`)) {
                                 adicionarVideoCard(telaId, remoteStream, `Tela de ${call.metadata.userName}`, null);
                                 monitorarVolume(remoteStream, `vc-${telaId}`);
+                                // Tela compartilhada vira o foco na hora pra
+                                // todo mundo que já está na call, igual ao
+                                // Discord - sem isso, quem assistia via só o
+                                // card pequeno da câmera de quem apresenta,
+                                // do mesmo tamanho que todo o resto.
+                                document.querySelectorAll('.video-card').forEach(c => c.classList.remove('focused'));
+                                document.getElementById(`vc-${telaId}`).classList.add('focused');
+                                videoGrid.classList.add('focused-mode');
                             }
                         });
                     } else {
@@ -7537,6 +7558,7 @@
             activeScreenStreams.forEach(screenObj => {
                 const chamadaTela = mePeer.call(dados.peer_id, screenObj.stream, { metadata: { type: 'screen', userName: currentUserName, streamId: screenObj.id } });
                 monitorarEAjustarBitrate(chamadaTela, 'tela');
+                screenObj.calls.push(chamadaTela);
             });
         });
 
@@ -7599,6 +7621,26 @@
                               <div class="video-label">${esc(nome)}</div>`;
             videoGrid.appendChild(card);
             card.querySelector('video').srcObject = stream;
+
+            // Ligar/desligar câmera no meio da call não reabre a conexão -
+            // só troca o sender por null (ver pararVideoParaAmigos) - então
+            // quem assiste nunca sabia e o <video> ficava com o último
+            // quadro da câmera congelado pra sempre. mute/unmute é o evento
+            // nativo do WebRTC pra isso, não precisa de nenhum aviso extra
+            // indo e voltando pelo servidor.
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack) {
+                const videoEl = card.querySelector('video');
+                const avatarEl = card.querySelector('.video-avatar');
+                const atualizarVisibilidade = () => {
+                    const semVideo = videoTrack.muted || videoTrack.readyState === 'ended';
+                    videoEl.style.display = semVideo ? 'none' : 'block';
+                    avatarEl.style.display = semVideo ? 'flex' : 'none';
+                };
+                videoTrack.onmute = atualizarVisibilidade;
+                videoTrack.onunmute = atualizarVisibilidade;
+                videoTrack.onended = atualizarVisibilidade;
+            }
         }
 
         // Câmera e Tela
@@ -7609,6 +7651,7 @@
 
             if(myCamStream) {
                 myCamStream.getTracks().forEach(t => t.stop()); myCamStream = null;
+                pararVideoParaAmigos();
                 document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');
                 videoCardVideo.style.display = 'none'; videoCardAvatar.style.display = 'flex';
             } else {
@@ -7661,7 +7704,14 @@
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
                 const streamId = Date.now();
-                activeScreenStreams.push({ id: streamId, stream: newStream });
+                // `calls` guarda as ligações PeerJS abertas pra essa tela em
+                // cada peer - sem isso, pararCompartilhamento() não tinha
+                // como fechar elas, e parar a track local não avisa ninguém
+                // do outro lado (o card da tela ficava congelado pra sempre
+                // em quem assistia, e uma segunda tela nunca conseguia
+                // "desempatar" com a primeira que nunca foi embora de vez).
+                const screenObj = { id: streamId, stream: newStream, calls: [] };
+                activeScreenStreams.push(screenObj);
 
                 const screenCard = document.createElement('div');
                 screenCard.className = 'video-card'; screenCard.id = `screen-card-${streamId}`;
@@ -7669,11 +7719,19 @@
                 document.getElementById('video-grid').appendChild(screenCard);
                 screenCard.querySelector('video').srcObject = newStream;
 
+                // Foca a própria tela na hora (igual ao Discord) - sem isso
+                // ela nascia do mesmo tamanho que o card da câmera de
+                // qualquer um, escondida no meio da grade.
+                document.querySelectorAll('.video-card').forEach(c => c.classList.remove('focused'));
+                screenCard.classList.add('focused');
+                videoGrid.classList.add('focused-mode');
+
                 document.getElementById('btn-main-screen').classList.add('active-green'); document.getElementById('btn-side-screen').classList.add('active-stream');
 
                 Object.keys(peers).forEach(peerId => {
                     const call = mePeer.call(peerId, newStream, { metadata: { type: 'screen', userName: currentUserName, streamId } });
                     monitorarEAjustarBitrate(call, 'tela');
+                    screenObj.calls.push(call);
                 });
                 newStream.getVideoTracks()[0].onended = () => pararCompartilhamento(streamId);
             } catch(e) {}
@@ -7681,7 +7739,16 @@
 
         function pararCompartilhamento(id) {
             const index = activeScreenStreams.findIndex(s => s.id === id);
-            if(index !== -1) { activeScreenStreams[index].stream.getTracks().forEach(t => t.stop()); activeScreenStreams.splice(index, 1); }
+            if(index !== -1) {
+                const screenObj = activeScreenStreams[index];
+                screenObj.stream.getTracks().forEach(t => t.stop());
+                // Fecha a ligação de cada peer que via essa tela - parar a
+                // track local sozinha nunca chega no outro lado, e sem o
+                // 'close' explícito o card de quem assistia ficava congelado
+                // pra sempre (e travava uma tela nova de aparecer direito).
+                screenObj.calls.forEach(call => call.close());
+                activeScreenStreams.splice(index, 1);
+            }
             const card = document.getElementById(`screen-card-${id}`);
             if(card) { if(card.classList.contains('focused')) videoGrid.classList.remove('focused-mode'); card.remove(); }
             if(activeScreenStreams.length === 0) { document.getElementById('btn-main-screen').classList.remove('active-green'); document.getElementById('btn-side-screen').classList.remove('active-stream'); }
