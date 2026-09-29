@@ -54,6 +54,12 @@ class Person(db.Model):
     # Carteira do Usuário (Começa com 500 moedas de brinde)
     bazinga_coins = db.Column(db.Integer, default=500)
 
+    # Battle Pass: XP ganho mandando mensagem (com intervalo mínimo entre
+    # ganhos - ver GANHO_XP_INTERVALO_SEGUNDOS em utils.py - senão dava pra
+    # subir de nível só mandando mensagem vazia em loop).
+    xp = db.Column(db.Integer, default=0, nullable=False)
+    xp_ganho_em = db.Column(db.DateTime, nullable=True)
+
     # Perfil (editável na tela de Configurações)
     bio = db.Column(db.Text, nullable=True)
     custom_status = db.Column(db.String(128), nullable=True)
