@@ -392,7 +392,13 @@
         .market-section-title { font-size: 20px; font-weight: 800; color: var(--text-header); margin: 32px 0 16px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;}
         .market-section-title:first-child { margin-top: 0; }
 
-        /* Battle Pass (nível/XP pessoal) */
+        /* Battle Pass (nível/XP pessoal) - classe própria (bp-content), NÃO
+           .market-content: essa classe é global e o troca-aba do Mercado
+           (Loja Bazinga/Bazar) faz querySelectorAll('.market-content') pra
+           tirar o "active" de todo mundo - reaproveitar ela aqui deixava o
+           Battle Pass invisível pra sempre depois de clicar em qualquer
+           aba do Mercado uma vez (a classe "active" nunca voltava). */
+        .bp-content { flex-grow: 1; overflow-y: auto; padding: 24px 32px; }
         .bp-card { display: flex; align-items: center; gap: 24px; background-color: var(--bg-tertiary); border-radius: 12px; padding: 24px; }
         .bp-nivel-badge { width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(135deg, #ffd76a, #ff9b3f); display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 900; color: #1a1b1e; flex-shrink: 0; box-shadow: 0 0 0 4px var(--bg-quaternary), 0 4px 16px rgba(255, 179, 71, 0.35); }
         @keyframes bpPulso { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
@@ -1490,7 +1496,7 @@
                         <i class="fa-solid fa-ranking-star" style="color: #ffd76a;"></i> Battle Pass
                     </h2>
                 </header>
-                <div class="market-content active">
+                <div class="bp-content">
                     <div class="bp-card">
                         <div class="bp-nivel-badge" id="bp-nivel-numero">1</div>
                         <div class="bp-info">
