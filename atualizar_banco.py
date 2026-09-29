@@ -114,6 +114,10 @@ def atualizar_banco():
             # fica NULL (não dá pra saber a data real dela).
             add_column_se_nao_existir("person", "created_at TIMESTAMP")
 
+            # 15. Battle Pass (nível/XP pessoal)
+            add_column_se_nao_existir("person", "xp INTEGER DEFAULT 0")
+            add_column_se_nao_existir("person", "xp_ganho_em TIMESTAMP")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

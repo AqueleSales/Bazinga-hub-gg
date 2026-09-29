@@ -9,7 +9,8 @@ from . import socketio
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship)
 from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
-                    servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite)
+                    servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
+                    conceder_xp_por_mensagem, nivel_da_pessoa, progresso_de_nivel)
 
 
 def usuario_logado():
@@ -201,6 +202,13 @@ def handle_connect():
 
         emit('carregar_meus_servidores', servidores)
 
+        xp_atual, xp_por_nivel = progresso_de_nivel(usuario.xp)
+        emit('xp_atualizado', {
+            'xp': usuario.xp or 0, 'nivel': nivel_da_pessoa(usuario.xp),
+            'xp_atual_nivel': xp_atual, 'xp_por_nivel': xp_por_nivel,
+            'coins': usuario.bazinga_coins, 'subiu_nivel': False
+        })
+
         # Só avisa quem divide servidor com ela quando é o PRIMEIRO socket
         # dela (outra aba/dispositivo já conectado não deve gerar aviso de novo).
         era_offline = not esta_online(usuario.id)
@@ -352,6 +360,12 @@ def lidar_com_mensagem(dados):
         # sem duplicar (ver enviarMensagemOtimista() no chat.html).
         'temp_id': temp_id_seguro(dados)
     }, to=str(canal.id))
+
+    # Battle Pass: XP por mensagem (com cooldown - ver conceder_xp_por_mensagem).
+    # Só pra quem mandou, não pra sala inteira - ninguém mais precisa saber.
+    resultado_xp = conceder_xp_por_mensagem(usuario)
+    if resultado_xp:
+        emit('xp_atualizado', resultado_xp, to=sala_pessoal(usuario.id))
 
 
 @socketio.on('editar_mensagem')
@@ -1697,6 +1711,10 @@ def on_enviar_mensagem_direta(data):
         salas = {sala_pessoal(usuario.id), sala_pessoal(target_id)}
         for sala in salas:
             emit('receber_mensagem_direta', payload, to=sala)
+
+        resultado_xp = conceder_xp_por_mensagem(usuario)
+        if resultado_xp:
+            emit('xp_atualizado', resultado_xp, to=sala_pessoal(usuario.id))
 
     except Exception as e:
         db.session.rollback()

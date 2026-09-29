@@ -392,6 +392,24 @@
         .market-section-title { font-size: 20px; font-weight: 800; color: var(--text-header); margin: 32px 0 16px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;}
         .market-section-title:first-child { margin-top: 0; }
 
+        /* Battle Pass (nível/XP pessoal) */
+        .bp-card { display: flex; align-items: center; gap: 24px; background-color: var(--bg-tertiary); border-radius: 12px; padding: 24px; }
+        .bp-nivel-badge { width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(135deg, #ffd76a, #ff9b3f); display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 900; color: #1a1b1e; flex-shrink: 0; box-shadow: 0 0 0 4px var(--bg-quaternary), 0 4px 16px rgba(255, 179, 71, 0.35); }
+        @keyframes bpPulso { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        .bp-nivel-badge.subiu { animation: bpPulso 0.6s ease; }
+        .bp-info { flex: 1; min-width: 0; }
+        .bp-titulo { font-size: 18px; font-weight: 800; color: var(--text-header); margin-bottom: 10px; }
+        .bp-barra-wrapper { position: relative; }
+        .bp-barra-fundo { height: 22px; border-radius: 11px; background-color: var(--bg-quaternary); overflow: hidden; }
+        .bp-barra-preenchida { height: 100%; border-radius: 11px; background: linear-gradient(90deg, var(--brand-color), #8a6ff2); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+        .bp-barra-texto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .bp-marcos { display: flex; gap: 16px; flex-wrap: wrap; }
+        .bp-marco { background-color: var(--bg-tertiary); border-radius: 8px; padding: 16px; width: 140px; text-align: center; opacity: 0.55; transition: 0.2s; border: 1px solid transparent; }
+        .bp-marco.alcancado { opacity: 1; border-color: var(--green-color); }
+        .bp-marco i { font-size: 22px; color: #ffd76a; margin-bottom: 8px; display: block; }
+        .bp-marco-nivel { font-weight: 800; font-size: 14px; color: var(--text-header); }
+        .bp-marco-premio { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
         /* ==========================================================================
            5. ÁREA DE VÍDEO E CALL (WebRTC P2P)
            ========================================================================== */
@@ -1027,6 +1045,25 @@
         .user-popout-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; display: none; }
         .user-popout { position: absolute; bottom: 65px; left: 16px; width: 340px; background-color: var(--bg-quaternary); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.8); display: none; flex-direction: column; overflow: hidden; z-index: 2001; animation: popoutAnim 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.1); border: 1px solid var(--bg-tertiary); }
 
+        /* Popout tinha o avatar posicionado com position:absolute dentro de
+           um .popout-header sem "position:relative" nenhum - ele ancorava
+           contra o card inteiro (não contra o banner), o que ficava torto
+           dependendo do navegador. Layout reconstruído: banner normal +
+           margin-top negativo puxando o avatar pra cima (mesmo truque já
+           usado em "Minha Conta"), sem position:absolute pra nada disso. */
+        .popout-banner { height: 90px; background-color: var(--brand-color); position: relative; transition: background 0.3s ease; }
+        .popout-info-row { display: flex; align-items: flex-end; justify-content: space-between; padding: 0 16px; margin-top: -32px; position: relative; }
+        .popout-avatar-wrap { position: relative; width: 76px; height: 76px; border-radius: 50%; border: 6px solid var(--bg-quaternary); background-color: var(--bg-quaternary); flex-shrink: 0; }
+        .popout-avatar { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: var(--green-color); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; color: #fff; }
+        .popout-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .popout-status-dot { position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; background-color: var(--green-color); border-radius: 50%; border: 4px solid var(--bg-quaternary); display: flex; align-items: center; justify-content: center; font-size: 10px; }
+        .popout-badges { display: flex; gap: 6px; margin-bottom: 6px; }
+        .popout-badges .badge { width: 30px; height: 30px; border-radius: 8px; background-color: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+        .popout-nivel-badge { font-weight: 800; font-size: 11px !important; color: #ffd76a; background: linear-gradient(135deg, rgba(255,215,106,0.18), rgba(255,155,63,0.18)) !important; }
+        .popout-body { padding: 12px 16px 16px; }
+        .popout-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .popout-value { color: var(--text-normal); font-size: 14px; line-height: 1.4; margin-bottom: 14px; }
+
         .discord-select-old { -webkit-appearance: none; appearance: none; width: 100%; padding: 10px 12px; background-color: var(--bg-tertiary); color: var(--text-normal); border: 1px solid rgba(0,0,0,0.2); border-radius: 4px; outline: none; font-size: 14px; font-weight: 500; cursor: pointer;}
         .discord-slider { -webkit-appearance: none; width: 100%; height: 8px; background: #4e5058; border-radius: 4px; outline: none; margin-top: 8px; cursor: pointer; }
         .discord-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -1092,6 +1129,10 @@
                         <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA BAZINGA</div>
                         <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
                         <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
+                        <div class="channel-item" id="btn-battlepass" style="gap: 12px; margin: 0 8px; padding: 8px; justify-content: space-between;" title="Seu nível e progresso">
+                            <div style="display:flex; align-items:center; gap:12px;"><i class="fa-solid fa-ranking-star" style="font-size: 16px; color: #ffd76a;"></i> Battle Pass</div>
+                            <span id="sidebar-nivel-badge" style="background: var(--brand-color); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">1</span>
+                        </div>
 
                         <div style="height: 1px; background-color: rgba(255,255,255,0.05); margin: 8px 16px;"></div>
 
@@ -1440,6 +1481,31 @@
                     <div class="market-grid" id="bazar-grid-container"></div>
                 </div>
 
+            </div>
+
+            <!-- VISUALIZAÇÃO: BATTLE PASS (nível/XP pessoal) -->
+            <div id="battlepass-content-wrapper" class="market-wrapper">
+                <header class="market-header">
+                    <h2 style="color: var(--text-header); font-size: 16px; display: flex; align-items: center; gap: 8px; font-weight: 800;">
+                        <i class="fa-solid fa-ranking-star" style="color: #ffd76a;"></i> Battle Pass
+                    </h2>
+                </header>
+                <div class="market-content active">
+                    <div class="bp-card">
+                        <div class="bp-nivel-badge" id="bp-nivel-numero">1</div>
+                        <div class="bp-info">
+                            <div class="bp-titulo">Nível <span id="bp-nivel-texto">1</span></div>
+                            <div class="bp-barra-wrapper">
+                                <div class="bp-barra-fundo"><div class="bp-barra-preenchida" id="bp-barra-preenchida" style="width: 0%;"></div></div>
+                                <div class="bp-barra-texto" id="bp-barra-texto">0 / 100 XP</div>
+                            </div>
+                            <div style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">Manda mensagem pra ganhar XP. A cada nível, uma recompensa em Bazinga Coins cai direto na sua carteira.</div>
+                        </div>
+                    </div>
+
+                    <div class="market-section-title">Próximos marcos</div>
+                    <div class="bp-marcos" id="bp-marcos-lista"></div>
+                </div>
             </div>
             <!-- ==========================================
                  CALENDÁRIO DO SERVIDOR (aba própria, não pop-up)
@@ -2099,33 +2165,31 @@
     <!-- Mini Perfil Popout (Ao clicar no nome) -->
     <div class="user-popout-overlay" id="user-popout-overlay"></div>
     <div class="user-popout" id="user-popout">
-        <div class="npc-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="popout-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
-        <div class="popout-header">
-            <div class="npc-avatar-wrapper" style="top: -45px; width: 92px; height: 92px; border: 6px solid var(--bg-quaternary);">
-                <div class="npc-avatar-inner" id="popout-avatar-container"></div>
-                <div class="npc-status" id="popout-status-dot"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
+        <div class="popout-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="popout-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
+        <div class="popout-info-row">
+            <div class="popout-avatar-wrap">
+                <div class="popout-avatar" id="popout-avatar-container"></div>
+                <div class="popout-status-dot" id="popout-status-dot"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
             </div>
-            <div class="npc-badges" style="top: 12px; right: 16px; position: absolute;">
-                <!-- Tinha um segundo badge aqui, "Bazinga Hub" com o logo do
-                     Discord - mostrava a marca de um concorrente pro usuário
-                     final, sem função nenhuma por trás. Removido. -->
+            <div class="popout-badges">
                 <div class="badge" title="Membro Elite"><i class="fa-solid fa-gem" style="color: #00a8fc;"></i></div>
+                <div class="badge popout-nivel-badge" id="popout-nivel-badge" title="Seu nível no Battle Pass">Nv. 1</div>
             </div>
         </div>
-        <div class="npc-body" style="padding-top: 16px;">
+        <div class="popout-body">
             <div class="npc-name" id="popout-name-text">Carregando...</div>
             <div class="npc-username" id="popout-username-text">carregando... <i class="fa-solid fa-pen" style="font-size: 10px; cursor: pointer; margin-left: 4px;" onclick="document.getElementById('btn-open-settings').click();"></i></div>
 
             <div class="npc-custom-status" id="popout-custom-status"><i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> {{ usuario_atual.custom_status or "Sem status" }}</div>
             <div class="npc-divider"></div>
 
-            <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Sobre mim</div>
-            <div style="color: var(--text-normal); font-size: 14px; line-height: 1.4; margin-bottom: 16px;" id="popout-bio-text">{{ usuario_atual.bio or "Use as configurações para me editar!" }}</div>
+            <div class="popout-label">Sobre mim</div>
+            <div class="popout-value" id="popout-bio-text">{{ usuario_atual.bio or "Use as configurações para me editar!" }}</div>
 
             {% if membro_desde_texto %}
             <div class="npc-divider"></div>
-            <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Membro desde</div>
-            <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">{{ membro_desde_texto }}</div>
+            <div class="popout-label">Membro desde</div>
+            <div class="popout-value" style="margin-bottom: 0;">{{ membro_desde_texto }}</div>
             {% endif %}
         </div>
     </div>
@@ -2764,6 +2828,7 @@
             const homeContent = document.getElementById('home-content-wrapper');
             const serverContent = document.getElementById('server-content-wrapper');
             const marketContent = document.getElementById('market-content-wrapper');
+            const battlepassContent = document.getElementById('battlepass-content-wrapper');
             const calendarContent = document.getElementById('calendar-content-wrapper');
             const dmChat = document.getElementById('dm-chat-view');
             const radarMap = document.getElementById('bazinga-map');
@@ -2772,6 +2837,7 @@
             if(homeContent) homeContent.style.display = 'none';
             if(serverContent) serverContent.style.display = 'none';
             if(marketContent) marketContent.style.display = 'none';
+            if(battlepassContent) battlepassContent.style.display = 'none';
             if(calendarContent) calendarContent.style.display = 'none';
             if(dmChat) dmChat.style.display = 'none';
             if(radarMap) radarMap.style.display = 'none';
@@ -2792,6 +2858,8 @@
                 if(membersSidebar) membersSidebar.style.display = 'flex';
             } else if (viewName === 'market') {
                 if(marketContent) marketContent.style.display = 'flex';
+            } else if (viewName === 'battlepass') {
+                if(battlepassContent) battlepassContent.style.display = 'flex';
             } else if (viewName === 'calendar') {
                 if(calendarContent) calendarContent.style.display = 'flex';
             }
@@ -2836,6 +2904,58 @@
                 carregarMercado();
             });
         }
+
+        const btnBattlePass = document.getElementById('btn-battlepass');
+        if (btnBattlePass) {
+            btnBattlePass.addEventListener('click', () => {
+                resetSidebars();
+                btnHomeView.classList.add('active');
+                btnBattlePass.classList.add('active');
+                if(dmsSidebar) dmsSidebar.style.display = 'flex';
+                if(bazingaSidebar) bazingaSidebar.style.display = 'none';
+                switchMainView('battlepass');
+            });
+        }
+
+        // Desenha nível/XP - chamado tanto ao conectar (xp_atualizado sem
+        // subiu_nivel) quanto depois de mandar mensagem (com XP ganho).
+        function desenharMarcosBattlePass(nivelAtual) {
+            const lista = document.getElementById('bp-marcos-lista');
+            if (!lista) return;
+            let html = '';
+            for (let n = nivelAtual; n < nivelAtual + 5; n++) {
+                html += `<div class="bp-marco ${n === nivelAtual ? 'alcancado' : ''}">
+                    <i class="fa-solid fa-medal"></i>
+                    <div class="bp-marco-nivel">Nível ${n}</div>
+                    <div class="bp-marco-premio">+50 BZC</div>
+                </div>`;
+            }
+            lista.innerHTML = html;
+        }
+
+        socket.on('xp_atualizado', (dados) => {
+            const badgeSidebar = document.getElementById('sidebar-nivel-badge');
+            if (badgeSidebar) badgeSidebar.textContent = dados.nivel;
+            const badgePopout = document.getElementById('popout-nivel-badge');
+            if (badgePopout) badgePopout.textContent = `Nv. ${dados.nivel}`;
+
+            const badge = document.getElementById('bp-nivel-numero');
+            if (badge) {
+                badge.textContent = dados.nivel;
+                document.getElementById('bp-nivel-texto').textContent = dados.nivel;
+                const pct = Math.round((dados.xp_atual_nivel / dados.xp_por_nivel) * 100);
+                document.getElementById('bp-barra-preenchida').style.width = pct + '%';
+                document.getElementById('bp-barra-texto').textContent = `${dados.xp_atual_nivel} / ${dados.xp_por_nivel} XP`;
+                desenharMarcosBattlePass(dados.nivel);
+            }
+
+            if (dados.subiu_nivel) {
+                showToast(`Subiu pro nível ${dados.nivel}! +50 Bazinga Coins`, 'success');
+                const saldoEl = document.getElementById('meu-saldo-bzc');
+                if (saldoEl) saldoEl.textContent = dados.coins;
+                if (badge) { badge.classList.remove('subiu'); void badge.offsetWidth; badge.classList.add('subiu'); }
+            }
+        });
 
         const btnVoltarRadar = document.getElementById('btn-voltar-radar');
         if(btnVoltarRadar) {

@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy.exc import OperationalError
 
-from .models import db, Channel, Server
+from .models import db, Channel, Server, br_now
 
 
 def com_retry(fn, tentativas=4, espera=1.0):
@@ -138,3 +138,60 @@ def gerar_codigo_convite(tamanho=8):
             return codigo
     # Praticamente impossível chegar aqui, mas melhor que devolver um repetido.
     raise RuntimeError("Não foi possível gerar um código de convite único")
+
+
+# ==========================================
+# BATTLE PASS: nível/XP pessoal
+# ==========================================
+XP_POR_NIVEL = 100          # XP fixo por nível - simples de propósito, dá pra
+                             # progredir pra curva depois sem migração nenhuma.
+COINS_POR_NIVEL = 50         # Bazinga Coins pagos ao subir de nível.
+GANHO_XP_INTERVALO_SEGUNDOS = 30   # Sem isso, mandar mensagem vazia em loop
+                                    # virava fábrica de XP infinita.
+XP_POR_MENSAGEM = 5
+
+
+def nivel_da_pessoa(xp):
+    """Nível 1 começa em 0 XP; cada nível seguinte custa XP_POR_NIVEL a mais."""
+    return 1 + (xp or 0) // XP_POR_NIVEL
+
+
+def progresso_de_nivel(xp):
+    """(xp dentro do nível atual, xp necessário pro próximo) - pra desenhar a barrinha."""
+    xp = xp or 0
+    return xp % XP_POR_NIVEL, XP_POR_NIVEL
+
+
+def conceder_xp_por_mensagem(usuario):
+    """Dá XP por mandar mensagem, com cooldown pra não virar spam de XP.
+
+    Devolve None se não ganhou XP agora (cooldown), ou um dict com o
+    resultado (pra montar o toast/evento de subiu de nível) se ganhou.
+    Quem chama decide o que fazer com `subiu_nivel` (emitir evento, etc);
+    esta função só mexe no usuário e comita.
+    """
+    agora = br_now()
+    if usuario.xp_ganho_em and (agora - usuario.xp_ganho_em).total_seconds() < GANHO_XP_INTERVALO_SEGUNDOS:
+        return None
+
+    nivel_antes = nivel_da_pessoa(usuario.xp)
+
+    def preparar():
+        usuario.xp = (usuario.xp or 0) + XP_POR_MENSAGEM
+        usuario.xp_ganho_em = agora
+        nivel_depois = nivel_da_pessoa(usuario.xp)
+        if nivel_depois > nivel_antes:
+            usuario.bazinga_coins = (usuario.bazinga_coins or 0) + COINS_POR_NIVEL * (nivel_depois - nivel_antes)
+
+    comitar_com_retry(preparar)
+
+    nivel_depois = nivel_da_pessoa(usuario.xp)
+    xp_atual, xp_por_nivel = progresso_de_nivel(usuario.xp)
+    return {
+        'xp': usuario.xp,
+        'nivel': nivel_depois,
+        'xp_atual_nivel': xp_atual,
+        'xp_por_nivel': xp_por_nivel,
+        'subiu_nivel': nivel_depois > nivel_antes,
+        'coins': usuario.bazinga_coins,
+    }
