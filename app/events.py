@@ -2,6 +2,7 @@ from flask import session, request
 from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 from datetime import timedelta
 import re
 from . import socketio
@@ -528,7 +529,9 @@ def listar_fixadas(dados):
             return
 
         fixadas = com_retry(lambda: Message.query.filter_by(
-            channel_id=canal_id, is_pinned=True).order_by(Message.timestamp.desc()).all())
+            channel_id=canal_id, is_pinned=True)
+            .options(joinedload(Message.author))
+            .order_by(Message.timestamp.desc()).all())
 
         emit('fixadas_do_canal', {
             'canal_id': canal_id,

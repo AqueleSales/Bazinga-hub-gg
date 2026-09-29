@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app
 from sqlalchemy.exc import OperationalError, PendingRollbackError, SQLAlchemyError
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 import os
 import uuid
 import cloudinary
@@ -281,7 +282,13 @@ def pegar_mensagens(canal_id):
         return jsonify({'error': 'Você não tem acesso a esse canal'}), 403
 
     try:
+        # joinedload aqui é o que faz essa rota valer a pena existir: sem ele,
+        # cada `msg.author` e cada `msg.author.role` (usados embaixo) dispara
+        # uma query própria - até 50 mensagens x 2 = ~100 idas ao banco só pra
+        # abrir um canal. Com NullPool (toda query = conexão nova no Neon),
+        # isso sozinho já explicava boa parte do "demora pra trocar de canal".
         mensagens_db = com_retry(lambda: Message.query.filter_by(channel_id=canal_id)
+                                 .options(joinedload(Message.author).joinedload(Person.role))
                                  .order_by(Message.timestamp.asc()).limit(50).all())
     except (OperationalError, PendingRollbackError) as e:
         db.session.rollback()
@@ -335,6 +342,7 @@ def get_dms(target_id):
                 and_(DirectMessage.sender_id == meu_id, DirectMessage.receiver_id == target_id),
                 and_(DirectMessage.sender_id == target_id, DirectMessage.receiver_id == meu_id)
             )
+        ).options(joinedload(DirectMessage.sender).joinedload(Person.role)
         ).order_by(DirectMessage.timestamp.asc()).limit(50).all()
     except (OperationalError, PendingRollbackError):
         db.session.rollback()

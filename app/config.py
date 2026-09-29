@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-from sqlalchemy.pool import NullPool
 
 load_dotenv()
 
@@ -50,8 +49,23 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = bool(os.getenv('RENDER'))
 
-    # Desativa o pool do Flask. O Neon assume o controle 100%.
+    # Era NullPool (conexão nova a cada query) - a ideia era deixar o Neon
+    # controlar tudo e nunca reaproveitar uma conexão que ele já tivesse
+    # fechado por trás (daí o com_retry() em app/utils.py). Só que isso fazia
+    # TODA query pagar handshake TCP+TLS+Postgres do zero contra o pooler do
+    # Neon - com página trocando de canal disparando dezenas de queries em
+    # sequência, isso sozinho já era boa parte do "tudo demora".
+    # `pool_pre_ping` resolve o mesmo problema que o NullPool evitava (testa
+    # a conexão com um SELECT 1 antes de reusar e reconecta sozinho se ela
+    # morreu) só que sem descartar uma conexão viva - `pool_recycle` também
+    # descarta proativamente conexões mais velhas que isso, antes que o Neon
+    # feche por inatividade. com_retry()/comitar_com_retry() continuam
+    # necessários: cold start de verdade (Neon com o compute desligado)
+    # ainda estoura na primeira query, pool nenhum evita isso.
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "poolclass": NullPool
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+        "pool_size": 5,
+        "max_overflow": 10,
     }
     

@@ -14,8 +14,11 @@ from .models import db, Channel, Server
 
 def com_retry(fn, tentativas=4, espera=1.0):
     """Roda fn() e tenta de novo se o Neon (banco serverless) estiver
-    'acordando' de um cold start - com NullPool, toda operação abre uma
-    conexão nova, então isso pode acontecer em qualquer query, não só no login.
+    'acordando' de um cold start de verdade (compute desligado por
+    inatividade) - o pool de conexões (app/config.py, pool_pre_ping +
+    pool_recycle) já lida com conexão parada/velha sozinho, mas não existe
+    pool que acelere o Neon ligando o compute do zero, então isso ainda pode
+    acontecer em qualquer query, não só no login.
 
     A espera cresce a cada tentativa (1s, 2s, 3s...) porque o cold start do
     Neon às vezes passa de 3 segundos.
@@ -65,9 +68,10 @@ def pode_ver_canal(usuario, canal):
     if canal.server_id is None:
         return True
 
-    # NullPool abre uma conexão nova por query - o com_retry() de cima (no
-    # Channel.query.get de canal_permitido) não "esquenta" esta aqui. Sem
-    # com_retry também, um cold start do Neon bem no meio de pode_ver_canal
+    # O com_retry() de cima (no Channel.query.get de canal_permitido) não
+    # "esquenta" esta query aqui - cada uma pode pegar um cold start
+    # diferente. Sem com_retry também, um cold start do Neon bem no meio de
+    # pode_ver_canal
     # estourava OperationalError sem retry nenhum, e como quem chama esta
     # função (entrar_call, listar_participantes_call...) não tinha
     # try/except, o handler inteiro morria em silêncio - por isso às vezes
