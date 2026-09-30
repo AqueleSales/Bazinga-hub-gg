@@ -124,6 +124,10 @@ def atualizar_banco():
             add_column_se_nao_existir("person", "streak_em DATE")
             add_column_se_nao_existir("person", "tema VARCHAR(20) DEFAULT 'dark' NOT NULL")
 
+            # 18. Cartão de perfil: faixa em imagem e pronomes
+            add_column_se_nao_existir("person", "banner_url VARCHAR(255)")
+            add_column_se_nao_existir("person", "pronomes VARCHAR(40)")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

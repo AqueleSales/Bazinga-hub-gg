@@ -1484,6 +1484,99 @@
         /* Trilha de 100 níveis: rolagem horizontal, sem blur por cartão (100 blurs pesam) */
         .bp-marcos { display: flex; gap: 14px; overflow-x: auto; padding: 16px 4px 14px; margin-top: 4px; scroll-snap-type: x proximity; scrollbar-width: thin; }
         .bp-marco { flex: 0 0 132px; scroll-snap-align: center; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+        /* ==========================================================================
+           CARTÃO DE PERFIL (popup + pré-visualização) e página "Meu Perfil"
+           ========================================================================== */
+        .pc-popout { position: fixed; bottom: auto; width: 348px; padding: 0; overflow: visible !important; border-radius: 18px !important; z-index: 2001; }
+        .pc { position: relative; width: 100%; border-radius: 18px; background: color-mix(in srgb, var(--bg-quaternary) 94%, transparent); }
+        .pc-previa { border: 1px solid var(--glass-borda); box-shadow: 0 14px 40px rgba(0,0,0,.4); }
+        .pc-banner { height: 108px; border-radius: 18px 18px 0 0; background-color: var(--brand-color); background-size: cover; background-position: center; }
+        .pc-banner.banner-animado { background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: bg-spin 8s ease infinite; }
+        .pc-topo { position: relative; display: flex; align-items: flex-end; gap: 10px; padding: 0 16px; margin-top: -42px; }
+        .pc-avatar { position: relative; flex-shrink: 0; width: 92px; height: 92px; border-radius: 50%; border: 6px solid var(--bg-quaternary); background: var(--bg-quaternary); }
+        .pc-avatar-img { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: var(--brand-color); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #fff; }
+        .pc-avatar-img img { width: 100%; height: 100%; object-fit: cover; }
+        .pc-avatar .status-indicator { width: 24px; height: 24px; right: 0; bottom: 0; border: 5px solid var(--bg-quaternary); }
+        .pc-balao { position: relative; margin-bottom: 18px; max-width: 190px; padding: 8px 12px; border-radius: 14px; background: rgba(255,255,255,.08); border: 1px solid var(--glass-borda); font-size: 12px; line-height: 1.3; color: var(--text-normal); word-break: break-word; }
+        .pc-balao::before, .pc-balao::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid var(--glass-borda); }
+        .pc-balao::before { width: 9px; height: 9px; left: -10px; bottom: -4px; }
+        .pc-balao::after { width: 5px; height: 5px; left: -16px; bottom: -10px; }
+        .pc-balao.vazio { color: var(--text-muted); font-style: italic; }
+        .pc-balao[data-acao] { cursor: pointer; transition: background-color .2s, transform .15s; }
+        .pc-balao[data-acao]:hover { background: rgba(255,255,255,.14); transform: translateY(-1px); }
+        .pc-corpo { padding: 10px 16px 16px; }
+        .pc-nome { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: 21px; font-weight: 800; color: var(--text-header); word-break: break-word; }
+        .pc-pronomes { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+        .pc-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .pc-chip { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: rgba(255,215,106,.12); color: #ffd76a; }
+        .pc-chip.titulo { background: rgba(114,137,218,.2); color: #aab6f5; }
+        .pc-acoes { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+        .pc-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--glass-borda); background: rgba(255,255,255,.07); color: var(--text-normal); font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .2s, transform .15s, box-shadow .2s; }
+        .pc-btn:hover { background: rgba(255,255,255,.14); transform: translateY(-1px); }
+        .pc-btn:active { transform: scale(.96); }
+        .pc-btn.primario { background: linear-gradient(180deg, #7d92e0, var(--brand-color) 55%, var(--brand-hover)); border-color: rgba(255,255,255,.18); color: #fff; box-shadow: 0 4px 14px rgba(114,137,218,.35); }
+        .pc-btn.primario:hover { box-shadow: 0 8px 22px var(--brand-glow); }
+        .pc-btn.icone { flex: 0 0 40px; padding: 9px 0; }
+        .pc-btn.desativado { opacity: .55; cursor: default; pointer-events: none; }
+        .pc-menu-wrap { position: relative; flex: 0 0 40px; display: flex; }
+        .pc-menu-wrap .pc-btn { flex: 1; }
+        .pc-menu { display: none; position: absolute; right: 0; top: calc(100% + 6px); min-width: 220px; z-index: 5; padding: 6px; border-radius: 12px; background: var(--bg-quaternary); border: 1px solid var(--glass-borda); box-shadow: 0 14px 36px rgba(0,0,0,.5); }
+        .pc-menu.aberto { display: block; animation: modalPop .18s cubic-bezier(.16,.84,.44,1) backwards; }
+        .pc-menu button, .pc-item, .pc-opcao { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 12px; border: 0; border-radius: 8px; background: none; color: var(--text-normal); font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; transition: background-color .15s; }
+        .pc-menu button:hover, .pc-item:hover, .pc-opcao:hover { background: rgba(255,255,255,.08); }
+        .pc-menu button:disabled { opacity: .55; cursor: default; }
+        .pc-menu button.perigo, .pc-item.perigo { color: var(--red-color); }
+        .pc-secao { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--glass-borda); }
+        .pc-rotulo { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+        .pc-texto { font-size: 14px; line-height: 1.45; color: var(--text-normal); white-space: pre-wrap; word-break: break-word; }
+        .pc-lista { margin-top: 12px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--glass-borda); }
+        .pc-item { padding: 10px 12px; font-size: 14px; }
+        .pc-item .ico { width: 18px; text-align: center; color: var(--text-muted); }
+        .pc-item .seta { margin-left: auto; font-size: 11px; color: var(--text-muted); transition: transform .2s; }
+        .pc-item.aberto .seta { transform: rotate(90deg); }
+        .pc-sep { height: 1px; margin: 2px 8px; background: var(--glass-borda); }
+        .pc-ponto { position: static !important; display: inline-block; flex-shrink: 0; width: 12px !important; height: 12px !important; border: 0 !important; }
+        .pc-status-opcoes { display: none; padding: 2px 0 6px 8px; }
+        .pc-status-opcoes.aberto { display: block; animation: vistaEntra .2s ease backwards; }
+        .pc-opcao small { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-top: 1px; }
+        .pc-opcao.atual { background: rgba(114,137,218,.16); }
+
+        /* Página Meu Perfil */
+        .pf-layout { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+        .pf-controles { flex: 1 1 250px; min-width: 240px; display: flex; flex-direction: column; gap: 22px; }
+        .pf-previa { flex: 0 0 340px; position: sticky; top: 0; }
+        .pf-grupo { display: flex; flex-direction: column; gap: 8px; }
+        .pf-dica { font-size: 12px; color: var(--text-muted); }
+        .pf-cont { float: right; font-weight: 600; letter-spacing: 0; text-transform: none; opacity: .7; }
+        .pf-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .pf-av { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: var(--brand-color); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; color: #fff; }
+        .pf-av img { width: 100%; height: 100%; object-fit: cover; }
+        .pf-btn-sec { background: rgba(255,255,255,.07); color: var(--text-normal); border: 1px solid var(--glass-borda); border-radius: 8px; padding: 8px 12px; text-decoration: none; }
+        .pf-btn-sec:hover { background: rgba(255,255,255,.14); }
+        .pf-presenca { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+        .pf-presenca button { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--glass-borda); background: rgba(255,255,255,.05); color: var(--text-normal); font-weight: 700; font-size: 13px; cursor: pointer; transition: background-color .2s, border-color .2s, transform .15s; }
+        .pf-presenca button:hover { background: rgba(255,255,255,.1); transform: translateY(-1px); }
+        .pf-presenca button.ativo { border-color: var(--brand-color); background: rgba(114,137,218,.2); box-shadow: 0 0 0 3px rgba(114,137,218,.15); }
+        .pf-presenca .status-indicator { position: static; width: 12px; height: 12px; border: 0; }
+        .pf-conta { padding: 16px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--glass-borda); }
+        .pf-linha-info { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--glass-borda); }
+        .pf-linha-info span { color: var(--text-muted); min-width: 110px; }
+        .pf-linha-info b { color: var(--text-header); font-weight: 700; word-break: break-all; }
+        .pf-mini { margin-left: auto; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--glass-borda); background: rgba(255,255,255,.07); color: var(--text-normal); font-size: 12px; font-weight: 700; cursor: pointer; }
+        .pf-mini:hover { background: var(--brand-color); color: #fff; }
+        .pf-sair { align-self: flex-start; margin-top: 12px; color: var(--red-color); }
+        .pf-barra { position: sticky; bottom: -28px; margin: 28px -8px 0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-radius: 14px; background: color-mix(in srgb, var(--bg-quaternary) 92%, transparent); border: 1px solid var(--glass-borda); box-shadow: 0 -8px 30px rgba(0,0,0,.35); backdrop-filter: blur(14px); transform: translateY(140%); opacity: 0; pointer-events: none; transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .25s; z-index: 6; }
+        .pf-barra.visivel { transform: none; opacity: 1; pointer-events: auto; }
+        .pf-barra > span { font-size: 13px; font-weight: 700; color: var(--text-normal); }
+        .pf-barra > span i { color: var(--yellow-color); margin-right: 6px; }
+        .pf-barra > div { display: flex; gap: 8px; }
+        @media (max-width: 860px) { .pf-previa { flex: 1 1 100%; position: static; } }
+
+        /* Emoji desenhado pelo Twemoji (emojificar()). Sem esta regra o <img> vinha em
+           tamanho natural (~109px) e estourava qualquer linha de texto (barra do usuário,
+           status, mensagens). Tamanho acompanha a fonte do lugar onde o emoji está. */
+        img.emoji { display: inline-block; width: 1.2em; height: 1.2em; margin: 0 .05em 0 .1em; vertical-align: -0.22em; }
     </style>
 </head>
 <body>
@@ -1996,7 +2089,7 @@
         <!-- SIDEBAR DE MEMBROS DIREITA -->
         <aside class="members-sidebar" id="server-members-sidebar" style="display: none;">
             <div class="channel-category">ONLINE — 1</div>
-            <div class="channel-item active" style="margin-top: 8px;" id="sidebar-member-item">
+            <div class="channel-item active" style="margin-top: 8px;" id="sidebar-member-item" data-perfil-id="{{ usuario_atual.id }}">
                 <div class="user-avatar-wrapper" style="width: 32px; height: 32px;">
                     <div id="sidebar-avatar-container" style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: var(--brand-color); display: flex; justify-content: center; align-items: center;"></div>
                     <div class="status-indicator online"></div>
@@ -2607,35 +2700,7 @@
 
     <!-- Mini Perfil Popout (Ao clicar no nome) -->
     <div class="user-popout-overlay" id="user-popout-overlay"></div>
-    <div class="user-popout" id="user-popout">
-        <div class="popout-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="popout-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
-        <div class="popout-info-row">
-            <div class="popout-avatar-wrap">
-                <div class="popout-avatar" id="popout-avatar-container"></div>
-                <div class="popout-status-dot" id="popout-status-dot"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
-            </div>
-            <div class="popout-badges">
-                <div class="badge" title="Membro Elite"><i class="fa-solid fa-gem" style="color: #00a8fc;"></i></div>
-                <div class="badge popout-nivel-badge" id="popout-nivel-badge" title="Seu nível no Battle Pass">Nv. 1</div>
-            </div>
-        </div>
-        <div class="popout-body">
-            <div class="npc-name" id="popout-name-text">Carregando...</div>
-            <div class="npc-username" id="popout-username-text">carregando... <i class="fa-solid fa-pen" style="font-size: 10px; cursor: pointer; margin-left: 4px;" onclick="document.getElementById('btn-open-settings').click();"></i></div>
-
-            <div class="npc-custom-status" id="popout-custom-status"><i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> {{ usuario_atual.custom_status or "Sem status" }}</div>
-            <div class="npc-divider"></div>
-
-            <div class="popout-label">Sobre mim</div>
-            <div class="popout-value" id="popout-bio-text">{{ usuario_atual.bio or "Use as configurações para me editar!" }}</div>
-
-            {% if membro_desde_texto %}
-            <div class="npc-divider"></div>
-            <div class="popout-label">Membro desde</div>
-            <div class="popout-value" style="margin-bottom: 0;">{{ membro_desde_texto }}</div>
-            {% endif %}
-        </div>
-    </div>
+    <div class="user-popout pc-popout" id="user-popout"></div>
 
     <!-- Menus de Contexto (Clique Direito) -->
     <!-- Menu da mensagem: abre no botão direito E nos 3 pontinhos -->
@@ -2840,8 +2905,7 @@
             <div class="settings-sidebar">
                 <div class="set-tab-group">
                     <div class="set-tab-header">Configurações de Usuário</div>
-                    <div class="set-tab" data-target="set-conta">Minha Conta</div>
-                    <div class="set-tab active" data-target="set-perfis">Perfis</div>
+                    <div class="set-tab active" data-target="set-perfil">Meu Perfil</div>
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
                     <div class="set-tab-header">Configurações do App</div>
                     <div class="set-tab" data-target="set-voz">Voz e Vídeo</div>
@@ -2858,128 +2922,89 @@
                     <span class="esc-hint">ESC</span>
                 </div>
 
-                <!-- ABA: MINHA CONTA -->
-                <div class="set-section" id="set-conta">
-                    <h2 class="set-title">Minha Conta</h2>
-                    <div class="account-card">
-                        <div class="account-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="conta-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
-                        <div class="account-info-row">
-                            <div class="account-avatar-large" style="background-color: var(--green-color); overflow: hidden;" id="conta-avatar-img">
-                                <!-- Preenchido pelo JS -->
+                <!-- ABA: MEU PERFIL (conta + perfil juntos; o cartão à direita é o mesmo do popup) -->
+                <div class="set-section active" id="set-perfil" style="max-width: 980px;">
+                    <h2 class="set-title">Meu Perfil</h2>
+
+                    <div class="pf-layout">
+                        <div class="pf-controles">
+                            <div class="pf-grupo">
+                                <label class="control-label" for="pf-nome">Nome de exibição</label>
+                                <input type="text" class="discord-input" id="pf-nome" maxlength="100" autocomplete="off">
+                                <span class="pf-dica">É o nome que aparece pra todo mundo.</span>
                             </div>
-                            <button class="btn btn-primary" onclick="document.querySelector('[data-target=\'set-perfis\']').click();">Editar perfil de usuário</button>
+
+                            <div class="pf-grupo">
+                                <label class="control-label" for="pf-pronomes">Pronomes</label>
+                                <input type="text" class="discord-input" id="pf-pronomes" maxlength="40" placeholder="ele/dele, ela/dela, elu/delu..." autocomplete="off">
+                            </div>
+
+                            <div class="pf-grupo">
+                                <span class="control-label">Avatar</span>
+                                <div class="pf-linha">
+                                    <div class="pf-av" id="pf-av"></div>
+                                    <button class="btn btn-primary" id="pf-mudar-avatar"><i class="fa-solid fa-image"></i> Mudar avatar</button>
+                                    <span class="pf-dica">Aceita foto ou GIF.</span>
+                                </div>
+                            </div>
+
+                            <div class="pf-grupo">
+                                <span class="control-label">Faixa do perfil</span>
+                                <div class="pf-linha">
+                                    <input type="color" id="pf-cor-input" style="display:none;">
+                                    <div class="color-preview-box" id="pf-cor-btn" title="Escolher cor"></div>
+                                    <div class="color-preview-box banner-animado" id="pf-cor-animada" title="Faixa animada" style="cursor:pointer;"></div>
+                                    <button class="btn pf-btn-sec" id="pf-banner-enviar"><i class="fa-solid fa-upload"></i> Enviar imagem</button>
+                                    <button class="btn pf-btn-sec" id="pf-banner-remover" style="display:none;"><i class="fa-solid fa-trash"></i> Remover</button>
+                                    <input type="file" id="pf-banner-file" accept="image/*" style="display:none;">
+                                </div>
+                            </div>
+
+                            <div class="pf-grupo">
+                                <span class="control-label">Status de presença</span>
+                                <div class="pf-presenca" id="pf-presenca">
+                                    <button data-status="online"><span class="status-indicator online"></span> Disponível</button>
+                                    <button data-status="idle"><span class="status-indicator idle"></span> Ausente</button>
+                                    <button data-status="dnd"><span class="status-indicator dnd"></span> Não perturbar</button>
+                                    <button data-status="invisible"><span class="status-indicator invisible"></span> Invisível</button>
+                                </div>
+                                <span class="pf-dica">Vale na hora, em todos os lugares. Invisível aparece como offline pros outros.</span>
+                            </div>
+
+                            <div class="pf-grupo">
+                                <label class="control-label" for="pf-status">Status personalizado</label>
+                                <div class="custom-status-row">
+                                    <button class="emoji-picker-btn" type="button" title="Escolher Emoji"><i class="fa-solid fa-face-smile"></i></button>
+                                    <input type="text" class="discord-input" id="pf-status" maxlength="128" placeholder="O que está acontecendo?" autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div class="pf-grupo">
+                                <label class="control-label" for="pf-bio">Sobre mim <span class="pf-cont" id="pf-bio-cont">0/1000</span></label>
+                                <textarea class="discord-input discord-textarea" id="pf-bio" maxlength="1000" placeholder="Conte um pouco sobre você..."></textarea>
+                            </div>
+
+                            <div class="pf-grupo pf-conta" id="pf-conta-ancora">
+                                <span class="control-label">Conta</span>
+                                <div class="pf-linha-info"><span>E-mail</span><b id="pf-email"></b></div>
+                                <div class="pf-linha-info"><span>Entrou com</span><b><i class="fa-brands fa-google"></i> Google</b></div>
+                                <div class="pf-linha-info"><span>ID do usuário</span><b id="pf-id"></b><button class="pf-mini" id="pf-copiar-id">Copiar</button></div>
+                                <div class="pf-linha-info"><span>Membro desde</span><b id="pf-desde"></b></div>
+                                <div class="pf-linha-info"><span>Nível</span><b id="pf-nivel"></b></div>
+                                <a class="btn pf-btn-sec pf-sair" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Sair da conta</a>
+                            </div>
                         </div>
-                        <div class="account-details-box">
-                            <div class="acc-data-row">
-                                <div><div class="acc-label">Nome de exibição</div><div class="acc-value" id="conta-nome-atual">{{ usuario_atual.name }}</div></div>
-                                <button class="btn btn-secondary" style="background-color: #4e5058; color: white;" id="btn-editar-nome">Editar</button>
-                            </div>
-                            <div class="acc-data-row">
-                                <div><div class="acc-label">E-mail</div><div class="acc-value">{{ usuario_atual.email }}</div></div>
-                                <button class="btn btn-secondary" style="background-color: #4e5058; color: white;" id="btn-editar-email">Editar</button>
-                            </div>
+
+                        <div class="pf-previa">
+                            <span class="control-label">Pré-visualização</span>
+                            <div class="pc pc-previa" id="pf-cartao"></div>
                         </div>
                     </div>
-                </div>
 
-                <!-- ABA: PERFIS (O EDITOR NITRO) -->
-                <div class="set-section active" id="set-perfis" style="max-width: 900px;">
-                    <h2 class="set-title">Perfis</h2>
-
-                    <div class="profile-edit-layout">
-                        <!-- Lado Esquerdo: Controles -->
-                        <div class="profile-controls-left">
-
-                            <div class="control-group">
-                                <span class="control-label">Placa de identificação</span>
-                                <div style="background-color: var(--bg-tertiary); border-radius: 8px; padding: 16px; border: 1px solid #3f4147;">
-                                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;" id="placa-nome-atual">{{ usuario_atual.name }}</div>
-                                    <div style="font-size: 14px; color: var(--text-muted);" id="placa-usuario-atual">{{ usuario_atual.name|lower|replace(' ', '.') }}</div>
-                                </div>
-                            </div>
-
-                            <div class="control-group">
-                                <span class="control-label">Avatar e decorações</span>
-                                <div class="decoration-grid">
-                                    <div class="deco-card" onclick="document.getElementById('avatar-upload-modal').style.display='flex'">
-                                        <div id="editor-avatar-container" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: var(--brand-color); font-size: 24px; font-weight: bold; color: white;"></div>
-                                        <div class="overlay"><i class="fa-solid fa-pen"></i></div>
-                                    </div>
-                                    <!-- Segundo deco-card removido: não tinha onclick nenhum (botão morto)
-                                         e usava o logo do Discord como ícone - a Bazinga não tem produto
-                                         de decoração pra vender ainda (ver Pendências: Decorações de
-                                         perfil). Quando existir, entra aqui de novo com ícone próprio. -->
-                                </div>
-                            </div>
-
-                            <div class="control-group">
-                                <span class="control-label">Cor da faixa</span>
-                                <div class="color-picker-wrapper">
-                                    <input type="color" id="banner-color-input" value="{{ usuario_atual.banner_color or '#e91e63' }}" style="display: none;">
-                                    <div class="color-preview-box" id="btn-open-color" title="Alterar cor do banner" style="background: {{ usuario_atual.banner_color or '#e91e63' }};"></div>
-                                    <div class="color-preview-box banner-animado{{ ' selected' if not usuario_atual.banner_color else '' }}" id="btn-banner-animado" title="Usar faixa animada" style="cursor:pointer;"></div>
-                                    <span style="font-size: 12px; color: var(--text-muted);">Escolha a cor de fundo do seu cartão de perfil, ou deixe animada.</span>
-                                </div>
-                            </div>
-
-                            <div class="control-group">
-                                <span class="control-label">Status Personalizado</span>
-                                <div class="custom-status-row">
-                                    <button class="emoji-picker-btn" title="Escolher Emoji"><i class="fa-solid fa-face-smile"></i></button>
-                                    <input type="text" class="discord-input" id="status-input" placeholder="O que está acontecendo?" value="{{ usuario_atual.custom_status or '' }}">
-                                </div>
-                            </div>
-
-                            <div class="control-group">
-                                <span class="control-label">Sobre mim</span>
-                                <textarea class="discord-input discord-textarea" id="bio-input" placeholder="Conte um pouco sobre você...">{{ usuario_atual.bio or '' }}</textarea>
-                            </div>
-
-                            <div class="control-group" style="border: none; padding-bottom: 0;">
-                                <button class="btn btn-primary" id="btn-save-profile" style="width: 100%; background-color: var(--green-color); padding: 12px;">Salvar Alterações do Perfil</button>
-                            </div>
-                        </div>
-
-                        <!-- Lado Direito: Preview do Nitro ao Vivo -->
-                        <div class="profile-preview-right">
-                            <span class="control-label">Pré-visualização</span>
-
-                            <div class="nitro-preview-card">
-                                <div class="npc-banner{{ '' if usuario_atual.banner_color else ' banner-animado' }}" id="preview-banner-bg" style="background: {{ usuario_atual.banner_color or '' }};"></div>
-
-                                <div class="npc-avatar-wrapper">
-                                    <div class="npc-avatar-inner" id="preview-avatar-container"></div>
-                                    <div class="npc-status"><i class="fa-solid fa-circle" style="font-size: 8px;"></i></div>
-                                </div>
-
-                                <div class="npc-badges">
-                                    <div class="badge" title="Membro Elite"><i class="fa-solid fa-gem" style="color: #00a8fc;"></i></div>
-                                </div>
-
-                                <div class="npc-body">
-                                    <div class="npc-name" id="preview-name-text">Carregando...</div>
-                                    <div class="npc-username" id="preview-username-text">carregando... <span style="background-color: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: var(--green-color); margin-left: 4px;">BZG</span></div>
-
-                                    <div class="npc-custom-status" id="preview-custom-status"><i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> {{ usuario_atual.custom_status or "Sem status" }}</div>
-
-                                    <div class="npc-divider"></div>
-
-                                    <div style="display: flex; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-                                        <div style="font-weight: 600; font-size: 14px; border-bottom: 2px solid var(--text-header); padding-bottom: 4px; color: var(--text-header); cursor: pointer;">Mural</div>
-                                        <div style="font-weight: 500; font-size: 14px; color: var(--text-muted); cursor: pointer;">Atividade</div>
-                                    </div>
-
-                                    <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Sobre mim</div>
-                                    <div style="color: var(--text-normal); font-size: 14px; line-height: 1.4; margin-bottom: 16px;" id="preview-bio-text">{{ usuario_atual.bio or "Use as configurações para me editar!" }}</div>
-
-                                    {% if membro_desde_texto %}
-                                    <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Membro desde</div>
-                                    <div style="color: var(--text-normal); font-size: 14px; margin-bottom: 16px;">{{ membro_desde_texto }}</div>
-                                    {% endif %}
-
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Barra de salvar: só aparece quando há alteração pendente -->
+                    <div class="pf-barra" id="pf-barra">
+                        <span><i class="fa-solid fa-circle-exclamation"></i> Você tem alterações não salvas</span>
+                        <div><button class="btn btn-cancel" id="pf-descartar">Descartar</button><button class="btn btn-primary" id="pf-salvar">Salvar alterações</button></div>
                     </div>
                 </div>
 
@@ -3097,24 +3122,11 @@
         document.getElementById('sidebar-avatar-container').innerHTML = inicialHTML;
         document.getElementById('sidebar-username-text').innerText = currentUserName;
 
-        document.getElementById('editor-avatar-container').innerHTML = inicialHTML;
-        document.getElementById('preview-avatar-container').innerHTML = inicialHTML;
-        document.getElementById('popout-avatar-container').innerHTML = inicialHTML;
-        document.getElementById('conta-avatar-img').innerHTML = inicialHTML;
         // Bolinha da call: nascia sempre vazia (só a cor de fundo) até você
         // trocar de avatar DENTRO da call - por isso a "bolha azul".
         document.getElementById('my-avatar-placeholder').innerHTML = inicialHTML;
         document.getElementById('my-avatar-placeholder').style.backgroundColor = currentUserAvatar ? 'transparent' : 'var(--brand-color)';
 
-        // Status/bio já chegam prontos do Jinja no primeiro carregamento -
-        // sem isso, só ficavam bonitos (vetor) depois da primeira edição.
-        ['popout-custom-status', 'preview-custom-status', 'popout-bio-text', 'preview-bio-text', 'bottom-status-text']
-            .forEach(id => emojificar(document.getElementById(id)));
-
-        document.getElementById('preview-name-text').innerText = currentUserName;
-        document.getElementById('preview-username-text').innerText = currentUserName.toLowerCase().replace(/\s/g, '.');
-        document.getElementById('popout-name-text').innerText = currentUserName;
-        document.getElementById('popout-username-text').innerText = currentUserName.toLowerCase().replace(/\s/g, '.');
         document.getElementById('my-video-label').innerText = currentUserName;
 
         // 2. SOCKET.IO SETUP (precisa vir cedo: vários handlers abaixo dependem de `socket`)
@@ -4216,7 +4228,7 @@
                 const avatarHtml = avatarSeguro
                     ? `<img src="${avatarSeguro}" style="width:100%;height:100%;object-fit:cover;">`
                     : esc((m.nome || '?')[0].toUpperCase());
-                return `<div class="channel-item" style="margin-top:2px; opacity:${online ? '1' : '.5'};">
+                return `<div class="channel-item" data-perfil-id="${Number(m.id)}" style="margin-top:2px; opacity:${online ? '1' : '.5'};">
                     <div class="user-avatar-wrapper" style="width:32px;height:32px;">
                         <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background-color:${avatarSeguro ? 'transparent' : 'var(--brand-color)'};display:flex;justify-content:center;align-items:center;">${avatarHtml}</div>
                         <div class="status-indicator ${statusClasse}"></div>
@@ -4234,7 +4246,12 @@
                 (offline.length ? `<div class="channel-category" style="margin-top:14px;">OFFLINE — ${offline.length}</div>${offline.map(linha).join('')}` : '');
         }
 
-        socket.on('usuario_ficou_online', (dados) => { membrosOnlineSet.add(dados.usuario_id); desenharMembrosSidebar(); });
+        socket.on('usuario_ficou_online', (dados) => {
+            membrosOnlineSet.add(dados.usuario_id);
+            const m = membrosDoServidor.find(x => Number(x.id) === Number(dados.usuario_id));
+            if (m && dados.status) m.status = dados.status;
+            desenharMembrosSidebar();
+        });
         socket.on('usuario_ficou_offline', (dados) => { membrosOnlineSet.delete(dados.usuario_id); desenharMembrosSidebar(); });
 
         // Retrátil: guarda a preferência (é só UI local, não precisa ir pro banco)
@@ -5293,9 +5310,9 @@
             if (dot) dot.className = `status-indicator ${novoStatus}`;
             applyFriendFilter(document.getElementById('filter-disponivel').classList.contains('active') ? 'disponivel' : 'todos');
         }
-        socket.on('usuario_ficou_online', (d) => atualizarStatusAmigo(d.usuario_id, true));
+        socket.on('usuario_ficou_online', (d) => atualizarStatusAmigo(d.usuario_id, true, d.status));
         socket.on('usuario_ficou_offline', (d) => atualizarStatusAmigo(d.usuario_id, false));
-        socket.on('status_amigos_ao_conectar', (d) => (d.online_ids || []).forEach(id => atualizarStatusAmigo(id, true)));
+        socket.on('status_amigos_ao_conectar', (d) => (d.online_ids || []).forEach(id => atualizarStatusAmigo(id, true, (d.status_por_id || {})[id])));
 
         // ==========================================
         // CTRL+K: busca rápida (servidores, canais do servidor atual, amigos/DMs)
@@ -5615,7 +5632,7 @@
 
         document.querySelector('.emoji-picker-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            abrirEmojiPicker(e.currentTarget, document.getElementById('status-input'));
+            abrirEmojiPicker(e.currentTarget, document.getElementById('pf-status'));
         });
 
         document.addEventListener('click', (e) => {
@@ -7185,12 +7202,283 @@
             if(!e.target.closest('.context-menu')) document.getElementById('msg-context-menu').style.display = 'none';
         });
 
-        // 5. EDITOR NITRO E POPOUTS
+        // 5. PERFIL: cartão (popup + pré-visualização), edição e status de presença
+        // ------------------------------------------------------------------
+        // UM renderizador de cartão (htmlCartao) serve o popup de quem clica e a
+        // pré-visualização do editor - o que você vê ao editar é o que os outros veem.
+        // Os dados de quem NÃO sou eu vêm do servidor (`obter_perfil`), que só
+        // entrega bio/status/faixa pra quem convive (servidor em comum ou amizade).
+        const perfilMeu = {
+            id: currentUserId,
+            nome: {{ usuario_atual.name|tojson }},
+            avatar: {{ (usuario_atual.avatar or '')|tojson }},
+            bio: {{ (usuario_atual.bio or '')|tojson }},
+            custom_status: {{ (usuario_atual.custom_status or '')|tojson }},
+            banner_color: {{ (usuario_atual.banner_color or '')|tojson }},
+            banner_url: {{ (usuario_atual.banner_url or '')|tojson }},
+            pronomes: {{ (usuario_atual.pronomes or '')|tojson }},
+            status: {{ (usuario_atual.status or 'online')|tojson }},
+            email: {{ usuario_atual.email|tojson }},
+            membro_desde: {{ (membro_desde_texto or '')|tojson }},
+            nivel: 1, titulo: 'Novato'
+        };
+        const ROTULO_STATUS = { online: 'Disponível', idle: 'Ausente', dnd: 'Não perturbar', invisible: 'Invisível', offline: 'Offline' };
+        const DESC_STATUS = { online: 'Tudo certo por aqui', idle: 'Você aparece como ausente', dnd: 'Sem notificações', invisible: 'Você aparece como offline' };
+
+        function corDeFaixa(c) { return /^#[0-9a-fA-F]{6}$/.test(c || '') ? c : ''; }
+
+        function faixaDe(pf) {
+            const url = escUrl(pf.banner_url || '');
+            if (url) return { classe: '', estilo: `background-image:url('${url}');` };
+            const cor = corDeFaixa(pf.banner_color);
+            return cor ? { classe: '', estilo: `background:${cor};` } : { classe: 'banner-animado', estilo: '' };
+        }
+
+        // modo: 'popout' (cartão aberto ao clicar) | 'previa' (editor, botões de enfeite)
+        function htmlCartao(pf, modo) {
+            const faixa = faixaDe(pf);
+            const avUrl = escUrl(pf.avatar || '');
+            const avatar = avUrl ? `<img src="${avUrl}" alt="">` : esc((pf.nome || '?')[0].toUpperCase());
+            const statusDot = pf.status || 'offline';
+            const sou = !!pf.sou_eu;
+            const popoutProprio = modo === 'popout' && sou;
+
+            const texto = pf.custom_status || '';
+            const podeEditarStatus = popoutProprio;
+            const balao = pf.restrito ? '' : (texto || podeEditarStatus || modo === 'previa'
+                ? `<div class="pc-balao ${texto ? '' : 'vazio'}" ${podeEditarStatus ? 'data-acao="editar-status" title="Editar status"' : ''}>${texto ? esc(texto) : '+ Adicionar status'}</div>` : '');
+
+            const chips = pf.restrito ? '' : `<div class="pc-chips">
+                <span class="pc-chip" title="Nível no Battle Pass">Nv. ${Number(pf.nivel || 1)}</span>
+                <span class="pc-chip titulo">${esc(pf.titulo || 'Novato')}</span>
+            </div>`;
+
+            let acoes = '';
+            if (modo === 'previa') {
+                acoes = `<div class="pc-acoes"><span class="pc-btn desativado"><i class="fa-solid fa-message"></i> Mensagem</span><span class="pc-btn icone desativado"><i class="fa-solid fa-ellipsis"></i></span></div>`;
+            } else if (!sou) {
+                acoes = `<div class="pc-acoes">
+                    <button class="pc-btn primario" data-acao="mensagem"><i class="fa-solid fa-message"></i> Mensagem</button>
+                    ${pf.tem_loja ? `<button class="pc-btn icone" data-acao="loja" title="Ver a loja dessa pessoa"><i class="fa-solid fa-store"></i></button>` : ''}
+                    <div class="pc-menu-wrap">
+                        <button class="pc-btn icone" data-acao="menu" title="Mais"><i class="fa-solid fa-ellipsis"></i></button>
+                        <div class="pc-menu" id="pc-menu">
+                            <button data-acao="copiar-id"><i class="fa-regular fa-copy"></i> Copiar ID do usuário</button>
+                            ${pf.eh_amigo
+                                ? `<button class="perigo" data-acao="remover-amigo"><i class="fa-solid fa-user-minus"></i> Desfazer amizade</button>`
+                                : (pf.pedido_pendente
+                                    ? `<button disabled><i class="fa-solid fa-hourglass-half"></i> Pedido de amizade enviado</button>`
+                                    : `<button data-acao="add-amigo"><i class="fa-solid fa-user-plus"></i> Adicionar amigo</button>`)}
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            const secoes = pf.restrito
+                ? `<div class="pc-secao"><div class="pc-texto" style="color:var(--text-muted);">Você e essa pessoa não têm servidor em comum, então o perfil completo fica reservado.</div></div>`
+                : `<div class="pc-secao">
+                    <div class="pc-rotulo">Sobre mim</div>
+                    <div class="pc-texto">${pf.bio ? esc(pf.bio) : '<span style="color:var(--text-muted);">Nada por aqui ainda.</span>'}</div>
+                    ${pf.membro_desde ? `<div class="pc-rotulo" style="margin-top:12px;">Membro desde</div><div class="pc-texto">${esc(pf.membro_desde)}</div>` : ''}
+                </div>`;
+
+            const lista = popoutProprio ? `
+                <div class="pc-lista">
+                    <button class="pc-item" data-acao="editar"><i class="fa-solid fa-pen ico"></i> Editar perfil</button>
+                    <div class="pc-sep"></div>
+                    <button class="pc-item" data-acao="status-toggle" id="pc-status-toggle"><span class="status-indicator ${esc(statusDot)} pc-ponto"></span> ${esc(ROTULO_STATUS[pf.status] || 'Disponível')} <i class="fa-solid fa-chevron-right seta"></i></button>
+                    <div class="pc-status-opcoes" id="pc-status-opcoes">
+                        ${['online', 'idle', 'dnd', 'invisible'].map(s => `<button class="pc-opcao ${pf.status === s ? 'atual' : ''}" data-acao="status:${s}"><span class="status-indicator ${s} pc-ponto"></span><span><b>${ROTULO_STATUS[s]}</b><small>${DESC_STATUS[s]}</small></span></button>`).join('')}
+                    </div>
+                </div>
+                <div class="pc-lista">
+                    <button class="pc-item" data-acao="conta"><i class="fa-solid fa-user-gear ico"></i> Gerenciar conta</button>
+                    <button class="pc-item" data-acao="copiar-id"><i class="fa-regular fa-id-badge ico"></i> Copiar ID do usuário</button>
+                    <button class="pc-item perigo" data-acao="sair"><i class="fa-solid fa-right-from-bracket ico"></i> Sair da conta</button>
+                </div>` : '';
+
+            return `
+                <div class="pc-banner ${faixa.classe}" style="${faixa.estilo}"></div>
+                <div class="pc-topo">
+                    <div class="pc-avatar"><div class="pc-avatar-img" style="${avUrl ? 'background:transparent;' : ''}">${avatar}</div><span class="status-indicator ${esc(statusDot)}"></span></div>
+                    ${balao}
+                </div>
+                <div class="pc-corpo">
+                    <div class="pc-nome">${esc(pf.nome || '')}${pf.pronomes ? `<span class="pc-pronomes">${esc(pf.pronomes)}</span>` : ''}</div>
+                    ${chips}
+                    ${acoes}
+                    ${secoes}
+                    ${lista}
+                </div>`;
+        }
+
+        // ---------- popup ----------
+        const userPopout = document.getElementById('user-popout');
+        const popoutOverlay = document.getElementById('user-popout-overlay');
+        let cartaoAberto = null;   // { id, ancora, dados }
+
+        function perfilMeuParaCartao() { return { ...perfilMeu, sou_eu: true }; }
+
+        function posicionarCartao() {
+            if (!cartaoAberto) return;
+            const r = cartaoAberto.ancora.getBoundingClientRect();
+            userPopout.style.visibility = 'hidden';
+            userPopout.style.display = 'flex';
+            const w = userPopout.offsetWidth, hgt = userPopout.offsetHeight;
+            let left, top;
+            if (cartaoAberto.acimaDaAncora) {
+                left = r.left; top = r.top - hgt - 8;
+            } else {
+                left = (r.right + 12 + w <= window.innerWidth) ? r.right + 12 : r.left - w - 12;
+                top = r.top;
+            }
+            left = Math.min(Math.max(8, left), window.innerWidth - w - 8);
+            top = Math.min(Math.max(8, top), window.innerHeight - hgt - 8);
+            userPopout.style.left = left + 'px';
+            userPopout.style.top = top + 'px';
+            userPopout.style.bottom = 'auto';
+            userPopout.style.visibility = 'visible';
+        }
+
+        function pintarCartao() {
+            if (!cartaoAberto) return;
+            const d = cartaoAberto.dados;
+            userPopout.innerHTML = d
+                ? `<div class="pc">${htmlCartao(d, 'popout')}</div>`
+                : `<div class="pc"><div class="pc-banner banner-animado"></div><div class="pc-corpo" style="padding-top:40px;color:var(--text-muted);">Carregando perfil...</div></div>`;
+            emojificar(userPopout);
+            posicionarCartao();
+        }
+
+        function abrirCartao(id, ancora, acimaDaAncora) {
+            id = Number(id);
+            if (!id || !ancora) return;
+            const eu = id === Number(currentUserId);
+            cartaoAberto = { id, ancora, acimaDaAncora: !!acimaDaAncora, dados: eu ? perfilMeuParaCartao() : null };
+            popoutOverlay.style.display = 'block';
+            pintarCartao();
+            if (!eu) socket.emit('obter_perfil', { usuario_id: id });
+        }
+
+        function fecharCartao() {
+            userPopout.style.display = 'none';
+            popoutOverlay.style.display = 'none';
+            cartaoAberto = null;
+        }
+
+        socket.on('perfil_publico', (d) => {
+            if (!cartaoAberto || Number(cartaoAberto.id) !== Number(d.id)) return;
+            cartaoAberto.dados = d;
+            pintarCartao();
+        });
+
+        popoutOverlay.addEventListener('click', fecharCartao);
+        window.addEventListener('resize', () => { if (cartaoAberto) posicionarCartao(); });
+
+        document.getElementById('btn-open-popout').addEventListener('click', (e) => { e.stopPropagation(); abrirCartao(currentUserId, e.currentTarget, true); });
+
+        // Qualquer coisa com data-perfil-id (lista de membros, eu na sidebar...) e o
+        // avatar/nome de quem mandou a mensagem abrem o cartão. Delegado: vale
+        // pro que for desenhado depois também.
+        document.addEventListener('click', (e) => {
+            const direto = e.target.closest('[data-perfil-id]');
+            if (direto && direto.dataset.perfilId) { e.stopPropagation(); abrirCartao(direto.dataset.perfilId, direto); return; }
+            const msgAlvo = e.target.closest('.message .chat-avatar, .message .message-author');
+            if (msgAlvo) {
+                const msg = msgAlvo.closest('.message');
+                const id = msg && msg.getAttribute('data-autor-id');
+                if (id) { e.stopPropagation(); abrirCartao(id, msgAlvo); }
+            }
+        });
+
+        userPopout.addEventListener('click', (e) => {
+            const item = e.target.closest('[data-acao]');
+            if (!item) {
+                if (!e.target.closest('.pc-menu-wrap')) document.getElementById('pc-menu')?.classList.remove('aberto');
+                return;
+            }
+            e.stopPropagation();
+            const acao = item.getAttribute('data-acao');
+            const d = cartaoAberto && cartaoAberto.dados;
+            const idAlvo = cartaoAberto && cartaoAberto.id;
+
+            if (acao.startsWith('status:')) { definirMeuStatus(acao.slice(7)); return; }
+            if (acao === 'status-toggle') { item.classList.toggle('aberto'); document.getElementById('pc-status-opcoes').classList.toggle('aberto'); return; }
+            if (acao === 'menu') { document.getElementById('pc-menu').classList.toggle('aberto'); return; }
+            if (acao === 'copiar-id') {
+                navigator.clipboard?.writeText(String(idAlvo)).then(() => showToast('ID copiado.', 'success'), () => showToast('Não consegui copiar o ID.', 'error'));
+                document.getElementById('pc-menu')?.classList.remove('aberto');
+                return;
+            }
+            if (acao === 'editar') { fecharCartao(); abrirConfigPerfil(); return; }
+            if (acao === 'editar-status') { fecharCartao(); abrirConfigPerfil('pf-status'); return; }
+            if (acao === 'conta') { fecharCartao(); abrirConfigPerfil('pf-conta-ancora'); return; }
+            if (acao === 'sair') { window.location.href = "{{ url_for('auth.logout') }}"; return; }
+            if (!d) return;
+
+            if (acao === 'mensagem') {
+                fecharCartao();
+                const card = document.getElementById(`dm-${d.id}`);
+                if (card) card.click(); else iniciarDMTemporaria(d.id, d.nome, d.avatar || '');
+                document.getElementById('btn-home-view')?.click();
+                setTimeout(() => document.getElementById(`dm-${d.id}`)?.click(), 60);
+            } else if (acao === 'loja') {
+                fecharCartao();
+                document.getElementById('btn-mercado').click();
+                document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click();
+            } else if (acao === 'add-amigo') {
+                socket.emit('enviar_pedido_amizade', { usuario_id: d.id });
+                d.pedido_pendente = true;
+                pintarCartao();
+            } else if (acao === 'remover-amigo') {
+                fecharCartao();
+                openConfirmModal('Desfazer amizade?', `Você e ${d.nome} deixam de ser amigos.`, () => socket.emit('remover_amigo', { amigo_id: d.id }));
+            }
+        });
+
+        // ---------- status de presença: muda em TODO lugar ----------
         const statusMenu = document.getElementById('status-picker-menu');
         const btnStatus = document.getElementById('btn-status-picker');
         const dotBottom = document.getElementById('bottom-status-dot');
         const textBottom = document.getElementById('bottom-status-text');
-        const dotPopout = document.getElementById('popout-status-dot');
+
+        function atualizarTextoBarraInferior() {
+            textBottom.innerText = perfilMeu.custom_status || ROTULO_STATUS[perfilMeu.status] || 'Disponível';
+            emojificar(textBottom);
+        }
+
+        function aplicarMeuStatus(status) {
+            perfilMeu.status = status;
+            dotBottom.className = `status-indicator ${status}`;
+            const dotLateral = document.querySelector('#sidebar-member-item .status-indicator');
+            if (dotLateral) dotLateral.className = `status-indicator ${status}`;
+            atualizarTextoBarraInferior();
+            const eu = membrosDoServidor.find(m => Number(m.id) === Number(currentUserId));
+            if (eu) { eu.status = status; desenharMembrosSidebar(); }
+            document.querySelectorAll('#pf-presenca button').forEach(b => b.classList.toggle('ativo', b.dataset.status === status));
+            if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
+            if (typeof pintarPrevia === 'function') pintarPrevia();
+        }
+
+        function definirMeuStatus(status) {
+            aplicarMeuStatus(status);
+            if (socket.connected) socket.emit('mudar_status', { status });
+        }
+
+        // Outra aba/aparelho meu mudou o status
+        socket.on('meu_status_mudou', (d) => aplicarMeuStatus(d.status));
+
+        // Outra pessoa mudou o status (Invisível chega como 'offline')
+        socket.on('status_visivel_mudou', (d) => {
+            const on = d.status !== 'offline';
+            if (on) membrosOnlineSet.add(d.usuario_id); else membrosOnlineSet.delete(d.usuario_id);
+            const m = membrosDoServidor.find(x => Number(x.id) === Number(d.usuario_id));
+            if (m) { m.status = d.status; desenharMembrosSidebar(); }
+            atualizarStatusAmigo(d.usuario_id, on, d.status);
+            if (cartaoAberto && cartaoAberto.dados && Number(cartaoAberto.id) === Number(d.usuario_id)) {
+                cartaoAberto.dados.status = d.status; pintarCartao();
+            }
+        });
 
         btnStatus.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -7205,16 +7493,14 @@
 
         document.querySelectorAll('.status-option[data-status]').forEach(opt => {
             opt.addEventListener('click', () => {
-                const status = opt.getAttribute('data-status');
-                const text = opt.getAttribute('data-text');
-                dotBottom.className = `status-indicator ${status}`;
-                if(dotPopout) dotPopout.className = `npc-status status-indicator ${status}`;
-                textBottom.innerText = text;
-                if (typeof socket !== 'undefined' && socket.connected) {
-                    socket.emit('mudar_status', { status: status });
-                }
+                definirMeuStatus(opt.getAttribute('data-status'));
                 statusMenu.classList.remove('active');
             });
+        });
+        // "Editar status personalizado" do menu (antes não fazia nada)
+        document.querySelector('#status-picker-menu .status-option:not([data-status])')?.addEventListener('click', () => {
+            statusMenu.classList.remove('active');
+            abrirConfigPerfil('pf-status');
         });
 
         document.addEventListener('click', (e) => {
@@ -7223,18 +7509,24 @@
             }
         });
 
-        const myProfileBtn = document.getElementById('btn-open-popout');
-        const userPopout = document.getElementById('user-popout');
-        const popoutOverlay = document.getElementById('user-popout-overlay');
-
-        myProfileBtn.addEventListener('click', (e) => { e.stopPropagation(); userPopout.style.display = 'flex'; popoutOverlay.style.display = 'block'; });
-        document.getElementById('sidebar-member-item').addEventListener('click', (e) => { e.stopPropagation(); userPopout.style.display = 'flex'; popoutOverlay.style.display = 'block'; });
-        popoutOverlay.addEventListener('click', () => { userPopout.style.display = 'none'; popoutOverlay.style.display = 'none'; });
-
+        // ---------- configurações ----------
         const settingsModal = document.getElementById('settings-modal');
+        function abrirConfigPerfil(focoId) {
+            settingsModal.classList.add('active');
+            enumerarDispositivos();
+            document.querySelector('.set-tab[data-target="set-perfil"]').click();
+            if (focoId) setTimeout(() => {
+                const el = document.getElementById(focoId);
+                if (!el) return;
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (el.focus && el.tagName !== 'DIV') el.focus();
+            }, 80);
+        }
         document.getElementById('btn-open-settings').addEventListener('click', (e) => { e.stopPropagation(); settingsModal.classList.add('active'); enumerarDispositivos(); });
         document.getElementById('btn-close-settings').addEventListener('click', () => { settingsModal.classList.remove('active'); pararTesteModal(); });
-        document.addEventListener('keydown', (e) => { if(e.key === 'Escape') { settingsModal.classList.remove('active'); pararTesteModal(); }});
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') { settingsModal.classList.remove('active'); pararTesteModal(); fecharCartao(); }
+        });
 
         document.querySelectorAll('.set-tab[data-target]').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -7245,123 +7537,129 @@
             });
         });
 
-        const colorInput = document.getElementById('banner-color-input');
-        const colorBtn = document.getElementById('btn-open-color');
-        const btnBannerAnimado = document.getElementById('btn-banner-animado');
-        const previewBanner = document.getElementById('preview-banner-bg');
-        const popoutBanner = document.getElementById('popout-banner-bg');
-        const contaBanner = document.getElementById('conta-banner-bg');
-        // Guarda o que vai de verdade pro servidor ao salvar: string vazia
-        // pede pro backend limpar banner_color e voltar pro gradiente
-        // animado (mesma regra que já valia pra conta nova, sem cor escolhida).
-        let bannerAnimadoEscolhido = !document.getElementById('banner-color-input').value ||
-            popoutBanner.classList.contains('banner-animado');
+        // ---------- editor de perfil (rascunho + barra de salvar) ----------
+        const CAMPOS_PERFIL = ['nome', 'pronomes', 'custom_status', 'bio', 'banner_color', 'banner_url'];
+        let rascunho = {};
+        function copiarCampos(de) { const o = {}; CAMPOS_PERFIL.forEach(k => { o[k] = de[k] || ''; }); return o; }
+        rascunho = copiarCampos(perfilMeu);
 
-        colorBtn.addEventListener('click', () => colorInput.click());
-        colorInput.addEventListener('input', (e) => {
-            const color = e.target.value;
-            bannerAnimadoEscolhido = false;
-            colorBtn.style.background = color;
-            colorBtn.classList.add('selected'); btnBannerAnimado.classList.remove('selected');
-            [previewBanner, popoutBanner, contaBanner].forEach(el => {
-                el.classList.remove('banner-animado');
-                el.style.background = color;
+        function perfilSujo() { return CAMPOS_PERFIL.some(k => (rascunho[k] || '') !== (perfilMeu[k] || '')); }
+
+        function preencherCamposDoRascunho() {
+            document.getElementById('pf-nome').value = rascunho.nome;
+            document.getElementById('pf-pronomes').value = rascunho.pronomes;
+            document.getElementById('pf-status').value = rascunho.custom_status;
+            document.getElementById('pf-bio').value = rascunho.bio;
+            document.getElementById('pf-bio-cont').textContent = `${rascunho.bio.length}/1000`;
+            document.getElementById('pf-cor-input').value = corDeFaixa(rascunho.banner_color) || '#e91e63';
+        }
+
+        function pintarPrevia() {
+            const cartao = document.getElementById('pf-cartao');
+            if (!cartao) return;
+            cartao.innerHTML = htmlCartao({
+                ...perfilMeu, ...rascunho,
+                nome: rascunho.nome || perfilMeu.nome, sou_eu: true
+            }, 'previa');
+            emojificar(cartao);
+
+            const corBtn = document.getElementById('pf-cor-btn');
+            const cor = corDeFaixa(rascunho.banner_color);
+            corBtn.style.background = cor || document.getElementById('pf-cor-input').value;
+            corBtn.classList.toggle('selected', !!cor && !rascunho.banner_url);
+            document.getElementById('pf-cor-animada').classList.toggle('selected', !cor && !rascunho.banner_url);
+            document.getElementById('pf-banner-remover').style.display = rascunho.banner_url ? '' : 'none';
+
+            document.getElementById('pf-barra').classList.toggle('visivel', perfilSujo());
+
+            const av = document.getElementById('pf-av');
+            const avUrl = escUrl(perfilMeu.avatar || '');
+            av.innerHTML = avUrl ? `<img src="${avUrl}" alt="">` : esc((perfilMeu.nome || '?')[0].toUpperCase());
+
+            document.getElementById('pf-email').textContent = perfilMeu.email;
+            document.getElementById('pf-id').textContent = perfilMeu.id;
+            document.getElementById('pf-desde').textContent = perfilMeu.membro_desde || 'Conta antiga (sem data guardada)';
+            document.getElementById('pf-nivel').textContent = `Nv. ${perfilMeu.nivel} · ${perfilMeu.titulo}`;
+            document.querySelectorAll('#pf-presenca button').forEach(b => b.classList.toggle('ativo', b.dataset.status === perfilMeu.status));
+        }
+
+        [['pf-nome', 'nome'], ['pf-pronomes', 'pronomes'], ['pf-status', 'custom_status'], ['pf-bio', 'bio']].forEach(([id, chave]) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                rascunho[chave] = e.target.value;
+                if (chave === 'bio') document.getElementById('pf-bio-cont').textContent = `${e.target.value.length}/1000`;
+                pintarPrevia();
             });
         });
 
-        btnBannerAnimado.addEventListener('click', () => {
-            bannerAnimadoEscolhido = true;
-            btnBannerAnimado.classList.add('selected'); colorBtn.classList.remove('selected');
-            [previewBanner, popoutBanner, contaBanner].forEach(el => {
-                el.style.background = '';
-                el.classList.add('banner-animado');
+        document.getElementById('pf-cor-btn').addEventListener('click', () => document.getElementById('pf-cor-input').click());
+        document.getElementById('pf-cor-input').addEventListener('input', (e) => { rascunho.banner_color = e.target.value; rascunho.banner_url = ''; pintarPrevia(); });
+        document.getElementById('pf-cor-animada').addEventListener('click', () => { rascunho.banner_color = ''; rascunho.banner_url = ''; pintarPrevia(); });
+        document.getElementById('pf-banner-enviar').addEventListener('click', () => document.getElementById('pf-banner-file').click());
+        document.getElementById('pf-banner-remover').addEventListener('click', () => { rascunho.banner_url = ''; pintarPrevia(); });
+        document.getElementById('pf-banner-file').addEventListener('change', async (e) => {
+            const arquivo = e.target.files[0];
+            e.target.value = '';
+            if (!arquivo) return;
+            try {
+                showToast('Enviando a imagem da faixa...', 'info');
+                rascunho.banner_url = await uploadMidia(arquivo);
+                pintarPrevia();
+                showToast('Imagem pronta. Clique em "Salvar alterações" pra confirmar.', 'success');
+            } catch (err) {
+                showToast(err.message || 'Não foi possível enviar a imagem.', 'error');
+            }
+        });
+
+        document.getElementById('pf-mudar-avatar').addEventListener('click', () => { document.getElementById('avatar-upload-modal').style.display = 'flex'; });
+        document.getElementById('pf-copiar-id').addEventListener('click', () => {
+            navigator.clipboard?.writeText(String(perfilMeu.id)).then(() => showToast('ID copiado.', 'success'), () => showToast('Não consegui copiar o ID.', 'error'));
+        });
+        document.querySelectorAll('#pf-presenca button').forEach(b => b.addEventListener('click', () => definirMeuStatus(b.dataset.status)));
+
+        document.getElementById('pf-descartar').addEventListener('click', () => { rascunho = copiarCampos(perfilMeu); preencherCamposDoRascunho(); pintarPrevia(); });
+        document.getElementById('pf-salvar').addEventListener('click', () => {
+            if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
+            if (!(rascunho.nome || '').trim()) { showToast('O nome de exibição não pode ficar vazio.', 'warning'); return; }
+            socket.emit('atualizar_perfil', {
+                name: rascunho.nome, pronomes: rascunho.pronomes, custom_status: rascunho.custom_status,
+                bio: rascunho.bio, banner_color: rascunho.banner_color, banner_url: rascunho.banner_url
             });
+            showToast('Salvando...', 'info');
         });
 
-        document.getElementById('status-input').addEventListener('input', (e) => {
-            const text = e.target.value || "Sem status";
-            const previewStatus = document.getElementById('preview-custom-status');
-            const popoutStatus = document.getElementById('popout-custom-status');
-            previewStatus.innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
-            popoutStatus.innerHTML = `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(text)}`;
-            emojificar(previewStatus); emojificar(popoutStatus);
+        // Confirmação de verdade do servidor (convenção do projeto: toast de
+        // sucesso só depois que o banco confirmou).
+        socket.on('perfil_atualizado', (d) => {
+            // Campos que a pessoa está editando e ainda não salvou não podem ser
+            // atropelados por um perfil_atualizado que veio de outra coisa (ex.: avatar).
+            const pendentes = CAMPOS_PERFIL.filter(k => (rascunho[k] || '') !== (perfilMeu[k] || ''));
+
+            if (d.name) { perfilMeu.nome = d.name; currentUserName = d.name; }
+            ['custom_status', 'bio', 'banner_color', 'banner_url', 'pronomes'].forEach(k => { if (k in d) perfilMeu[k] = d[k] || ''; });
+            if (d.avatar) perfilMeu.avatar = d.avatar;
+
+            CAMPOS_PERFIL.forEach(k => { if (!pendentes.includes(k)) rascunho[k] = perfilMeu[k] || ''; });
+            // o que acabou de ser salvo deixa de ser rascunho
+            if (!pendentes.some(k => rascunho[k] !== perfilMeu[k])) rascunho = copiarCampos(perfilMeu);
+
+            ['bottom-username-text', 'sidebar-username-text', 'my-video-label'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = currentUserName;
+            });
+            if (d.avatar) aplicarAvatarNaTela(d.avatar);
+            atualizarTextoBarraInferior();
+            preencherCamposDoRascunho();
+            pintarPrevia();
+            if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
+
+            showToast('Perfil atualizado!', 'success');
         });
 
-        document.getElementById('bio-input').addEventListener('input', (e) => {
-            const text = e.target.value || "Conte um pouco sobre você...";
-            const previewBio = document.getElementById('preview-bio-text');
-            const popoutBio = document.getElementById('popout-bio-text');
-            previewBio.innerText = text;
-            popoutBio.innerText = text;
-            emojificar(previewBio); emojificar(popoutBio);
-        });
-
-        document.getElementById('btn-save-profile').addEventListener('click', () => {
-            const novoStatus = document.getElementById('status-input').value;
-            const novaBio = document.getElementById('bio-input').value;
-            // String vazia = "sem cor escolhida", que o backend entende como
-            // "usa o gradiente animado padrão".
-            const novaCor = bannerAnimadoEscolhido ? '' : document.getElementById('banner-color-input').value;
-
-            if (typeof socket !== 'undefined' && socket.connected) {
-                socket.emit('atualizar_perfil', { custom_status: novoStatus, bio: novaBio, banner_color: novaCor });
-                showToast("Salvando...", "info");
-            }
-        });
-
-        // Confirmação de verdade do servidor - sem isso o toast de sucesso
-        // aparecia antes mesmo de saber se salvou (contra a convenção do
-        // projeto: otimista no emit, "success" só na confirmação).
-        socket.on('perfil_atualizado', (dados) => {
-            if (dados.name) {
-                currentUserName = dados.name;
-                ['conta-nome-atual', 'bottom-username-text', 'sidebar-username-text',
-                 'preview-name-text', 'popout-name-text', 'my-video-label', 'placa-nome-atual'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.textContent = currentUserName;
-                });
-                const usuarioEl = document.getElementById('placa-usuario-atual');
-                if (usuarioEl) usuarioEl.textContent = currentUserName.toLowerCase().replace(/\s/g, '.');
-            }
-            // Confirma (de novo) o que já tinha sido aplicado na hora em
-            // finalizarUploadAvatar - garante que fica certo mesmo se algum
-            // elemento tiver ficado de fora do patch otimista.
-            if (dados.avatar) aplicarAvatarNaTela(dados.avatar);
-
-            // Status/bio/cor só atualizavam dentro do popup de configurações
-            // (só o preview ao vivo enquanto digitava) - a barra inferior e o
-            // cartão de perfil continuavam com o valor antigo até dar F5.
-            if ('custom_status' in dados) {
-                const statusHtml = dados.custom_status
-                    ? `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> ${esc(dados.custom_status)}`
-                    : `<i class="fa-solid fa-rocket" style="color: var(--text-normal);"></i> Sem status`;
-                const popoutStatus = document.getElementById('popout-custom-status');
-                if (popoutStatus) { popoutStatus.innerHTML = statusHtml; emojificar(popoutStatus); }
-                const bottomStatus = document.getElementById('bottom-status-text');
-                if (bottomStatus) { bottomStatus.textContent = dados.custom_status || 'Disponível'; emojificar(bottomStatus); }
-            }
-            if ('bio' in dados) {
-                const bioTexto = dados.bio || 'Use as configurações para me editar!';
-                const popoutBio = document.getElementById('popout-bio-text');
-                if (popoutBio) { popoutBio.innerText = bioTexto; emojificar(popoutBio); }
-            }
-            if ('banner_color' in dados) {
-                ['popout-banner-bg', 'conta-banner-bg', 'preview-banner-bg'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (!el) return;
-                    if (dados.banner_color) { el.classList.remove('banner-animado'); el.style.background = dados.banner_color; }
-                    else { el.style.background = ''; el.classList.add('banner-animado'); }
-                });
-                const colorBtn = document.getElementById('btn-open-color');
-                const animBtn = document.getElementById('btn-banner-animado');
-                if (colorBtn && animBtn) {
-                    colorBtn.classList.toggle('selected', !!dados.banner_color);
-                    animBtn.classList.toggle('selected', !dados.banner_color);
-                    if (dados.banner_color) colorBtn.style.background = dados.banner_color;
-                }
-            }
-
-            showToast("Perfil atualizado!", "success");
+        // Nível/título do cartão acompanham o Battle Pass
+        socket.on('xp_atualizado', (d) => {
+            perfilMeu.nivel = d.nivel; perfilMeu.titulo = d.titulo || perfilMeu.titulo;
+            pintarPrevia();
+            if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
         });
 
         // Outro membro do servidor mudou nome/avatar: corrige a lista de
@@ -7376,17 +7674,9 @@
             }
         });
 
-        document.getElementById('btn-editar-nome').addEventListener('click', () => {
-            openInputModal('Editar nome de exibição', 'Esse é o nome que aparece pra todo mundo.', currentUserName, (novoNome) => {
-                novoNome = (novoNome || '').trim();
-                if (!novoNome) return;
-                socket.emit('atualizar_perfil', { name: novoNome });
-            });
-            document.getElementById('g-input-field').value = currentUserName;
-        });
-        document.getElementById('btn-editar-email')?.addEventListener('click', () => {
-            showToast('O e-mail é o mesmo da sua conta Google - não dá pra mudar por aqui.', 'info');
-        });
+        preencherCamposDoRascunho();
+        pintarPrevia();
+        atualizarTextoBarraInferior();
 
         // ==========================================
         // AJUSTAR IMAGEM (CROP) + UPLOAD REAL DO AVATAR
@@ -7620,8 +7910,11 @@
 
         function aplicarAvatarNaTela(url) {
             currentUserAvatar = url;
+            perfilMeu.avatar = url;
+            if (typeof pintarPrevia === 'function') pintarPrevia();
+            if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
             const htmlToInject = `<img src="${escUrl(url)}" style="width: 100%; height: 100%; object-fit: cover;">`;
-            const ids = ['editor-avatar-container', 'preview-avatar-container', 'popout-avatar-container', 'conta-avatar-img', 'bottom-avatar-container', 'sidebar-avatar-container'];
+            const ids = ['bottom-avatar-container', 'sidebar-avatar-container'];
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if(el) { el.innerHTML = htmlToInject; el.style.backgroundColor = 'transparent'; }

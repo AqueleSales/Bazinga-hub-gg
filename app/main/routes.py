@@ -9,7 +9,7 @@ import cloudinary.uploader
 import requests
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
-from ..utils import com_retry, comitar_com_retry, canal_permitido
+from ..utils import com_retry, comitar_com_retry, canal_permitido, membro_desde_texto
 from .. import socketio, APP_NOME, MOEDA_NOME
 from ..events import sala_servidor, servidor_para_json
 
@@ -227,17 +227,6 @@ def chat():
         servidores_iniciais=servidores_iniciais,
         membro_desde_texto=membro_desde_texto(usuario_atual.created_at)
     )
-
-
-MESES_ABREVIADOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-                     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-
-
-def membro_desde_texto(criado_em):
-    """'Set. 2026', ou None se a conta é antiga e não tem essa data guardada."""
-    if not criado_em:
-        return None
-    return f"{MESES_ABREVIADOS[criado_em.month - 1]}. {criado_em.year}"
 
 
 GIPHY_API_KEY = os.getenv('GIPHY_API_KEY')

@@ -691,6 +691,47 @@ na hora (`aplicarMeusServidores` em `setTimeout 0`, porque várias variáveis
 `let` usadas por `entrarNoServidor()` só existem depois do script inteiro ser
 avaliado); o socket reenvia e reconcilia.
 
+## Cartão de perfil, "Meu Perfil" e status de presença
+
+**Um renderizador só** (`htmlCartao(pf, modo)` em `chat.html`) desenha o cartão do
+popup (quem você clica) e a pré-visualização do editor — o que você vê editando é
+o que os outros veem. Popup: `abrirCartao(id, ancora)` / `fecharCartao()`; o
+clique é **delegado** (`[data-perfil-id]` em qualquer elemento + avatar/nome de
+mensagem via `data-autor-id`), então vale pro que for desenhado depois.
+
+- **Meu cartão** vem do estado local `perfilMeu` (abre na hora, sem rede). **O de
+  outra pessoa** vem de `obter_perfil`: o servidor só entrega bio/status/faixa
+  pra quem **convive** (servidor em comum ou amizade); senão devolve só nome e
+  foto com `restrito: true`. Nunca exponha e-mail no cartão dos outros.
+- Ações do cartão alheio: Mensagem (amigo → DM; senão DM temporária), loja
+  (só se a pessoa vende no Bazar → abre Mercado > Bazar), ⋯ (copiar ID,
+  adicionar/desfazer amizade). Adicionar amigo manda `usuario_id` (exato — o
+  pedido por nome/e-mail ambíguo não serve aqui).
+- **Configurações**: "Minha Conta" e "Perfis" viraram **uma aba só, "Meu Perfil"**
+  (nome de exibição, pronomes, avatar, faixa em cor/animada/**imagem**, status de
+  presença, status personalizado, bio, e o bloco Conta: e-mail, ID, membro desde,
+  nível, sair). Edição usa **rascunho + barra "alterações não salvas"**; avatar e
+  presença aplicam na hora (não entram no rascunho). `perfil_atualizado` **não
+  atropela** campo que a pessoa está editando.
+- Campos novos em `Person`: `pronomes`, `banner_url` (migração em
+  `atualizar_banco.py`, passo 18). `banner_url` só aceita caminho do site ou
+  Cloudinary; `banner_color` só `#rrggbb` (a string vai parar num `style=""` no
+  navegador de todo mundo).
+
+**Status de presença (online/ausente/não perturbar/invisível) vale em todo lugar**
+(regra 6). `mudar_status` antes só salvava no banco. Agora:
+`meu_status_mudou` → minhas outras abas (status real); `status_visivel_mudou` →
+servidores e amigos (**Invisível chega como `offline`**, por `status_visivel()`).
+`connect` não anuncia "ficou online" quem está invisível; `listar_membros_servidor`
+e o snapshot de amigos também mascaram. `aplicarMeuStatus()` atualiza barra
+inferior, cartão, editor, lista de membros e o item da sidebar numa função só.
+
+**Emoji do Twemoji precisa de `img.emoji`** (1.2em): sem essa regra o `<img>` vinha
+em ~109px e estourava qualquer linha (barra do usuário, status, mensagens).
+
+Pendência: o CSS antigo do popup (`.popout-*`, `.nitro-preview-card`, `.npc-*`,
+`.account-*`) ficou sem uso — pode ser removido numa limpeza.
+
 ## Mensagens fixadas
 
 `Message.is_pinned` (coluna nova, precisa de `atualizar_banco.py`). Fixar é
@@ -1006,7 +1047,7 @@ vetorial e busca de GIF (Giphy).
 **Rodar `python atualizar_banco.py` depois do deploy** — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
 `person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
-`person.streak_dias`, `person.streak_em` e `person.tema`. Configurar `GIPHY_API_KEY` no
+`person.streak_dias`, `person.streak_em`, `person.tema`, `person.pronomes` e `person.banner_url`. Configurar `GIPHY_API_KEY` no
 Environment do Render (ver seção Deploy) pra busca de GIF funcionar em
 produção.
 

@@ -8,12 +8,12 @@ import re
 import time
 from . import socketio
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
-                     GeoNote, MapServer, Reaction, Invite, Event, Friendship)
+                     GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product)
 from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
-                    BATIMENTO_MIN_SEGUNDOS)
+                    BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto)
 
 
 def usuario_logado():
@@ -99,6 +99,14 @@ usuarios_conectados = {}
 
 def esta_online(person_id):
     return usuarios_conectados.get(person_id, 0) > 0
+
+
+def status_visivel(p):
+    """Status que OS OUTROS enxergam: 'offline' se não está conectado OU se
+    escolheu Invisível (senão Invisível só mudava a bolinha de quem escolheu)."""
+    if not esta_online(p.id) or (p.status or 'online') == 'invisible':
+        return 'offline'
+    return p.status or 'online'
 
 
 def amigos_de(pessoa):
@@ -281,15 +289,21 @@ def handle_connect():
         era_offline = not esta_online(usuario.id)
         usuarios_conectados[usuario.id] = usuarios_conectados.get(usuario.id, 0) + 1
         amigos = amigos_de(usuario)
-        if era_offline:
+        if era_offline and (usuario.status or 'online') != 'invisible':
+            aviso = {'usuario_id': usuario.id, 'status': usuario.status or 'online'}
             for srv in usuario.servers:
-                emit('usuario_ficou_online', {'usuario_id': usuario.id}, to=sala_servidor(srv.id), include_self=False)
+                emit('usuario_ficou_online', aviso, to=sala_servidor(srv.id), include_self=False)
             for amigo in amigos:
-                emit('usuario_ficou_online', {'usuario_id': usuario.id}, to=sala_pessoal(amigo.id))
+                emit('usuario_ficou_online', aviso, to=sala_pessoal(amigo.id))
 
         # Snapshot de quem já tá online agora, pra corrigir a lista de amigos
-        # que a página carregou "todo mundo offline" por padrão.
-        emit('status_amigos_ao_conectar', {'online_ids': [a.id for a in amigos if esta_online(a.id)]})
+        # que a página carregou "todo mundo offline" por padrão. Quem está
+        # Invisível fica de fora (e o status de cada um vai junto).
+        visiveis = {a.id: status_visivel(a) for a in amigos}
+        emit('status_amigos_ao_conectar', {
+            'online_ids': [i for i, st in visiveis.items() if st != 'offline'],
+            'status_por_id': {str(i): st for i, st in visiveis.items() if st != 'offline'}
+        })
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO CONNECT] {e}")
@@ -981,8 +995,10 @@ def listar_membros_servidor(dados):
             'membros': [{
                 'id': m.id, 'nome': m.name, 'avatar': m.avatar,
                 'dono': m.id == srv.owner_id,
-                'status': m.status or 'online',
-                'online': esta_online(m.id)
+                # Pra mim mesmo vale o status real; pros outros, o que eles
+                # escolheram mostrar (Invisível aparece como offline).
+                'status': (m.status or 'online') if m.id == usuario.id else status_visivel(m),
+                'online': True if m.id == usuario.id else status_visivel(m) != 'offline'
             } for m in srv.members]
         })
     except Exception as e:
@@ -1548,7 +1564,16 @@ def atualizar_perfil(dados):
             if 'bio' in dados:
                 usuario.bio = (dados.get('bio') or '').strip()[:1000] or None
             if 'banner_color' in dados:
-                usuario.banner_color = dados.get('banner_color') or None
+                # Só #rrggbb: essa string vai parar num style="" no cliente de todo mundo.
+                cor = (dados.get('banner_color') or '').strip()
+                usuario.banner_color = cor if re.match(r'^#[0-9a-fA-F]{6}$', cor) else None
+            if 'pronomes' in dados:
+                usuario.pronomes = (dados.get('pronomes') or '').strip()[:40] or None
+            if 'banner_url' in dados:
+                # Só caminho do próprio site ou Cloudinary (mesma regra dos anexos);
+                # vazio limpa e volta pra cor.
+                url = (dados.get('banner_url') or '').strip()
+                usuario.banner_url = url[:255] if url.startswith('/') or url.startswith('https://res.cloudinary.com/') else None
             avatar = dados.get('avatar')
             # blob: só existe na aba que criou - nunca salvar isso no banco.
             if avatar and not avatar.startswith('blob:'):
@@ -1560,6 +1585,8 @@ def atualizar_perfil(dados):
             'custom_status': usuario.custom_status,
             'bio': usuario.bio,
             'banner_color': usuario.banner_color,
+            'banner_url': usuario.banner_url,
+            'pronomes': usuario.pronomes,
             'avatar': usuario.avatar
         })
 
@@ -1648,10 +1675,69 @@ def mudar_status(dados):
             usuario.status = status
 
         comitar_com_retry(preparar)
+
+        # Outras abas/aparelhos dela: status de verdade (inclusive Invisível).
+        emit('meu_status_mudou', {'status': status}, to=sala_pessoal(usuario.id))
+        # Quem convive: só o que ela deixa ver (Invisível = offline). Antes só
+        # salvava no banco e ninguém via a bolinha mudar sem recarregar (regra 6).
+        aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario)}
+        for srv in usuario.servers:
+            emit('status_visivel_mudou', aviso, to=sala_servidor(srv.id), include_self=False)
+        for amigo in amigos_de(usuario):
+            emit('status_visivel_mudou', aviso, to=sala_pessoal(amigo.id))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MUDAR STATUS] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível mudar seu status: {e}'})
+
+
+@socketio.on('obter_perfil')
+def obter_perfil(dados):
+    """Cartão de perfil de alguém. Quem não convive (nem servidor, nem amizade)
+    só recebe nome e foto - bio/status/faixa não são públicos pro site todo."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        alvo = com_retry(lambda: Person.query.get(int(dados.get('usuario_id'))))
+    except (TypeError, ValueError):
+        return
+    if not alvo:
+        return
+
+    try:
+        sou_eu = alvo.id == usuario.id
+        amigo = False if sou_eu else sao_amigos(usuario.id, alvo.id)
+        convivem = sou_eu or amigo or bool(
+            {s.id for s in usuario.servers} & {s.id for s in alvo.servers})
+
+        if not convivem:
+            emit('perfil_publico', {'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': True})
+            return
+
+        pendente = False
+        if not sou_eu and not amigo:
+            pendente = Friendship.query.filter(
+                Friendship.status == 'pending',
+                or_(and_(Friendship.requester_id == usuario.id, Friendship.addressee_id == alvo.id),
+                    and_(Friendship.requester_id == alvo.id, Friendship.addressee_id == usuario.id))
+            ).first() is not None
+
+        nivel = nivel_da_pessoa(alvo.xp)
+        emit('perfil_publico', {
+            'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': False,
+            'bio': alvo.bio, 'custom_status': alvo.custom_status, 'pronomes': alvo.pronomes,
+            'banner_color': alvo.banner_color, 'banner_url': alvo.banner_url,
+            'status': (alvo.status or 'online') if sou_eu else status_visivel(alvo),
+            'membro_desde': membro_desde_texto(alvo.created_at),
+            'nivel': nivel, 'titulo': titulo_do_nivel(nivel),
+            'eh_amigo': amigo, 'pedido_pendente': pendente, 'sou_eu': sou_eu,
+            'tem_loja': Product.query.filter_by(seller_id=alvo.id).count() > 0
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO OBTER PERFIL] {e}")
 
 
 # ==========================================
@@ -1662,8 +1748,9 @@ def mudar_status(dados):
 # Friendship (pending -> accepted) de verdade.
 # ==========================================
 def pessoa_para_json_amigo(p):
+    sv = status_visivel(p)
     return {'id': p.id, 'nome': p.name, 'avatar': p.avatar,
-            'status': p.status or 'online', 'online': esta_online(p.id)}
+            'status': sv if sv != 'offline' else (p.status or 'online'), 'online': sv != 'offline'}
 
 
 @socketio.on('enviar_pedido_amizade')
@@ -1673,16 +1760,23 @@ def enviar_pedido_amizade(dados):
         return
 
     busca = (dados.get('busca') or '').strip()
-    if not busca:
+    alvo_id = dados.get('usuario_id')   # vindo do cartão de perfil: exato, sem depender do nome
+    if not busca and alvo_id is None:
         return
 
     try:
-        alvo = com_retry(lambda: Person.query.filter(
-            or_(Person.name == busca, Person.email == busca)
-        ).first())
+        if alvo_id is not None:
+            try:
+                alvo = com_retry(lambda: Person.query.get(int(alvo_id)))
+            except (TypeError, ValueError):
+                return
+        else:
+            alvo = com_retry(lambda: Person.query.filter(
+                or_(Person.name == busca, Person.email == busca)
+            ).first())
 
         if not alvo:
-            emit('erro_bazinga', {'msg': f'Não achei ninguém com "{busca}" na Bazinga.'})
+            emit('erro_bazinga', {'msg': f'Não achei ninguém com "{busca}" no Panteão.'})
             return
         if alvo.id == usuario.id:
             emit('erro_bazinga', {'msg': 'Você não pode adicionar a si mesmo.'})

@@ -75,6 +75,9 @@ class Person(db.Model):
     bio = db.Column(db.Text, nullable=True)
     custom_status = db.Column(db.String(128), nullable=True)
     banner_color = db.Column(db.String(50), nullable=True)
+    # Faixa em imagem (prevalece sobre a cor) e pronomes - campos do cartão de perfil.
+    banner_url = db.Column(db.String(255), nullable=True)
+    pronomes = db.Column(db.String(40), nullable=True)
     status = db.Column(db.String(20), default="online")  # online, idle, dnd, invisible
     # Conta antiga (de antes dessa coluna existir) fica None de propósito -
     # não dá pra inventar uma data de quando a pessoa entrou de verdade.

@@ -460,3 +460,17 @@ def registrar_tempo_ativo(usuario, em_call=False):
     if em_call:
         eventos['call_minutos'] = 1
     return registrar_eventos(usuario, eventos, xp_extra=xp_passivo, motivo='tempo')
+
+
+# ==========================================
+# Texto "Set. 2026" do "Membro desde" (cartão de perfil)
+# ==========================================
+MESES_ABREVIADOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+
+def membro_desde_texto(criado_em):
+    """'Set. 2026', ou None se a conta é antiga e não tem essa data guardada."""
+    if not criado_em:
+        return None
+    return f"{MESES_ABREVIADOS[criado_em.month - 1]}. {criado_em.year}"
