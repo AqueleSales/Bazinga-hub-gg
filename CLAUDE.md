@@ -1115,7 +1115,7 @@ em tempo real de verdade (regra 6), latência de mensagem percebida, prévia
 de call, qualidade de call automática, correções de mapa/perfil, emoji
 vetorial e busca de GIF (Giphy).
 
-**Rodar `python atualizar_banco.py` depois do deploy** — essa rodada criou
+**Rodar `python atualizar_banco.py` depois do deploy** (colunas novas de perfil: `pronomes`, `banner_url`, `username`, `status_emoji`, `pensando`, `perfil_tema`, `nome_estilo`, `placa`, `moldura`) — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
 `person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
 `person.streak_dias`, `person.streak_em`, `person.tema`, `person.pronomes`, `person.banner_url`, `person.username` (+ índice único), `person.status_emoji`, `person.perfil_tema`, `person.nome_estilo`, `person.placa` e `person.moldura` e `person.pensando`. Configurar `GIPHY_API_KEY` no
@@ -1123,6 +1123,14 @@ Environment do Render (ver seção Deploy) pra busca de GIF funcionar em
 produção.
 
 ## Pendências conhecidas
+
+- **Mais faixas animadas e molduras** (combinado com o dono): hoje são 11 faixas
+  (`FAIXAS_ANIMADAS`) e 6 molduras (`MOLDURAS`). A ideia é ampliar e, depois, ligar
+  parte delas ao Battle Pass/loja (hoje todas são livres; "Efeitos de perfil" já
+  aparecem como "Em breve"). Passos pra criar cada tipo estão na seção de perfil.
+- **Estilo de nome e placa** aparecem no cartão, nas listas e na barra inferior, mas
+  **não** no nome de quem fala nas mensagens do chat.
+- **Menção (@) só em canais**; DM ainda não tem.
 
 - **Call é malha P2P (PeerJS), não SFU**: cada participante manda a
   própria mídia direto pra cada outro — upload de cada um escala com
