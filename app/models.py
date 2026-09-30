@@ -356,3 +356,25 @@ class MapServer(db.Model):
 
     owner = db.relationship('Person', backref='map_servers', foreign_keys=[owner_id])
     server = db.relationship('Server', backref=db.backref('map_pin', uselist=False))
+
+
+# ==========================================
+# BATTLE PASS: progresso de missões (diárias/semanais)
+# ------------------------------------------------------------
+# As DEFINIÇÕES das missões vivem em código (utils.py, MISSOES) - aqui só
+# o progresso de cada pessoa no período atual. `chave` = dia (YYYY-MM-DD) das
+# diárias, ou a segunda-feira (YYYY-MM-DD) das semanais: virou o período, a
+# chave muda e as missões novas nascem zeradas sem precisar apagar nada.
+# Linhas com código começando em "_" são contadores internos (ex.: minutos
+# ativos do dia), não aparecem pra pessoa.
+# ==========================================
+class MissaoProgresso(db.Model):
+    __tablename__ = 'missao_progresso'
+    __table_args__ = (db.UniqueConstraint('person_id', 'codigo', 'periodo', 'chave', name='uq_missao_periodo'),)
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    codigo = db.Column(db.String(40), nullable=False)
+    periodo = db.Column(db.String(10), nullable=False)   # 'diaria' | 'semanal'
+    chave = db.Column(db.String(10), nullable=False)
+    progresso = db.Column(db.Integer, default=0, nullable=False)
+    concluida = db.Column(db.Boolean, default=False, nullable=False)

@@ -1439,6 +1439,51 @@
         .settings-close-btn:hover { transform: rotate(90deg); }
         .toggle-switch::after { transition: transform .3s cubic-bezier(.34,1.56,.64,1); box-shadow: 0 2px 4px rgba(0,0,0,.3); }
         .toggle-switch.active { box-shadow: 0 0 12px rgba(67,181,129,.45); }
+
+        /* ==========================================================================
+           BATTLE PASS: MISSÕES + TRILHA DE 100 NÍVEIS (inspiração: passe do Valorant -
+           abas, cartões com canto cortado, barras finas)
+           ========================================================================== */
+        .bp-secao-cab { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 32px 0 0; }
+        .bp-secao-cab .market-section-title { margin: 0 auto 0 0; }
+        .bp-sub { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin-left: 8px; }
+        .bp-mtabs { display: flex; gap: 6px; background: rgba(255,255,255,.05); border: 1px solid var(--glass-borda); border-radius: 12px; padding: 4px; }
+        .bp-mtab { background: transparent; border: 0; color: var(--text-muted); font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; padding: 8px 14px; border-radius: 9px; cursor: pointer; transition: background-color .2s, color .2s; }
+        .bp-mtab span { margin-left: 6px; opacity: .7; font-variant-numeric: tabular-nums; }
+        .bp-mtab:hover { color: var(--text-header); }
+        .bp-mtab.active { background: linear-gradient(180deg, rgba(114,137,218,.4), rgba(114,137,218,.22)); color: var(--text-header); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+        .bp-reset { font-size: 12px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        .bp-setas { display: flex; gap: 6px; }
+        .bp-seta { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--glass-borda); background: rgba(255,255,255,.06); color: var(--text-normal); cursor: pointer; transition: background-color .2s, transform .15s; }
+        .bp-seta:hover { background: var(--brand-color); color: #fff; transform: translateY(-1px); }
+        .bp-seta:active { transform: scale(.94); }
+
+        .bp-missoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 16px; }
+        .bp-vazio { color: var(--text-muted); font-size: 14px; padding: 18px; }
+        .bp-missao { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 14px 18px; overflow: hidden;
+            background-color: color-mix(in srgb, var(--bg-secondary) 62%, transparent); border: 1px solid var(--glass-borda);
+            clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+            animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) backwards; animation-delay: calc(var(--i, 0) * 70ms); transition: transform .2s, background-color .2s; }
+        .bp-missao::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--brand-color), #eb459e); }
+        .bp-missao:hover { transform: translateY(-3px); background-color: color-mix(in srgb, var(--bg-secondary) 40%, rgba(114,137,218,.22)); }
+        .bp-missao-topo { display: flex; align-items: center; gap: 12px; }
+        .bp-missao-ico { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; background: rgba(114,137,218,.2); color: #aab6f5; }
+        .bp-missao-txt { min-width: 0; flex: 1; }
+        .bp-missao-txt b { display: block; color: var(--text-header); font-size: 14px; }
+        .bp-missao-txt span { color: var(--text-muted); font-size: 12px; line-height: 1.35; }
+        .bp-missao-xp { font-size: 12px; font-weight: 900; color: #ffd76a; background: rgba(255,215,106,.12); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+        .bp-missao-barra { position: relative; height: 10px; border-radius: 5px; background: rgba(0,0,0,.35); overflow: hidden; }
+        .bp-missao-barra i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: linear-gradient(90deg, var(--brand-color), #eb459e); transition: width .8s cubic-bezier(.22,1,.36,1); }
+        .bp-missao-num { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-top: -6px; }
+        .bp-missao.feita { opacity: .8; }
+        .bp-missao.feita::before { background: var(--green-color); }
+        .bp-missao.feita .bp-missao-ico { background: rgba(67,181,129,.2); color: var(--green-color); }
+        .bp-missao.feita .bp-missao-barra i { background: var(--green-color); }
+        .bp-missao.feita .bp-missao-xp { color: var(--green-color); background: rgba(67,181,129,.14); }
+
+        /* Trilha de 100 níveis: rolagem horizontal, sem blur por cartão (100 blurs pesam) */
+        .bp-marcos { display: flex; gap: 14px; overflow-x: auto; padding: 16px 4px 14px; margin-top: 4px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+        .bp-marco { flex: 0 0 132px; scroll-snap-align: center; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
     </style>
 </head>
 <body>
@@ -1873,14 +1918,34 @@
                         </div>
                     </div>
 
-                    <div class="market-section-title">Trilha de recompensas</div>
+                    <!-- MISSÕES (diárias/semanais). Definições em app/utils.py (MISSOES). -->
+                    <div class="bp-secao-cab">
+                        <div class="market-section-title">Missões</div>
+                        <div class="bp-mtabs" id="bp-mtabs">
+                            <button class="bp-mtab active" data-per="diarias">Diárias <span id="bp-cont-diarias">0/3</span></button>
+                            <button class="bp-mtab" data-per="semanais">Semanais <span id="bp-cont-semanais">0/3</span></button>
+                        </div>
+                        <div class="bp-reset" id="bp-reset"><i class="fa-regular fa-clock"></i> <span id="bp-reset-txt">--</span></div>
+                    </div>
+                    <div class="bp-missoes" id="bp-missoes-lista"><div class="bp-vazio">Carregando missões...</div></div>
+
+                    <div class="bp-secao-cab">
+                        <div class="market-section-title">Trilha de recompensas <span class="bp-sub">100 níveis</span></div>
+                        <div class="bp-setas">
+                            <button class="bp-seta" id="bp-trilha-esq" title="Voltar"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button class="bp-seta" id="bp-trilha-atual" title="Ir pro meu nível"><i class="fa-solid fa-crosshairs"></i></button>
+                            <button class="bp-seta" id="bp-trilha-dir" title="Avançar"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
                     <div class="bp-marcos" id="bp-marcos-lista"></div>
 
-                    <!-- Valores daqui espelham XP_POR_MENSAGEM / XP_BONUS_DIARIO / XP_BONUS_SEQUENCIA em app/utils.py -->
+                    <!-- Valores daqui espelham as constantes XP_* / MINUTOS_* em app/utils.py -->
                     <div class="market-section-title">Como ganhar XP</div>
                     <div class="bp-fontes">
-                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-comment-dots"></i></div><div><b>Converse: +5 XP</b><span>Em canais e DMs, no máximo 1 vez a cada 30 segundos.</span></div></div>
-                        <div class="bp-fonte"><div class="bp-fonte-ico fogo"><i class="fa-solid fa-fire"></i></div><div><b>Bônus diário: +25 XP</b><span>Abra o app todo dia. Cada dia seguido soma +5 XP (até 7 dias).</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-comment-dots"></i></div><div><b>Converse: +10 XP</b><span>Em canais e DMs, no máximo 1 vez a cada 30 segundos.</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>Tempo ativo: +3 XP/min</b><span>Mexendo no app ou numa call. Vale até 60 minutos por dia (180 XP).</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico fogo"><i class="fa-solid fa-fire"></i></div><div><b>Bônus diário: +50 XP</b><span>Abra o app todo dia. Cada dia seguido soma +10 XP (até 7 dias).</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-list-check"></i></div><div><b>Missões: até +1.800 XP</b><span>3 diárias e 3 semanais novas pra você. O XP cai assim que completar.</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: {{ moeda_sigla }}</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Títulos novos nos marcos.</span></div></div>
                     </div>
                 </div>
@@ -3319,21 +3384,102 @@
             el.classList.remove(classe); void el.offsetWidth; el.classList.add(classe);
         }
 
+        let bpTrilhaDesenhada = false;
         function desenharMarcosBattlePass(marcos, nivelAtual) {
             const lista = document.getElementById('bp-marcos-lista');
             if (!lista || !Array.isArray(marcos)) return;
-            lista.innerHTML = marcos.map((m, i) => {
+            lista.innerHTML = marcos.map((m) => {
                 const estado = m.nivel < nivelAtual ? 'concluido' : (m.nivel === nivelAtual ? 'atual' : 'bloqueado');
                 const especial = m.titulo || m.coins >= 150;
                 const icone = m.titulo ? 'fa-crown' : (m.coins >= 300 ? 'fa-gem' : (m.coins >= 150 ? 'fa-trophy' : 'fa-coins'));
-                return `<div class="bp-marco ${estado} ${especial ? 'especial' : ''}" style="--i:${i}">
+                // escalonamento só perto do nível atual (100 cartões com atraso crescente seria eterno)
+                const i = Math.min(Math.abs(m.nivel - nivelAtual), 10);
+                return `<div class="bp-marco ${estado} ${especial ? 'especial' : ''}" data-nivel="${Number(m.nivel)}" style="--i:${i}">
                     <i class="fa-solid ${icone} bp-ico"></i>
                     <div class="bp-marco-nivel">Nível ${Number(m.nivel)}</div>
                     <div class="bp-marco-premio">+${Number(m.coins)} {{ moeda_sigla }}</div>
                     ${m.titulo ? `<div class="bp-marco-titulo">${esc(m.titulo)}</div>` : ''}
                 </div>`;
             }).join('');
+            irParaNivelAtual(!bpTrilhaDesenhada);
+            bpTrilhaDesenhada = true;
         }
+
+        function irParaNivelAtual(instantaneo) {
+            const lista = document.getElementById('bp-marcos-lista');
+            const atual = lista && lista.querySelector('.bp-marco.atual');
+            if (!atual) return;
+            lista.scrollTo({ left: atual.offsetLeft - lista.clientWidth / 2 + atual.offsetWidth / 2, behavior: instantaneo ? 'auto' : 'smooth' });
+        }
+        document.getElementById('bp-trilha-esq')?.addEventListener('click', () => document.getElementById('bp-marcos-lista').scrollBy({ left: -560, behavior: 'smooth' }));
+        document.getElementById('bp-trilha-dir')?.addEventListener('click', () => document.getElementById('bp-marcos-lista').scrollBy({ left: 560, behavior: 'smooth' }));
+        document.getElementById('bp-trilha-atual')?.addEventListener('click', () => irParaNivelAtual(false));
+        // Ao abrir a aba, recentra (a rolagem calculada com a aba escondida sai errada)
+        document.getElementById('btn-battlepass')?.addEventListener('click', () => setTimeout(() => irParaNivelAtual(true), 60));
+
+        // ---- Missões ----
+        let bpMissoes = null, bpAbaMissoes = 'diarias', bpMissoesEm = 0;
+
+        function formatarReset(seg) {
+            const d = Math.floor(seg / 86400), hh = Math.floor((seg % 86400) / 3600), mm = Math.floor((seg % 3600) / 60);
+            return d > 0 ? `${d}d ${hh}h` : (hh > 0 ? `${hh}h ${mm}min` : `${Math.max(mm, 1)}min`);
+        }
+
+        function atualizarContagemReset() {
+            if (!bpMissoes) return;
+            const base = bpAbaMissoes === 'diarias' ? bpMissoes.reseta_diarias : bpMissoes.reseta_semanais;
+            const passou = Math.floor((Date.now() - bpMissoesEm) / 1000);
+            const el = document.getElementById('bp-reset-txt');
+            if (el) el.textContent = 'Reinicia em ' + formatarReset(Math.max(base - passou, 0));
+        }
+
+        function desenharMissoes() {
+            const lista = document.getElementById('bp-missoes-lista');
+            if (!lista || !bpMissoes) return;
+            ['diarias', 'semanais'].forEach(per => {
+                const el = document.getElementById('bp-cont-' + per);
+                if (el) el.textContent = `${bpMissoes[per].filter(m => m.concluida).length}/${bpMissoes[per].length}`;
+            });
+            lista.innerHTML = bpMissoes[bpAbaMissoes].map((m, i) => {
+                const pct = Math.round((m.progresso / m.meta) * 100);
+                return `<div class="bp-missao ${m.concluida ? 'feita' : ''}" style="--i:${i}">
+                    <div class="bp-missao-topo">
+                        <div class="bp-missao-ico"><i class="fa-solid fa-${m.concluida ? 'check' : esc(m.icone)}"></i></div>
+                        <div class="bp-missao-txt"><b>${esc(m.titulo)}</b><span>${esc(m.descricao)}</span></div>
+                        <div class="bp-missao-xp">+${Number(m.xp)} XP</div>
+                    </div>
+                    <div class="bp-missao-barra"><i style="width:${pct}%"></i></div>
+                    <div class="bp-missao-num"><span>${m.concluida ? 'Concluída' : 'Progresso'}</span><span>${Number(m.progresso)} / ${Number(m.meta)}</span></div>
+                </div>`;
+            }).join('');
+            atualizarContagemReset();
+        }
+
+        document.querySelectorAll('.bp-mtab').forEach(btn => btn.addEventListener('click', () => {
+            bpAbaMissoes = btn.dataset.per;
+            document.querySelectorAll('.bp-mtab').forEach(b => b.classList.toggle('active', b === btn));
+            desenharMissoes();
+        }));
+
+        socket.on('missoes_atualizadas', (dados) => {
+            bpMissoes = dados;
+            bpMissoesEm = Date.now();
+            desenharMissoes();
+        });
+        socket.on('missao_concluida', (m) => showToast(`Missão concluída: ${m.titulo} · +${m.xp} XP`, 'success'));
+        setInterval(atualizarContagemReset, 30000);
+
+        // ---- Tempo ativo: batimento de 1/min, só se a pessoa mexeu de verdade ----
+        // (o servidor também limita frequência e XP diário - isto só evita mandar à toa)
+        let ultimaAtividadeEm = Date.now();
+        ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev =>
+            document.addEventListener(ev, () => { ultimaAtividadeEm = Date.now(); }, { passive: true }));
+        setInterval(() => {
+            if (!socket.connected) return;
+            const mexeu = document.visibilityState === 'visible' && (Date.now() - ultimaAtividadeEm) < 60000;
+            // Em call conta mesmo parado (ouvindo) e com a aba em segundo plano.
+            if (mexeu || (typeof inCall !== 'undefined' && inCall)) socket.emit('batimento_atividade', {});
+        }, 60000);
 
         function mostrarXpFlutuante(qtd) {
             const botao = document.getElementById('btn-battlepass');
@@ -3428,7 +3574,7 @@
                 if (saldoEl) saldoEl.textContent = dados.coins;
             }
 
-            if (dados.motivo === 'mensagem' && dados.ganho_xp) mostrarXpFlutuante(dados.ganho_xp);
+            if ((dados.motivo === 'mensagem' || dados.motivo === 'tempo') && dados.ganho_xp) mostrarXpFlutuante(dados.ganho_xp);
 
             if (dados.bonus_diario) {
                 showToast(`Bônus diário: +${dados.ganho_xp} XP · ${dados.streak} ${dados.streak === 1 ? 'dia' : 'dias'} seguidos`, 'success');

@@ -5,12 +5,15 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
 from datetime import timedelta
 import re
+import time
 from . import socketio
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship)
 from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
-                    conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass)
+                    conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
+                    registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
+                    BATIMENTO_MIN_SEGUNDOS)
 
 
 def usuario_logado():
@@ -184,6 +187,54 @@ def avisar_servidor(srv):
 
 
 # ==========================================
+# MISSÕES: todo progresso passa por aqui
+# ------------------------------------------------------------
+# Nunca pode quebrar a ação que originou o evento (mandar mensagem, reagir...):
+# se o banco falhar, só loga - a missão perde 1 ponto, a mensagem segue.
+# ==========================================
+_ultimo_batimento = {}   # user_id -> epoch do último batimento aceito
+
+
+def _emitir_resultado(usuario, r):
+    if not r:
+        return
+    sala = sala_pessoal(usuario.id)
+    emit('missoes_atualizadas', r['missoes'], to=sala)
+    for c in r['concluidas']:
+        emit('missao_concluida', c, to=sala)
+    if r['estado']:
+        emit('xp_atualizado', r['estado'], to=sala)
+
+
+def _emitir_progresso(usuario, eventos):
+    try:
+        _emitir_resultado(usuario, registrar_eventos(usuario, eventos))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MISSOES] {e}")
+
+
+@socketio.on('batimento_atividade')
+def batimento_atividade(dados=None):
+    """O cliente manda 1x por minuto SÓ se a pessoa mexeu (mouse/teclado) com a
+    aba visível. O servidor não confia nisso: limita a frequência e o XP diário."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    agora = time.time()
+    if agora - _ultimo_batimento.get(usuario.id, 0) < BATIMENTO_MIN_SEGUNDOS:
+        return
+    _ultimo_batimento[usuario.id] = agora
+
+    try:
+        _emitir_resultado(usuario, registrar_tempo_ativo(usuario, em_call=request.sid in _call_por_sid))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO BATIMENTO] {e}")
+
+
+# ==========================================
 # CONEXÃO: Carrega os servidores do usuário e entra na sala pessoal
 # (para DMs em tempo real) e nas salas dos servidores dele.
 # ==========================================
@@ -214,9 +265,16 @@ def handle_connect():
             bonus = conceder_bonus_diario(usuario)
             if bonus:
                 emit('xp_atualizado', bonus)
+                _emitir_progresso(usuario, {'login': 1})   # missão "abra o app em N dias"
         except Exception as e:
             db.session.rollback()
             print(f"[ERRO BONUS DIARIO] {e}")
+
+        try:
+            emit('missoes_atualizadas', missoes_do_usuario(usuario))
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO MISSOES CONNECT] {e}")
 
         # Só avisa quem divide servidor com ela quando é o PRIMEIRO socket
         # dela (outra aba/dispositivo já conectado não deve gerar aviso de novo).
@@ -375,6 +433,7 @@ def lidar_com_mensagem(dados):
     resultado_xp = conceder_xp_por_mensagem(usuario)
     if resultado_xp:
         emit('xp_atualizado', resultado_xp, to=sala_pessoal(usuario.id))
+    _emitir_progresso(usuario, {'mensagem': 1})
 
 
 @socketio.on('editar_mensagem')
@@ -452,15 +511,21 @@ def reagir_mensagem(dados):
         if not emoji:
             return
 
+        adicionou = []
+
         def preparar():
+            adicionou.clear()
             existente = Reaction.query.filter_by(
                 message_id=msg.id, person_id=usuario.id, emoji=emoji).first()
             if existente:
                 db.session.delete(existente)
             else:
                 db.session.add(Reaction(message_id=msg.id, person_id=usuario.id, emoji=emoji))
+                adicionou.append(1)
 
         comitar_com_retry(preparar)
+        if adicionou:   # tirar a reação não conta (senão ligar/desligar viraria XP)
+            _emitir_progresso(usuario, {'reacao': 1})
 
         emit('reacoes_atualizadas', {
             'msg_id': msg.id,
@@ -1270,6 +1335,7 @@ def criar_geonote(dados):
             'texto': nota.text, 'autor': usuario.name, 'autor_id': usuario.id,
             'cor': nota.color
         }, broadcast=True)
+        _emitir_progresso(usuario, {'nota': 1})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO CRIAR GEONOTE] {e}")
@@ -1363,6 +1429,7 @@ def plantar_servidor(dados):
             'online': len(srv.members),
             'server_id': srv.id
         }, broadcast=True)
+        _emitir_progresso(usuario, {'plantar': 1})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO PLANTAR SERVIDOR] {e}")
@@ -1787,6 +1854,7 @@ def on_enviar_mensagem_direta(data):
         resultado_xp = conceder_xp_por_mensagem(usuario)
         if resultado_xp:
             emit('xp_atualizado', resultado_xp, to=sala_pessoal(usuario.id))
+        _emitir_progresso(usuario, {'dm': 1})
 
     except Exception as e:
         db.session.rollback()

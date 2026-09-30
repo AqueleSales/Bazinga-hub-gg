@@ -571,26 +571,48 @@ pra conveniência de UI (ex.: lista de membros recolhida).
   duplo clique vazava). Ao ligar, emite `posicao_amigo_removida` pra
   `sala_servidor` (o pino some do mapa de quem já via — regra 6).
 
-## Battle Pass (nível/XP)
+## Battle Pass (nível/XP) e missões
 
-Tudo calculado no servidor (`app/utils.py`); o cliente só desenha o dict que
-chega em `xp_atualizado` (nunca recalcula nível).
+Tudo calculado no servidor (`app/utils.py`); o cliente só desenha o que chega em
+`xp_atualizado` e `missoes_atualizadas` (nunca recalcula nível nem progresso).
 
-- **Curva progressiva**: subir do nível N pro N+1 custa `100 + 30·(N-1)` XP
-  (1→2 = 100, 2→3 = 130...), teto nível 100. `Person.xp` guarda o TOTAL, então
-  mudar a curva não precisa de migração.
-- **Recompensas** (`recompensa_do_nivel`): +50 BZC por nível, +150 a cada 5,
-  +300 a cada 10; títulos (Novato → Explorador → ... → Imortal) nos marcos de
-  `TITULOS_POR_NIVEL`. As moedas dos níveis cruzados são pagas dentro do
-  mesmo `comitar_com_retry` que soma o XP (regra 2).
-- **Fontes de XP**: mensagem (+5, cooldown 30s) e **bônus diário** (+25, +5
-  por dia seguido até 7 — `Person.streak_dias`/`streak_em`; pular um dia zera a
-  sequência). O bônus é pago no `connect`, em `try` próprio pra falha nele não
-  derrubar a presença. O texto "Como ganhar XP" em `chat.html` é fixo e
-  **espelha** essas constantes — mudou uma, mude a outra.
-- UI: anel de progresso + barra com brilho, trilha de 10 marcos
-  (concluído/atual/bloqueado), "+N XP" flutuando no botão da barra lateral e
-  tela de comemoração com confete em `subiu_nivel` (clique/ESC/6s fecham).
+- **100 níveis, ~1 milhão de XP**: subir do nível N pro N+1 custa
+  `100 + 204·(N-1)` (1→2 = 100, 99→100 = 20.092); o total até o 100 é
+  **999.504 XP**. `Person.xp` guarda o TOTAL, então mexer em `XP_BASE`/
+  `XP_CRESCIMENTO` não precisa de migração (só muda o nível calculado). O
+  servidor manda a trilha inteira (`marcos`, 100 itens); o cliente rola até o
+  nível atual.
+- **Recompensas** (`recompensa_do_nivel`): +50 DRC por nível, +150 a cada 5,
+  +300 a cada 10; títulos em `TITULOS_POR_NIVEL` (Novato … Panteão). As moedas
+  dos níveis cruzados são pagas na MESMA transação que soma o XP (regra 2).
+- **Fontes de XP**: mensagem (+10, cooldown 30s), **tempo ativo** (+3 XP/min,
+  teto 60 min/dia), **bônus diário** (+50, +10 por dia seguido até 7; pular um
+  dia zera) e **missões**.
+- **Missões** (`MISSOES` em utils.py): cada pessoa tem 3 diárias + 3 semanais
+  sorteadas de um pool. O sorteio é **determinístico** (semente = pessoa +
+  período), então a escolha não é guardada — só o progresso
+  (`MissaoProgresso`, `chave` = dia ou segunda-feira). Virou o período, a chave
+  muda e as missões novas nascem zeradas sem apagar nada. Cada missão tem um
+  `evento` ligado a algo que o app já faz: `mensagem`, `dm`, `reacao` (só ao
+  ADICIONAR — ligar/desligar não vira XP), `nota`, `plantar`, `minutos`,
+  `call_minutos`, `login`. Concluiu = o XP cai na hora (sem "resgatar").
+  Para criar missão nova: uma linha em `MISSOES` (entra no pool sozinha).
+- **Todo progresso passa por `_emitir_progresso()`** (events.py), que engole
+  erro de propósito: falha de banco na missão nunca pode quebrar a mensagem/
+  reação/nota que a originou.
+- **Tempo ativo**: o cliente manda `batimento_atividade` 1x/min só se houve
+  mouse/teclado com a aba visível (ou se está em call). **O servidor não
+  confia**: limita a 1 batimento a cada 50s e a 60 min de XP/dia, e decide
+  `call_minutos` por `_call_por_sid` (estar na call de verdade).
+- Linhas de `MissaoProgresso` com `codigo` começando em `_` são contadores
+  internos (ex.: `_tempo_ativo`), nunca aparecem pra pessoa.
+- O texto "Como ganhar XP" em `chat.html` é fixo e **espelha** as constantes —
+  mudou uma, mude a outra. A tabela `missao_progresso` nasce pelo
+  `db.create_all()` (não precisa de ALTER).
+- UI: anel de progresso + barra com brilho, missões em abas Diárias/Semanais
+  (cartão com canto cortado, barra fina, contagem de reset), trilha de 100
+  níveis com rolagem horizontal (**sem** `backdrop-filter` nos cartões: 100
+  blurs pesam), "+N XP" flutuando na barra lateral e comemoração com confete.
 
 ## Visual: "vidro" sobre o Discord clássico
 

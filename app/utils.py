@@ -3,13 +3,15 @@
 Antes cada um desses arquivos tinha a sua própria cópia de `com_retry()` -
 mesma ideia, tempos de espera diferentes. Agora é só uma.
 """
+import random
 import secrets
 import string
 import time
+from datetime import timedelta
 
 from sqlalchemy.exc import OperationalError
 
-from .models import db, Channel, Server, br_now
+from .models import db, Channel, Server, MissaoProgresso, br_now
 
 
 def com_retry(fn, tentativas=4, espera=1.0):
@@ -141,29 +143,36 @@ def gerar_codigo_convite(tamanho=8):
 
 
 # ==========================================
-# BATTLE PASS: nível/XP pessoal
+# BATTLE PASS: nível/XP pessoal + missões
 # ==========================================
-# Curva progressiva: subir do nível N pro N+1 custa XP_BASE + XP_CRESCIMENTO*(N-1).
-# Nível 1->2 = 100 XP, 2->3 = 130, 3->4 = 160... Quem começa sobe rápido (dá
-# vontade de continuar) e o topo exige constância. O XP é guardado TOTAL em
-# Person.xp - trocar a curva aqui não precisa de migração, só muda o nível
-# calculado.
+# 100 níveis. Subir do nível N pro N+1 custa XP_BASE + XP_CRESCIMENTO*(N-1):
+#   1->2 = 100 XP, 50->51 = 10.096 XP, 99->100 = 20.092 XP
+# e chegar ao nível 100 soma 999.504 XP (~1 milhão). Quem começa sobe rápido
+# (dá vontade de continuar) e o topo é coisa de meses. `Person.xp` guarda o
+# TOTAL, então mexer na curva não precisa de migração, só muda o nível calculado.
 XP_BASE = 100
-XP_CRESCIMENTO = 30
+XP_CRESCIMENTO = 204
 NIVEL_MAXIMO = 100
-COINS_POR_NIVEL = 50         # Bazinga Coins pagos ao subir de nível.
+COINS_POR_NIVEL = 50         # Dracmas pagas ao subir de nível.
 GANHO_XP_INTERVALO_SEGUNDOS = 30   # Sem isso, mandar mensagem vazia em loop
                                     # virava fábrica de XP infinita.
-XP_POR_MENSAGEM = 5
-XP_BONUS_DIARIO = 25         # Pago uma vez por dia, ao abrir o app.
-XP_BONUS_SEQUENCIA = 5       # Extra por dia seguido (até SEQUENCIA_MAXIMA dias).
+XP_POR_MENSAGEM = 10
+XP_BONUS_DIARIO = 50         # Pago uma vez por dia, ao abrir o app.
+XP_BONUS_SEQUENCIA = 10      # Extra por dia seguido (até SEQUENCIA_MAXIMA dias).
 SEQUENCIA_MAXIMA = 7
+# Tempo ativo no app (mexendo de verdade - o cliente só manda o batimento se
+# houve mouse/teclado no último minuto, com a aba visível). O servidor ainda
+# limita por minuto e por dia, então um cliente adulterado não vira fábrica de XP.
+XP_POR_MINUTO_ATIVO = 3
+MINUTOS_ATIVOS_MAX_POR_DIA = 60      # = no máximo 180 XP/dia só por ficar
+BATIMENTO_MIN_SEGUNDOS = 50
 
 # Título que a pessoa ostenta a partir de cada nível (o maior já alcançado vale).
 TITULOS_POR_NIVEL = [
     (1, 'Novato'), (5, 'Explorador'), (10, 'Desbravador'), (15, 'Veterano'),
-    (20, 'Lenda Local'), (30, 'Mestre do Radar'), (40, 'Elite Bazinga'),
-    (50, 'Imortal'),
+    (20, 'Lenda Local'), (30, 'Mestre do Radar'), (40, 'Elite'),
+    (50, 'Imortal'), (60, 'Semideus'), (75, 'Titã'), (90, 'Olimpiano'),
+    (100, 'Panteão'),
 ]
 
 
@@ -212,9 +221,6 @@ def recompensa_do_nivel(nivel):
 def _estado_xp(usuario, nivel_antes, ganho_xp=0, motivo=None, bonus_diario=False):
     nivel = nivel_da_pessoa(usuario.xp)
     xp_atual, xp_por_nivel = progresso_de_nivel(usuario.xp)
-    # Janela de marcos: o que acabou de passar + os próximos 8, pra trilha.
-    primeiro = max(nivel - 1, 1)
-    marcos = [recompensa_do_nivel(n) for n in range(primeiro, min(primeiro + 9, NIVEL_MAXIMO) + 1)]
     return {
         'xp': usuario.xp or 0,
         'nivel': nivel,
@@ -223,7 +229,8 @@ def _estado_xp(usuario, nivel_antes, ganho_xp=0, motivo=None, bonus_diario=False
         'titulo': titulo_do_nivel(nivel),
         'subiu_nivel': nivel > nivel_antes,
         'recompensas': [recompensa_do_nivel(n) for n in range(nivel_antes + 1, nivel + 1)],
-        'marcos': marcos,
+        # A trilha inteira (100 marcos) - é pouca coisa e o cliente rola até o atual.
+        'marcos': [recompensa_do_nivel(n) for n in range(1, NIVEL_MAXIMO + 1)],
         'coins': usuario.bazinga_coins,
         'ganho_xp': ganho_xp,
         'motivo': motivo,
@@ -290,3 +297,166 @@ def conceder_bonus_diario(usuario):
 
     comitar_com_retry(preparar)
     return _estado_xp(usuario, nivel_antes, ganho, 'diario', bonus_diario=True)
+
+
+# ==========================================
+# MISSÕES (diárias e semanais)
+# ------------------------------------------------------------
+# Cada pessoa recebe 3 diárias e 3 semanais sorteadas de um pool. O sorteio é
+# DETERMINÍSTICO (semente = pessoa + período), então a escolha não precisa ser
+# guardada: só o progresso vai pro banco (MissaoProgresso).
+# `evento` liga a missão a algo que o app já faz de verdade:
+#   mensagem (canal), dm, reacao, nota (nota no mapa), plantar (servidor no
+#   mapa), minutos (ativo no app), call_minutos (em call de voz), login
+#   (abrir o app em dias diferentes).
+# Concluiu = o XP cai na hora (sem botão de "resgatar").
+# ==========================================
+MISSOES = {
+    # --- diárias ---
+    'd_msg10':    {'periodo': 'diaria',  'evento': 'mensagem',     'meta': 10,  'xp': 150,  'icone': 'comment-dots', 'titulo': 'Bate-papo',          'desc': 'Envie 10 mensagens em canais'},
+    'd_msg30':    {'periodo': 'diaria',  'evento': 'mensagem',     'meta': 30,  'xp': 350,  'icone': 'comments',     'titulo': 'Língua solta',       'desc': 'Envie 30 mensagens em canais'},
+    'd_ativo15':  {'periodo': 'diaria',  'evento': 'minutos',      'meta': 15,  'xp': 150,  'icone': 'hourglass-half', 'titulo': 'De olho no Panteão', 'desc': 'Fique 15 minutos ativo no app'},
+    'd_ativo45':  {'periodo': 'diaria',  'evento': 'minutos',      'meta': 45,  'xp': 350,  'icone': 'clock',        'titulo': 'Morador',            'desc': 'Fique 45 minutos ativo no app'},
+    'd_reacao5':  {'periodo': 'diaria',  'evento': 'reacao',       'meta': 5,   'xp': 120,  'icone': 'face-smile',   'titulo': 'Reator',             'desc': 'Reaja a 5 mensagens'},
+    'd_dm5':      {'periodo': 'diaria',  'evento': 'dm',           'meta': 5,   'xp': 150,  'icone': 'paper-plane',  'titulo': 'Papo reservado',     'desc': 'Envie 5 mensagens diretas'},
+    'd_call10':   {'periodo': 'diaria',  'evento': 'call_minutos', 'meta': 10,  'xp': 300,  'icone': 'headset',      'titulo': 'Na voz',             'desc': 'Passe 10 minutos numa call de voz'},
+    # --- semanais ---
+    's_msg150':   {'periodo': 'semanal', 'evento': 'mensagem',     'meta': 150, 'xp': 1200, 'icone': 'comments',     'titulo': 'Voz da comunidade',  'desc': 'Envie 150 mensagens em canais'},
+    's_ativo240': {'periodo': 'semanal', 'evento': 'minutos',      'meta': 240, 'xp': 1500, 'icone': 'clock',        'titulo': 'Cidadão fiel',       'desc': 'Some 4 horas ativo no app'},
+    's_call90':   {'periodo': 'semanal', 'evento': 'call_minutos', 'meta': 90,  'xp': 1800, 'icone': 'headset',      'titulo': 'Rei da call',        'desc': 'Some 90 minutos em calls de voz'},
+    's_nota3':    {'periodo': 'semanal', 'evento': 'nota',         'meta': 3,   'xp': 900,  'icone': 'map-pin',      'titulo': 'Cronista do mapa',   'desc': 'Deixe 3 notas no mapa'},
+    's_plantar1': {'periodo': 'semanal', 'evento': 'plantar',      'meta': 1,   'xp': 1500, 'icone': 'location-dot', 'titulo': 'Fundador',           'desc': 'Plante um servidor no mapa'},
+    's_reacao30': {'periodo': 'semanal', 'evento': 'reacao',       'meta': 30,  'xp': 800,  'icone': 'face-smile',   'titulo': 'Torcida organizada', 'desc': 'Reaja a 30 mensagens'},
+    's_dm30':     {'periodo': 'semanal', 'evento': 'dm',           'meta': 30,  'xp': 900,  'icone': 'paper-plane',  'titulo': 'Rede de contatos',   'desc': 'Envie 30 mensagens diretas'},
+    's_login5':   {'periodo': 'semanal', 'evento': 'login',        'meta': 5,   'xp': 1000, 'icone': 'calendar-check', 'titulo': 'Presença VIP',     'desc': 'Abra o app em 5 dias diferentes'},
+}
+POOL_DIARIAS = [c for c, m in MISSOES.items() if m['periodo'] == 'diaria']
+POOL_SEMANAIS = [c for c, m in MISSOES.items() if m['periodo'] == 'semanal']
+QTD_POR_PERIODO = 3
+TEMPO_ATIVO_CODIGO = '_tempo_ativo'   # contador interno (não é missão)
+
+
+def _chave_do_periodo(periodo, hoje=None):
+    hoje = hoje or br_now().date()
+    if periodo == 'diaria':
+        return hoje.isoformat()
+    return (hoje - timedelta(days=hoje.weekday())).isoformat()   # segunda-feira
+
+
+def _segundos_ate_reset(periodo):
+    agora = br_now()
+    hoje = agora.date()
+    alvo = hoje + timedelta(days=1) if periodo == 'diaria' else hoje + timedelta(days=7 - hoje.weekday())
+    meia_noite = agora.replace(year=alvo.year, month=alvo.month, day=alvo.day, hour=0, minute=0, second=0, microsecond=0)
+    return max(int((meia_noite - agora).total_seconds()), 0)
+
+
+def _sortear_codigos(usuario_id, periodo, chave):
+    pool = POOL_DIARIAS if periodo == 'diaria' else POOL_SEMANAIS
+    return random.Random(f"{usuario_id}|{periodo}|{chave}").sample(pool, QTD_POR_PERIODO)
+
+
+def _linhas_do_periodo(usuario, periodo, criar=True):
+    """Linhas de progresso do período atual (cria as que faltam)."""
+    chave = _chave_do_periodo(periodo)
+    codigos = _sortear_codigos(usuario.id, periodo, chave)
+
+    def existentes():
+        return {r.codigo: r for r in MissaoProgresso.query.filter_by(
+            person_id=usuario.id, periodo=periodo, chave=chave).all()}
+
+    linhas = com_retry(existentes)
+    if criar and any(c not in linhas for c in codigos):
+        def preparar():
+            ja = {r.codigo for r in MissaoProgresso.query.filter_by(
+                person_id=usuario.id, periodo=periodo, chave=chave).all()}
+            for c in codigos:
+                if c not in ja:
+                    db.session.add(MissaoProgresso(person_id=usuario.id, codigo=c, periodo=periodo, chave=chave))
+        comitar_com_retry(preparar)
+        linhas = com_retry(existentes)
+    return [linhas[c] for c in codigos if c in linhas]
+
+
+def _missao_para_json(linha):
+    m = MISSOES[linha.codigo]
+    return {
+        'codigo': linha.codigo, 'titulo': m['titulo'], 'descricao': m['desc'], 'icone': m['icone'],
+        'meta': m['meta'], 'progresso': min(linha.progresso, m['meta']), 'xp': m['xp'],
+        'concluida': bool(linha.concluida),
+    }
+
+
+def missoes_do_usuario(usuario):
+    return {
+        'diarias': [_missao_para_json(l) for l in _linhas_do_periodo(usuario, 'diaria')],
+        'semanais': [_missao_para_json(l) for l in _linhas_do_periodo(usuario, 'semanal')],
+        'reseta_diarias': _segundos_ate_reset('diaria'),
+        'reseta_semanais': _segundos_ate_reset('semanal'),
+    }
+
+
+def registrar_eventos(usuario, eventos, xp_extra=0, motivo=None):
+    """Conta `eventos` ({'mensagem': 1, ...}) nas missões ativas da pessoa.
+
+    Missão que completa paga o XP na hora. `xp_extra` é XP avulso (ex.: o do
+    tempo ativo) somado na MESMA transação. Devolve None se nada mudou, ou
+    {'missoes': payload, 'concluidas': [...], 'estado': estado_xp_ou_None}.
+    """
+    linhas = [l for l in (_linhas_do_periodo(usuario, 'diaria') + _linhas_do_periodo(usuario, 'semanal'))
+              if not l.concluida and MISSOES[l.codigo]['evento'] in eventos]
+    if not linhas and not xp_extra:
+        return None
+
+    nivel_antes = nivel_da_pessoa(usuario.xp)
+    concluidas = []
+
+    def preparar():
+        concluidas.clear()
+        ganho = xp_extra
+        for l in linhas:
+            m = MISSOES[l.codigo]
+            l.progresso = min((l.progresso or 0) + eventos[m['evento']], m['meta'])
+            if l.progresso >= m['meta'] and not l.concluida:
+                l.concluida = True
+                ganho += m['xp']
+                concluidas.append({'titulo': m['titulo'], 'xp': m['xp']})
+        if ganho:
+            _somar_xp(usuario, ganho, nivel_antes)
+
+    comitar_com_retry(preparar)
+
+    ganho_total = xp_extra + sum(c['xp'] for c in concluidas)
+    return {
+        'missoes': missoes_do_usuario(usuario),
+        'concluidas': concluidas,
+        'estado': _estado_xp(usuario, nivel_antes, ganho_total, motivo or ('missao' if concluidas else 'tempo')) if ganho_total else None,
+    }
+
+
+def registrar_tempo_ativo(usuario, em_call=False):
+    """1 minuto de atividade real: XP passivo (com teto diário) + missões de tempo."""
+    chave = _chave_do_periodo('diaria')
+
+    def contador():
+        return MissaoProgresso.query.filter_by(
+            person_id=usuario.id, codigo=TEMPO_ATIVO_CODIGO, periodo='diaria', chave=chave).first()
+
+    linha = com_retry(contador)
+    if linha is None:
+        def criar():
+            db.session.add(MissaoProgresso(person_id=usuario.id, codigo=TEMPO_ATIVO_CODIGO, periodo='diaria', chave=chave))
+        comitar_com_retry(criar)
+        linha = com_retry(contador)
+
+    xp_passivo = 0
+    if (linha.progresso or 0) < MINUTOS_ATIVOS_MAX_POR_DIA:
+        def somar_minuto():
+            linha.progresso = (linha.progresso or 0) + 1
+        comitar_com_retry(somar_minuto)
+        xp_passivo = XP_POR_MINUTO_ATIVO
+
+    eventos = {'minutos': 1}
+    if em_call:
+        eventos['call_minutos'] = 1
+    return registrar_eventos(usuario, eventos, xp_extra=xp_passivo, motivo='tempo')
