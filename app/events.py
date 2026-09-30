@@ -14,7 +14,7 @@ from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_cana
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
                     BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
-                    ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, url_de_imagem_ok,
+                    ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok,
                     tema_perfil_valido, username_valido)
 
 
@@ -1623,9 +1623,11 @@ def atualizar_perfil(dados):
             if 'bio' in dados:
                 usuario.bio = (dados.get('bio') or '').strip()[:1000] or None
             if 'banner_color' in dados:
-                # Só #rrggbb: essa string vai parar num style="" no cliente de todo mundo.
+                # Só #rrggbb ou anim:<id conhecido>: essa string vai parar num style=""/class=""
+                # no cliente de todo mundo.
                 cor = (dados.get('banner_color') or '').strip()
-                usuario.banner_color = cor if re.match(r'^#[0-9a-fA-F]{6}$', cor) else None
+                valida = bool(re.match(r'^#[0-9a-fA-F]{6}$', cor)) or (cor.startswith('anim:') and cor[5:] in FAIXAS_ANIMADAS)
+                usuario.banner_color = cor if valida else None
             if 'pronomes' in dados:
                 usuario.pronomes = (dados.get('pronomes') or '').strip()[:40] or None
             if 'banner_url' in dados:

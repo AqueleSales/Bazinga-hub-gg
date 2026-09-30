@@ -766,7 +766,17 @@ inferior, cartão, editor, lista de membros e o item da sidebar numa função s�
   a área de corte agora é largura×altura (`PW/PH/SW/SH`), não mais um quadrado fixo.
   A proporção do preview e da saída tem que ser a mesma ("o que vejo é o que sai").
 - A foto do avatar **é o botão** (sem botão extra); a faixa é um retângulo só que abre
-  cor sólida / faixa animada / imagem / sugestões.
+  cor sólida / **faixas animadas** / imagem / sugestões. A moldura é só o quadradinho
+  ao lado da foto (sem texto — "quebrava a vibe").
+- **Faixas animadas** = `banner_color` com `anim:<id>` (ids em `utils.FAIXAS_ANIMADAS`,
+  11 opções incluindo o arco-íris padrão, que é o valor **vazio**). O CSS é
+  `.banner-anim-<id>` (mesmo padrão `bg-spin` da faixa antiga). **Criar faixa nova =**
+  id em `FAIXAS_ANIMADAS` + `.banner-anim-<id>` no CSS + item em `FAIXAS_ANIM` no JS.
+  O servidor só aceita `#rrggbb` ou `anim:<id conhecido>`. **A faixa animada do modal
+  ficava invisível** porque a classe só tinha CSS em `.pc-banner`/`.npc-banner` — todo
+  lugar novo que use `banner-animado`/`banner-anim-*` precisa de tamanho e fundo próprios.
+- **z-index do avatar do cartão**: o anel da moldura (`::before`) fica em `0`, a foto em
+  `1` e a bolinha/emoji de presença em `3`. Antes o anel cobria a bolinha.
 - Dead code: o modal antigo `#avatar-upload-modal` e seu input continuam no HTML (um
   listener ainda referencia o input) mas nada o abre mais.
 

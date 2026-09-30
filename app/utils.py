@@ -488,6 +488,8 @@ ESTILOS_NOME = ('padrao', 'neon', 'ouro', 'fogo', 'gelo', 'arco', 'sakura', 'gli
 PLACAS = ('nenhuma', 'aurora', 'ouro', 'neon', 'oceano', 'sakura', 'lava', 'galaxia')
 MOLDURAS = ('nenhuma', 'aurora', 'neon', 'ouro', 'fogo', 'gelo', 'arco')
 STATUS_VALIDOS = ('online', 'idle', 'dnd', 'invisible', 'custom')
+# Faixas animadas do perfil (guardadas em banner_color como 'anim:<id>'; vazio = arco-íris padrão)
+FAIXAS_ANIMADAS = ('aurora', 'oceano', 'fogo', 'sakura', 'neon', 'galaxia', 'ouro', 'menta', 'cereja', 'gelo')
 
 _RE_TEMA_COR = re.compile(r'^(grad:#[0-9a-fA-F]{6},#[0-9a-fA-F]{6}|solid:#[0-9a-fA-F]{6})$')
 _RE_GIPHY = re.compile(r'^https://media\d*\.giphy\.com/')

@@ -1777,6 +1777,40 @@
         .mencao-item.sel, .mencao-item:hover { background: rgba(114,137,218,.22); }
         .mencao-av { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: var(--brand-color); align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0; }
         .mencao-av img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ==========================================================================
+           Correções: moldura x bolinha, campo do @, faixas animadas, tile de moldura
+           ========================================================================== */
+        /* A bolinha/emoji de presença fica SEMPRE por cima do anel da moldura */
+        .pc-avatar .status-indicator { z-index: 3; }
+        [class*="moldura-"]::before { z-index: 0; }
+        .pc-avatar-img { position: relative; z-index: 1; }
+
+        /* Campo do @: altura e alinhamento fixos (o "@" era maior que o texto e subia) */
+        .pf-arroba { height: 42px; padding: 0 12px; gap: 6px; }
+        .pf-arroba span { padding: 0; display: flex; align-items: center; font-size: 15px; font-weight: 700; line-height: 1; color: var(--text-muted); }
+        .pf-arroba input { height: 100%; padding: 0 !important; font-size: 14px; line-height: 1; }
+
+        /* Moldura: só o quadrado (sem o texto ao lado) */
+        .pf-tile.quadrado { width: 72px; height: 72px; padding: 0; justify-content: center; border-radius: 14px; }
+
+        /* Faixas animadas (banner_color = 'anim:<id>'; ids em utils.FAIXAS_ANIMADAS) */
+        [class*="banner-anim-"] { background-size: 400% 400%; animation: bg-spin 9s ease infinite; }
+        .banner-anim-aurora { background-image: linear-gradient(-45deg, #0f9b8e, #43b581, #7289da, #a855f7); }
+        .banner-anim-oceano { background-image: linear-gradient(-45deg, #0ea5e9, #1e3a8a, #06b6d4, #2563eb); }
+        .banner-anim-fogo { background-image: linear-gradient(-45deg, #ef4444, #f97316, #fde047, #dc2626); }
+        .banner-anim-sakura { background-image: linear-gradient(-45deg, #f472b6, #fb7185, #fbcfe8, #c084fc); }
+        .banner-anim-neon { background-image: linear-gradient(-45deg, #22d3ee, #a855f7, #ec4899, #22d3ee); }
+        .banner-anim-galaxia { background-image: linear-gradient(-45deg, #0f0c29, #302b63, #6d28d9, #1e1b4b); }
+        .banner-anim-ouro { background-image: linear-gradient(-45deg, #b8860b, #ffe27a, #f59e0b, #92400e); }
+        .banner-anim-menta { background-image: linear-gradient(-45deg, #34d399, #6ee7b7, #22d3ee, #10b981); }
+        .banner-anim-cereja { background-image: linear-gradient(-45deg, #be123c, #f43f5e, #fb7185, #881337); }
+        .banner-anim-gelo { background-image: linear-gradient(-45deg, #bae6fd, #7dd3fc, #e0f2fe, #38bdf8); }
+        .sm-anim-grade { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .sm-anim-tile { position: relative; height: 44px; border: 2px solid transparent; border-radius: 10px; cursor: pointer; overflow: hidden; color: #fff; font-size: 12px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.6); transition: transform .15s, border-color .2s; }
+        .sm-anim-tile:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.7); }
+        .sm-anim-tile.sel { border-color: #fff; box-shadow: 0 0 0 3px rgba(114,137,218,.45); }
+        .sm-anim-tile.banner-animado { background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: bg-spin 8s ease infinite; }
     </style>
 </head>
 <body>
@@ -3194,7 +3228,7 @@
                                 <div class="pf-bloco-tit">Avatar e moldura</div>
                                 <div class="pf-linha">
                                     <button type="button" class="pf-av-btn" id="pf-av-btn" title="Mudar foto"><span class="pf-av" id="pf-av"></span><span class="pf-av-lapis"><i class="fa-solid fa-pen"></i></span></button>
-                                    <button type="button" class="pf-tile" id="pf-moldura-btn" title="Moldura do avatar"><span class="pf-tile-av" id="pf-moldura-amostra"></span><span class="pf-tile-txt">Moldura</span></button>
+                                    <button type="button" class="pf-tile quadrado" id="pf-moldura-btn" title="Moldura do avatar" aria-label="Moldura do avatar"><span class="pf-tile-av" id="pf-moldura-amostra"></span></button>
                                 </div>
                                 <span class="pf-dica">Clique na foto pra trocar: imagem, GIF ou uma sugestão da nossa busca.</span>
                             </div>
@@ -7542,6 +7576,12 @@
             { nome: 'Sakura', v: 'grad:#8e2de2,#f06292' }, { nome: 'Meia-noite', v: 'grad:#0f0c29,#302b63' },
             { nome: 'Ouro', v: 'grad:#3a2e0a,#c9a227' }, { nome: 'Grafite', v: 'solid:#1f2024' }
         ];
+        const FAIXAS_ANIM = [
+            { id: '', nome: 'Arco-íris' }, { id: 'aurora', nome: 'Aurora' }, { id: 'oceano', nome: 'Oceano' },
+            { id: 'fogo', nome: 'Fogo' }, { id: 'sakura', nome: 'Sakura' }, { id: 'neon', nome: 'Neon' },
+            { id: 'galaxia', nome: 'Galáxia' }, { id: 'ouro', nome: 'Ouro' }, { id: 'menta', nome: 'Menta' },
+            { id: 'cereja', nome: 'Cereja' }, { id: 'gelo', nome: 'Gelo' }
+        ];
         const ROTULO_STATUS = { online: 'Disponível', idle: 'Ausente', dnd: 'Não perturbar', invisible: 'Invisível', custom: 'Personalizado', offline: 'Offline' };
         const DESC_STATUS = { online: 'Tudo certo por aqui', idle: 'Você aparece como ausente', dnd: 'Sem notificações', invisible: 'Você aparece como offline', custom: 'Seu emoji no lugar da bolinha' };
 
@@ -7559,7 +7599,9 @@
         function faixaDe(pf) {
             const url = escUrl(pf.banner_url || '');
             if (url) return { classe: '', estilo: `background-image:url('${url}');` };
-            const cor = corDeFaixa(pf.banner_color);
+            const bc = pf.banner_color || '';
+            if (bc.startsWith('anim:')) return { classe: 'banner-anim-' + bc.slice(5).replace(/[^a-z]/g, ''), estilo: '' };
+            const cor = corDeFaixa(bc);
             return cor ? { classe: '', estilo: `background:${cor};` } : { classe: 'banner-animado', estilo: '' };
         }
 
@@ -8112,12 +8154,23 @@
                     <span class="control-label">Cor sólida</span>
                     <label class="sm-cor" for="sm-cor-input"><span class="color-preview-box" id="sm-cor-amostra" style="background:${corDeFaixa(rascunho.banner_color) || '#e91e63'};"></span> Escolher uma cor</label>
                     <input type="color" id="sm-cor-input" value="${corDeFaixa(rascunho.banner_color) || '#e91e63'}" style="display:none;">
-                    <span class="control-label" style="margin-top:12px;">Faixa animada</span>
-                    <div class="sm-animada banner-animado" id="sm-animada" title="Usar a faixa animada"></div>
+                    <span class="control-label" style="margin-top:12px;">Faixas animadas</span>
+                    <div class="sm-anim-grade" id="sm-anim-grade">
+                        ${FAIXAS_ANIM.map(f => {
+                            const valor = f.id ? 'anim:' + f.id : '';
+                            const sel = (rascunho.banner_color || '') === valor && !rascunho.banner_url;
+                            return `<button type="button" class="sm-anim-tile ${f.id ? 'banner-anim-' + f.id : 'banner-animado'} ${sel ? 'sel' : ''}" data-valor="${valor}" title="${esc(f.nome)}"><span>${esc(f.nome)}</span></button>`;
+                        }).join('')}
+                    </div>
                 </div>` : '';
             if (cfg.extras === 'faixa') {
                 document.getElementById('sm-cor-input').addEventListener('input', (e) => { fecharSeletor(); cfg.aoCor(e.target.value); });
-                document.getElementById('sm-animada').addEventListener('click', () => { fecharSeletor(); cfg.aoAnimada(); });
+                document.getElementById('sm-anim-grade').addEventListener('click', (e) => {
+                    const tile = e.target.closest('.sm-anim-tile');
+                    if (!tile) return;
+                    fecharSeletor();
+                    cfg.aoAnimada(tile.dataset.valor);
+                });
             }
             document.getElementById('sm-busca').value = '';
             smEl.style.display = 'flex';
@@ -8181,7 +8234,7 @@
             aoArquivo: (f) => enviarImagemDoPerfil(f, (url) => { rascunho.banner_url = url; }),
             aoUrl: (url) => { rascunho.banner_url = url; pintarPrevia(); },
             aoCor: (c) => { rascunho.banner_color = c; rascunho.banner_url = ''; pintarPrevia(); },
-            aoAnimada: () => { rascunho.banner_color = ''; rascunho.banner_url = ''; pintarPrevia(); }
+            aoAnimada: (valor) => { rascunho.banner_color = valor; rascunho.banner_url = ''; pintarPrevia(); }
         }));
 
         // ---------- catálogo: estilo de nome, tema, placa, moldura ----------
