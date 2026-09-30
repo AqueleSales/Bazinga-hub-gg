@@ -4,14 +4,16 @@ Antes cada um desses arquivos tinha a sua própria cópia de `com_retry()` -
 mesma ideia, tempos de espera diferentes. Agora é só uma.
 """
 import random
+import re
 import secrets
+import unicodedata
 import string
 import time
 from datetime import timedelta
 
 from sqlalchemy.exc import OperationalError
 
-from .models import db, Channel, Server, MissaoProgresso, br_now
+from .models import db, Channel, Server, MissaoProgresso, Person, br_now
 
 
 def com_retry(fn, tentativas=4, espera=1.0):
@@ -474,3 +476,70 @@ def membro_desde_texto(criado_em):
     if not criado_em:
         return None
     return f"{MESES_ABREVIADOS[criado_em.month - 1]}. {criado_em.year}"
+
+
+# ==========================================
+# PERFIL: catálogos validados no servidor + nome da conta (@)
+# ------------------------------------------------------------
+# Os ids abaixo precisam bater com o catálogo do chat.html (CSS .ne-*, .placa-*,
+# .moldura-*). O servidor só guarda id conhecido - nunca texto livre num class="".
+# ==========================================
+ESTILOS_NOME = ('padrao', 'neon', 'ouro', 'fogo', 'gelo', 'arco', 'sakura', 'glitch', 'retro')
+PLACAS = ('nenhuma', 'aurora', 'ouro', 'neon', 'oceano', 'sakura', 'lava', 'galaxia')
+MOLDURAS = ('nenhuma', 'aurora', 'neon', 'ouro', 'fogo', 'gelo', 'arco')
+STATUS_VALIDOS = ('online', 'idle', 'dnd', 'invisible', 'custom')
+
+_RE_TEMA_COR = re.compile(r'^(grad:#[0-9a-fA-F]{6},#[0-9a-fA-F]{6}|solid:#[0-9a-fA-F]{6})$')
+_RE_GIPHY = re.compile(r'^https://media\d*\.giphy\.com/')
+_RE_USERNAME = re.compile(r'^[a-z0-9_.]{3,32}$')
+
+
+def url_de_imagem_ok(url):
+    """Só caminho do próprio site, Cloudinary ou Giphy (mesma regra dos anexos).
+    Qualquer outro host seria um pixel de rastreio no navegador de todo mundo."""
+    url = (url or '').strip()
+    return bool(url) and len(url) <= 255 and (
+        url.startswith('/') or url.startswith('https://res.cloudinary.com/') or bool(_RE_GIPHY.match(url)))
+
+
+def tema_perfil_valido(valor):
+    """'' (sem tema), cor sólida, gradiente ou 'img:<url permitida>'."""
+    if not valor:
+        return True
+    if valor.startswith('img:'):
+        return url_de_imagem_ok(valor[4:])
+    return bool(_RE_TEMA_COR.match(valor))
+
+
+def username_valido(nome):
+    return bool(_RE_USERNAME.match(nome or '')) and '..' not in nome
+
+
+def _slug(texto):
+    ascii_ = unicodedata.normalize('NFKD', texto or '').encode('ascii', 'ignore').decode()
+    return re.sub(r'[^a-z0-9]+', '.', ascii_.lower()).strip('.')
+
+
+def gerar_username(nome, email=None):
+    """'Aquele Sales' -> 'aquele.sales' (com sufixo numérico se já existir)."""
+    base = _slug(nome) or _slug((email or '').split('@')[0]) or 'usuario'
+    base = base[:26]
+    if len(base) < 3:
+        base = (base + '.usuario')[:26]
+    candidato, n = base, 1
+    while Person.query.filter_by(username=candidato).first():
+        n += 1
+        candidato = f"{base}{n}"
+    return candidato
+
+
+def garantir_username(usuario):
+    """Conta antiga (de antes do @ existir) ganha um nome de conta automático."""
+    if usuario.username:
+        return
+
+    def preparar():
+        if not usuario.username:
+            usuario.username = gerar_username(usuario.name, usuario.email)
+
+    comitar_com_retry(preparar)

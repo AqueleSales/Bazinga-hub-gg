@@ -13,7 +13,9 @@ from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_cana
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
-                    BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto)
+                    BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
+                    ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, url_de_imagem_ok,
+                    tema_perfil_valido, username_valido)
 
 
 def usuario_logado():
@@ -107,6 +109,11 @@ def status_visivel(p):
     if not esta_online(p.id) or (p.status or 'online') == 'invisible':
         return 'offline'
     return p.status or 'online'
+
+
+def emoji_do_status(p):
+    """Emoji que substitui a bolinha (só no status Personalizado)."""
+    return (p.status_emoji or None) if (p.status or 'online') == 'custom' else None
 
 
 def amigos_de(pessoa):
@@ -290,7 +297,7 @@ def handle_connect():
         usuarios_conectados[usuario.id] = usuarios_conectados.get(usuario.id, 0) + 1
         amigos = amigos_de(usuario)
         if era_offline and (usuario.status or 'online') != 'invisible':
-            aviso = {'usuario_id': usuario.id, 'status': usuario.status or 'online'}
+            aviso = {'usuario_id': usuario.id, 'status': usuario.status or 'online', 'emoji': emoji_do_status(usuario)}
             for srv in usuario.servers:
                 emit('usuario_ficou_online', aviso, to=sala_servidor(srv.id), include_self=False)
             for amigo in amigos:
@@ -302,7 +309,8 @@ def handle_connect():
         visiveis = {a.id: status_visivel(a) for a in amigos}
         emit('status_amigos_ao_conectar', {
             'online_ids': [i for i, st in visiveis.items() if st != 'offline'],
-            'status_por_id': {str(i): st for i, st in visiveis.items() if st != 'offline'}
+            'status_por_id': {str(i): st for i, st in visiveis.items() if st != 'offline'},
+            'emoji_por_id': {str(a.id): emoji_do_status(a) for a in amigos if visiveis[a.id] != 'offline' and emoji_do_status(a)}
         })
     except Exception as e:
         db.session.rollback()
@@ -998,7 +1006,9 @@ def listar_membros_servidor(dados):
                 # Pra mim mesmo vale o status real; pros outros, o que eles
                 # escolheram mostrar (Invisível aparece como offline).
                 'status': (m.status or 'online') if m.id == usuario.id else status_visivel(m),
-                'online': True if m.id == usuario.id else status_visivel(m) != 'offline'
+                'online': True if m.id == usuario.id else status_visivel(m) != 'offline',
+                'emoji': emoji_do_status(m),
+                'placa': m.placa, 'nome_estilo': m.nome_estilo
             } for m in srv.members]
         })
     except Exception as e:
@@ -1553,6 +1563,19 @@ def atualizar_perfil(dados):
     if not usuario:
         return
 
+    # Nome da conta (@): validado e checado por unicidade antes de tudo. Se falhar,
+    # o resto do perfil ainda salva - só o @ fica como estava.
+    username_novo = None
+    if 'username' in dados:
+        candidato = (dados.get('username') or '').strip().lstrip('@').lower()
+        if candidato != (usuario.username or ''):
+            if not username_valido(candidato):
+                emit('erro_bazinga', {'msg': 'Nome da conta inválido: use de 3 a 32 letras minúsculas, números, ponto ou _.'})
+            elif com_retry(lambda: Person.query.filter(Person.username == candidato, Person.id != usuario.id).first()):
+                emit('erro_bazinga', {'msg': f'O nome de conta "{candidato}" já está em uso.'})
+            else:
+                username_novo = candidato
+
     try:
         def preparar():
             if 'name' in dados:
@@ -1574,9 +1597,26 @@ def atualizar_perfil(dados):
                 # vazio limpa e volta pra cor.
                 url = (dados.get('banner_url') or '').strip()
                 usuario.banner_url = url[:255] if url.startswith('/') or url.startswith('https://res.cloudinary.com/') else None
+            if 'status_emoji' in dados:
+                usuario.status_emoji = (dados.get('status_emoji') or '').strip()[:16] or None
+            if 'perfil_tema' in dados:
+                tema = (dados.get('perfil_tema') or '').strip()
+                usuario.perfil_tema = tema if tema and tema_perfil_valido(tema) else None
+            if 'nome_estilo' in dados:
+                estilo = dados.get('nome_estilo')
+                usuario.nome_estilo = estilo if estilo in ESTILOS_NOME and estilo != 'padrao' else None
+            if 'placa' in dados:
+                placa = dados.get('placa')
+                usuario.placa = placa if placa in PLACAS and placa != 'nenhuma' else None
+            if 'moldura' in dados:
+                moldura = dados.get('moldura')
+                usuario.moldura = moldura if moldura in MOLDURAS and moldura != 'nenhuma' else None
+            if username_novo:
+                usuario.username = username_novo
             avatar = dados.get('avatar')
-            # blob: só existe na aba que criou - nunca salvar isso no banco.
-            if avatar and not avatar.startswith('blob:'):
+            # Só caminho do site, Cloudinary ou Giphy (antes só barrava blob:, então
+            # qualquer URL externa virava o avatar de todo mundo).
+            if avatar and url_de_imagem_ok(avatar):
                 usuario.avatar = avatar
 
         comitar_com_retry(preparar)
@@ -1587,16 +1627,32 @@ def atualizar_perfil(dados):
             'banner_color': usuario.banner_color,
             'banner_url': usuario.banner_url,
             'pronomes': usuario.pronomes,
+            'username': usuario.username,
+            'status_emoji': usuario.status_emoji,
+            'perfil_tema': usuario.perfil_tema,
+            'nome_estilo': usuario.nome_estilo,
+            'placa': usuario.placa,
+            'moldura': usuario.moldura,
             'avatar': usuario.avatar
         })
 
         # Nome/avatar aparecem em telas de quem não é "eu": lista de membros
         # de cada servidor. Sem isso, só quem editou via as próprias
         # (várias abas dele) via perfil_atualizado; o resto via F5.
-        if 'name' in dados or dados.get('avatar'):
-            payload_publico = {'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar}
+        visual = ('name', 'avatar', 'placa', 'nome_estilo', 'status_emoji')
+        if any(k in dados for k in visual):
+            payload_publico = {'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
+                               'placa': usuario.placa, 'nome_estilo': usuario.nome_estilo}
             for srv in usuario.servers:
                 emit('perfil_membro_mudou', payload_publico, to=sala_servidor(srv.id), include_self=False)
+            for amigo in amigos_de(usuario):
+                emit('perfil_membro_mudou', payload_publico, to=sala_pessoal(amigo.id))
+        if 'status_emoji' in dados and (usuario.status or 'online') == 'custom':
+            aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario), 'emoji': usuario.status_emoji}
+            for srv in usuario.servers:
+                emit('status_visivel_mudou', aviso, to=sala_servidor(srv.id), include_self=False)
+            for amigo in amigos_de(usuario):
+                emit('status_visivel_mudou', aviso, to=sala_pessoal(amigo.id))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ATUALIZAR PERFIL] {e}")
@@ -1668,7 +1724,7 @@ def mudar_status(dados):
 
     try:
         status = dados.get('status')
-        if status not in ('online', 'idle', 'dnd', 'invisible'):
+        if status not in STATUS_VALIDOS:
             return
 
         def preparar():
@@ -1677,10 +1733,10 @@ def mudar_status(dados):
         comitar_com_retry(preparar)
 
         # Outras abas/aparelhos dela: status de verdade (inclusive Invisível).
-        emit('meu_status_mudou', {'status': status}, to=sala_pessoal(usuario.id))
+        emit('meu_status_mudou', {'status': status, 'emoji': usuario.status_emoji}, to=sala_pessoal(usuario.id))
         # Quem convive: só o que ela deixa ver (Invisível = offline). Antes só
         # salvava no banco e ninguém via a bolinha mudar sem recarregar (regra 6).
-        aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario)}
+        aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario), 'emoji': emoji_do_status(usuario)}
         for srv in usuario.servers:
             emit('status_visivel_mudou', aviso, to=sala_servidor(srv.id), include_self=False)
         for amigo in amigos_de(usuario):
@@ -1713,7 +1769,8 @@ def obter_perfil(dados):
             {s.id for s in usuario.servers} & {s.id for s in alvo.servers})
 
         if not convivem:
-            emit('perfil_publico', {'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': True})
+            emit('perfil_publico', {'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': True,
+                                     'username': alvo.username, 'nome_estilo': alvo.nome_estilo})
             return
 
         pendente = False
@@ -1728,6 +1785,9 @@ def obter_perfil(dados):
         emit('perfil_publico', {
             'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': False,
             'bio': alvo.bio, 'custom_status': alvo.custom_status, 'pronomes': alvo.pronomes,
+            'username': alvo.username, 'status_emoji': alvo.status_emoji, 'emoji': emoji_do_status(alvo),
+            'perfil_tema': alvo.perfil_tema, 'nome_estilo': alvo.nome_estilo,
+            'placa': alvo.placa, 'moldura': alvo.moldura,
             'banner_color': alvo.banner_color, 'banner_url': alvo.banner_url,
             'status': (alvo.status or 'online') if sou_eu else status_visivel(alvo),
             'membro_desde': membro_desde_texto(alvo.created_at),
@@ -1750,7 +1810,8 @@ def obter_perfil(dados):
 def pessoa_para_json_amigo(p):
     sv = status_visivel(p)
     return {'id': p.id, 'nome': p.name, 'avatar': p.avatar,
-            'status': sv if sv != 'offline' else (p.status or 'online'), 'online': sv != 'offline'}
+            'status': sv if sv != 'offline' else (p.status or 'online'), 'online': sv != 'offline',
+            'emoji': emoji_do_status(p), 'placa': p.placa, 'nome_estilo': p.nome_estilo}
 
 
 @socketio.on('enviar_pedido_amizade')
@@ -1771,8 +1832,9 @@ def enviar_pedido_amizade(dados):
             except (TypeError, ValueError):
                 return
         else:
+            arroba = busca.lstrip('@').lower()
             alvo = com_retry(lambda: Person.query.filter(
-                or_(Person.name == busca, Person.email == busca)
+                or_(Person.username == arroba, Person.name == busca, Person.email == busca)
             ).first())
 
         if not alvo:

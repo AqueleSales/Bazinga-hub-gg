@@ -128,6 +128,21 @@ def atualizar_banco():
             add_column_se_nao_existir("person", "banner_url VARCHAR(255)")
             add_column_se_nao_existir("person", "pronomes VARCHAR(40)")
 
+            # 19. Perfil completo: nome da conta (@), emoji de status, tema, estilo de
+            # nome, placa e moldura
+            add_column_se_nao_existir("person", "username VARCHAR(32)")
+            add_column_se_nao_existir("person", "status_emoji VARCHAR(16)")
+            add_column_se_nao_existir("person", "perfil_tema VARCHAR(300)")
+            add_column_se_nao_existir("person", "nome_estilo VARCHAR(24)")
+            add_column_se_nao_existir("person", "placa VARCHAR(24)")
+            add_column_se_nao_existir("person", "moldura VARCHAR(24)")
+            try:
+                db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_person_username ON person (username)"))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"\u2139\ufe0f Indice unico de username: {e}")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

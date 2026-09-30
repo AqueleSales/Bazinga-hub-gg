@@ -1577,6 +1577,162 @@
            tamanho natural (~109px) e estourava qualquer linha de texto (barra do usuário,
            status, mensagens). Tamanho acompanha a fonte do lugar onde o emoji está. */
         img.emoji { display: inline-block; width: 1.2em; height: 1.2em; margin: 0 .05em 0 .1em; vertical-align: -0.22em; }
+
+        /* ==========================================================================
+           PERFIL v2: enfeites (estilo de nome, placa, moldura), tema, presença
+           personalizada, seletor de mídia e catálogo.
+           Os ids de .ne-* / .placa-* / .moldura-* precisam bater com utils.py
+           (ESTILOS_NOME / PLACAS / MOLDURAS) e com os catálogos do JS.
+           ========================================================================== */
+        /* O painel de emoji precisa ficar ACIMA das configurações (z 9999) e dos modais (10500) */
+        #emoji-picker-panel { z-index: 10700 !important; }
+
+        /* ---- estilos do nome exibido ---- */
+        @keyframes neBrilho { to { background-position: 200% center; } }
+        @keyframes neGlitch { 0%, 92%, 100% { text-shadow: 2px 0 #f0f, -2px 0 #0ff; transform: none; } 94% { text-shadow: -3px 0 #f0f, 3px 0 #0ff; transform: translateX(1px); } 97% { text-shadow: 3px 0 #0ff, -3px 0 #f0f; transform: translateX(-1px); } }
+        .ne-ouro, .ne-fogo, .ne-gelo, .ne-arco, .ne-sakura { color: transparent !important; -webkit-background-clip: text; background-clip: text; background-size: 200% auto; animation: neBrilho 4s linear infinite; }
+        .ne-ouro { background-image: linear-gradient(90deg, #b8860b, #ffe27a, #b8860b); }
+        .ne-fogo { background-image: linear-gradient(90deg, #ff512f, #f9d423, #ff512f); }
+        .ne-gelo { background-image: linear-gradient(90deg, #8ec5fc, #ffffff, #8ec5fc); }
+        .ne-arco { background-image: linear-gradient(90deg, #ff5f6d, #ffc371, #47e891, #4facfe, #c471f5, #ff5f6d); background-size: 300% auto; }
+        .ne-sakura { background-image: linear-gradient(90deg, #ff9ac1, #ffffff, #ff6fa5, #ff9ac1); }
+        .ne-neon { color: #fff !important; text-shadow: 0 0 4px #7dd3fc, 0 0 10px #38bdf8, 0 0 22px #0ea5e9; }
+        .ne-glitch { color: #fff !important; animation: neGlitch 2.6s steps(2, end) infinite; }
+        .ne-retro { color: #ffe600 !important; font-family: 'Courier New', monospace !important; letter-spacing: .06em; text-shadow: 2px 2px 0 #ff2bd6; }
+
+        /* ---- placas de identificação (barrinha atrás do nome) ---- */
+        @keyframes placaFluxo { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .placa-aurora, .placa-ouro, .placa-neon, .placa-oceano, .placa-sakura, .placa-lava, .placa-galaxia { background-size: 220% 100% !important; animation: placaFluxo 9s ease-in-out infinite; }
+        .placa-aurora { background-image: linear-gradient(90deg, rgba(67,181,129,.42), rgba(114,137,218,.36), rgba(235,69,158,.28), rgba(67,181,129,.42)) !important; }
+        .placa-ouro { background-image: linear-gradient(90deg, rgba(245,197,66,.45), rgba(180,120,20,.22), rgba(245,197,66,.45)) !important; }
+        .placa-neon { background-image: linear-gradient(90deg, rgba(34,211,238,.42), rgba(168,85,247,.38), rgba(34,211,238,.42)) !important; }
+        .placa-oceano { background-image: linear-gradient(90deg, rgba(14,165,233,.42), rgba(30,58,138,.4), rgba(14,165,233,.42)) !important; }
+        .placa-sakura { background-image: linear-gradient(90deg, rgba(244,114,182,.42), rgba(251,113,133,.3), rgba(244,114,182,.42)) !important; }
+        .placa-lava { background-image: linear-gradient(90deg, rgba(239,68,68,.45), rgba(249,115,22,.36), rgba(239,68,68,.45)) !important; }
+        .placa-galaxia { background-image: linear-gradient(90deg, rgba(109,40,217,.5), rgba(15,23,42,.6), rgba(109,40,217,.5)) !important; }
+
+        /* ---- molduras do avatar (anel animado) ---- */
+        .pc-avatar, .pf-tile-av { position: relative; }
+        [class*="moldura-"]::before { content: ''; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; z-index: 1;
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+            animation: bpGira 5s linear infinite; }
+        .pf-tile-av[class*="moldura-"]::before { inset: -5px; -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
+        .moldura-aurora::before { background: conic-gradient(from var(--bp-angulo), #43b581, #7289da, #eb459e, #43b581); }
+        .moldura-neon::before { background: conic-gradient(from var(--bp-angulo), #22d3ee, #a855f7, #22d3ee); filter: drop-shadow(0 0 6px #22d3ee); }
+        .moldura-ouro::before { background: conic-gradient(from var(--bp-angulo), #b8860b, #ffe27a, #b8860b, #ffe27a, #b8860b); }
+        .moldura-fogo::before { background: conic-gradient(from var(--bp-angulo), #ef4444, #f97316, #fde047, #f97316, #ef4444); filter: drop-shadow(0 0 5px #f97316); }
+        .moldura-gelo::before { background: conic-gradient(from var(--bp-angulo), #bae6fd, #38bdf8, #ffffff, #38bdf8, #bae6fd); }
+        .moldura-arco::before { background: conic-gradient(from var(--bp-angulo), #ff5f6d, #ffc371, #47e891, #4facfe, #c471f5, #ff5f6d); }
+
+        /* ---- presença Personalizada: o emoji ocupa o lugar da bolinha ---- */
+        .status-indicator.custom { width: 16px; height: 16px; right: -4px; bottom: -4px; border: 0 !important; background: var(--bg-tertiary) !important; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; }
+        .status-indicator.custom img.emoji { width: 100%; height: 100%; margin: 0; vertical-align: baseline; }
+        .pc-avatar .status-indicator.custom { width: 30px; height: 30px; right: -2px; bottom: -2px; font-size: 20px; }
+        .pc-ponto.status-indicator.custom { position: static !important; width: 18px !important; height: 18px !important; font-size: 14px; background: transparent !important; }
+        .pc-emoji { display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .pc-emoji img.emoji { width: 100%; height: 100%; margin: 0; }
+
+        /* ---- cartão: nome da conta, tema ---- */
+        .pc-usuario { margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--text-muted); word-break: break-all; }
+        .pc.com-tema .pc-secao, .pc.com-tema .pc-lista { background: rgba(0,0,0,.24); border-radius: 12px; border-color: rgba(255,255,255,.1); }
+        .pc.com-tema .pc-secao { padding: 12px; }
+        .pc.com-tema .pc-avatar { border-color: rgba(0,0,0,.35); }
+
+        /* ---- Meu Perfil: blocos ---- */
+        .pf-controles { gap: 18px; }
+        .pf-bloco { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 16px; background: rgba(255,255,255,.035); border: 1px solid var(--glass-borda); }
+        .pf-bloco-tit { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-header); }
+        .pf-conta { padding: 18px; }
+        .pf-arroba { display: flex; align-items: center; gap: 0; }
+        .pf-arroba span { padding: 10px 0 10px 12px; background: var(--bg-tertiary); border: 1px solid rgba(0,0,0,.2); border-right: 0; border-radius: 4px 0 0 4px; color: var(--text-muted); font-weight: 800; }
+        .pf-arroba input { border-radius: 0 4px 4px 0; }
+
+        .pf-av-btn { position: relative; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
+        .pf-av { display: flex; width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: var(--brand-color); align-items: center; justify-content: center; font-weight: 800; font-size: 26px; color: #fff; }
+        .pf-av img { width: 100%; height: 100%; object-fit: cover; }
+        .pf-av-lapis { position: absolute; right: -2px; bottom: -2px; width: 26px; height: 26px; border-radius: 50%; background: var(--brand-color); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 3px solid var(--bg-primary); transition: transform .2s cubic-bezier(.34,1.56,.64,1); }
+        .pf-av-btn:hover .pf-av-lapis { transform: scale(1.18) rotate(-10deg); }
+        .pf-av-btn:hover .pf-av { filter: brightness(1.12); }
+
+        .pf-tile { display: inline-flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; border: 1px dashed rgba(255,255,255,.22); background: rgba(255,255,255,.04); color: var(--text-normal); font-weight: 700; font-size: 13px; cursor: pointer; transition: border-color .2s, background-color .2s, transform .15s; }
+        .pf-tile:hover { border-color: var(--brand-color); background: rgba(114,137,218,.12); transform: translateY(-1px); }
+        .pf-tile.larga { width: 100%; }
+        .pf-tile-av { display: flex; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: var(--brand-color); align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0; }
+        .pf-tile-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        [class*="moldura-"].pf-tile-av { overflow: visible; }
+        .pf-tile-av > img { border-radius: 50%; }
+
+        .pf-faixa-btn { position: relative; display: block; width: 100%; height: 92px; padding: 0; border: 0; border-radius: 14px; overflow: hidden; cursor: pointer; }
+        .pf-faixa-amostra { position: absolute; inset: 0; background-color: var(--brand-color); background-size: cover; background-position: center; }
+        .pf-faixa-amostra.banner-animado { background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab); background-size: 400% 400%; animation: bg-spin 8s ease infinite; }
+        .pf-faixa-lapis { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 13px; color: #fff; background: rgba(0,0,0,.38); opacity: 0; transition: opacity .2s; }
+        .pf-faixa-btn:hover .pf-faixa-lapis { opacity: 1; }
+
+        .pf-estilo-amostra { font-size: 20px; font-weight: 800; color: var(--text-header); }
+        .pf-tema-amostra { width: 64px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); flex-shrink: 0; }
+        .pf-tema-amostra.vazio, .cat-tema-amostra.vazio { background: repeating-linear-gradient(45deg, rgba(255,255,255,.06), rgba(255,255,255,.06) 6px, transparent 6px, transparent 12px); }
+        .pf-placa-amostra { flex: 1; display: block; }
+        .pf-placa-linha { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 8px; background-color: rgba(0,0,0,.15); color: var(--text-header); font-weight: 700; font-size: 14px; min-width: 0; }
+        .pf-mini-av { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: var(--brand-color); align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0; }
+        .pf-mini-av img { width: 100%; height: 100%; object-fit: cover; }
+
+        .pf-efeitos { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+        .pf-efeito { position: relative; padding: 14px 12px; border-radius: 12px; border: 1px solid var(--glass-borda); background: rgba(255,255,255,.03); display: flex; flex-direction: column; gap: 2px; }
+        .pf-efeito i { position: absolute; right: 10px; top: 10px; font-size: 12px; color: var(--text-muted); }
+        .pf-efeito b { font-size: 13px; color: var(--text-header); }
+        .pf-efeito small { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+        .pf-efeito.bloqueado { opacity: .6; }
+
+        .pf-presenca button.larga { grid-column: 1 / -1; }
+        .pf-presenca button small { margin-left: auto; font-size: 11px; color: var(--text-muted); font-weight: 600; }
+        .pf-pres-emoji { display: inline-flex; width: 16px; height: 16px; align-items: center; justify-content: center; font-size: 13px; }
+        .pf-pres-emoji img.emoji { width: 100%; height: 100%; margin: 0; }
+        .custom-status-row .pf-mini { align-self: center; margin-left: 8px; }
+        #pf-status-emoji img.emoji { width: 22px; height: 22px; margin: 0; }
+        #pf-status-emoji { font-size: 20px; }
+
+        /* ---- seletor de mídia ---- */
+        .sm-modal { width: 760px; max-width: 94vw; }
+        .sm-corpo { display: flex; gap: 18px; padding: 16px; max-height: 64vh; }
+        .sm-esq { flex: 0 0 260px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+        .sm-dir { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+        .sm-drop { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 14px; text-align: center; border: 2px dashed rgba(255,255,255,.22); border-radius: 14px; background: rgba(255,255,255,.04); cursor: pointer; transition: border-color .2s, background-color .2s, transform .15s; }
+        .sm-drop i { font-size: 28px; color: var(--brand-color); }
+        .sm-drop b { color: var(--text-header); }
+        .sm-drop small { color: var(--text-muted); font-size: 12px; }
+        .sm-drop:hover, .sm-drop.sobre, .sm-drop:focus-visible { border-color: var(--brand-color); background: rgba(114,137,218,.14); outline: none; transform: translateY(-2px); }
+        .sm-extra { display: flex; flex-direction: column; gap: 8px; }
+        .sm-cor { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }
+        .sm-animada { height: 44px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: transform .15s, border-color .2s; }
+        .sm-animada:hover { border-color: #fff; transform: translateY(-1px); }
+        .sm-dica { font-size: 12px; line-height: 1.45; color: var(--text-muted); padding: 10px 12px; border-radius: 10px; background: rgba(255,215,106,.07); }
+        .sm-dica i { color: #ffd76a; margin-right: 4px; }
+        .sm-busca { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 10px; background: var(--bg-tertiary); border: 1px solid var(--glass-borda); }
+        .sm-busca input { flex: 1; padding: 10px 0; background: transparent; border: 0; outline: none; color: var(--text-normal); font-size: 14px; }
+        .sm-busca i { color: var(--text-muted); }
+        .sm-tit { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+        .sm-tit small { text-transform: none; letter-spacing: 0; font-weight: 600; margin-left: 6px; opacity: .8; }
+        .sm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; align-content: start; min-height: 220px; }
+        .sm-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; cursor: pointer; background: var(--bg-tertiary); transition: transform .2s, box-shadow .2s; }
+        .sm-grid img:hover { transform: scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,.45); }
+        .sm-aviso { grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px; }
+        @media (max-width: 700px) { .sm-corpo { flex-direction: column; } .sm-esq { flex: none; } }
+
+        /* ---- catálogo ---- */
+        .cat-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+        .cat-grade.larga { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+        .cat-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 10px; border-radius: 12px; border: 2px solid transparent; background: rgba(255,255,255,.05); color: var(--text-normal); cursor: pointer; transition: transform .15s, border-color .2s, background-color .2s; min-width: 0; }
+        .cat-tile:hover { transform: translateY(-2px); background: rgba(255,255,255,.09); }
+        .cat-tile.sel { border-color: var(--brand-color); background: rgba(114,137,218,.16); }
+        .cat-tile small { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+        .cat-nome { font-size: 17px; font-weight: 800; color: var(--text-header); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cat-tile .pf-placa-linha { width: 100%; }
+        .cat-tile .pf-tile-av { width: 52px; height: 52px; }
+        .cat-tema-amostra { width: 100%; height: 54px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); }
+        .cat-linha { display: flex; gap: 18px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--glass-borda); }
+        .cat-campo { display: flex; flex-direction: column; gap: 6px; }
+        .cat-duplo { display: flex; align-items: center; gap: 6px; }
+        .cat-campo input[type=color] { width: 44px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -1654,7 +1810,7 @@
 
                             <!-- Loop Mágico -->
                             {% for amigo in amigos %}
-                            <div class="dm-card user-dm-item" id="dm-{{ amigo.id }}" data-user-id="{{ amigo.id }}" data-status="offline" data-name="{{ amigo.name }}" data-avatar="{{ amigo.avatar or '' }}">
+                            <div class="dm-card user-dm-item{% if amigo.placa %} placa-{{ amigo.placa }}{% endif %}" id="dm-{{ amigo.id }}" data-user-id="{{ amigo.id }}" data-status="offline" data-name="{{ amigo.name }}" data-avatar="{{ amigo.avatar or '' }}">
                                 <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
                                     {% if amigo.avatar %}
                                         <img src="{{ amigo.avatar }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -1664,7 +1820,7 @@
                                     <div class="status-indicator offline"></div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
-                                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">{{ amigo.name }}</span>
+                                    <span class="dm-nome{% if amigo.nome_estilo %} ne-{{ amigo.nome_estilo }}{% endif %}" style="color: var(--text-header); font-weight: 600; font-size: 13px;">{{ amigo.name }}</span>
                                 </div>
                                 <div class="dm-notification-badge" id="badge-{{ amigo.id }}">0</div>
                             </div>
@@ -2694,6 +2850,7 @@
         <div class="status-option" data-status="idle" data-text="Ausente"><div class="status-icon" style="background: var(--yellow-color);"></div> Ausente</div>
         <div class="status-option" data-status="dnd" data-text="Não perturbar"><div class="status-icon" style="background: var(--red-color);"></div> Não perturbar</div>
         <div class="status-option" data-status="invisible" data-text="Invisível"><div class="status-icon" style="background: #80848e;"></div> Invisível</div>
+        <div class="status-option" data-status="custom" data-text="Personalizado"><i class="fa-regular fa-face-smile" style="width: 10px; color: #ffd76a;"></i> Personalizado</div>
         <div class="context-menu-separator"></div>
         <div class="status-option"><i class="fa-regular fa-face-smile" style="width: 10px; color: #b5bac1;"></i> Editar status personalizado</div>
     </div>
@@ -2897,6 +3054,47 @@
         </div>
     </div>
 
+    <!-- SELETOR DE MÍDIA (avatar, faixa, tema): enviar arquivo + sugestões de GIF -->
+    <div class="modal-overlay" id="seletor-midia">
+        <div class="bazinga-modal sm-modal">
+            <div class="modal-header" style="position: relative;">
+                <h2 id="sm-titulo">Escolher imagem</h2>
+                <p id="sm-sub">Envie um arquivo ou escolha uma sugestão.</p>
+                <i class="fa-solid fa-xmark modal-close-x" id="sm-fechar"></i>
+            </div>
+            <div class="sm-corpo">
+                <div class="sm-esq">
+                    <div class="sm-drop" id="sm-drop" tabindex="0">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <b>Enviar imagem ou GIF</b>
+                        <small>Clique ou arraste aqui. Depois você pode cortar, girar e dar zoom.</small>
+                    </div>
+                    <input type="file" id="sm-arquivo" accept="image/*" style="display:none;">
+                    <div id="sm-extras"></div>
+                    <div class="sm-dica"><i class="fa-regular fa-lightbulb"></i> Achou uma foto no Pinterest ou em outro site? Salve a imagem e envie aqui - esses sites não liberam busca direta pra outros apps.</div>
+                </div>
+                <div class="sm-dir">
+                    <div class="sm-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="sm-busca" placeholder="Buscar GIFs..." autocomplete="off"></div>
+                    <div class="sm-tit">Sugestões <small>GIFs do Giphy</small></div>
+                    <div class="sm-grid" id="sm-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CATÁLOGO (estilo de nome, tema, placa, moldura) -->
+    <div class="modal-overlay" id="pf-catalogo">
+        <div class="bazinga-modal sm-modal" style="width: 560px;">
+            <div class="modal-header" style="position: relative;">
+                <h2 id="pfc-titulo">Escolher</h2>
+                <p id="pfc-sub"></p>
+                <i class="fa-solid fa-xmark modal-close-x" id="pfc-fechar"></i>
+            </div>
+            <div class="modal-content" style="gap: 14px; max-height: 60vh; overflow-y: auto;" id="pfc-corpo"></div>
+            <div class="modal-footer" style="justify-content: flex-end;"><button class="btn btn-primary" id="pfc-ok">Concluir</button></div>
+        </div>
+    </div>
+
     <!-- TELA CHEIA: CONFIGURAÇÕES E NITRO (O EDITOR SUPREMO) -->
     <div class="settings-overlay" id="settings-modal">
         <div class="settings-modal">
@@ -2923,72 +3121,106 @@
                 </div>
 
                 <!-- ABA: MEU PERFIL (conta + perfil juntos; o cartão à direita é o mesmo do popup) -->
-                <div class="set-section active" id="set-perfil" style="max-width: 980px;">
+                <div class="set-section active" id="set-perfil" style="max-width: 1000px;">
                     <h2 class="set-title">Meu Perfil</h2>
 
                     <div class="pf-layout">
                         <div class="pf-controles">
-                            <div class="pf-grupo">
-                                <label class="control-label" for="pf-nome">Nome de exibição</label>
-                                <input type="text" class="discord-input" id="pf-nome" maxlength="100" autocomplete="off">
-                                <span class="pf-dica">É o nome que aparece pra todo mundo.</span>
+
+                            <div class="pf-bloco">
+                                <div class="pf-bloco-tit">Identidade</div>
+                                <div class="pf-grupo">
+                                    <label class="control-label" for="pf-nome">Nome de exibição</label>
+                                    <input type="text" class="discord-input" id="pf-nome" maxlength="100" autocomplete="off">
+                                    <span class="pf-dica">É o que aparece pra todo mundo - pode ter estilo e efeito.</span>
+                                </div>
+                                <div class="pf-grupo">
+                                    <label class="control-label" for="pf-username">Nome da conta</label>
+                                    <div class="pf-arroba"><span>@</span><input type="text" class="discord-input" id="pf-username" maxlength="32" autocomplete="off" spellcheck="false"></div>
+                                    <span class="pf-dica">É o que as pessoas digitam pra te adicionar. Letras minúsculas, números, ponto e _.</span>
+                                </div>
+                                <div class="pf-grupo">
+                                    <label class="control-label" for="pf-pronomes">Pronomes</label>
+                                    <input type="text" class="discord-input" id="pf-pronomes" maxlength="40" placeholder="ele/dele, ela/dela, elu/delu..." autocomplete="off">
+                                </div>
                             </div>
 
-                            <div class="pf-grupo">
-                                <label class="control-label" for="pf-pronomes">Pronomes</label>
-                                <input type="text" class="discord-input" id="pf-pronomes" maxlength="40" placeholder="ele/dele, ela/dela, elu/delu..." autocomplete="off">
-                            </div>
-
-                            <div class="pf-grupo">
-                                <span class="control-label">Avatar</span>
+                            <div class="pf-bloco">
+                                <div class="pf-bloco-tit">Avatar e moldura</div>
                                 <div class="pf-linha">
-                                    <div class="pf-av" id="pf-av"></div>
-                                    <button class="btn btn-primary" id="pf-mudar-avatar"><i class="fa-solid fa-image"></i> Mudar avatar</button>
-                                    <span class="pf-dica">Aceita foto ou GIF.</span>
+                                    <button type="button" class="pf-av-btn" id="pf-av-btn" title="Mudar foto"><span class="pf-av" id="pf-av"></span><span class="pf-av-lapis"><i class="fa-solid fa-pen"></i></span></button>
+                                    <button type="button" class="pf-tile" id="pf-moldura-btn" title="Moldura do avatar"><span class="pf-tile-av" id="pf-moldura-amostra"></span><span class="pf-tile-txt">Moldura</span></button>
+                                </div>
+                                <span class="pf-dica">Clique na foto pra trocar: imagem, GIF ou uma sugestão da nossa busca.</span>
+                            </div>
+
+                            <div class="pf-bloco">
+                                <div class="pf-bloco-tit">Faixa do perfil</div>
+                                <button type="button" class="pf-faixa-btn" id="pf-faixa-btn" title="Mudar faixa"><span class="pf-faixa-amostra" id="pf-faixa-amostra"></span><span class="pf-faixa-lapis"><i class="fa-solid fa-pen"></i> Editar faixa</span></button>
+                            </div>
+
+                            <div class="pf-bloco">
+                                <div class="pf-bloco-tit">Aparência <button type="button" class="pf-mini" id="pf-surpresa" style="margin-left:auto;"><i class="fa-solid fa-wand-magic-sparkles"></i> Surpreenda-me</button></div>
+                                <div class="pf-grupo">
+                                    <span class="control-label">Estilo do nome exibido</span>
+                                    <button type="button" class="pf-tile larga" id="pf-estilo-btn"><span class="pf-estilo-amostra" id="pf-estilo-amostra">Nome</span></button>
+                                </div>
+                                <div class="pf-grupo">
+                                    <span class="control-label">Tema do perfil</span>
+                                    <button type="button" class="pf-tile larga" id="pf-tema-btn"><span class="pf-tema-amostra" id="pf-tema-amostra"></span><span class="pf-tile-txt" id="pf-tema-txt">Sem tema</span></button>
+                                </div>
+                                <div class="pf-grupo">
+                                    <span class="control-label">Placa de identificação</span>
+                                    <button type="button" class="pf-tile larga" id="pf-placa-btn"><span class="pf-placa-amostra" id="pf-placa-amostra"></span></button>
+                                    <span class="pf-dica">A barrinha que aparece atrás do seu nome nas listas de membros, DMs e ao lado do microfone.</span>
+                                </div>
+                                <div class="pf-grupo">
+                                    <span class="control-label">Efeitos de perfil</span>
+                                    <div class="pf-efeitos">
+                                        <div class="pf-efeito bloqueado"><i class="fa-solid fa-lock"></i><b>Faíscas</b><small>Em breve</small></div>
+                                        <div class="pf-efeito bloqueado"><i class="fa-solid fa-lock"></i><b>Aurora</b><small>Em breve</small></div>
+                                        <div class="pf-efeito bloqueado"><i class="fa-solid fa-lock"></i><b>Chuva de estrelas</b><small>Em breve</small></div>
+                                    </div>
+                                    <span class="pf-dica">Animações que rodam por cima do cartão. Vão ser desbloqueadas pelo Battle Pass e pela loja.</span>
                                 </div>
                             </div>
 
-                            <div class="pf-grupo">
-                                <span class="control-label">Faixa do perfil</span>
-                                <div class="pf-linha">
-                                    <input type="color" id="pf-cor-input" style="display:none;">
-                                    <div class="color-preview-box" id="pf-cor-btn" title="Escolher cor"></div>
-                                    <div class="color-preview-box banner-animado" id="pf-cor-animada" title="Faixa animada" style="cursor:pointer;"></div>
-                                    <button class="btn pf-btn-sec" id="pf-banner-enviar"><i class="fa-solid fa-upload"></i> Enviar imagem</button>
-                                    <button class="btn pf-btn-sec" id="pf-banner-remover" style="display:none;"><i class="fa-solid fa-trash"></i> Remover</button>
-                                    <input type="file" id="pf-banner-file" accept="image/*" style="display:none;">
+                            <div class="pf-bloco">
+                                <div class="pf-bloco-tit">Status</div>
+                                <div class="pf-grupo">
+                                    <span class="control-label">Presença</span>
+                                    <div class="pf-presenca" id="pf-presenca">
+                                        <button data-status="online"><span class="status-indicator online"></span> Disponível</button>
+                                        <button data-status="idle"><span class="status-indicator idle"></span> Ausente</button>
+                                        <button data-status="dnd"><span class="status-indicator dnd"></span> Não perturbar</button>
+                                        <button data-status="invisible"><span class="status-indicator invisible"></span> Invisível</button>
+                                        <button data-status="custom" class="larga"><span class="pf-pres-emoji" id="pf-pres-emoji"><i class="fa-regular fa-face-smile"></i></span> Personalizado <small>o emoji vira a sua bolinha</small></button>
+                                    </div>
+                                    <span class="pf-dica">Vale na hora, em todos os lugares. Invisível aparece como offline pros outros.</span>
+                                </div>
+                                <div class="pf-grupo">
+                                    <label class="control-label" for="pf-status">Status personalizado</label>
+                                    <div class="custom-status-row">
+                                        <button class="emoji-picker-btn" type="button" id="pf-status-emoji" title="Escolher emoji"><i class="fa-solid fa-face-smile"></i></button>
+                                        <input type="text" class="discord-input" id="pf-status" maxlength="128" placeholder="O que está acontecendo?" autocomplete="off">
+                                        <button type="button" class="pf-mini" id="pf-status-limpar" title="Limpar">Limpar</button>
+                                    </div>
+                                    <span class="pf-dica">Aparece no balão ao lado da sua foto. Com a presença "Personalizado", o emoji também troca a bolinha.</span>
                                 </div>
                             </div>
 
-                            <div class="pf-grupo">
-                                <span class="control-label">Status de presença</span>
-                                <div class="pf-presenca" id="pf-presenca">
-                                    <button data-status="online"><span class="status-indicator online"></span> Disponível</button>
-                                    <button data-status="idle"><span class="status-indicator idle"></span> Ausente</button>
-                                    <button data-status="dnd"><span class="status-indicator dnd"></span> Não perturbar</button>
-                                    <button data-status="invisible"><span class="status-indicator invisible"></span> Invisível</button>
-                                </div>
-                                <span class="pf-dica">Vale na hora, em todos os lugares. Invisível aparece como offline pros outros.</span>
-                            </div>
-
-                            <div class="pf-grupo">
-                                <label class="control-label" for="pf-status">Status personalizado</label>
-                                <div class="custom-status-row">
-                                    <button class="emoji-picker-btn" type="button" title="Escolher Emoji"><i class="fa-solid fa-face-smile"></i></button>
-                                    <input type="text" class="discord-input" id="pf-status" maxlength="128" placeholder="O que está acontecendo?" autocomplete="off">
+                            <div class="pf-bloco">
+                                <div class="pf-grupo">
+                                    <label class="control-label" for="pf-bio">Bio <span class="pf-cont" id="pf-bio-cont">0/1000</span></label>
+                                    <textarea class="discord-input discord-textarea" id="pf-bio" maxlength="1000" placeholder="Fale um pouco sobre você (opcional)"></textarea>
                                 </div>
                             </div>
 
-                            <div class="pf-grupo">
-                                <label class="control-label" for="pf-bio">Sobre mim <span class="pf-cont" id="pf-bio-cont">0/1000</span></label>
-                                <textarea class="discord-input discord-textarea" id="pf-bio" maxlength="1000" placeholder="Conte um pouco sobre você..."></textarea>
-                            </div>
-
-                            <div class="pf-grupo pf-conta" id="pf-conta-ancora">
-                                <span class="control-label">Conta</span>
+                            <div class="pf-bloco pf-conta" id="pf-conta-ancora">
+                                <div class="pf-bloco-tit">Conta</div>
                                 <div class="pf-linha-info"><span>E-mail</span><b id="pf-email"></b></div>
                                 <div class="pf-linha-info"><span>Entrou com</span><b><i class="fa-brands fa-google"></i> Google</b></div>
-                                <div class="pf-linha-info"><span>ID do usuário</span><b id="pf-id"></b><button class="pf-mini" id="pf-copiar-id">Copiar</button></div>
+                                <div class="pf-linha-info"><span>ID do usuário</span><b id="pf-id"></b><button class="pf-mini" id="pf-copiar-id" style="margin-left:auto;">Copiar</button></div>
                                 <div class="pf-linha-info"><span>Membro desde</span><b id="pf-desde"></b></div>
                                 <div class="pf-linha-info"><span>Nível</span><b id="pf-nivel"></b></div>
                                 <a class="btn pf-btn-sec pf-sair" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Sair da conta</a>
@@ -2997,7 +3229,7 @@
 
                         <div class="pf-previa">
                             <span class="control-label">Pré-visualização</span>
-                            <div class="pc pc-previa" id="pf-cartao"></div>
+                            <div id="pf-cartao"></div>
                         </div>
                     </div>
 
@@ -4228,12 +4460,12 @@
                 const avatarHtml = avatarSeguro
                     ? `<img src="${avatarSeguro}" style="width:100%;height:100%;object-fit:cover;">`
                     : esc((m.nome || '?')[0].toUpperCase());
-                return `<div class="channel-item" data-perfil-id="${Number(m.id)}" style="margin-top:2px; opacity:${online ? '1' : '.5'};">
+                return `<div class="channel-item ${m.placa ? 'placa-' + esc(m.placa) : ''}" data-perfil-id="${Number(m.id)}" style="margin-top:2px; opacity:${online ? '1' : '.5'};">
                     <div class="user-avatar-wrapper" style="width:32px;height:32px;">
                         <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background-color:${avatarSeguro ? 'transparent' : 'var(--brand-color)'};display:flex;justify-content:center;align-items:center;">${avatarHtml}</div>
-                        <div class="status-indicator ${statusClasse}"></div>
+                        ${htmlBolinha(statusClasse, m.emoji)}
                     </div>
-                    <span style="color:#fff;font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
+                    <span class="${classeNome(m.nome_estilo)}" style="color:#fff;font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
                 </div>`;
             };
 
@@ -4244,12 +4476,13 @@
                 `<div class="channel-category">ONLINE — ${online.length}</div>` +
                 online.map(linha).join('') +
                 (offline.length ? `<div class="channel-category" style="margin-top:14px;">OFFLINE — ${offline.length}</div>${offline.map(linha).join('')}` : '');
+            emojificar(cont);
         }
 
         socket.on('usuario_ficou_online', (dados) => {
             membrosOnlineSet.add(dados.usuario_id);
             const m = membrosDoServidor.find(x => Number(x.id) === Number(dados.usuario_id));
-            if (m && dados.status) m.status = dados.status;
+            if (m && dados.status) { m.status = dados.status; m.emoji = dados.emoji || null; }
             desenharMembrosSidebar();
         });
         socket.on('usuario_ficou_offline', (dados) => { membrosOnlineSet.delete(dados.usuario_id); desenharMembrosSidebar(); });
@@ -5167,7 +5400,7 @@
                 if (filterType === 'todos') {
                     item.style.display = 'flex';
                 } else if (filterType === 'disponivel') {
-                    if (status === 'online' || status === 'idle') {
+                    if (status === 'online' || status === 'idle' || status === 'custom') {
                         item.style.display = 'flex';
                     } else {
                         item.style.display = 'none';
@@ -5267,13 +5500,13 @@
         function linhaAmigoHtml(amigo) {
             const avatarSeguro = escUrl(amigo.avatar);
             const avatarHtml = avatarSeguro ? `<img src="${avatarSeguro}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : `<span>${esc((amigo.nome || '?')[0].toUpperCase())}</span>`;
-            return `<div class="dm-card user-dm-item" id="dm-${amigo.id}" data-user-id="${amigo.id}" data-status="${amigo.online ? (amigo.status || 'online') : 'offline'}" data-name="${esc(amigo.nome)}" data-avatar="${avatarSeguro || ''}">
+            return `<div class="dm-card user-dm-item ${amigo.placa ? 'placa-' + esc(amigo.placa) : ''}" id="dm-${amigo.id}" data-user-id="${amigo.id}" data-status="${amigo.online ? (amigo.status || 'online') : 'offline'}" data-name="${esc(amigo.nome)}" data-avatar="${avatarSeguro || ''}">
                 <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
                     ${avatarHtml}
-                    <div class="status-indicator ${amigo.online ? (amigo.status || 'online') : 'offline'}"></div>
+                    ${htmlBolinha(amigo.online ? (amigo.status || 'online') : 'offline', amigo.emoji)}
                 </div>
                 <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
-                    <span style="color: var(--text-header); font-weight: 600; font-size: 13px;">${esc(amigo.nome)}</span>
+                    <span class="dm-nome ${classeNome(amigo.nome_estilo)}" style="color: var(--text-header); font-weight: 600; font-size: 13px;">${esc(amigo.nome)}</span>
                 </div>
                 <div class="dm-notification-badge" id="badge-${amigo.id}">0</div>
             </div>`;
@@ -5301,18 +5534,18 @@
         });
 
         // ---- Presença dos amigos (online/offline em tempo real na lista de DMs) ----
-        function atualizarStatusAmigo(userId, online, status) {
+        function atualizarStatusAmigo(userId, online, status, emoji) {
             const item = document.getElementById(`dm-${userId}`);
             if (!item) return;
             const novoStatus = online ? (status || 'online') : 'offline';
             item.setAttribute('data-status', novoStatus);
             const dot = item.querySelector('.status-indicator');
-            if (dot) dot.className = `status-indicator ${novoStatus}`;
+            if (dot) aplicarBolinha(dot, novoStatus, emoji);
             applyFriendFilter(document.getElementById('filter-disponivel').classList.contains('active') ? 'disponivel' : 'todos');
         }
-        socket.on('usuario_ficou_online', (d) => atualizarStatusAmigo(d.usuario_id, true, d.status));
+        socket.on('usuario_ficou_online', (d) => atualizarStatusAmigo(d.usuario_id, true, d.status, d.emoji));
         socket.on('usuario_ficou_offline', (d) => atualizarStatusAmigo(d.usuario_id, false));
-        socket.on('status_amigos_ao_conectar', (d) => (d.online_ids || []).forEach(id => atualizarStatusAmigo(id, true, (d.status_por_id || {})[id])));
+        socket.on('status_amigos_ao_conectar', (d) => (d.online_ids || []).forEach(id => atualizarStatusAmigo(id, true, (d.status_por_id || {})[id], (d.emoji_por_id || {})[id])));
 
         // ==========================================
         // CTRL+K: busca rápida (servidores, canais do servidor atual, amigos/DMs)
@@ -5628,11 +5861,6 @@
         document.getElementById('note-emoji-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             abrirEmojiPicker(e.currentTarget, document.getElementById('note-text-input'));
-        });
-
-        document.querySelector('.emoji-picker-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            abrirEmojiPicker(e.currentTarget, document.getElementById('pf-status'));
         });
 
         document.addEventListener('click', (e) => {
@@ -7211,19 +7439,56 @@
         const perfilMeu = {
             id: currentUserId,
             nome: {{ usuario_atual.name|tojson }},
+            username: {{ (usuario_atual.username or '')|tojson }},
             avatar: {{ (usuario_atual.avatar or '')|tojson }},
             bio: {{ (usuario_atual.bio or '')|tojson }},
             custom_status: {{ (usuario_atual.custom_status or '')|tojson }},
+            status_emoji: {{ (usuario_atual.status_emoji or '')|tojson }},
             banner_color: {{ (usuario_atual.banner_color or '')|tojson }},
             banner_url: {{ (usuario_atual.banner_url or '')|tojson }},
             pronomes: {{ (usuario_atual.pronomes or '')|tojson }},
+            perfil_tema: {{ (usuario_atual.perfil_tema or '')|tojson }},
+            nome_estilo: {{ (usuario_atual.nome_estilo or '')|tojson }},
+            placa: {{ (usuario_atual.placa or '')|tojson }},
+            moldura: {{ (usuario_atual.moldura or '')|tojson }},
             status: {{ (usuario_atual.status or 'online')|tojson }},
             email: {{ usuario_atual.email|tojson }},
             membro_desde: {{ (membro_desde_texto or '')|tojson }},
             nivel: 1, titulo: 'Novato'
         };
-        const ROTULO_STATUS = { online: 'Disponível', idle: 'Ausente', dnd: 'Não perturbar', invisible: 'Invisível', offline: 'Offline' };
-        const DESC_STATUS = { online: 'Tudo certo por aqui', idle: 'Você aparece como ausente', dnd: 'Sem notificações', invisible: 'Você aparece como offline' };
+
+        // ---- Catálogos (ids validados no servidor: utils.ESTILOS_NOME/PLACAS/MOLDURAS) ----
+        const ESTILOS_NOME = [
+            { id: 'padrao', nome: 'Padrão' }, { id: 'neon', nome: 'Neon' }, { id: 'ouro', nome: 'Ouro' },
+            { id: 'fogo', nome: 'Fogo' }, { id: 'gelo', nome: 'Gelo' }, { id: 'arco', nome: 'Arco-íris' },
+            { id: 'sakura', nome: 'Sakura' }, { id: 'glitch', nome: 'Glitch' }, { id: 'retro', nome: 'Retrô' }
+        ];
+        const PLACAS = [
+            { id: 'nenhuma', nome: 'Nenhuma' }, { id: 'aurora', nome: 'Aurora' }, { id: 'ouro', nome: 'Ouro' },
+            { id: 'neon', nome: 'Neon' }, { id: 'oceano', nome: 'Oceano' }, { id: 'sakura', nome: 'Sakura' },
+            { id: 'lava', nome: 'Lava' }, { id: 'galaxia', nome: 'Galáxia' }
+        ];
+        const MOLDURAS = [
+            { id: 'nenhuma', nome: 'Nenhuma' }, { id: 'aurora', nome: 'Aurora' }, { id: 'neon', nome: 'Neon' },
+            { id: 'ouro', nome: 'Ouro' }, { id: 'fogo', nome: 'Fogo' }, { id: 'gelo', nome: 'Gelo' }, { id: 'arco', nome: 'Arco-íris' }
+        ];
+        const TEMAS_PRESET = [
+            { nome: 'Crepúsculo', v: 'grad:#3a1c71,#d76d77' }, { nome: 'Oceano', v: 'grad:#0f2027,#2c5364' },
+            { nome: 'Floresta', v: 'grad:#134e5e,#71b280' }, { nome: 'Chama', v: 'grad:#7f1d1d,#f97316' },
+            { nome: 'Sakura', v: 'grad:#8e2de2,#f06292' }, { nome: 'Meia-noite', v: 'grad:#0f0c29,#302b63' },
+            { nome: 'Ouro', v: 'grad:#3a2e0a,#c9a227' }, { nome: 'Grafite', v: 'solid:#1f2024' }
+        ];
+        const ROTULO_STATUS = { online: 'Disponível', idle: 'Ausente', dnd: 'Não perturbar', invisible: 'Invisível', custom: 'Personalizado', offline: 'Offline' };
+        const DESC_STATUS = { online: 'Tudo certo por aqui', idle: 'Você aparece como ausente', dnd: 'Sem notificações', invisible: 'Você aparece como offline', custom: 'Seu emoji no lugar da bolinha' };
+
+        const classeNome = (est) => (est && est !== 'padrao') ? 'ne-' + est : '';
+        const classePlaca = (pl) => (pl && pl !== 'nenhuma') ? 'placa-' + pl : '';
+        const classeMoldura = (m) => (m && m !== 'nenhuma') ? 'moldura-' + m : '';
+        function trocarClasse(el, prefixo, nova) {
+            if (!el) return;
+            [...el.classList].filter(c => c.startsWith(prefixo)).forEach(c => el.classList.remove(c));
+            if (nova) el.classList.add(nova);
+        }
 
         function corDeFaixa(c) { return /^#[0-9a-fA-F]{6}$/.test(c || '') ? c : ''; }
 
@@ -7232,6 +7497,36 @@
             if (url) return { classe: '', estilo: `background-image:url('${url}');` };
             const cor = corDeFaixa(pf.banner_color);
             return cor ? { classe: '', estilo: `background:${cor};` } : { classe: 'banner-animado', estilo: '' };
+        }
+
+        // Tema do cartão: 'grad:#a,#b' | 'solid:#a' | 'img:<url>' -> CSS (cores/urls revalidadas aqui)
+        function estiloTema(valor) {
+            if (!valor) return '';
+            if (valor.startsWith('grad:')) {
+                const [c1, c2] = valor.slice(5).split(',');
+                if (corDeFaixa(c1) && corDeFaixa(c2)) return `background:linear-gradient(165deg, ${c1}, ${c2});`;
+            } else if (valor.startsWith('solid:')) {
+                const c = valor.slice(6);
+                if (corDeFaixa(c)) return `background:${c};`;
+            } else if (valor.startsWith('img:')) {
+                const u = escUrl(valor.slice(4));
+                if (u) return `background:linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.68)), url('${u}') center/cover;`;
+            }
+            return '';
+        }
+
+        // Bolinha de presença. No status Personalizado o emoji ocupa o lugar dela.
+        function htmlBolinha(status, emoji, extra) {
+            const cls = extra ? ' ' + extra : '';
+            if (status === 'custom' && emoji) return `<div class="status-indicator custom${cls}">${esc(emoji)}</div>`;
+            return `<div class="status-indicator ${status === 'custom' ? 'online' : esc(status)}${cls}"></div>`;
+        }
+        function aplicarBolinha(el, status, emoji) {
+            if (!el) return;
+            const custom = status === 'custom' && !!emoji;
+            el.className = 'status-indicator ' + (custom ? 'custom' : (status === 'custom' ? 'online' : status));
+            el.textContent = custom ? emoji : '';
+            if (custom) emojificar(el);
         }
 
         // modo: 'popout' (cartão aberto ao clicar) | 'previa' (editor, botões de enfeite)
@@ -7244,14 +7539,18 @@
             const popoutProprio = modo === 'popout' && sou;
 
             const texto = pf.custom_status || '';
-            const podeEditarStatus = popoutProprio;
-            const balao = pf.restrito ? '' : (texto || podeEditarStatus || modo === 'previa'
-                ? `<div class="pc-balao ${texto ? '' : 'vazio'}" ${podeEditarStatus ? 'data-acao="editar-status" title="Editar status"' : ''}>${texto ? esc(texto) : '+ Adicionar status'}</div>` : '');
+            const emojiSt = pf.status_emoji || '';
+            const temStatus = !!(texto || emojiSt);
+            const balao = pf.restrito ? '' : ((temStatus || popoutProprio || modo === 'previa')
+                ? `<div class="pc-balao ${temStatus ? '' : 'vazio'}" ${popoutProprio ? 'data-acao="editar-status" title="Editar status"' : ''}>${temStatus ? `${emojiSt ? esc(emojiSt) + ' ' : ''}${esc(texto)}` : '+ Adicionar status'}</div>` : '');
 
             const chips = pf.restrito ? '' : `<div class="pc-chips">
                 <span class="pc-chip" title="Nível no Battle Pass">Nv. ${Number(pf.nivel || 1)}</span>
                 <span class="pc-chip titulo">${esc(pf.titulo || 'Novato')}</span>
             </div>`;
+
+            const linhaUsuario = (pf.username || pf.pronomes)
+                ? `<div class="pc-usuario">${pf.username ? '@' + esc(pf.username) : ''}${pf.username && pf.pronomes ? ' • ' : ''}${pf.pronomes ? esc(pf.pronomes) : ''}</div>` : '';
 
             let acoes = '';
             if (modo === 'previa') {
@@ -7264,6 +7563,7 @@
                         <button class="pc-btn icone" data-acao="menu" title="Mais"><i class="fa-solid fa-ellipsis"></i></button>
                         <div class="pc-menu" id="pc-menu">
                             <button data-acao="copiar-id"><i class="fa-regular fa-copy"></i> Copiar ID do usuário</button>
+                            ${pf.username ? `<button data-acao="copiar-arroba"><i class="fa-solid fa-at"></i> Copiar nome da conta</button>` : ''}
                             ${pf.eh_amigo
                                 ? `<button class="perigo" data-acao="remover-amigo"><i class="fa-solid fa-user-minus"></i> Desfazer amizade</button>`
                                 : (pf.pedido_pendente
@@ -7274,21 +7574,23 @@
                 </div>`;
             }
 
+            // Sem bio e sem data: nada de caixa vazia "Nada por aqui" - o cartão fica limpo.
+            const temBio = !pf.restrito && !!(pf.bio || '').trim();
+            const temDesde = !pf.restrito && !!pf.membro_desde;
             const secoes = pf.restrito
-                ? `<div class="pc-secao"><div class="pc-texto" style="color:var(--text-muted);">Você e essa pessoa não têm servidor em comum, então o perfil completo fica reservado.</div></div>`
-                : `<div class="pc-secao">
-                    <div class="pc-rotulo">Sobre mim</div>
-                    <div class="pc-texto">${pf.bio ? esc(pf.bio) : '<span style="color:var(--text-muted);">Nada por aqui ainda.</span>'}</div>
-                    ${pf.membro_desde ? `<div class="pc-rotulo" style="margin-top:12px;">Membro desde</div><div class="pc-texto">${esc(pf.membro_desde)}</div>` : ''}
-                </div>`;
+                ? `<div class="pc-secao"><div class="pc-texto" style="color:var(--text-muted);">Vocês não têm servidor em comum, então o perfil completo fica reservado.</div></div>`
+                : ((temBio || temDesde) ? `<div class="pc-secao">
+                    ${temBio ? `<div class="pc-rotulo">Bio</div><div class="pc-texto">${esc(pf.bio)}</div>` : ''}
+                    ${temDesde ? `<div class="pc-rotulo" ${temBio ? 'style="margin-top:12px;"' : ''}>Membro desde</div><div class="pc-texto">${esc(pf.membro_desde)}</div>` : ''}
+                </div>` : '');
 
             const lista = popoutProprio ? `
                 <div class="pc-lista">
                     <button class="pc-item" data-acao="editar"><i class="fa-solid fa-pen ico"></i> Editar perfil</button>
                     <div class="pc-sep"></div>
-                    <button class="pc-item" data-acao="status-toggle" id="pc-status-toggle"><span class="status-indicator ${esc(statusDot)} pc-ponto"></span> ${esc(ROTULO_STATUS[pf.status] || 'Disponível')} <i class="fa-solid fa-chevron-right seta"></i></button>
+                    <button class="pc-item" data-acao="status-toggle" id="pc-status-toggle">${htmlBolinha(pf.status, pf.emoji, 'pc-ponto')} ${esc(ROTULO_STATUS[pf.status] || 'Disponível')} <i class="fa-solid fa-chevron-right seta"></i></button>
                     <div class="pc-status-opcoes" id="pc-status-opcoes">
-                        ${['online', 'idle', 'dnd', 'invisible'].map(s => `<button class="pc-opcao ${pf.status === s ? 'atual' : ''}" data-acao="status:${s}"><span class="status-indicator ${s} pc-ponto"></span><span><b>${ROTULO_STATUS[s]}</b><small>${DESC_STATUS[s]}</small></span></button>`).join('')}
+                        ${['online', 'idle', 'dnd', 'invisible', 'custom'].map(s => `<button class="pc-opcao ${pf.status === s ? 'atual' : ''}" data-acao="status:${s}">${s === 'custom' ? `<span class="pc-ponto pc-emoji">${pf.status_emoji ? esc(pf.status_emoji) : '🙂'}</span>` : htmlBolinha(s, '', 'pc-ponto')}<span><b>${ROTULO_STATUS[s]}</b><small>${DESC_STATUS[s]}</small></span></button>`).join('')}
                     </div>
                 </div>
                 <div class="pc-lista">
@@ -7297,19 +7599,22 @@
                     <button class="pc-item perigo" data-acao="sair"><i class="fa-solid fa-right-from-bracket ico"></i> Sair da conta</button>
                 </div>` : '';
 
-            return `
+            const tema = pf.restrito ? '' : estiloTema(pf.perfil_tema);
+            return `<div class="pc ${modo === 'previa' ? 'pc-previa' : ''} ${tema ? 'com-tema' : ''}" style="${tema}">
                 <div class="pc-banner ${faixa.classe}" style="${faixa.estilo}"></div>
                 <div class="pc-topo">
-                    <div class="pc-avatar"><div class="pc-avatar-img" style="${avUrl ? 'background:transparent;' : ''}">${avatar}</div><span class="status-indicator ${esc(statusDot)}"></span></div>
+                    <div class="pc-avatar ${classeMoldura(pf.moldura)}"><div class="pc-avatar-img" style="${avUrl ? 'background:transparent;' : ''}">${avatar}</div>${htmlBolinha(statusDot, pf.emoji)}</div>
                     ${balao}
                 </div>
                 <div class="pc-corpo">
-                    <div class="pc-nome">${esc(pf.nome || '')}${pf.pronomes ? `<span class="pc-pronomes">${esc(pf.pronomes)}</span>` : ''}</div>
+                    <div class="pc-nome"><span class="${classeNome(pf.nome_estilo)}">${esc(pf.nome || '')}</span></div>
+                    ${linhaUsuario}
                     ${chips}
                     ${acoes}
                     ${secoes}
                     ${lista}
-                </div>`;
+                </div>
+            </div>`;
         }
 
         // ---------- popup ----------
@@ -7317,7 +7622,9 @@
         const popoutOverlay = document.getElementById('user-popout-overlay');
         let cartaoAberto = null;   // { id, ancora, dados }
 
-        function perfilMeuParaCartao() { return { ...perfilMeu, sou_eu: true }; }
+        function perfilMeuParaCartao() {
+            return { ...perfilMeu, sou_eu: true, emoji: perfilMeu.status === 'custom' ? perfilMeu.status_emoji : '' };
+        }
 
         function posicionarCartao() {
             if (!cartaoAberto) return;
@@ -7344,7 +7651,7 @@
             if (!cartaoAberto) return;
             const d = cartaoAberto.dados;
             userPopout.innerHTML = d
-                ? `<div class="pc">${htmlCartao(d, 'popout')}</div>`
+                ? htmlCartao(d, 'popout')
                 : `<div class="pc"><div class="pc-banner banner-animado"></div><div class="pc-corpo" style="padding-top:40px;color:var(--text-muted);">Carregando perfil...</div></div>`;
             emojificar(userPopout);
             posicionarCartao();
@@ -7391,6 +7698,10 @@
             }
         });
 
+        function copiarTexto(txt, okMsg) {
+            navigator.clipboard?.writeText(String(txt)).then(() => showToast(okMsg, 'success'), () => showToast('Não consegui copiar.', 'error'));
+        }
+
         userPopout.addEventListener('click', (e) => {
             const item = e.target.closest('[data-acao]');
             if (!item) {
@@ -7405,11 +7716,8 @@
             if (acao.startsWith('status:')) { definirMeuStatus(acao.slice(7)); return; }
             if (acao === 'status-toggle') { item.classList.toggle('aberto'); document.getElementById('pc-status-opcoes').classList.toggle('aberto'); return; }
             if (acao === 'menu') { document.getElementById('pc-menu').classList.toggle('aberto'); return; }
-            if (acao === 'copiar-id') {
-                navigator.clipboard?.writeText(String(idAlvo)).then(() => showToast('ID copiado.', 'success'), () => showToast('Não consegui copiar o ID.', 'error'));
-                document.getElementById('pc-menu')?.classList.remove('aberto');
-                return;
-            }
+            if (acao === 'copiar-id') { copiarTexto(idAlvo, 'ID copiado.'); document.getElementById('pc-menu')?.classList.remove('aberto'); return; }
+            if (acao === 'copiar-arroba') { copiarTexto('@' + (d && d.username), 'Nome da conta copiado.'); document.getElementById('pc-menu')?.classList.remove('aberto'); return; }
             if (acao === 'editar') { fecharCartao(); abrirConfigPerfil(); return; }
             if (acao === 'editar-status') { fecharCartao(); abrirConfigPerfil('pf-status'); return; }
             if (acao === 'conta') { fecharCartao(); abrirConfigPerfil('pf-conta-ancora'); return; }
@@ -7443,40 +7751,70 @@
         const textBottom = document.getElementById('bottom-status-text');
 
         function atualizarTextoBarraInferior() {
-            textBottom.innerText = perfilMeu.custom_status || ROTULO_STATUS[perfilMeu.status] || 'Disponível';
+            const base = perfilMeu.custom_status || ROTULO_STATUS[perfilMeu.status] || 'Disponível';
+            textBottom.innerText = (perfilMeu.status_emoji && perfilMeu.custom_status ? perfilMeu.status_emoji + ' ' : '') + base;
             emojificar(textBottom);
+        }
+
+        // Placa e estilo de nome DO PRÓPRIO usuário (barra inferior e item da sidebar do servidor)
+        function aplicarMinhaAparencia() {
+            trocarClasse(document.querySelector('.user-profile-bar'), 'placa-', classePlaca(perfilMeu.placa));
+            trocarClasse(document.getElementById('sidebar-member-item'), 'placa-', classePlaca(perfilMeu.placa));
+            ['bottom-username-text', 'sidebar-username-text'].forEach(id => trocarClasse(document.getElementById(id), 'ne-', classeNome(perfilMeu.nome_estilo)));
+            // minha linha na lista de membros (vem do servidor, então também precisa acompanhar)
+            const eu = membrosDoServidor.find(m => Number(m.id) === Number(currentUserId));
+            if (eu) {
+                eu.nome = perfilMeu.nome; eu.avatar = perfilMeu.avatar;
+                eu.placa = perfilMeu.placa || null; eu.nome_estilo = perfilMeu.nome_estilo || null;
+                desenharMembrosSidebar();
+            }
         }
 
         function aplicarMeuStatus(status) {
             perfilMeu.status = status;
-            dotBottom.className = `status-indicator ${status}`;
-            const dotLateral = document.querySelector('#sidebar-member-item .status-indicator');
-            if (dotLateral) dotLateral.className = `status-indicator ${status}`;
+            aplicarBolinha(dotBottom, status, perfilMeu.status_emoji);
+            aplicarBolinha(document.querySelector('#sidebar-member-item .status-indicator'), status, perfilMeu.status_emoji);
             atualizarTextoBarraInferior();
             const eu = membrosDoServidor.find(m => Number(m.id) === Number(currentUserId));
-            if (eu) { eu.status = status; desenharMembrosSidebar(); }
-            document.querySelectorAll('#pf-presenca button').forEach(b => b.classList.toggle('ativo', b.dataset.status === status));
+            if (eu) { eu.status = status; eu.emoji = status === 'custom' ? perfilMeu.status_emoji : null; desenharMembrosSidebar(); }
             if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
             if (typeof pintarPrevia === 'function') pintarPrevia();
         }
 
         function definirMeuStatus(status) {
+            if (status === 'custom') {
+                const emoji = perfilMeu.status_emoji || rascunho.status_emoji;
+                if (!emoji) {
+                    showToast('Escolha um emoji em "Status personalizado" pra usar esse modo.', 'info');
+                    fecharCartao();
+                    abrirConfigPerfil('pf-status-emoji');
+                    return;
+                }
+                // Emoji ainda não salvo: manda junto (o servidor processa na ordem).
+                if (emoji !== perfilMeu.status_emoji) {
+                    perfilMeu.status_emoji = emoji;
+                    if (socket.connected) socket.emit('atualizar_perfil', { status_emoji: emoji });
+                }
+            }
             aplicarMeuStatus(status);
             if (socket.connected) socket.emit('mudar_status', { status });
         }
 
         // Outra aba/aparelho meu mudou o status
-        socket.on('meu_status_mudou', (d) => aplicarMeuStatus(d.status));
+        socket.on('meu_status_mudou', (d) => {
+            if ('emoji' in d) perfilMeu.status_emoji = d.emoji || '';
+            aplicarMeuStatus(d.status);
+        });
 
         // Outra pessoa mudou o status (Invisível chega como 'offline')
         socket.on('status_visivel_mudou', (d) => {
             const on = d.status !== 'offline';
             if (on) membrosOnlineSet.add(d.usuario_id); else membrosOnlineSet.delete(d.usuario_id);
             const m = membrosDoServidor.find(x => Number(x.id) === Number(d.usuario_id));
-            if (m) { m.status = d.status; desenharMembrosSidebar(); }
-            atualizarStatusAmigo(d.usuario_id, on, d.status);
+            if (m) { m.status = d.status; m.emoji = d.emoji || null; desenharMembrosSidebar(); }
+            atualizarStatusAmigo(d.usuario_id, on, d.status, d.emoji);
             if (cartaoAberto && cartaoAberto.dados && Number(cartaoAberto.id) === Number(d.usuario_id)) {
-                cartaoAberto.dados.status = d.status; pintarCartao();
+                cartaoAberto.dados.status = d.status; cartaoAberto.dados.emoji = d.emoji || null; pintarCartao();
             }
         });
 
@@ -7525,7 +7863,12 @@
         document.getElementById('btn-open-settings').addEventListener('click', (e) => { e.stopPropagation(); settingsModal.classList.add('active'); enumerarDispositivos(); });
         document.getElementById('btn-close-settings').addEventListener('click', () => { settingsModal.classList.remove('active'); pararTesteModal(); });
         document.addEventListener('keydown', (e) => {
-            if(e.key === 'Escape') { settingsModal.classList.remove('active'); pararTesteModal(); fecharCartao(); }
+            if(e.key === 'Escape') {
+                // ESC fecha o de cima primeiro (seletor/catálogo), depois as configurações.
+                const aberto = ['seletor-midia', 'pf-catalogo', 'avatar-crop-modal'].find(id => document.getElementById(id).style.display === 'flex');
+                if (aberto) { document.getElementById(aberto).style.display = 'none'; return; }
+                settingsModal.classList.remove('active'); pararTesteModal(); fecharCartao();
+            }
         });
 
         document.querySelectorAll('.set-tab[data-target]').forEach(tab => {
@@ -7538,7 +7881,8 @@
         });
 
         // ---------- editor de perfil (rascunho + barra de salvar) ----------
-        const CAMPOS_PERFIL = ['nome', 'pronomes', 'custom_status', 'bio', 'banner_color', 'banner_url'];
+        const CAMPOS_PERFIL = ['nome', 'username', 'pronomes', 'custom_status', 'status_emoji', 'bio',
+                               'banner_color', 'banner_url', 'perfil_tema', 'nome_estilo', 'placa', 'moldura'];
         let rascunho = {};
         function copiarCampos(de) { const o = {}; CAMPOS_PERFIL.forEach(k => { o[k] = de[k] || ''; }); return o; }
         rascunho = copiarCampos(perfilMeu);
@@ -7547,11 +7891,21 @@
 
         function preencherCamposDoRascunho() {
             document.getElementById('pf-nome').value = rascunho.nome;
+            document.getElementById('pf-username').value = rascunho.username;
             document.getElementById('pf-pronomes').value = rascunho.pronomes;
             document.getElementById('pf-status').value = rascunho.custom_status;
             document.getElementById('pf-bio').value = rascunho.bio;
             document.getElementById('pf-bio-cont').textContent = `${rascunho.bio.length}/1000`;
-            document.getElementById('pf-cor-input').value = corDeFaixa(rascunho.banner_color) || '#e91e63';
+        }
+
+        function rotuloTema(v) {
+            if (!v) return 'Sem tema';
+            return v.startsWith('img:') ? 'Imagem / GIF' : (v.startsWith('solid:') ? 'Cor sólida' : 'Gradiente');
+        }
+
+        function avatarMini() {
+            const u = escUrl(perfilMeu.avatar || '');
+            return u ? `<img src="${u}" alt="">` : esc((perfilMeu.nome || '?')[0].toUpperCase());
         }
 
         function pintarPrevia() {
@@ -7559,22 +7913,43 @@
             if (!cartao) return;
             cartao.innerHTML = htmlCartao({
                 ...perfilMeu, ...rascunho,
-                nome: rascunho.nome || perfilMeu.nome, sou_eu: true
+                nome: rascunho.nome || perfilMeu.nome, sou_eu: true,
+                emoji: perfilMeu.status === 'custom' ? rascunho.status_emoji : ''
             }, 'previa');
             emojificar(cartao);
 
-            const corBtn = document.getElementById('pf-cor-btn');
-            const cor = corDeFaixa(rascunho.banner_color);
-            corBtn.style.background = cor || document.getElementById('pf-cor-input').value;
-            corBtn.classList.toggle('selected', !!cor && !rascunho.banner_url);
-            document.getElementById('pf-cor-animada').classList.toggle('selected', !cor && !rascunho.banner_url);
-            document.getElementById('pf-banner-remover').style.display = rascunho.banner_url ? '' : 'none';
+            // amostras clicáveis
+            const fx = faixaDe(rascunho);
+            const am = document.getElementById('pf-faixa-amostra');
+            am.className = 'pf-faixa-amostra ' + fx.classe;
+            am.style.cssText = fx.estilo;
+
+            const nomeMostrado = rascunho.nome || perfilMeu.nome;
+            const est = document.getElementById('pf-estilo-amostra');
+            est.className = 'pf-estilo-amostra ' + classeNome(rascunho.nome_estilo);
+            est.textContent = nomeMostrado;
+
+            const tm = document.getElementById('pf-tema-amostra');
+            tm.style.cssText = estiloTema(rascunho.perfil_tema);
+            tm.classList.toggle('vazio', !rascunho.perfil_tema);
+            document.getElementById('pf-tema-txt').textContent = rotuloTema(rascunho.perfil_tema);
+
+            document.getElementById('pf-placa-amostra').innerHTML =
+                `<span class="pf-placa-linha ${classePlaca(rascunho.placa)}"><span class="pf-mini-av">${avatarMini()}</span><span class="${classeNome(rascunho.nome_estilo)}">${esc(nomeMostrado)}</span></span>`;
+
+            const mo = document.getElementById('pf-moldura-amostra');
+            mo.className = 'pf-tile-av ' + classeMoldura(rascunho.moldura);
+            mo.innerHTML = avatarMini();
+
+            document.getElementById('pf-av').innerHTML = avatarMini();
+
+            // emoji do status (botão e presença Personalizado)
+            const eb = document.getElementById('pf-status-emoji');
+            eb.innerHTML = rascunho.status_emoji ? esc(rascunho.status_emoji) : '<i class="fa-solid fa-face-smile"></i>';
+            document.getElementById('pf-pres-emoji').innerHTML = rascunho.status_emoji ? esc(rascunho.status_emoji) : '<i class="fa-regular fa-face-smile"></i>';
+            emojificar(eb); emojificar(document.getElementById('pf-pres-emoji'));
 
             document.getElementById('pf-barra').classList.toggle('visivel', perfilSujo());
-
-            const av = document.getElementById('pf-av');
-            const avUrl = escUrl(perfilMeu.avatar || '');
-            av.innerHTML = avUrl ? `<img src="${avUrl}" alt="">` : esc((perfilMeu.nome || '?')[0].toUpperCase());
 
             document.getElementById('pf-email').textContent = perfilMeu.email;
             document.getElementById('pf-id').textContent = perfilMeu.id;
@@ -7590,40 +7965,218 @@
                 pintarPrevia();
             });
         });
+        // Nome da conta: já corrige enquanto digita (minúsculo, só a-z 0-9 . _)
+        document.getElementById('pf-username').addEventListener('input', (e) => {
+            const limpo = e.target.value.toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_.]/g, '');
+            if (limpo !== e.target.value) e.target.value = limpo;
+            rascunho.username = limpo;
+            pintarPrevia();
+        });
 
-        document.getElementById('pf-cor-btn').addEventListener('click', () => document.getElementById('pf-cor-input').click());
-        document.getElementById('pf-cor-input').addEventListener('input', (e) => { rascunho.banner_color = e.target.value; rascunho.banner_url = ''; pintarPrevia(); });
-        document.getElementById('pf-cor-animada').addEventListener('click', () => { rascunho.banner_color = ''; rascunho.banner_url = ''; pintarPrevia(); });
-        document.getElementById('pf-banner-enviar').addEventListener('click', () => document.getElementById('pf-banner-file').click());
-        document.getElementById('pf-banner-remover').addEventListener('click', () => { rascunho.banner_url = ''; pintarPrevia(); });
-        document.getElementById('pf-banner-file').addEventListener('change', async (e) => {
-            const arquivo = e.target.files[0];
-            e.target.value = '';
-            if (!arquivo) return;
+        // Emoji do status: o picker devolve por callback (não escreve no texto)
+        document.getElementById('pf-status-emoji').addEventListener('click', (e) => {
+            e.stopPropagation();
+            abrirEmojiPicker(e.currentTarget, (emoji) => { rascunho.status_emoji = emoji; pintarPrevia(); });
+        });
+        document.getElementById('pf-status-limpar').addEventListener('click', () => {
+            rascunho.status_emoji = ''; rascunho.custom_status = '';
+            document.getElementById('pf-status').value = '';
+            pintarPrevia();
+        });
+
+        document.getElementById('pf-copiar-id').addEventListener('click', () => copiarTexto(perfilMeu.id, 'ID copiado.'));
+        document.querySelectorAll('#pf-presenca button').forEach(b => b.addEventListener('click', () => definirMeuStatus(b.dataset.status)));
+
+        // ---------- seletor de mídia (avatar / faixa / tema): arquivo + sugestões ----------
+        const sm = { cfg: null, timer: null };
+        const smEl = document.getElementById('seletor-midia');
+
+        async function carregarSugestoes(busca) {
+            const grid = document.getElementById('sm-grid');
+            grid.innerHTML = '<div class="sm-aviso">Carregando...</div>';
             try {
-                showToast('Enviando a imagem da faixa...', 'info');
-                rascunho.banner_url = await uploadMidia(arquivo);
+                const resp = await fetch(`/api/gifs?q=${encodeURIComponent(busca)}`);
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok || !Array.isArray(data)) { grid.innerHTML = `<div class="sm-aviso">${esc((data && data.error) || 'Não consegui buscar sugestões agora.')}</div>`; return; }
+                if (!data.length) { grid.innerHTML = '<div class="sm-aviso">Nada encontrado.</div>'; return; }
+                grid.innerHTML = data.map(g => `<img src="${escUrl(g.preview)}" data-url="${escUrl(g.url)}" alt="${esc(g.nome)}" title="${esc(g.nome)}" loading="lazy">`).join('');
+            } catch (e) {
+                grid.innerHTML = '<div class="sm-aviso">Erro de conexão.</div>';
+            }
+        }
+
+        function fecharSeletor() { smEl.style.display = 'none'; }
+
+        function abrirSeletorMidia(cfg) {
+            sm.cfg = cfg;
+            document.getElementById('sm-titulo').textContent = cfg.titulo;
+            document.getElementById('sm-sub').textContent = cfg.sub || 'Envie um arquivo ou escolha uma sugestão.';
+            const extras = document.getElementById('sm-extras');
+            extras.innerHTML = cfg.extras === 'faixa' ? `
+                <div class="sm-extra">
+                    <span class="control-label">Cor sólida</span>
+                    <label class="sm-cor" for="sm-cor-input"><span class="color-preview-box" id="sm-cor-amostra" style="background:${corDeFaixa(rascunho.banner_color) || '#e91e63'};"></span> Escolher uma cor</label>
+                    <input type="color" id="sm-cor-input" value="${corDeFaixa(rascunho.banner_color) || '#e91e63'}" style="display:none;">
+                    <span class="control-label" style="margin-top:12px;">Faixa animada</span>
+                    <div class="sm-animada banner-animado" id="sm-animada" title="Usar a faixa animada"></div>
+                </div>` : '';
+            if (cfg.extras === 'faixa') {
+                document.getElementById('sm-cor-input').addEventListener('input', (e) => { fecharSeletor(); cfg.aoCor(e.target.value); });
+                document.getElementById('sm-animada').addEventListener('click', () => { fecharSeletor(); cfg.aoAnimada(); });
+            }
+            document.getElementById('sm-busca').value = '';
+            smEl.style.display = 'flex';
+            carregarSugestoes('');
+        }
+
+        function escolherArquivo(file) {
+            const cfg = sm.cfg;
+            if (!cfg || !file) return;
+            if (!file.type.startsWith('image/')) { showToast('Escolha uma imagem ou GIF.', 'warning'); return; }
+            fecharSeletor();
+            abrirEditorImagem(file, { formato: cfg.formato, titulo: cfg.titulo, aoConfirmar: (arquivo) => cfg.aoArquivo(arquivo) });
+        }
+
+        document.getElementById('sm-fechar').addEventListener('click', fecharSeletor);
+        const smDrop = document.getElementById('sm-drop');
+        smDrop.addEventListener('click', () => document.getElementById('sm-arquivo').click());
+        smDrop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('sm-arquivo').click(); } });
+        document.getElementById('sm-arquivo').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; escolherArquivo(f); });
+        ['dragenter', 'dragover'].forEach(ev => smDrop.addEventListener(ev, (e) => { e.preventDefault(); smDrop.classList.add('sobre'); }));
+        ['dragleave', 'drop'].forEach(ev => smDrop.addEventListener(ev, (e) => { e.preventDefault(); smDrop.classList.remove('sobre'); }));
+        smDrop.addEventListener('drop', (e) => escolherArquivo(e.dataTransfer.files[0]));
+        document.getElementById('sm-busca').addEventListener('input', (e) => {
+            clearTimeout(sm.timer);
+            sm.timer = setTimeout(() => carregarSugestoes(e.target.value.trim()), 400);
+        });
+        // Sugestão escolhida = abre no editor "como se tivesse sido enviada"
+        document.getElementById('sm-grid').addEventListener('click', (e) => {
+            const img = e.target.closest('img[data-url]');
+            const cfg = sm.cfg;
+            if (!img || !cfg) return;
+            const url = img.getAttribute('data-url');
+            fecharSeletor();
+            abrirEditorImagem(null, { formato: cfg.formato, titulo: cfg.titulo, urlRemota: url, aoConfirmar: (_f, _o, remota) => cfg.aoUrl(remota) });
+        });
+
+        // Avatar: a própria foto é o botão (nada de botão extra "brega")
+        document.getElementById('pf-av-btn').addEventListener('click', () => abrirSeletorMidia({
+            titulo: 'Sua foto', formato: 'circulo', sub: 'Imagem ou GIF - você pode cortar e girar.',
+            aoArquivo: (f) => finalizarUploadAvatar(f),
+            aoUrl: (url) => {
+                aplicarAvatarNaTela(url);
+                if (socket.connected) { socket.emit('atualizar_perfil', { avatar: url }); showToast('Salvando...', 'info'); }
+                else showToast('Sem conexão - a foto não foi salva.', 'error');
+            }
+        }));
+
+        // Faixa: um retângulo só; o clique abre cor / animada / imagem / sugestões
+        async function enviarImagemDoPerfil(arquivo, aoPronto) {
+            try {
+                showToast('Enviando a imagem...', 'info');
+                aoPronto(await uploadMidia(arquivo));
                 pintarPrevia();
-                showToast('Imagem pronta. Clique em "Salvar alterações" pra confirmar.', 'success');
+                showToast('Pronto. Clique em "Salvar alterações" pra confirmar.', 'success');
             } catch (err) {
                 showToast(err.message || 'Não foi possível enviar a imagem.', 'error');
             }
-        });
+        }
+        document.getElementById('pf-faixa-btn').addEventListener('click', () => abrirSeletorMidia({
+            titulo: 'Faixa do perfil', formato: 'faixa', extras: 'faixa', sub: 'Cor, faixa animada, imagem ou GIF.',
+            aoArquivo: (f) => enviarImagemDoPerfil(f, (url) => { rascunho.banner_url = url; }),
+            aoUrl: (url) => { rascunho.banner_url = url; pintarPrevia(); },
+            aoCor: (c) => { rascunho.banner_color = c; rascunho.banner_url = ''; pintarPrevia(); },
+            aoAnimada: () => { rascunho.banner_color = ''; rascunho.banner_url = ''; pintarPrevia(); }
+        }));
 
-        document.getElementById('pf-mudar-avatar').addEventListener('click', () => { document.getElementById('avatar-upload-modal').style.display = 'flex'; });
-        document.getElementById('pf-copiar-id').addEventListener('click', () => {
-            navigator.clipboard?.writeText(String(perfilMeu.id)).then(() => showToast('ID copiado.', 'success'), () => showToast('Não consegui copiar o ID.', 'error'));
+        // ---------- catálogo: estilo de nome, tema, placa, moldura ----------
+        const catEl = document.getElementById('pf-catalogo');
+        let catTipo = null;
+
+        function renderCatalogo() {
+            const corpo = document.getElementById('pfc-corpo');
+            const nome = esc(rascunho.nome || perfilMeu.nome);
+            if (catTipo === 'estilo') {
+                corpo.innerHTML = `<div class="cat-grade">${ESTILOS_NOME.map(o => `<button class="cat-tile ${(rascunho.nome_estilo || 'padrao') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="cat-nome ${classeNome(o.id)}">${nome}</span><small>${o.nome}</small></button>`).join('')}</div>`;
+            } else if (catTipo === 'placa') {
+                corpo.innerHTML = `<div class="cat-grade larga">${PLACAS.map(o => `<button class="cat-tile ${(rascunho.placa || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-placa-linha ${classePlaca(o.id)}"><span class="pf-mini-av">${avatarMini()}</span>${nome}</span><small>${o.nome}</small></button>`).join('')}</div>`;
+            } else if (catTipo === 'moldura') {
+                corpo.innerHTML = `<div class="cat-grade">${MOLDURAS.map(o => `<button class="cat-tile ${(rascunho.moldura || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-tile-av ${classeMoldura(o.id)}">${avatarMini()}</span><small>${o.nome}</small></button>`).join('')}</div>`;
+            } else if (catTipo === 'tema') {
+                const atual = rascunho.perfil_tema || '';
+                corpo.innerHTML = `
+                    <div class="cat-grade">
+                        <button class="cat-tile ${!atual ? 'sel' : ''}" data-tema=""><span class="cat-tema-amostra vazio"></span><small>Sem tema</small></button>
+                        ${TEMAS_PRESET.map(o => `<button class="cat-tile ${atual === o.v ? 'sel' : ''}" data-tema="${esc(o.v)}"><span class="cat-tema-amostra" style="${estiloTema(o.v)}"></span><small>${o.nome}</small></button>`).join('')}
+                    </div>
+                    <div class="cat-linha">
+                        <div class="cat-campo"><span class="control-label">Cor sólida</span><input type="color" id="cat-solida" value="${atual.startsWith('solid:') ? esc(atual.slice(6)) : '#1f2024'}"></div>
+                        <div class="cat-campo"><span class="control-label">Gradiente</span><div class="cat-duplo"><input type="color" id="cat-g1" value="${atual.startsWith('grad:') ? esc(atual.slice(5).split(',')[0]) : '#3a1c71'}"><input type="color" id="cat-g2" value="${atual.startsWith('grad:') ? esc(atual.slice(5).split(',')[1]) : '#d76d77'}"><button class="pf-mini" id="cat-g-ok">Aplicar</button></div></div>
+                        <div class="cat-campo"><span class="control-label">Foto ou GIF</span><button class="pf-mini" id="cat-img"><i class="fa-solid fa-image"></i> Escolher imagem</button></div>
+                    </div>`;
+                document.getElementById('cat-solida').addEventListener('input', (e) => { rascunho.perfil_tema = 'solid:' + e.target.value; pintarPrevia(); });
+                document.getElementById('cat-g-ok').addEventListener('click', () => { rascunho.perfil_tema = `grad:${document.getElementById('cat-g1').value},${document.getElementById('cat-g2').value}`; pintarPrevia(); renderCatalogo(); });
+                document.getElementById('cat-img').addEventListener('click', () => {
+                    catEl.style.display = 'none';
+                    abrirSeletorMidia({
+                        titulo: 'Tema do perfil', formato: 'faixa', sub: 'A imagem vira o fundo do seu cartão.',
+                        aoArquivo: (f) => enviarImagemDoPerfil(f, (url) => { rascunho.perfil_tema = 'img:' + url; }),
+                        aoUrl: (url) => { rascunho.perfil_tema = 'img:' + url; pintarPrevia(); }
+                    });
+                });
+            }
+            emojificar(corpo);
+        }
+
+        function abrirCatalogo(tipo) {
+            catTipo = tipo;
+            const info = {
+                estilo: ['Estilo do nome exibido', 'O jeito que o seu nome aparece no cartão, nas listas e na barra.'],
+                placa: ['Placa de identificação', 'A barrinha atrás do seu nome nas listas de membros, DMs e ao lado do microfone.'],
+                moldura: ['Moldura do avatar', 'Um anel animado em volta da sua foto. Mais molduras chegam com o Battle Pass e a loja.'],
+                tema: ['Tema do perfil', 'Gradiente, cor sólida ou uma foto/GIF de fundo pro seu cartão.']
+            }[tipo];
+            document.getElementById('pfc-titulo').textContent = info[0];
+            document.getElementById('pfc-sub').textContent = info[1];
+            renderCatalogo();
+            catEl.style.display = 'flex';
+        }
+
+        document.getElementById('pfc-corpo').addEventListener('click', (e) => {
+            const tile = e.target.closest('.cat-tile');
+            if (!tile) return;
+            if (tile.dataset.tema !== undefined) rascunho.perfil_tema = tile.dataset.tema;
+            else if (catTipo === 'estilo') rascunho.nome_estilo = tile.dataset.id === 'padrao' ? '' : tile.dataset.id;
+            else if (catTipo === 'placa') rascunho.placa = tile.dataset.id === 'nenhuma' ? '' : tile.dataset.id;
+            else if (catTipo === 'moldura') rascunho.moldura = tile.dataset.id === 'nenhuma' ? '' : tile.dataset.id;
+            pintarPrevia();
+            renderCatalogo();
         });
-        document.querySelectorAll('#pf-presenca button').forEach(b => b.addEventListener('click', () => definirMeuStatus(b.dataset.status)));
+        document.getElementById('pfc-fechar').addEventListener('click', () => { catEl.style.display = 'none'; });
+        document.getElementById('pfc-ok').addEventListener('click', () => { catEl.style.display = 'none'; });
+
+        document.getElementById('pf-estilo-btn').addEventListener('click', () => abrirCatalogo('estilo'));
+        document.getElementById('pf-tema-btn').addEventListener('click', () => abrirCatalogo('tema'));
+        document.getElementById('pf-placa-btn').addEventListener('click', () => abrirCatalogo('placa'));
+        document.getElementById('pf-moldura-btn').addEventListener('click', () => abrirCatalogo('moldura'));
+
+        // Surpreenda-me: sorteia estilo de nome, tema, placa e moldura (no rascunho - dá pra descartar)
+        document.getElementById('pf-surpresa').addEventListener('click', () => {
+            const sortear = (lista) => lista[Math.floor(Math.random() * lista.length)];
+            const e = sortear(ESTILOS_NOME.filter(o => o.id !== 'padrao')), p = sortear(PLACAS.filter(o => o.id !== 'nenhuma')), m = sortear(MOLDURAS.filter(o => o.id !== 'nenhuma'));
+            rascunho.nome_estilo = e.id; rascunho.placa = p.id; rascunho.moldura = m.id;
+            rascunho.perfil_tema = sortear(TEMAS_PRESET).v;
+            pintarPrevia();
+            showToast(`Surpresa! Nome ${e.nome}, placa ${p.nome}, moldura ${m.nome}. Não gostou? Clique em Descartar.`, 'info');
+        });
 
         document.getElementById('pf-descartar').addEventListener('click', () => { rascunho = copiarCampos(perfilMeu); preencherCamposDoRascunho(); pintarPrevia(); });
         document.getElementById('pf-salvar').addEventListener('click', () => {
             if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
             if (!(rascunho.nome || '').trim()) { showToast('O nome de exibição não pode ficar vazio.', 'warning'); return; }
-            socket.emit('atualizar_perfil', {
-                name: rascunho.nome, pronomes: rascunho.pronomes, custom_status: rascunho.custom_status,
-                bio: rascunho.bio, banner_color: rascunho.banner_color, banner_url: rascunho.banner_url
-            });
+            const envio = { name: rascunho.nome };
+            CAMPOS_PERFIL.filter(k => k !== 'nome').forEach(k => { envio[k] = rascunho[k]; });
+            socket.emit('atualizar_perfil', envio);
             showToast('Salvando...', 'info');
         });
 
@@ -7635,7 +8188,8 @@
             const pendentes = CAMPOS_PERFIL.filter(k => (rascunho[k] || '') !== (perfilMeu[k] || ''));
 
             if (d.name) { perfilMeu.nome = d.name; currentUserName = d.name; }
-            ['custom_status', 'bio', 'banner_color', 'banner_url', 'pronomes'].forEach(k => { if (k in d) perfilMeu[k] = d[k] || ''; });
+            ['custom_status', 'status_emoji', 'bio', 'banner_color', 'banner_url', 'pronomes', 'username',
+             'perfil_tema', 'nome_estilo', 'placa', 'moldura'].forEach(k => { if (k in d) perfilMeu[k] = d[k] || ''; });
             if (d.avatar) perfilMeu.avatar = d.avatar;
 
             CAMPOS_PERFIL.forEach(k => { if (!pendentes.includes(k)) rascunho[k] = perfilMeu[k] || ''; });
@@ -7647,7 +8201,8 @@
                 if (el) el.textContent = currentUserName;
             });
             if (d.avatar) aplicarAvatarNaTela(d.avatar);
-            atualizarTextoBarraInferior();
+            aplicarMinhaAparencia();
+            aplicarMeuStatus(perfilMeu.status);   // o emoji pode ter mudado a bolinha
             preencherCamposDoRascunho();
             pintarPrevia();
             if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
@@ -7662,21 +8217,29 @@
             if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
         });
 
-        // Outro membro do servidor mudou nome/avatar: corrige a lista de
-        // membros e a sidebar sem precisar de F5.
+        // Outra pessoa mudou nome/avatar/placa/estilo: corrige lista de membros, DMs e sidebar sem F5.
         socket.on('perfil_membro_mudou', (dados) => {
             const membro = membrosDoServidor.find(m => Number(m.id) === Number(dados.usuario_id));
             if (membro) {
                 membro.nome = dados.nome;
                 membro.avatar = dados.avatar;
+                membro.placa = dados.placa;
+                membro.nome_estilo = dados.nome_estilo;
                 desenharMembrosSidebar();
                 if (typeof desenharMembrosDoCanal === 'function') desenharMembrosDoCanal();
+            }
+            const card = document.getElementById(`dm-${dados.usuario_id}`);
+            if (card) {
+                trocarClasse(card, 'placa-', classePlaca(dados.placa));
+                const nm = card.querySelector('.dm-nome');
+                if (nm) { nm.textContent = dados.nome; trocarClasse(nm, 'ne-', classeNome(dados.nome_estilo)); }
             }
         });
 
         preencherCamposDoRascunho();
         pintarPrevia();
-        atualizarTextoBarraInferior();
+        aplicarMinhaAparencia();
+        aplicarMeuStatus(perfilMeu.status);
 
         // ==========================================
         // AJUSTAR IMAGEM (CROP) + UPLOAD REAL DO AVATAR
@@ -7684,8 +8247,10 @@
         const cropViewport = document.getElementById('crop-viewport');
         const cropCanvas = document.getElementById('crop-canvas');
         const cropZoom = document.getElementById('crop-zoom');
-        const TAM_PREVIEW = 260;    // lado do quadrado de preview, em px
-        const TAM_SAIDA = 512;      // lado da imagem final gerada
+        // Área de corte: quadrada (avatar/ícone) ou retangular (faixa do perfil).
+        // Preview e saída têm a MESMA proporção - é o que garante "o que vejo é o que sai".
+        let PW = 260, PH = 260;      // preview, em px
+        let SW = 512, SH = 512;      // imagem final gerada
 
         // `fonte` é a imagem original; `corrigida` é ela já girada/espelhada.
         // Separar as duas mantém a conta do corte simples: depois da correção
@@ -7725,12 +8290,12 @@
             const bm = editorImg.corrigida;
             if (!bm) return;
 
-            const k = tamanho / TAM_PREVIEW;   // preview -> saída
-            // "cover": a imagem sempre cobre o quadrado inteiro
-            const base = TAM_PREVIEW / Math.min(bm.width, bm.height);
+            const k = tamanho / PW;   // preview -> saída
+            // "cover": a imagem sempre cobre a área inteira
+            const base = Math.max(PW / bm.width, PH / bm.height);
             const s = base * editorImg.escala;
 
-            ctx.clearRect(0, 0, tamanho, tamanho);
+            ctx.clearRect(0, 0, PW * k, PH * k);
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(bm,
                 editorImg.offsetX * k, editorImg.offsetY * k,
@@ -7741,26 +8306,26 @@
         function limitarOffset() {
             const bm = editorImg.corrigida;
             if (!bm) return;
-            const base = TAM_PREVIEW / Math.min(bm.width, bm.height);
+            const base = Math.max(PW / bm.width, PH / bm.height);
             const s = base * editorImg.escala;
-            const minX = TAM_PREVIEW - bm.width * s;
-            const minY = TAM_PREVIEW - bm.height * s;
+            const minX = PW - bm.width * s;
+            const minY = PH - bm.height * s;
             editorImg.offsetX = Math.min(0, Math.max(minX, editorImg.offsetX));
             editorImg.offsetY = Math.min(0, Math.max(minY, editorImg.offsetY));
         }
 
         function atualizarPreview() {
             limitarOffset();
-            desenharEditor(cropCanvas.getContext('2d'), TAM_PREVIEW);
+            desenharEditor(cropCanvas.getContext('2d'), PW);
         }
 
         function centralizarEditor() {
             const bm = editorImg.corrigida;
             if (!bm) return;
-            const base = TAM_PREVIEW / Math.min(bm.width, bm.height);
+            const base = Math.max(PW / bm.width, PH / bm.height);
             const s = base * editorImg.escala;
-            editorImg.offsetX = (TAM_PREVIEW - bm.width * s) / 2;
-            editorImg.offsetY = (TAM_PREVIEW - bm.height * s) / 2;
+            editorImg.offsetX = (PW - bm.width * s) / 2;
+            editorImg.offsetY = (PH - bm.height * s) / 2;
         }
 
         /**
@@ -7768,14 +8333,23 @@
          * opcoes: { formato: 'circulo'|'quadrado', titulo, aoConfirmar(arquivo, ehOriginal) }
          */
         function abrirEditorImagem(file, opcoes = {}) {
-            const formato = opcoes.formato === 'quadrado' ? 'quadrado' : 'circulo';
-            cropViewport.classList.remove('circulo', 'quadrado');
+            const formato = opcoes.formato === 'quadrado' ? 'quadrado' : (opcoes.formato === 'faixa' ? 'faixa' : 'circulo');
+            cropViewport.classList.remove('circulo', 'quadrado', 'faixa');
             cropViewport.classList.add(formato);
             document.getElementById('editor-img-titulo').textContent = opcoes.titulo || 'Ajustar imagem';
 
+            // Faixa é retangular (mesma proporção do topo do cartão de perfil).
+            if (formato === 'faixa') { PW = 340; PH = 108; SW = 1360; SH = 432; }
+            else { PW = PH = 260; SW = SH = 512; }
+            cropCanvas.width = PW; cropCanvas.height = PH;
+            cropViewport.style.width = PW + 'px'; cropViewport.style.height = PH + 'px';
+            const gifPreview = document.getElementById('gif-preview-img');
+            gifPreview.style.width = PW + 'px'; gifPreview.style.height = PH + 'px';
+
             editorImg.aoConfirmar = opcoes.aoConfirmar || null;
             editorImg.arquivoOriginal = file;
-            editorImg.ehGif = file.type === 'image/gif';
+            editorImg.urlRemota = opcoes.urlRemota || null;   // GIF escolhido nas sugestões (não é arquivo nosso)
+            editorImg.ehGif = !!opcoes.urlRemota || file.type === 'image/gif';
             editorImg.giro = 0;
             editorImg.espelhoH = editorImg.espelhoV = false;
             editorImg.escala = 1;
@@ -7795,7 +8369,7 @@
                 document.getElementById('editor-img-zoom-row').style.display = 'none';
                 canvas.style.display = 'none';
                 gifImg.style.display = 'block';
-                gifImg.src = URL.createObjectURL(file);
+                gifImg.src = editorImg.urlRemota || URL.createObjectURL(file);
                 document.getElementById('btn-crop-confirm').textContent = 'Usar GIF';
                 document.getElementById('avatar-crop-modal').style.display = 'flex';
                 return;
@@ -7841,9 +8415,9 @@
             // Dá zoom mirando o centro, não o canto de cima
             const bm = editorImg.corrigida;
             if (bm) {
-                const meio = TAM_PREVIEW / 2;
-                editorImg.offsetX = meio - (meio - editorImg.offsetX) * (editorImg.escala / antes);
-                editorImg.offsetY = meio - (meio - editorImg.offsetY) * (editorImg.escala / antes);
+                const meioX = PW / 2, meioY = PH / 2;
+                editorImg.offsetX = meioX - (meioX - editorImg.offsetX) * (editorImg.escala / antes);
+                editorImg.offsetY = meioY - (meioY - editorImg.offsetY) * (editorImg.escala / antes);
             }
             atualizarPreview();
         });
@@ -7904,6 +8478,7 @@
             const gifImg = document.getElementById('gif-preview-img');
             if (gifImg.src) { URL.revokeObjectURL(gifImg.src); gifImg.src = ''; }
             editorImg.aoConfirmar = null;
+            editorImg.urlRemota = null;
         }
         document.getElementById('btn-crop-cancel').addEventListener('click', fecharEditorImagem);
         document.getElementById('btn-crop-x').addEventListener('click', fecharEditorImagem);
@@ -7961,15 +8536,16 @@
             // (canvas só captura um quadro e mataria a animação).
             if (editorImg.ehGif) {
                 const original = editorImg.arquivoOriginal;
+                const remota = editorImg.urlRemota;
                 fecharEditorImagem();
-                if (cb) cb(original, true);
+                if (cb) cb(original, true, remota);
                 return;
             }
 
             // Desenha na saída exatamente como está no preview, só que maior.
             const saida = document.createElement('canvas');
-            saida.width = saida.height = TAM_SAIDA;
-            desenharEditor(saida.getContext('2d'), TAM_SAIDA);
+            saida.width = SW; saida.height = SH;
+            desenharEditor(saida.getContext('2d'), SW);
 
             fecharEditorImagem();
             saida.toBlob(blob => {

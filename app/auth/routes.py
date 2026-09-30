@@ -2,7 +2,7 @@ from flask import Blueprint, redirect, url_for, session
 from authlib.integrations.flask_client import OAuth
 from app import db
 from app.models import Person, Role
-from app.utils import com_retry, comitar_com_retry
+from app.utils import com_retry, comitar_com_retry, gerar_username
 import os
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -60,7 +60,7 @@ def callback():
 
     if not user:
         def criar():
-            novo = Person(name=name, email=email, avatar=avatar,
+            novo = Person(name=name, email=email, avatar=avatar, username=gerar_username(name, email),
                           provider_id=provider_id, role_id=cargo_padrao_id())
             db.session.add(novo)
             return novo

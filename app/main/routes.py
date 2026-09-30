@@ -9,7 +9,7 @@ import cloudinary.uploader
 import requests
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
-from ..utils import com_retry, comitar_com_retry, canal_permitido, membro_desde_texto
+from ..utils import com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username
 from .. import socketio, APP_NOME, MOEDA_NOME
 from ..events import sala_servidor, servidor_para_json
 
@@ -211,6 +211,12 @@ def chat():
         db.session.rollback()
         print(f"[ERRO BANCO] rota /chat: {e}")
         return "Erro de conexão com o banco. Recarregue a página."
+
+    try:
+        garantir_username(usuario_atual)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO USERNAME] {e}")
 
     # Mensagem de "entrou pelo convite" deixada pela rota /convite/<code>
     aviso_convite = session.pop('aviso_convite', None)

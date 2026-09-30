@@ -78,6 +78,17 @@ class Person(db.Model):
     # Faixa em imagem (prevalece sobre a cor) e pronomes - campos do cartão de perfil.
     banner_url = db.Column(db.String(255), nullable=True)
     pronomes = db.Column(db.String(40), nullable=True)
+    # Nome da CONTA (@): o que se digita pra adicionar a pessoa. Único, minúsculo.
+    # O nome de EXIBIÇÃO (`name`) é o enfeitado, pode repetir e mudar à vontade.
+    username = db.Column(db.String(32), unique=True, nullable=True, index=True)
+    # Emoji do status personalizado; vira a "bolinha" quando status == 'custom'.
+    status_emoji = db.Column(db.String(16), nullable=True)
+    # Tema do cartão: 'grad:#rrggbb,#rrggbb' | 'solid:#rrggbb' | 'img:<url>' | vazio
+    perfil_tema = db.Column(db.String(300), nullable=True)
+    # Enfeites (ids validados contra utils.ESTILOS_NOME / PLACAS / MOLDURAS)
+    nome_estilo = db.Column(db.String(24), nullable=True)
+    placa = db.Column(db.String(24), nullable=True)
+    moldura = db.Column(db.String(24), nullable=True)
     status = db.Column(db.String(20), default="online")  # online, idle, dnd, invisible
     # Conta antiga (de antes dessa coluna existir) fica None de propósito -
     # não dá pra inventar uma data de quando a pessoa entrou de verdade.

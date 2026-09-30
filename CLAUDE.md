@@ -726,6 +726,42 @@ servidores e amigos (**Invisível chega como `offline`**, por `status_visivel()`
 e o snapshot de amigos também mascaram. `aplicarMeuStatus()` atualiza barra
 inferior, cartão, editor, lista de membros e o item da sidebar numa função só.
 
+### Perfil v2: dois nomes, enfeites, mídia e status personalizado
+
+- **Dois nomes.** `Person.name` = nome de **exibição** (enfeitável, pode repetir).
+  `Person.username` = nome da **conta** (@, único, `[a-z0-9_.]{3,32}`): é o que se
+  digita pra adicionar alguém (`enviar_pedido_amizade` aceita `@username`, nome ou
+  e-mail). Conta antiga ganha `@` automático em `garantir_username()` (chamado no
+  `/chat`). `@` inválido/repetido só gera toast de erro — o resto do perfil salva.
+- **Status personalizado = emoji + texto** (`status_emoji` + `custom_status`). O balão
+  ao lado da foto mostra os dois. A presença ganhou um 5º valor, **`custom`**: o
+  emoji **substitui a bolinha** (`htmlBolinha()`/`aplicarBolinha()`; sem emoji cai no
+  verde). `custom` conta como "disponível" no filtro de amigos. O emoji vai junto em
+  todo payload de presença (`emoji`), não só o status.
+- **Enfeites** (ids validados em `utils.ESTILOS_NOME/PLACAS/MOLDURAS`, **têm que bater
+  com o catálogo do JS e o CSS `.ne-*`/`.placa-*`/`.moldura-*`** — o servidor nunca
+  guarda texto livre que vire `class=""`):
+  estilo de nome (`nome_estilo`), **placa** (barrinha atrás do nome na lista de
+  membros, DMs e barra inferior), **moldura** (anel animado no avatar, via `::before`
+  com máscara + `bpGira`) e **tema do cartão** (`perfil_tema`: `grad:#a,#b` |
+  `solid:#a` | `img:<url>`, validado por `tema_perfil_valido`). "Efeitos de perfil"
+  são cartões **Em breve** (vão ser desbloqueados por Battle Pass/loja).
+  "Surpreenda-me" sorteia estilo/placa/moldura/tema **no rascunho** (dá pra descartar).
+- **URLs de imagem** (avatar, faixa, tema): só caminho do site, Cloudinary ou Giphy
+  (`url_de_imagem_ok`). Antes o avatar só barrava `blob:` e aceitava qualquer host.
+- **Seletor de mídia** (`abrirSeletorMidia`): avatar, faixa e tema usam o mesmo modal —
+  enviar arquivo/arrastar + sugestões de GIF (`/api/gifs`, Giphy). Escolher uma
+  sugestão abre o editor **como se tivesse sido enviada** (`urlRemota`; GIF não corta,
+  vai inteiro e fica hospedado no Giphy). Pinterest e similares **não** têm busca
+  liberada pra apps de terceiros — a saída é salvar a imagem e enviar.
+- **Editor de imagem** ganhou formato `faixa` (340×108 de preview, 1360×432 de saída):
+  a área de corte agora é largura×altura (`PW/PH/SW/SH`), não mais um quadrado fixo.
+  A proporção do preview e da saída tem que ser a mesma ("o que vejo é o que sai").
+- A foto do avatar **é o botão** (sem botão extra); a faixa é um retângulo só que abre
+  cor sólida / faixa animada / imagem / sugestões.
+- Dead code: o modal antigo `#avatar-upload-modal` e seu input continuam no HTML (um
+  listener ainda referencia o input) mas nada o abre mais.
+
 **Emoji do Twemoji precisa de `img.emoji`** (1.2em): sem essa regra o `<img>` vinha
 em ~109px e estourava qualquer linha (barra do usuário, status, mensagens).
 
@@ -1047,7 +1083,7 @@ vetorial e busca de GIF (Giphy).
 **Rodar `python atualizar_banco.py` depois do deploy** — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
 `person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
-`person.streak_dias`, `person.streak_em`, `person.tema`, `person.pronomes` e `person.banner_url`. Configurar `GIPHY_API_KEY` no
+`person.streak_dias`, `person.streak_em`, `person.tema`, `person.pronomes`, `person.banner_url`, `person.username` (+ índice único), `person.status_emoji`, `person.perfil_tema`, `person.nome_estilo`, `person.placa` e `person.moldura`. Configurar `GIPHY_API_KEY` no
 Environment do Render (ver seção Deploy) pra busca de GIF funcionar em
 produção.
 
