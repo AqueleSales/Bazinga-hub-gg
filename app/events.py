@@ -111,6 +111,11 @@ def status_visivel(p):
     return p.status or 'online'
 
 
+def texto_do_status(p):
+    """Texto do status Personalizado (ex.: "Jogando Valorant"); só vale nesse modo."""
+    return (p.custom_status or None) if (p.status or 'online') == 'custom' else None
+
+
 def emoji_do_status(p):
     """Emoji que substitui a bolinha (só no status Personalizado)."""
     return (p.status_emoji or None) if (p.status or 'online') == 'custom' else None
@@ -297,7 +302,8 @@ def handle_connect():
         usuarios_conectados[usuario.id] = usuarios_conectados.get(usuario.id, 0) + 1
         amigos = amigos_de(usuario)
         if era_offline and (usuario.status or 'online') != 'invisible':
-            aviso = {'usuario_id': usuario.id, 'status': usuario.status or 'online', 'emoji': emoji_do_status(usuario)}
+            aviso = {'usuario_id': usuario.id, 'status': usuario.status or 'online', 'emoji': emoji_do_status(usuario),
+                     'texto': texto_do_status(usuario)}
             for srv in usuario.servers:
                 emit('usuario_ficou_online', aviso, to=sala_servidor(srv.id), include_self=False)
             for amigo in amigos:
@@ -310,7 +316,8 @@ def handle_connect():
         emit('status_amigos_ao_conectar', {
             'online_ids': [i for i, st in visiveis.items() if st != 'offline'],
             'status_por_id': {str(i): st for i, st in visiveis.items() if st != 'offline'},
-            'emoji_por_id': {str(a.id): emoji_do_status(a) for a in amigos if visiveis[a.id] != 'offline' and emoji_do_status(a)}
+            'emoji_por_id': {str(a.id): emoji_do_status(a) for a in amigos if visiveis[a.id] != 'offline' and emoji_do_status(a)},
+            'texto_por_id': {str(a.id): texto_do_status(a) for a in amigos if visiveis[a.id] != 'offline' and texto_do_status(a)}
         })
     except Exception as e:
         db.session.rollback()
@@ -381,6 +388,33 @@ def handle_leave(dados):
     canal_id = dados.get('canal_id')
     if canal_id is not None:
         leave_room(str(canal_id))
+
+
+_RE_MENCAO = re.compile(r'<@(\d{1,10})>')
+
+
+def _notificar_mencoes(autor, canal, msg):
+    """Avisa quem foi citado (`<@id>` no texto). Só vale pra quem é membro do
+    servidor E enxerga o canal - citar não pode vazar canal privado nem
+    "chamar" quem não tem acesso. Nunca quebra o envio da mensagem."""
+    try:
+        ids = {int(i) for i in _RE_MENCAO.findall(msg.text or '')}
+        ids.discard(autor.id)
+        if not ids or canal.server_id is None:
+            return
+        srv = Server.query.get(canal.server_id)
+        alvos = Person.query.filter(Person.id.in_(list(ids)[:10])).all()
+        nomes = {p.id: p.name for p in alvos}
+        trecho = _RE_MENCAO.sub(lambda m: '@' + nomes.get(int(m.group(1)), 'alguém'), msg.text or '')[:140]
+        for alvo in alvos:
+            if alvo in srv.members and pode_ver_canal(alvo, canal):
+                emit('mencao_recebida', {
+                    'canal_id': canal.id, 'canal_nome': canal.name, 'server_id': canal.server_id,
+                    'autor': autor.name, 'trecho': trecho, 'msg_id': msg.id
+                }, to=sala_pessoal(alvo.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MENCOES] {e}")
 
 
 @socketio.on('enviar_mensagem')
@@ -456,6 +490,7 @@ def lidar_com_mensagem(dados):
     if resultado_xp:
         emit('xp_atualizado', resultado_xp, to=sala_pessoal(usuario.id))
     _emitir_progresso(usuario, {'mensagem': 1})
+    _notificar_mencoes(usuario, canal, nova_msg)
 
 
 @socketio.on('editar_mensagem')
@@ -1007,7 +1042,8 @@ def listar_membros_servidor(dados):
                 # escolheram mostrar (Invisível aparece como offline).
                 'status': (m.status or 'online') if m.id == usuario.id else status_visivel(m),
                 'online': True if m.id == usuario.id else status_visivel(m) != 'offline',
-                'emoji': emoji_do_status(m),
+                'emoji': emoji_do_status(m), 'status_texto': texto_do_status(m),
+                'pensando': m.pensando, 'username': m.username,
                 'placa': m.placa, 'nome_estilo': m.nome_estilo
             } for m in srv.members]
         })
@@ -1599,6 +1635,8 @@ def atualizar_perfil(dados):
                 usuario.banner_url = url[:255] if url.startswith('/') or url.startswith('https://res.cloudinary.com/') else None
             if 'status_emoji' in dados:
                 usuario.status_emoji = (dados.get('status_emoji') or '').strip()[:16] or None
+            if 'pensando' in dados:
+                usuario.pensando = (dados.get('pensando') or '').strip()[:128] or None
             if 'perfil_tema' in dados:
                 tema = (dados.get('perfil_tema') or '').strip()
                 usuario.perfil_tema = tema if tema and tema_perfil_valido(tema) else None
@@ -1629,6 +1667,7 @@ def atualizar_perfil(dados):
             'pronomes': usuario.pronomes,
             'username': usuario.username,
             'status_emoji': usuario.status_emoji,
+            'pensando': usuario.pensando,
             'perfil_tema': usuario.perfil_tema,
             'nome_estilo': usuario.nome_estilo,
             'placa': usuario.placa,
@@ -1639,16 +1678,18 @@ def atualizar_perfil(dados):
         # Nome/avatar aparecem em telas de quem não é "eu": lista de membros
         # de cada servidor. Sem isso, só quem editou via as próprias
         # (várias abas dele) via perfil_atualizado; o resto via F5.
-        visual = ('name', 'avatar', 'placa', 'nome_estilo', 'status_emoji')
+        visual = ('name', 'avatar', 'placa', 'nome_estilo', 'status_emoji', 'pensando', 'custom_status')
         if any(k in dados for k in visual):
             payload_publico = {'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
-                               'placa': usuario.placa, 'nome_estilo': usuario.nome_estilo}
+                               'placa': usuario.placa, 'nome_estilo': usuario.nome_estilo,
+                               'pensando': usuario.pensando, 'status_texto': texto_do_status(usuario)}
             for srv in usuario.servers:
                 emit('perfil_membro_mudou', payload_publico, to=sala_servidor(srv.id), include_self=False)
             for amigo in amigos_de(usuario):
                 emit('perfil_membro_mudou', payload_publico, to=sala_pessoal(amigo.id))
-        if 'status_emoji' in dados and (usuario.status or 'online') == 'custom':
-            aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario), 'emoji': usuario.status_emoji}
+        if ('status_emoji' in dados or 'custom_status' in dados) and (usuario.status or 'online') == 'custom':
+            aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario), 'emoji': usuario.status_emoji,
+                     'texto': usuario.custom_status}
             for srv in usuario.servers:
                 emit('status_visivel_mudou', aviso, to=sala_servidor(srv.id), include_self=False)
             for amigo in amigos_de(usuario):
@@ -1733,10 +1774,11 @@ def mudar_status(dados):
         comitar_com_retry(preparar)
 
         # Outras abas/aparelhos dela: status de verdade (inclusive Invisível).
-        emit('meu_status_mudou', {'status': status, 'emoji': usuario.status_emoji}, to=sala_pessoal(usuario.id))
+        emit('meu_status_mudou', {'status': status, 'emoji': usuario.status_emoji, 'texto': usuario.custom_status}, to=sala_pessoal(usuario.id))
         # Quem convive: só o que ela deixa ver (Invisível = offline). Antes só
         # salvava no banco e ninguém via a bolinha mudar sem recarregar (regra 6).
-        aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario), 'emoji': emoji_do_status(usuario)}
+        aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario), 'emoji': emoji_do_status(usuario),
+                 'texto': texto_do_status(usuario)}
         for srv in usuario.servers:
             emit('status_visivel_mudou', aviso, to=sala_servidor(srv.id), include_self=False)
         for amigo in amigos_de(usuario):
@@ -1786,6 +1828,7 @@ def obter_perfil(dados):
             'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': False,
             'bio': alvo.bio, 'custom_status': alvo.custom_status, 'pronomes': alvo.pronomes,
             'username': alvo.username, 'status_emoji': alvo.status_emoji, 'emoji': emoji_do_status(alvo),
+            'pensando': alvo.pensando, 'status_texto': texto_do_status(alvo),
             'perfil_tema': alvo.perfil_tema, 'nome_estilo': alvo.nome_estilo,
             'placa': alvo.placa, 'moldura': alvo.moldura,
             'banner_color': alvo.banner_color, 'banner_url': alvo.banner_url,
@@ -1811,7 +1854,8 @@ def pessoa_para_json_amigo(p):
     sv = status_visivel(p)
     return {'id': p.id, 'nome': p.name, 'avatar': p.avatar,
             'status': sv if sv != 'offline' else (p.status or 'online'), 'online': sv != 'offline',
-            'emoji': emoji_do_status(p), 'placa': p.placa, 'nome_estilo': p.nome_estilo}
+            'emoji': emoji_do_status(p), 'status_texto': texto_do_status(p), 'pensando': p.pensando,
+            'placa': p.placa, 'nome_estilo': p.nome_estilo}
 
 
 @socketio.on('enviar_pedido_amizade')

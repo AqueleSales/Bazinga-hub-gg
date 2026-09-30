@@ -733,11 +733,19 @@ inferior, cartão, editor, lista de membros e o item da sidebar numa função s�
   digita pra adicionar alguém (`enviar_pedido_amizade` aceita `@username`, nome ou
   e-mail). Conta antiga ganha `@` automático em `garantir_username()` (chamado no
   `/chat`). `@` inválido/repetido só gera toast de erro — o resto do perfil salva.
-- **Status personalizado = emoji + texto** (`status_emoji` + `custom_status`). O balão
-  ao lado da foto mostra os dois. A presença ganhou um 5º valor, **`custom`**: o
-  emoji **substitui a bolinha** (`htmlBolinha()`/`aplicarBolinha()`; sem emoji cai no
-  verde). `custom` conta como "disponível" no filtro de amigos. O emoji vai junto em
-  todo payload de presença (`emoji`), não só o status.
+- **"Pensando agora" e Status são coisas separadas.**
+  `Person.pensando` = o **balão** ao lado da foto (texto livre). O **status** é a
+  presença (`online/idle/dnd/invisible/custom`); no modo `custom` valem
+  `status_emoji` (o emoji **substitui a bolinha**: `htmlBolinha()`/`aplicarBolinha()`;
+  sem emoji cai no verde) e `custom_status` (o **texto** do status, ex.: "Jogando
+  Valorant", que ocupa o lugar de "Disponível"). `custom` conta como "disponível" no
+  filtro de amigos. Emoji e texto vão junto em todo payload de presença
+  (`emoji`/`texto`), não só o status. Na migração, quem tinha texto no balão
+  (antes `custom_status`) teve o texto **copiado** pra `pensando` (uma vez só).
+- **Subtítulo nas listas** (DMs e membros): `subPresenca()` = `pensando` se houver;
+  senão o rótulo do status (texto do Personalizado ou Disponível/Ausente/...);
+  offline sem pensando não mostra nada. Nos cartões de DM vive em `data-pensando` /
+  `data-status-texto` + `atualizarSubDM()`.
 - **Enfeites** (ids validados em `utils.ESTILOS_NOME/PLACAS/MOLDURAS`, **têm que bater
   com o catálogo do JS e o CSS `.ne-*`/`.placa-*`/`.moldura-*`** — o servidor nunca
   guarda texto livre que vire `class=""`):
@@ -761,6 +769,23 @@ inferior, cartão, editor, lista de membros e o item da sidebar numa função s�
   cor sólida / faixa animada / imagem / sugestões.
 - Dead code: o modal antigo `#avatar-upload-modal` e seu input continuam no HTML (um
   listener ainda referencia o input) mas nada o abre mais.
+
+### Menções (@) no chat
+
+- No texto enviado a menção é **`<@id>`** (estável: o nome de exibição muda e a
+  mensagem continua certa). Na tela vira o **nome de exibição** em destaque,
+  clicável (abre o cartão) — `htmlTexto()` faz a troca sobre o texto **já escapado**
+  (`&lt;@id&gt;`). `atualizarMencoes()` corrige o nome quando a lista de membros
+  chega depois da mensagem.
+- `data-texto` no `.message` guarda o texto **bruto**: editar/copiar usam ele (senão a
+  menção viraria texto solto). Edição mostra `@Nome` e reconverte ao salvar.
+- Autocomplete no `#message-input`: `@` + parte do nome de exibição ou do `@conta`
+  (só membros do servidor ativo, online primeiro). O `@Nome` escolhido fica em
+  `mencoesPendentes` e vira `<@id>` no envio (`converterMencoes`); `@usuario`
+  digitado à mão também resolve. **Só canais** (DM não tem menção ainda).
+- Servidor: `_notificar_mencoes()` avisa (`mencao_recebida`) só quem é **membro do
+  servidor E enxerga o canal** — citar não vaza canal privado. Falha aqui nunca
+  quebra o envio. Mensagem que cita você ganha `.mencionando-me` (faixa amarela).
 
 **Emoji do Twemoji precisa de `img.emoji`** (1.2em): sem essa regra o `<img>` vinha
 em ~109px e estourava qualquer linha (barra do usuário, status, mensagens).
@@ -1083,7 +1108,7 @@ vetorial e busca de GIF (Giphy).
 **Rodar `python atualizar_banco.py` depois do deploy** — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
 `person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
-`person.streak_dias`, `person.streak_em`, `person.tema`, `person.pronomes`, `person.banner_url`, `person.username` (+ índice único), `person.status_emoji`, `person.perfil_tema`, `person.nome_estilo`, `person.placa` e `person.moldura`. Configurar `GIPHY_API_KEY` no
+`person.streak_dias`, `person.streak_em`, `person.tema`, `person.pronomes`, `person.banner_url`, `person.username` (+ índice único), `person.status_emoji`, `person.perfil_tema`, `person.nome_estilo`, `person.placa` e `person.moldura` e `person.pensando`. Configurar `GIPHY_API_KEY` no
 Environment do Render (ver seção Deploy) pra busca de GIF funcionar em
 produção.
 

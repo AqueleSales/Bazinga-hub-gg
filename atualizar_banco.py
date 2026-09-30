@@ -143,6 +143,24 @@ def atualizar_banco():
                 db.session.rollback()
                 print(f"\u2139\ufe0f Indice unico de username: {e}")
 
+            # 20. "Pensando agora" (balão) separado do status. Quem já tinha um texto no
+            # balão (antes era custom_status) mantém esse texto no balão: copia UMA vez,
+            # só quando a coluna acabou de ser criada (senão reviveria balão apagado).
+            try:
+                db.session.execute(text("SELECT pensando FROM person LIMIT 1"))
+                db.session.commit()
+                print("\u2139\ufe0f Coluna 'pensando' ja existe - nada a copiar.")
+            except Exception:
+                db.session.rollback()
+                add_column_se_nao_existir("person", "pensando VARCHAR(128)")
+                try:
+                    db.session.execute(text("UPDATE person SET pensando = custom_status WHERE custom_status IS NOT NULL AND custom_status <> ''"))
+                    db.session.commit()
+                    print("\u2705 Balao antigo copiado para 'pensando'.")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"\u26a0\ufe0f Nao consegui copiar o balao antigo: {e}")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

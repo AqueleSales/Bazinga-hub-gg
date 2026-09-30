@@ -83,6 +83,11 @@ class Person(db.Model):
     username = db.Column(db.String(32), unique=True, nullable=True, index=True)
     # Emoji do status personalizado; vira a "bolinha" quando status == 'custom'.
     status_emoji = db.Column(db.String(16), nullable=True)
+    # "Pensando agora": o texto do balão ao lado da foto (e o textinho embaixo do
+    # nome nas listas). É separado do STATUS: `custom_status` passou a ser o texto
+    # do status Personalizado (ex.: "Jogando Valorant"), que substitui o rótulo
+    # "Disponível" quando a presença é `custom`.
+    pensando = db.Column(db.String(128), nullable=True)
     # Tema do cartão: 'grad:#rrggbb,#rrggbb' | 'solid:#rrggbb' | 'img:<url>' | vazio
     perfil_tema = db.Column(db.String(300), nullable=True)
     # Enfeites (ids validados contra utils.ESTILOS_NOME / PLACAS / MOLDURAS)

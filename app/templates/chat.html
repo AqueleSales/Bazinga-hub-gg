@@ -1733,6 +1733,50 @@
         .cat-campo { display: flex; flex-direction: column; gap: 6px; }
         .cat-duplo { display: flex; align-items: center; gap: 6px; }
         .cat-campo input[type=color] { width: 44px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+
+        /* ==========================================================================
+           Ajustes: barra de salvar discreta, campo @, subtítulo nas listas, menções
+           ========================================================================== */
+        /* Barra de salvar: só "Descartar / Salvar", bem pequena, no canto */
+        .pf-barra { position: sticky; bottom: 6px; margin: 14px 0 0 auto; width: max-content; max-width: 100%; padding: 4px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 2px;
+            border-radius: 999px; background: color-mix(in srgb, var(--bg-quaternary) 92%, transparent); border: 1px solid var(--glass-borda); box-shadow: 0 6px 20px rgba(0,0,0,.35); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            transform: translateY(12px) scale(.96); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s; z-index: 6; }
+        .pf-barra.visivel { transform: none; opacity: 1; pointer-events: auto; }
+        .pf-barra button { border: 0; border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .2s, color .2s, transform .12s; }
+        .pf-barra button:active { transform: scale(.95); }
+        .pf-barra-desc { background: transparent; color: var(--text-muted); }
+        .pf-barra-desc:hover { color: var(--text-header); background: rgba(255,255,255,.08); }
+        .pf-barra-salvar { background: var(--brand-color); color: #fff; }
+        .pf-barra-salvar:hover { background: var(--brand-hover); }
+
+        /* Campo do @: um campo só (antes o input estourava o container e a borda ficava "partida") */
+        .pf-arroba { display: flex; align-items: center; background: var(--bg-tertiary); border: 1px solid rgba(0,0,0,.2); border-radius: 4px; transition: border-color .2s; }
+        .pf-arroba:focus-within { border-color: var(--brand-color); }
+        .pf-arroba span { padding: 0 0 0 12px; color: var(--text-muted); font-weight: 800; }
+        .pf-arroba input { flex: 1; min-width: 0; width: auto; border: 0 !important; background: transparent !important; padding-left: 4px; border-radius: 0; }
+
+        /* Emoji-bolinha no cartão: menor e sem "estourar" o anel do avatar */
+        .pc-avatar .status-indicator.custom { width: 26px; height: 26px; right: -1px; bottom: -1px; font-size: 17px; }
+
+        /* Pílula de status no cartão e subtítulo nas listas */
+        .pc-status-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid var(--glass-borda); font-size: 12px; font-weight: 700; color: var(--text-normal); max-width: 100%; }
+        .pc-status-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dm-sub { display: block; font-size: 11px; font-weight: 500; line-height: 1.25; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+        .dm-sub img.emoji { width: 1.1em; height: 1.1em; }
+
+        /* Menções */
+        .mencao { display: inline-block; padding: 0 4px; border-radius: 5px; background: rgba(114,137,218,.25); color: #c4cffb; font-weight: 600; cursor: pointer; transition: background-color .15s, color .15s; }
+        .mencao:hover { background: var(--brand-color); color: #fff; }
+        .mencao.mencao-eu { background: rgba(250,166,26,.28); color: #ffd98a; }
+        .mencao.mencao-eu:hover { background: var(--yellow-color); color: #1a1b1e; }
+        .message.mencionando-me { background-color: rgba(250,166,26,.08); box-shadow: inset 3px 0 0 var(--yellow-color); }
+        #mencao-lista { position: fixed; display: none; flex-direction: column; gap: 2px; padding: 6px; z-index: 3500; border-radius: 12px; background: var(--bg-quaternary); border: 1px solid var(--glass-borda); box-shadow: 0 14px 36px rgba(0,0,0,.5); }
+        .mencao-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 8px; background: none; color: var(--text-normal); font-size: 14px; text-align: left; cursor: pointer; }
+        .mencao-item b { font-weight: 700; color: var(--text-header); }
+        .mencao-item small { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+        .mencao-item.sel, .mencao-item:hover { background: rgba(114,137,218,.22); }
+        .mencao-av { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: var(--brand-color); align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0; }
+        .mencao-av img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
@@ -1810,7 +1854,7 @@
 
                             <!-- Loop Mágico -->
                             {% for amigo in amigos %}
-                            <div class="dm-card user-dm-item{% if amigo.placa %} placa-{{ amigo.placa }}{% endif %}" id="dm-{{ amigo.id }}" data-user-id="{{ amigo.id }}" data-status="offline" data-name="{{ amigo.name }}" data-avatar="{{ amigo.avatar or '' }}">
+                            <div class="dm-card user-dm-item{% if amigo.placa %} placa-{{ amigo.placa }}{% endif %}" id="dm-{{ amigo.id }}" data-user-id="{{ amigo.id }}" data-pensando="{{ amigo.pensando or '' }}" data-status-texto="{{ amigo.custom_status or '' }}" data-status="offline" data-name="{{ amigo.name }}" data-avatar="{{ amigo.avatar or '' }}">
                                 <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
                                     {% if amigo.avatar %}
                                         <img src="{{ amigo.avatar }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -1821,6 +1865,7 @@
                                 </div>
                                 <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
                                     <span class="dm-nome{% if amigo.nome_estilo %} ne-{{ amigo.nome_estilo }}{% endif %}" style="color: var(--text-header); font-weight: 600; font-size: 13px;">{{ amigo.name }}</span>
+                                    <span class="dm-sub" style="display:none;"></span>
                                 </div>
                                 <div class="dm-notification-badge" id="badge-{{ amigo.id }}">0</div>
                             </div>
@@ -3202,10 +3247,15 @@
                                     <label class="control-label" for="pf-status">Status personalizado</label>
                                     <div class="custom-status-row">
                                         <button class="emoji-picker-btn" type="button" id="pf-status-emoji" title="Escolher emoji"><i class="fa-solid fa-face-smile"></i></button>
-                                        <input type="text" class="discord-input" id="pf-status" maxlength="128" placeholder="O que está acontecendo?" autocomplete="off">
+                                        <input type="text" class="discord-input" id="pf-status" maxlength="128" placeholder="Ex.: Jogando Valorant, Estudando..." autocomplete="off">
                                         <button type="button" class="pf-mini" id="pf-status-limpar" title="Limpar">Limpar</button>
                                     </div>
-                                    <span class="pf-dica">Aparece no balão ao lado da sua foto. Com a presença "Personalizado", o emoji também troca a bolinha.</span>
+                                    <span class="pf-dica">É o texto do seu status (no lugar de "Disponível"). Com a presença "Personalizado", o emoji também vira a sua bolinha.</span>
+                                </div>
+                                <div class="pf-grupo">
+                                    <label class="control-label" for="pf-pensando">Pensando agora</label>
+                                    <input type="text" class="discord-input" id="pf-pensando" maxlength="128" placeholder="O que passa pela sua cabeça?" autocomplete="off">
+                                    <span class="pf-dica">Vira o balão ao lado da sua foto e o textinho embaixo do seu nome nas listas.</span>
                                 </div>
                             </div>
 
@@ -3234,10 +3284,7 @@
                     </div>
 
                     <!-- Barra de salvar: só aparece quando há alteração pendente -->
-                    <div class="pf-barra" id="pf-barra">
-                        <span><i class="fa-solid fa-circle-exclamation"></i> Você tem alterações não salvas</span>
-                        <div><button class="btn btn-cancel" id="pf-descartar">Descartar</button><button class="btn btn-primary" id="pf-salvar">Salvar alterações</button></div>
-                    </div>
+                    <div class="pf-barra" id="pf-barra"><button type="button" class="pf-barra-desc" id="pf-descartar">Descartar</button><button type="button" class="pf-barra-salvar" id="pf-salvar">Salvar</button></div>
                 </div>
 
                 <!-- ABA: APARÊNCIA -->
@@ -4438,6 +4485,7 @@
             membrosDoServidor.forEach(m => { if (m.online) membrosOnlineSet.add(m.id); });
             desenharMembrosDoCanal();
             desenharMembrosSidebar();
+            atualizarMencoes();
             if (typeof configCompletaAberta === 'function' && configCompletaAberta()) {
                 desenharMembrosDaConfig();
             }
@@ -4456,6 +4504,7 @@
             const linha = (m) => {
                 const online = m.id === currentUserId || membrosOnlineSet.has(m.id);
                 const statusClasse = online ? (m.status || 'online') : 'offline';
+                const sub = subPresenca(statusClasse, m.pensando, m.status_texto);
                 const avatarSeguro = escUrl(m.avatar);
                 const avatarHtml = avatarSeguro
                     ? `<img src="${avatarSeguro}" style="width:100%;height:100%;object-fit:cover;">`
@@ -4465,7 +4514,10 @@
                         <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background-color:${avatarSeguro ? 'transparent' : 'var(--brand-color)'};display:flex;justify-content:center;align-items:center;">${avatarHtml}</div>
                         ${htmlBolinha(statusClasse, m.emoji)}
                     </div>
-                    <span class="${classeNome(m.nome_estilo)}" style="color:#fff;font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
+                    <div style="display:flex;flex-direction:column;min-width:0;">
+                        <span class="${classeNome(m.nome_estilo)}" style="color:#fff;font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
+                        ${sub ? `<span class="dm-sub">${esc(sub)}</span>` : ''}
+                    </div>
                 </div>`;
             };
 
@@ -4482,7 +4534,7 @@
         socket.on('usuario_ficou_online', (dados) => {
             membrosOnlineSet.add(dados.usuario_id);
             const m = membrosDoServidor.find(x => Number(x.id) === Number(dados.usuario_id));
-            if (m && dados.status) { m.status = dados.status; m.emoji = dados.emoji || null; }
+            if (m && dados.status) { m.status = dados.status; m.emoji = dados.emoji || null; m.status_texto = dados.texto || null; }
             desenharMembrosSidebar();
         });
         socket.on('usuario_ficou_offline', (dados) => { membrosOnlineSet.delete(dados.usuario_id); desenharMembrosSidebar(); });
@@ -5500,13 +5552,14 @@
         function linhaAmigoHtml(amigo) {
             const avatarSeguro = escUrl(amigo.avatar);
             const avatarHtml = avatarSeguro ? `<img src="${avatarSeguro}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : `<span>${esc((amigo.nome || '?')[0].toUpperCase())}</span>`;
-            return `<div class="dm-card user-dm-item ${amigo.placa ? 'placa-' + esc(amigo.placa) : ''}" id="dm-${amigo.id}" data-user-id="${amigo.id}" data-status="${amigo.online ? (amigo.status || 'online') : 'offline'}" data-name="${esc(amigo.nome)}" data-avatar="${avatarSeguro || ''}">
+            return `<div class="dm-card user-dm-item ${amigo.placa ? 'placa-' + esc(amigo.placa) : ''}" id="dm-${amigo.id}" data-user-id="${amigo.id}" data-pensando="${esc(amigo.pensando || '')}" data-status-texto="${esc(amigo.status_texto || '')}" data-status="${amigo.online ? (amigo.status || 'online') : 'offline'}" data-name="${esc(amigo.nome)}" data-avatar="${avatarSeguro || ''}">
                 <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
                     ${avatarHtml}
                     ${htmlBolinha(amigo.online ? (amigo.status || 'online') : 'offline', amigo.emoji)}
                 </div>
                 <div style="display: flex; flex-direction: column; overflow: hidden; flex-grow: 1;">
                     <span class="dm-nome ${classeNome(amigo.nome_estilo)}" style="color: var(--text-header); font-weight: 600; font-size: 13px;">${esc(amigo.nome)}</span>
+                    <span class="dm-sub" style="display:none;"></span>
                 </div>
                 <div class="dm-notification-badge" id="badge-${amigo.id}">0</div>
             </div>`;
@@ -5534,18 +5587,20 @@
         });
 
         // ---- Presença dos amigos (online/offline em tempo real na lista de DMs) ----
-        function atualizarStatusAmigo(userId, online, status, emoji) {
+        function atualizarStatusAmigo(userId, online, status, emoji, texto) {
             const item = document.getElementById(`dm-${userId}`);
             if (!item) return;
             const novoStatus = online ? (status || 'online') : 'offline';
             item.setAttribute('data-status', novoStatus);
+            item.dataset.statusTexto = texto || '';
             const dot = item.querySelector('.status-indicator');
             if (dot) aplicarBolinha(dot, novoStatus, emoji);
+            atualizarSubDM(item);
             applyFriendFilter(document.getElementById('filter-disponivel').classList.contains('active') ? 'disponivel' : 'todos');
         }
-        socket.on('usuario_ficou_online', (d) => atualizarStatusAmigo(d.usuario_id, true, d.status, d.emoji));
+        socket.on('usuario_ficou_online', (d) => atualizarStatusAmigo(d.usuario_id, true, d.status, d.emoji, d.texto));
         socket.on('usuario_ficou_offline', (d) => atualizarStatusAmigo(d.usuario_id, false));
-        socket.on('status_amigos_ao_conectar', (d) => (d.online_ids || []).forEach(id => atualizarStatusAmigo(id, true, (d.status_por_id || {})[id], (d.emoji_por_id || {})[id])));
+        socket.on('status_amigos_ao_conectar', (d) => (d.online_ids || []).forEach(id => atualizarStatusAmigo(id, true, (d.status_por_id || {})[id], (d.emoji_por_id || {})[id], (d.texto_por_id || {})[id])));
 
         // ==========================================
         // CTRL+K: busca rápida (servidores, canais do servidor atual, amigos/DMs)
@@ -6716,6 +6771,12 @@
                 ? Number(autorId) === Number(currentUserId)
                 : autor === currentUserName;
             div.setAttribute('data-autor-id', autorId ?? '');
+            // Texto BRUTO (com os <@id>): o que aparece na tela é só o nome em destaque,
+            // mas editar/copiar precisam do original.
+            div.setAttribute('data-texto', texto || '');
+            if (texto && Number(autorId) !== Number(currentUserId) && texto.includes('<@' + currentUserId + '>')) {
+                div.classList.add('mencionando-me');
+            }
             div.setAttribute('data-sou-autor', souAutor ? '1' : '0');
             if (extras.anexo_url) div.setAttribute('data-anexo', extras.anexo_url);
             if (extras.fixada) div.classList.add('fixada');
@@ -6736,7 +6797,7 @@
 
             // Mensagem só de anexo não mostra o parágrafo de texto vazio
             const textoHtml = texto
-                ? `<p class="message-text">${esc(texto)}${marcaEditada}</p>`
+                ? `<p class="message-text">${htmlTexto(texto)}${marcaEditada}</p>`
                 : (marcaEditada ? `<p class="message-text">${marcaEditada}</p>` : '');
 
             if (isGrouped) {
@@ -6862,7 +6923,8 @@
 
         function enviarMensagemDoCanal() {
             const input = document.getElementById('message-input');
-            const texto = input.value.trim();
+            // @Nome escolhido no autocomplete (ou @usuario digitado) vira <@id> no texto enviado
+            const texto = converterMencoes(input.value.trim());
 
             // Anexo ainda subindo: espera, senão a mensagem sairia sem ele.
             if (anexosPendentes.some(a => a.subindo)) {
@@ -6945,7 +7007,7 @@
                 id: el.getAttribute('data-msg-id'),
                 souAutor: el.getAttribute('data-sou-autor') === '1',
                 anexo: el.getAttribute('data-anexo') || null,
-                texto: el.querySelector('.message-text')?.innerText.replace(/\(editada\)$/, '').trim() || ''
+                texto: el.getAttribute('data-texto') ?? (el.querySelector('.message-text')?.innerText.replace(/\(editada\)$/, '').trim() || '')
             };
         }
 
@@ -6991,7 +7053,7 @@
             if (!conteudo) return;
             if (conteudo.querySelector('.msg-edit-input')) return;  // já editando
 
-            const textoAtual = dados.texto;
+            const textoAtual = tokensParaNomes(dados.texto);
             const caixa = document.createElement('div');
             caixa.innerHTML = `<textarea class="msg-edit-input" rows="2"></textarea>
                                <div class="msg-edit-dica">Enter para salvar · Esc para cancelar</div>`;
@@ -7010,8 +7072,8 @@
                 if (ev.key === 'Escape') { ev.preventDefault(); encerrar(); }
                 if (ev.key === 'Enter' && !ev.shiftKey) {
                     ev.preventDefault();
-                    const novo = input.value.trim();
-                    if (novo && novo !== textoAtual) {
+                    const novo = converterMencoes(input.value.trim());
+                    if (novo && novo !== dados.texto) {
                         socket.emit('editar_mensagem', { msg_id: Number(dados.id), texto: novo });
                     }
                     encerrar();
@@ -7114,7 +7176,8 @@
                 p.className = 'message-text';
                 msg.querySelector('.message-content')?.prepend(p);
             }
-            p.innerHTML = `${esc(dados.texto)}<span class="msg-editada">(editada)</span>`;
+            msg.setAttribute('data-texto', dados.texto || '');
+            p.innerHTML = `${htmlTexto(dados.texto)}<span class="msg-editada">(editada)</span>`;
             p.style.display = '';
         });
 
@@ -7350,7 +7413,7 @@
         document.getElementById('ctx-copy').addEventListener('click', () => {
             const dados = dadosDaMensagem(msgAlvo);
             if (dados && dados.texto) {
-                navigator.clipboard.writeText(dados.texto);
+                navigator.clipboard.writeText(tokensParaNomes(dados.texto));
                 showToast("Texto copiado", "success");
             }
             fecharMenuMensagem();
@@ -7444,6 +7507,7 @@
             bio: {{ (usuario_atual.bio or '')|tojson }},
             custom_status: {{ (usuario_atual.custom_status or '')|tojson }},
             status_emoji: {{ (usuario_atual.status_emoji or '')|tojson }},
+            pensando: {{ (usuario_atual.pensando or '')|tojson }},
             banner_color: {{ (usuario_atual.banner_color or '')|tojson }},
             banner_url: {{ (usuario_atual.banner_url or '')|tojson }},
             pronomes: {{ (usuario_atual.pronomes or '')|tojson }},
@@ -7529,6 +7593,23 @@
             if (custom) emojificar(el);
         }
 
+        // Textinho embaixo do nome nas listas: o "pensando agora" se houver; senão o
+        // rótulo do status (o texto do Personalizado, ou Disponível/Ausente/...).
+        function subPresenca(status, pensando, textoStatus) {
+            if (pensando) return pensando;
+            if (status === 'custom') return textoStatus || ROTULO_STATUS.custom;
+            if (status === 'offline' || !status) return '';
+            return ROTULO_STATUS[status] || '';
+        }
+        function atualizarSubDM(item) {
+            const sub = item && item.querySelector('.dm-sub');
+            if (!sub) return;
+            const txt = subPresenca(item.getAttribute('data-status'), item.dataset.pensando, item.dataset.statusTexto);
+            sub.textContent = txt;
+            sub.style.display = txt ? '' : 'none';
+            if (txt) emojificar(sub);
+        }
+
         // modo: 'popout' (cartão aberto ao clicar) | 'previa' (editor, botões de enfeite)
         function htmlCartao(pf, modo) {
             const faixa = faixaDe(pf);
@@ -7538,11 +7619,15 @@
             const sou = !!pf.sou_eu;
             const popoutProprio = modo === 'popout' && sou;
 
-            const texto = pf.custom_status || '';
-            const emojiSt = pf.status_emoji || '';
-            const temStatus = !!(texto || emojiSt);
-            const balao = pf.restrito ? '' : ((temStatus || popoutProprio || modo === 'previa')
-                ? `<div class="pc-balao ${temStatus ? '' : 'vazio'}" ${popoutProprio ? 'data-acao="editar-status" title="Editar status"' : ''}>${temStatus ? `${emojiSt ? esc(emojiSt) + ' ' : ''}${esc(texto)}` : '+ Adicionar status'}</div>` : '');
+            // Balão = "pensando agora" (separado do status/presença)
+            const texto = pf.pensando || '';
+            const balao = pf.restrito ? '' : ((texto || popoutProprio || modo === 'previa')
+                ? `<div class="pc-balao ${texto ? '' : 'vazio'}" ${popoutProprio ? 'data-acao="editar-status" title="Editar o que você está pensando"' : ''}>${texto ? esc(texto) : '+ O que você está pensando?'}</div>` : '');
+
+            // Status (presença) como pílula - no popup do próprio usuário ele já está na lista
+            const rotuloSt = pf.status === 'custom' ? (pf.custom_status || ROTULO_STATUS.custom) : (ROTULO_STATUS[pf.status] || '');
+            const pilulaStatus = (pf.restrito || popoutProprio || !rotuloSt || pf.status === 'offline') ? ''
+                : `<div class="pc-status-pill">${htmlBolinha(pf.status, pf.emoji, 'pc-ponto')}<span>${esc(rotuloSt)}</span></div>`;
 
             const chips = pf.restrito ? '' : `<div class="pc-chips">
                 <span class="pc-chip" title="Nível no Battle Pass">Nv. ${Number(pf.nivel || 1)}</span>
@@ -7609,6 +7694,7 @@
                 <div class="pc-corpo">
                     <div class="pc-nome"><span class="${classeNome(pf.nome_estilo)}">${esc(pf.nome || '')}</span></div>
                     ${linhaUsuario}
+                    ${pilulaStatus}
                     ${chips}
                     ${acoes}
                     ${secoes}
@@ -7719,7 +7805,7 @@
             if (acao === 'copiar-id') { copiarTexto(idAlvo, 'ID copiado.'); document.getElementById('pc-menu')?.classList.remove('aberto'); return; }
             if (acao === 'copiar-arroba') { copiarTexto('@' + (d && d.username), 'Nome da conta copiado.'); document.getElementById('pc-menu')?.classList.remove('aberto'); return; }
             if (acao === 'editar') { fecharCartao(); abrirConfigPerfil(); return; }
-            if (acao === 'editar-status') { fecharCartao(); abrirConfigPerfil('pf-status'); return; }
+            if (acao === 'editar-status') { fecharCartao(); abrirConfigPerfil('pf-pensando'); return; }
             if (acao === 'conta') { fecharCartao(); abrirConfigPerfil('pf-conta-ancora'); return; }
             if (acao === 'sair') { window.location.href = "{{ url_for('auth.logout') }}"; return; }
             if (!d) return;
@@ -7766,6 +7852,8 @@
             if (eu) {
                 eu.nome = perfilMeu.nome; eu.avatar = perfilMeu.avatar;
                 eu.placa = perfilMeu.placa || null; eu.nome_estilo = perfilMeu.nome_estilo || null;
+                eu.pensando = perfilMeu.pensando || null;
+                eu.status_texto = perfilMeu.status === 'custom' ? perfilMeu.custom_status : null;
                 desenharMembrosSidebar();
             }
         }
@@ -7776,7 +7864,11 @@
             aplicarBolinha(document.querySelector('#sidebar-member-item .status-indicator'), status, perfilMeu.status_emoji);
             atualizarTextoBarraInferior();
             const eu = membrosDoServidor.find(m => Number(m.id) === Number(currentUserId));
-            if (eu) { eu.status = status; eu.emoji = status === 'custom' ? perfilMeu.status_emoji : null; desenharMembrosSidebar(); }
+            if (eu) {
+                eu.status = status; eu.emoji = status === 'custom' ? perfilMeu.status_emoji : null;
+                eu.status_texto = status === 'custom' ? perfilMeu.custom_status : null; eu.pensando = perfilMeu.pensando || null;
+                desenharMembrosSidebar();
+            }
             if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
             if (typeof pintarPrevia === 'function') pintarPrevia();
         }
@@ -7811,10 +7903,12 @@
             const on = d.status !== 'offline';
             if (on) membrosOnlineSet.add(d.usuario_id); else membrosOnlineSet.delete(d.usuario_id);
             const m = membrosDoServidor.find(x => Number(x.id) === Number(d.usuario_id));
-            if (m) { m.status = d.status; m.emoji = d.emoji || null; desenharMembrosSidebar(); }
-            atualizarStatusAmigo(d.usuario_id, on, d.status, d.emoji);
+            if (m) { m.status = d.status; m.emoji = d.emoji || null; m.status_texto = d.texto || null; desenharMembrosSidebar(); }
+            atualizarStatusAmigo(d.usuario_id, on, d.status, d.emoji, d.texto);
             if (cartaoAberto && cartaoAberto.dados && Number(cartaoAberto.id) === Number(d.usuario_id)) {
-                cartaoAberto.dados.status = d.status; cartaoAberto.dados.emoji = d.emoji || null; pintarCartao();
+                cartaoAberto.dados.status = d.status; cartaoAberto.dados.emoji = d.emoji || null;
+                if (d.status === 'custom') cartaoAberto.dados.custom_status = d.texto || cartaoAberto.dados.custom_status;
+                pintarCartao();
             }
         });
 
@@ -7881,7 +7975,7 @@
         });
 
         // ---------- editor de perfil (rascunho + barra de salvar) ----------
-        const CAMPOS_PERFIL = ['nome', 'username', 'pronomes', 'custom_status', 'status_emoji', 'bio',
+        const CAMPOS_PERFIL = ['nome', 'username', 'pronomes', 'custom_status', 'status_emoji', 'pensando', 'bio',
                                'banner_color', 'banner_url', 'perfil_tema', 'nome_estilo', 'placa', 'moldura'];
         let rascunho = {};
         function copiarCampos(de) { const o = {}; CAMPOS_PERFIL.forEach(k => { o[k] = de[k] || ''; }); return o; }
@@ -7894,6 +7988,7 @@
             document.getElementById('pf-username').value = rascunho.username;
             document.getElementById('pf-pronomes').value = rascunho.pronomes;
             document.getElementById('pf-status').value = rascunho.custom_status;
+            document.getElementById('pf-pensando').value = rascunho.pensando;
             document.getElementById('pf-bio').value = rascunho.bio;
             document.getElementById('pf-bio-cont').textContent = `${rascunho.bio.length}/1000`;
         }
@@ -7958,7 +8053,7 @@
             document.querySelectorAll('#pf-presenca button').forEach(b => b.classList.toggle('ativo', b.dataset.status === perfilMeu.status));
         }
 
-        [['pf-nome', 'nome'], ['pf-pronomes', 'pronomes'], ['pf-status', 'custom_status'], ['pf-bio', 'bio']].forEach(([id, chave]) => {
+        [['pf-nome', 'nome'], ['pf-pronomes', 'pronomes'], ['pf-status', 'custom_status'], ['pf-pensando', 'pensando'], ['pf-bio', 'bio']].forEach(([id, chave]) => {
             document.getElementById(id).addEventListener('input', (e) => {
                 rascunho[chave] = e.target.value;
                 if (chave === 'bio') document.getElementById('pf-bio-cont').textContent = `${e.target.value.length}/1000`;
@@ -8188,7 +8283,7 @@
             const pendentes = CAMPOS_PERFIL.filter(k => (rascunho[k] || '') !== (perfilMeu[k] || ''));
 
             if (d.name) { perfilMeu.nome = d.name; currentUserName = d.name; }
-            ['custom_status', 'status_emoji', 'bio', 'banner_color', 'banner_url', 'pronomes', 'username',
+            ['custom_status', 'status_emoji', 'pensando', 'bio', 'banner_color', 'banner_url', 'pronomes', 'username',
              'perfil_tema', 'nome_estilo', 'placa', 'moldura'].forEach(k => { if (k in d) perfilMeu[k] = d[k] || ''; });
             if (d.avatar) perfilMeu.avatar = d.avatar;
 
@@ -8225,12 +8320,17 @@
                 membro.avatar = dados.avatar;
                 membro.placa = dados.placa;
                 membro.nome_estilo = dados.nome_estilo;
+                membro.pensando = dados.pensando || null;
+                membro.status_texto = dados.status_texto || null;
                 desenharMembrosSidebar();
                 if (typeof desenharMembrosDoCanal === 'function') desenharMembrosDoCanal();
             }
             const card = document.getElementById(`dm-${dados.usuario_id}`);
             if (card) {
                 trocarClasse(card, 'placa-', classePlaca(dados.placa));
+                card.dataset.pensando = dados.pensando || '';
+                card.dataset.statusTexto = dados.status_texto || '';
+                atualizarSubDM(card);
                 const nm = card.querySelector('.dm-nome');
                 if (nm) { nm.textContent = dados.nome; trocarClasse(nm, 'ne-', classeNome(dados.nome_estilo)); }
             }
@@ -8240,6 +8340,129 @@
         pintarPrevia();
         aplicarMinhaAparencia();
         aplicarMeuStatus(perfilMeu.status);
+        document.querySelectorAll('.user-dm-item').forEach(atualizarSubDM);   // subtítulos iniciais das DMs
+
+        // ==========================================
+        // MENÇÕES (@): autocomplete no chat + destaque na mensagem
+        // ------------------------------------------------------------------
+        // No texto enviado a menção é `<@id>` (estável: o nome de exibição muda e a
+        // mensagem continua certa). Na tela vira o NOME DE EXIBIÇÃO em destaque, clicável
+        // (abre o cartão da pessoa). `data-texto` guarda o original pra editar/copiar.
+        // ==========================================
+        const mencoesPendentes = {};   // nome exibido escolhido no autocomplete -> id
+
+        function htmlTexto(texto) {
+            return esc(texto).replace(/&lt;@(\d{1,10})&gt;/g, (_, id) => {
+                const m = membrosDoServidor.find(x => Number(x.id) === Number(id));
+                const eu = Number(id) === Number(currentUserId);
+                return `<span class="mencao ${eu ? 'mencao-eu' : ''}" data-perfil-id="${Number(id)}">@${esc(m ? m.nome : 'usuário')}</span>`;
+            });
+        }
+
+        // Quando a lista de membros chega/muda, corrige o nome das menções já desenhadas
+        function atualizarMencoes() {
+            document.querySelectorAll('.mencao[data-perfil-id]').forEach(el => {
+                const m = membrosDoServidor.find(x => Number(x.id) === Number(el.dataset.perfilId));
+                if (m) el.textContent = '@' + m.nome;
+            });
+        }
+
+        function tokensParaNomes(texto) {
+            return (texto || '').replace(/<@(\d{1,10})>/g, (tok, id) => {
+                const m = membrosDoServidor.find(x => Number(x.id) === Number(id));
+                if (!m) return tok;
+                mencoesPendentes[m.nome] = m.id;
+                return '@' + m.nome;
+            });
+        }
+
+        function converterMencoes(texto) {
+            let out = texto;
+            Object.entries(mencoesPendentes).sort((a, b) => b[0].length - a[0].length).forEach(([nome, id]) => {
+                const re = new RegExp('@' + nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\p{L}\\p{N}_])', 'gu');
+                out = out.replace(re, `<@${id}>`);
+            });
+            // @usuario digitado à mão (sem escolher da lista)
+            out = out.replace(/(^|\s)@([a-z0-9_.]{3,32})(?![a-z0-9_.])/g, (full, pre, u) => {
+                const m = membrosDoServidor.find(x => x.username === u);
+                return m ? `${pre}<@${m.id}>` : full;
+            });
+            return out;
+        }
+
+        // ---- autocomplete ----
+        const mencaoBox = document.createElement('div');
+        mencaoBox.id = 'mencao-lista';
+        document.body.appendChild(mencaoBox);
+        const mencaoSt = { itens: [], sel: 0, inicio: 0 };
+        const msgInput = document.getElementById('message-input');
+
+        function fecharMencao() { mencaoBox.style.display = 'none'; mencaoSt.itens = []; }
+
+        function desenharMencao() {
+            if (!mencaoSt.itens.length) { fecharMencao(); return; }
+            mencaoBox.innerHTML = mencaoSt.itens.map((m, i) => {
+                const av = escUrl(m.avatar || '');
+                return `<button type="button" class="mencao-item ${i === mencaoSt.sel ? 'sel' : ''}" data-i="${i}">
+                    <span class="mencao-av">${av ? `<img src="${av}" alt="">` : esc((m.nome || '?')[0].toUpperCase())}</span>
+                    <b class="${classeNome(m.nome_estilo)}">${esc(m.nome)}</b>
+                    ${m.username ? `<small>@${esc(m.username)}</small>` : ''}
+                </button>`;
+            }).join('');
+            const r = msgInput.getBoundingClientRect();
+            mencaoBox.style.left = r.left + 'px';
+            mencaoBox.style.width = Math.min(r.width, 380) + 'px';
+            mencaoBox.style.bottom = (window.innerHeight - r.top + 8) + 'px';
+            mencaoBox.style.display = 'flex';
+        }
+
+        function escolherMencao(i) {
+            const m = mencaoSt.itens[i];
+            if (!m) return;
+            const v = msgInput.value, pos = msgInput.selectionStart;
+            const inserido = '@' + m.nome + ' ';
+            msgInput.value = v.slice(0, mencaoSt.inicio) + inserido + v.slice(pos);
+            const novaPos = mencaoSt.inicio + inserido.length;
+            msgInput.setSelectionRange(novaPos, novaPos);
+            mencoesPendentes[m.nome] = m.id;
+            fecharMencao();
+            msgInput.focus();
+        }
+
+        msgInput.addEventListener('input', () => {
+            const pos = msgInput.selectionStart;
+            const achou = /(^|\s)@([^\s@]{0,32})$/.exec(msgInput.value.slice(0, pos));
+            if (!achou) { fecharMencao(); return; }
+            const termo = achou[2].toLowerCase();
+            mencaoSt.inicio = pos - achou[2].length - 1;
+            mencaoSt.itens = membrosDoServidor
+                .filter(m => Number(m.id) !== Number(currentUserId) &&
+                    ((m.nome || '').toLowerCase().includes(termo) || (m.username || '').includes(termo)))
+                .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
+                .slice(0, 6);
+            mencaoSt.sel = 0;
+            desenharMencao();
+        });
+        msgInput.addEventListener('keydown', (e) => {
+            if (!mencaoSt.itens.length) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); mencaoSt.sel = (mencaoSt.sel + 1) % mencaoSt.itens.length; desenharMencao(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); mencaoSt.sel = (mencaoSt.sel - 1 + mencaoSt.itens.length) % mencaoSt.itens.length; desenharMencao(); }
+            else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); escolherMencao(mencaoSt.sel); }
+            else if (e.key === 'Escape') { e.preventDefault(); fecharMencao(); }
+        });
+        msgInput.addEventListener('blur', () => setTimeout(fecharMencao, 150));
+        // mousedown (não click): o blur do input fecharia a lista antes do clique chegar
+        mencaoBox.addEventListener('mousedown', (e) => {
+            const item = e.target.closest('.mencao-item');
+            if (!item) return;
+            e.preventDefault();
+            escolherMencao(Number(item.dataset.i));
+        });
+
+        // Alguém me citou
+        socket.on('mencao_recebida', (d) => {
+            showToast(`${d.autor} te citou em #${d.canal_nome}: ${d.trecho}`, 'info');
+        });
 
         // ==========================================
         // AJUSTAR IMAGEM (CROP) + UPLOAD REAL DO AVATAR
