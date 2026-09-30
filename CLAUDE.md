@@ -592,17 +592,38 @@ chega em `xp_atualizado` (nunca recalcula nível).
   (concluído/atual/bloqueado), "+N XP" flutuando no botão da barra lateral e
   tela de comemoração com confete em `subiu_nivel` (clique/ESC/6s fecham).
 
-## Animações e polimento
+## Visual: "vidro" sobre o Discord clássico
 
-Bloco "POLIMENTO GERAL" no CSS de `chat.html`: transição de aba
-(`vistaEntra` nos wrappers `#...-content-wrapper`), `modalPop` em
-`.bazinga-modal`, microinterações de botão/canal/ícone de servidor e
-`prefers-reduced-motion` desligando tudo. A entrada das abas é puro CSS
-(roda sozinha quando o elemento sai de `display:none`) e só usa
-opacity/translate com `backwards` — **não** deixe `transform` fixo num
-wrapper de aba, senão os `position:fixed` de dentro passam a se ancorar
-nele. O mapa (`#bazinga-map`) fica de fora de propósito (Leaflet usa
-transform).
+Direção: estrutura e paleta do Discord antigo (cinza-azulado
+`#36393f/#2f3136/#202225`, blurple suave `#7289da`, cantos arredondados), com
+camadas de **vidro fosco** (blur + borda de luz) flutuando sobre um fundo vivo
+(`body::before/::after`: duas manchas de cor à deriva, só `transform`). Fonte:
+Nunito Sans (parente da do Discord clássico).
+
+- O bloco **"TEMA VIDRO" fica no FIM do `<style>`** de propósito: sobrescreve
+  por ordem de declaração. Não mova pro meio nem quebre em vários.
+- Superfícies de vidro usam `color-mix(in srgb, var(--bg-X) N%, transparent)`,
+  então **seguem as variáveis** e os temas Claro/AMOLED continuam funcionando.
+  Se um elemento novo precisa parecer vidro, repita esse padrão (não use
+  `rgba` fixo).
+- `.bazinga-toast` **não** entra na regra de borda `!important` dos modais:
+  a borda colorida da esquerda é o que diferencia sucesso/erro/aviso.
+- `position:relative` dos botões/cartões é via `:where()` (especificidade zero)
+  pra não brigar com quem já define `position`. O ripple (`.ripple`) e o brilho
+  que segue o mouse (`--mx/--my`, `::after`) são delegados no `document` — não
+  precisa ligar nada em elemento novo, basta ter uma das classes da lista
+  `SPOT`/`RIPPLE` no JS.
+- Transição de aba (`vistaEntra`), `modalPop`, microinterações e
+  `prefers-reduced-motion` (desliga tudo) estão no bloco "POLIMENTO GERAL".
+  A entrada das abas é puro CSS e só usa opacity/translate com `backwards` —
+  **não** deixe `transform` fixo num wrapper de aba, senão os `position:fixed`
+  de dentro passam a se ancorar nele. O mapa (`#bazinga-map`) fica de fora de
+  propósito (Leaflet usa transform).
+- **Tema (Escuro/Claro/AMOLED) mora na conta** (`Person.tema`, evento
+  `mudar_tema`), igual ao Modo Fantasma. O valor vem em `<html data-tema>` e as
+  paletas Claro/AMOLED existem também em CSS puro (primeiro paint sem piscar);
+  `TEMAS`/`aplicarTema()` no JS cuidam da troca ao vivo. Mudou uma paleta,
+  mude nos dois lugares.
 
 ## Mensagens fixadas
 
@@ -919,7 +940,7 @@ vetorial e busca de GIF (Giphy).
 **Rodar `python atualizar_banco.py` depois do deploy** — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
 `person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
-`person.streak_dias` e `person.streak_em`. Configurar `GIPHY_API_KEY` no
+`person.streak_dias`, `person.streak_em` e `person.tema`. Configurar `GIPHY_API_KEY` no
 Environment do Render (ver seção Deploy) pra busca de GIF funcionar em
 produção.
 

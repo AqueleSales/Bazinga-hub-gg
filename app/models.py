@@ -68,6 +68,8 @@ class Person(db.Model):
     # pessoa entre dispositivos - e pra o servidor poder barrar a posição dela
     # de verdade, em vez de confiar que o navegador se comporta.
     ghost_mode = db.Column(db.Boolean, default=False, nullable=False)
+    # Tema visual (dark/light/amoled) - também na conta, pelo mesmo motivo.
+    tema = db.Column(db.String(20), default='dark', nullable=False)
 
     # Perfil (editável na tela de Configurações)
     bio = db.Column(db.Text, nullable=True)

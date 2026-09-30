@@ -122,6 +122,7 @@ def atualizar_banco():
             add_column_se_nao_existir("person", "ghost_mode BOOLEAN DEFAULT FALSE NOT NULL")
             add_column_se_nao_existir("person", "streak_dias INTEGER DEFAULT 0 NOT NULL")
             add_column_se_nao_existir("person", "streak_em DATE")
+            add_column_se_nao_existir("person", "tema VARCHAR(20) DEFAULT 'dark' NOT NULL")
 
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:

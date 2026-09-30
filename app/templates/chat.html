@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-tema="{{ usuario_atual.tema or 'dark' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat - Bazinga Hub</title>
+    <!-- Fonte: Nunito Sans (humanista arredondada, parente próxima da fonte do Discord clássico) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&display=swap">
     <!-- Ícones FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -33,19 +36,26 @@
            1. VARIÁVEIS E BASE (Cores exatas do Discord e Temas Dinâmicos)
            ========================================================================== */
         :root {
-            --bg-primary: #313338;
-            --bg-secondary: #2b2d31;
-            --bg-tertiary: #1e1f22;
-            --bg-quaternary: #111214;
-            --text-normal: #dbdee1;
-            --text-muted: #949ba4;
-            --text-header: #f2f3f5;
-            --brand-color: #5865F2;
-            --brand-hover: #4752c4;
-            --green-color: #23a559;
-            --red-color: #da373c;
-            --yellow-color: #f0b232;
+            /* Paleta "Discord clássico": cinza-azulado + blurple suave (antes era
+               a paleta nova, mais fria/apagada). O tema Escuro do JS usa os mesmos valores. */
+            --bg-primary: #36393f;
+            --bg-secondary: #2f3136;
+            --bg-tertiary: #202225;
+            --bg-quaternary: #18191c;
+            --text-normal: #dcddde;
+            --text-muted: #8e9297;
+            --text-header: #ffffff;
+            --brand-color: #7289da;
+            --brand-hover: #677bc4;
+            --green-color: #43b581;
+            --red-color: #f04747;
+            --yellow-color: #faa61a;
             --purple-color: #eb459e;
+            /* Vidro */
+            --glass-borda: rgba(255,255,255,.08);
+            --glass-brilho: rgba(255,255,255,.06);
+            --glass-blur: 18px;
+            --brand-glow: rgba(114,137,218,.45);
             --nitro-gradient: linear-gradient(90deg, #8547c6, #b845c1, #ab5d8a);
             /* Gravar/clipar a call: cores próprias pra não colidir com o que
                --brand-color/--purple-color já significam em outros botões. */
@@ -53,7 +63,7 @@
             --clip-color: #ff8c1a;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'gg sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito Sans', 'gg sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-tertiary); color: var(--text-normal); height: 100vh; overflow: hidden; display: flex; transition: background-color 0.3s; }
         .discord-app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
@@ -412,10 +422,10 @@
 
         .bp-hero { position: relative; display: flex; align-items: center; gap: 28px; padding: 28px; border-radius: 16px; isolation: isolate; overflow: hidden;
                    background: linear-gradient(var(--bg-tertiary), var(--bg-tertiary)) padding-box,
-                               conic-gradient(from var(--bp-angulo), #5865F2, #eb459e, #ffd76a, #23a559, #5865F2) border-box;
+                               conic-gradient(from var(--bp-angulo), #7289da, #eb459e, #ffd76a, #43b581, #7289da) border-box;
                    border: 2px solid transparent; animation: bpGira 7s linear infinite, bpEntra .5s cubic-bezier(.16,.84,.44,1) both; }
         .bp-hero::before { content: ''; position: absolute; inset: -40% -10% auto auto; width: 420px; height: 420px; border-radius: 50%; z-index: -1; pointer-events: none;
-                           background: radial-gradient(circle, rgba(88,101,242,.28), transparent 65%); }
+                           background: radial-gradient(circle, rgba(114,137,218,.28), transparent 65%); }
 
         .bp-anel { position: relative; width: 132px; height: 132px; flex-shrink: 0; }
         .bp-anel svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -456,14 +466,14 @@
         .bp-marco.atual { border-color: #ffd76a; background: linear-gradient(180deg, rgba(255,215,106,.12), var(--bg-tertiary)); animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) both, bpAtual 2.2s ease-in-out infinite; animation-delay: calc(var(--i, 0) * 55ms), 0s; }
         .bp-marco.bloqueado { opacity: .5; }
         .bp-marco.bloqueado:hover { opacity: .85; }
-        .bp-marco.especial { background: linear-gradient(160deg, rgba(235,69,158,.14), rgba(88,101,242,.14)), var(--bg-tertiary); }
+        .bp-marco.especial { background: linear-gradient(160deg, rgba(235,69,158,.14), rgba(114,137,218,.14)), var(--bg-tertiary); }
         .bp-marco.especial i.bp-ico { color: #ff9bd2; }
 
         /* Como ganhar XP */
         .bp-fontes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
         .bp-fonte { display: flex; gap: 14px; align-items: center; background-color: var(--bg-tertiary); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,.06); transition: transform .2s, border-color .2s; }
         .bp-fonte:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.14); }
-        .bp-fonte-ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: rgba(88,101,242,.18); color: #8f9bff; }
+        .bp-fonte-ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: rgba(114,137,218,.18); color: #8f9bff; }
         .bp-fonte-ico.fogo { background: rgba(255,122,47,.16); color: #ff7a2f; }
         .bp-fonte b { display: block; color: var(--text-header); font-size: 14px; }
         .bp-fonte span { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
@@ -477,7 +487,7 @@
         @keyframes bpCelebraFundo { from { opacity: 0; } to { opacity: 1; } }
         @keyframes bpCelebraCartao { 0% { opacity: 0; transform: scale(.6) translateY(30px); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: none; } }
         @keyframes bpConfete { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); } }
-        .bp-celebra { position: fixed; inset: 0; z-index: 10600; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 45%, rgba(88,101,242,.35), rgba(0,0,0,.82) 70%); animation: bpCelebraFundo .3s ease both; cursor: pointer; }
+        .bp-celebra { position: fixed; inset: 0; z-index: 10600; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 45%, rgba(114,137,218,.35), rgba(0,0,0,.82) 70%); animation: bpCelebraFundo .3s ease both; cursor: pointer; }
         .bp-celebra-cartao { position: relative; text-align: center; padding: 36px 48px; border-radius: 20px; background: var(--bg-tertiary); border: 2px solid #ffd76a; box-shadow: 0 0 60px rgba(255,215,106,.35); animation: bpCelebraCartao .6s cubic-bezier(.34,1.56,.64,1) both; max-width: min(420px, 90vw); }
         .bp-celebra-topo { font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #ffd76a; }
         .bp-celebra-num { font-size: 92px; font-weight: 900; line-height: 1.05; margin: 6px 0; background: linear-gradient(135deg, #ffd76a, #ff9b3f); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -508,7 +518,7 @@
 
         .btn, .btn-cancel, .bz-pill-btn { transition: background-color .2s, color .2s, border-color .2s, transform .12s, box-shadow .2s; }
         .btn:active, .btn-cancel:active, .bz-pill-btn:active { transform: scale(.96); }
-        .btn-primary:hover { box-shadow: 0 6px 16px rgba(88,101,242,.4); transform: translateY(-1px); }
+        .btn-primary:hover { box-shadow: 0 6px 16px rgba(114,137,218,.4); transform: translateY(-1px); }
         .btn-primary:active { transform: scale(.96); }
         .channel-item { transition: background-color .15s, color .15s, transform .15s; }
         .channel-item:hover { transform: translateX(3px); }
@@ -579,8 +589,8 @@
         .chamada-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .chamada-avatar-grande { width: 88px; height: 88px; font-size: 32px; animation: pulsarChamada 1.4s ease-in-out infinite; }
         @keyframes pulsarChamada {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(88,101,242,.55); }
-            50%      { box-shadow: 0 0 0 16px rgba(88,101,242,0); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(114,137,218,.55); }
+            50%      { box-shadow: 0 0 0 16px rgba(114,137,218,0); }
         }
 
         /* ---- Gravar / clipar a call ---- */
@@ -692,7 +702,7 @@
         /* Cartões de "tipo de canal" (texto / voz) */
         .bz-radio-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 6px; cursor: pointer; transition: background .15s; margin-bottom: 4px; }
         .bz-radio-card:hover { background: rgba(255,255,255,0.04); }
-        .bz-radio-card.selected { background: rgba(88,101,242,0.12); }
+        .bz-radio-card.selected { background: rgba(114,137,218,0.12); }
         .bz-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--text-muted); flex-shrink: 0; margin-top: 2px; position: relative; transition: border-color .15s; }
         .bz-radio-card.selected .bz-radio { border-color: var(--brand-color); }
         .bz-radio-card.selected .bz-radio::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand-color); }
@@ -870,7 +880,7 @@
         .msg-reacoes:empty { display: none; margin: 0; }
         .msg-reacao { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.06); border: 1px solid transparent; border-radius: 8px; padding: 2px 7px; font-size: 13px; cursor: pointer; transition: .12s; user-select: none; }
         .msg-reacao:hover { border-color: rgba(255,255,255,.2); }
-        .msg-reacao.minha { background: rgba(88,101,242,.22); border-color: var(--brand-color); }
+        .msg-reacao.minha { background: rgba(114,137,218,.22); border-color: var(--brand-color); }
         .msg-reacao-total { font-size: 12px; font-weight: 700; color: var(--text-muted); }
         .msg-reacao.minha .msg-reacao-total { color: var(--brand-color); }
         .msg-add-reacao { opacity: 0; display: flex; align-items: center; padding: 2px 7px; border-radius: 8px; background: rgba(255,255,255,.06); cursor: pointer; color: var(--text-muted); font-size: 12px; transition: .12s; }
@@ -903,7 +913,7 @@
         .anexo-chip .enviando { position: absolute; inset: 0; background: rgba(0,0,0,.6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 700; }
 
         /* Arrastar arquivo por cima do chat */
-        #drop-overlay { display: none; position: absolute; inset: 0; background: rgba(88,101,242,.88); z-index: 400; align-items: center; justify-content: center; text-align: center; color: #fff; border-radius: 8px; pointer-events: none; }
+        #drop-overlay { display: none; position: absolute; inset: 0; background: rgba(114,137,218,.88); z-index: 400; align-items: center; justify-content: center; text-align: center; color: #fff; border-radius: 8px; pointer-events: none; }
         #drop-overlay i { font-size: 54px; margin-bottom: 12px; }
         #drop-overlay h2 { font-size: 26px; font-weight: 800; }
         #drop-overlay p { font-size: 14px; opacity: .85; margin-top: 4px; }
@@ -1193,6 +1203,120 @@
         .radio-text h4 { color: var(--text-normal); font-size: 16px; font-weight: 500; margin-bottom: 4px; }
         .radio-text p { color: var(--text-muted); font-size: 14px; }
 
+
+        /* ==========================================================================
+           TEMA VIDRO  (fica no FIM do <style> de propósito: sobrescreve por ordem)
+           Ideia: estrutura e cores do Discord clássico, mas com as camadas de vidro
+           fosco (blur + borda de luz) flutuando sobre um fundo vivo e lento.
+           As cores vêm das variáveis (color-mix) - então os temas Claro/AMOLED
+           continuam funcionando.
+           ========================================================================== */
+        @keyframes vidroDeriva1 { 0% { transform: translate3d(-8%, -6%, 0) scale(1); } 50% { transform: translate3d(10%, 8%, 0) scale(1.15); } 100% { transform: translate3d(-8%, -6%, 0) scale(1); } }
+        @keyframes vidroDeriva2 { 0% { transform: translate3d(8%, 10%, 0) scale(1.1); } 50% { transform: translate3d(-10%, -8%, 0) scale(.95); } 100% { transform: translate3d(8%, 10%, 0) scale(1.1); } }
+        @keyframes rippleExpande { to { transform: scale(1); opacity: 0; } }
+        @keyframes vidroEntraLista { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
+        body { background-color: var(--bg-quaternary); }
+        /* Duas manchas de cor difusas à deriva atrás de tudo (só transform = GPU) */
+        body::before, body::after { content: ''; position: fixed; z-index: 0; pointer-events: none; border-radius: 50%; filter: blur(90px); will-change: transform; }
+        body::before { width: 60vw; height: 60vw; left: -15vw; top: -20vw; background: radial-gradient(circle, rgba(114,137,218,.85), rgba(114,137,218,.25) 45%, transparent 72%); animation: vidroDeriva1 38s ease-in-out infinite; }
+        body::after { width: 55vw; height: 55vw; right: -15vw; bottom: -22vw; background: radial-gradient(circle, rgba(235,69,158,.5), rgba(67,181,129,.3) 50%, transparent 72%); animation: vidroDeriva2 46s ease-in-out infinite; }
+        /* Paletas também em CSS puro: o tema certo já vale no primeiro paint
+           (o JS só reforça e cuida da troca ao vivo). Manter igual ao TEMAS do JS. */
+        :root[data-tema="light"] { --bg-primary: #ffffff; --bg-secondary: #f2f3f5; --bg-tertiary: #e3e5e8; --bg-quaternary: #ebedef; --text-normal: #313338; --text-header: #111214; }
+        :root[data-tema="amoled"] { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #050505; --bg-quaternary: #000000; --text-header: #ffffff; }
+        :root[data-tema="light"] body::before, :root[data-tema="light"] body::after { opacity: .35; }
+        :root[data-tema="amoled"] body::before, :root[data-tema="amoled"] body::after { opacity: .5; }
+        .discord-app { position: relative; z-index: 1; }
+
+        /* Superfícies de vidro */
+        .servers-sidebar { background-color: color-mix(in srgb, var(--bg-quaternary) 55%, transparent); backdrop-filter: blur(var(--glass-blur)) saturate(150%); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%); border-right: 1px solid var(--glass-borda); }
+        .channels-sidebar, .members-sidebar { background-color: color-mix(in srgb, var(--bg-secondary) 52%, transparent); backdrop-filter: blur(var(--glass-blur)) saturate(140%); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%); }
+        .left-sidebar-wrapper { background-color: transparent; border-right: 1px solid var(--glass-borda); }
+        .user-controls { background-color: color-mix(in srgb, var(--bg-tertiary) 70%, transparent); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border-top: 1px solid var(--glass-borda); box-shadow: inset 0 1px 0 var(--glass-brilho); }
+        .chat-area, .market-wrapper { background-color: color-mix(in srgb, var(--bg-primary) 60%, transparent); }
+        .chat-header, .market-header, .channels-header { background-color: color-mix(in srgb, var(--bg-primary) 55%, transparent); backdrop-filter: blur(var(--glass-blur)) saturate(140%); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%); border-bottom: 1px solid var(--glass-borda); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+
+        /* Cartões e popups flutuantes */
+        .bazinga-modal, .sf-card, .settings-modal, .user-popout, .context-menu, .leaflet-popup-content-wrapper {
+            background-color: color-mix(in srgb, var(--bg-primary) 82%, transparent) !important;
+            backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%);
+            border: 1px solid var(--glass-borda) !important;
+            box-shadow: 0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 var(--glass-brilho) !important;
+        }
+        .bazinga-modal, .sf-card, .settings-modal { border-radius: 14px !important; }
+        /* Toast: mantém a borda colorida da esquerda (sucesso/erro/aviso) */
+        .bazinga-toast { background-color: color-mix(in srgb, var(--bg-quaternary) 84%, transparent); backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.45), inset 0 1px 0 var(--glass-brilho); }
+        .user-popout { background-color: color-mix(in srgb, var(--bg-quaternary) 86%, transparent) !important; }
+        .settings-sidebar, .sf-menu { background-color: color-mix(in srgb, var(--bg-secondary) 55%, transparent); }
+        .settings-content { background-color: transparent; }
+        .modal-overlay, .settings-overlay { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); background-color: rgba(10,11,14,.62); }
+        .modal-footer { background-color: rgba(0,0,0,.18); }
+        .chat-input-container { background-color: color-mix(in srgb, var(--bg-secondary) 70%, transparent); border: 1px solid var(--glass-borda); border-radius: 12px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: border-color .2s, box-shadow .2s; }
+        .chat-input-container:focus-within { border-color: rgba(114,137,218,.65); box-shadow: 0 0 0 3px rgba(114,137,218,.18); }
+
+        .product-card, .dm-card, .welcome-action-btn, .bp-marco, .bp-fonte, .bp-chip, .sf-linha, .sf-vazio {
+            background-color: color-mix(in srgb, var(--bg-secondary) 62%, transparent);
+            border: 1px solid var(--glass-borda);
+            box-shadow: inset 0 1px 0 var(--glass-brilho);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        .bp-hero { background: linear-gradient(color-mix(in srgb, var(--bg-secondary) 70%, transparent), color-mix(in srgb, var(--bg-secondary) 70%, transparent)) padding-box, conic-gradient(from var(--bp-angulo), #7289da, #eb459e, #ffd76a, #43b581, #7289da) border-box; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+        .bp-marco.atual { background: linear-gradient(180deg, rgba(255,215,106,.14), color-mix(in srgb, var(--bg-secondary) 62%, transparent)); }
+        .bp-marco.especial { background: linear-gradient(160deg, rgba(235,69,158,.16), rgba(114,137,218,.16)), color-mix(in srgb, var(--bg-secondary) 62%, transparent); }
+
+        /* Barras de rolagem no estilo clássico: finas e arredondadas */
+        * { scrollbar-width: thin; scrollbar-color: rgba(32,34,37,.9) transparent; }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: rgba(32,34,37,.85); border: 2px solid transparent; background-clip: padding-box; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background-color: rgba(114,137,218,.6); }
+        .chat-messages::-webkit-scrollbar-thumb { background-color: rgba(32,34,37,.85); }
+
+        /* Barra de servidores: ícone ganha brilho de marca quando ativo/hover */
+        .server-icon { box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: border-radius .25s cubic-bezier(.34,1.56,.64,1), background-color .2s, color .2s, transform .15s, box-shadow .25s; }
+        .server-icon:hover { box-shadow: 0 6px 18px var(--brand-glow); transform: translateY(-2px); }
+        .server-icon.active { box-shadow: 0 0 0 2px rgba(255,255,255,.12), 0 6px 22px var(--brand-glow); }
+        .server-icon.add-server:hover { box-shadow: 0 6px 18px rgba(67,181,129,.45); }
+        .server-icon::before { background-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,.6); }
+
+        /* Canais e DMs: pílula com barra de acento e entrada escalonada */
+        .channel-item { border-radius: 8px; position: relative; }
+        .channel-item:hover { background-color: rgba(255,255,255,.07); }
+        .channel-item.active { background: linear-gradient(90deg, rgba(114,137,218,.28), rgba(114,137,218,.08)); box-shadow: inset 3px 0 0 var(--brand-color); }
+        .channels-list > *, #dm-list-container > * { animation: vidroEntraLista .35s cubic-bezier(.16,.84,.44,1) backwards; }
+        .channels-list > *:nth-child(2) { animation-delay: .03s; } .channels-list > *:nth-child(3) { animation-delay: .06s; } .channels-list > *:nth-child(4) { animation-delay: .09s; } .channels-list > *:nth-child(5) { animation-delay: .12s; } .channels-list > *:nth-child(n+6) { animation-delay: .15s; }
+        .dm-card:hover { background-color: color-mix(in srgb, var(--bg-secondary) 40%, rgba(114,137,218,.25)); border-color: rgba(114,137,218,.4); }
+
+        /* Botões: gradiente leve (brilho de vidro) + reação ao toque */
+        /* :where() = especificidade zero, então não briga com quem já define position */
+        :where(.btn, .btn-cancel, .bz-pill-btn, .product-card, .bp-fonte, .welcome-action-btn, .dm-card, .bp-chip) { position: relative; }
+        .btn, .btn-cancel { overflow: hidden; }
+        .btn-primary { background: linear-gradient(180deg, #7d92e0, var(--brand-color) 55%, var(--brand-hover)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px rgba(114,137,218,.25); border-radius: 8px; }
+        .btn-primary:hover { background: linear-gradient(180deg, #8ba0ea, #7a8fe0 55%, var(--brand-color)); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 22px var(--brand-glow); }
+        .btn-danger { border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
+        .btn-cancel { border-radius: 8px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+        .bz-pill-btn { border-radius: 8px; }
+        .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,.35); transform: scale(0); opacity: .9; pointer-events: none; animation: rippleExpande .6s ease-out forwards; }
+
+        /* Brilho que segue o mouse (o JS grava --mx/--my no elemento sob o cursor) */
+        .product-card, .bp-fonte, .welcome-action-btn, .dm-card, .bp-chip { overflow: hidden; }
+        .product-card::after, .bp-fonte::after, .welcome-action-btn::after, .btn-primary::after, .dm-card::after, .bp-chip::after, .bp-marco::before {
+            content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
+            background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.14), transparent 65%);
+        }
+        .product-card:hover::after, .bp-fonte:hover::after, .welcome-action-btn:hover::after, .btn-primary:hover::after, .dm-card:hover::after, .bp-chip:hover::after, .bp-marco:hover::before { opacity: 1; }
+        .bp-marco { overflow: hidden; }
+
+        /* Mensagens: hover mais suave */
+        .message:hover { background-color: rgba(255,255,255,.03); }
+        .message .chat-avatar { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+
+        :root[data-tema="light"] .bp-barra-fundo { background-color: rgba(0,0,0,.1); }
+        :root[data-tema="light"] .bp-barra-texto { color: #23262b; text-shadow: none; }
+        :root[data-tema="light"] .bp-rank, :root[data-tema="light"] .bp-marco-titulo { color: #a06800; }
+
+        @media (max-width: 720px) { body::before, body::after { display: none; } }
     </style>
 </head>
 <body>
@@ -2680,7 +2804,7 @@
                         <span class="control-label">Tema Principal</span>
                         <div style="display: flex; gap: 16px;">
                             <div class="theme-btn active" data-theme="dark" style="flex: 1;">
-                                <div class="theme-preview" style="background-color: #313338;"></div>
+                                <div class="theme-preview" style="background-color: #36393f;"></div>
                                 <div class="theme-label">Escuro</div>
                             </div>
                             <div class="theme-btn" data-theme="light" style="flex: 1;">
@@ -7291,29 +7415,72 @@
             e.target.value = '';
         });
 
-        // Temas Globais (JS Injetor)
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const theme = btn.getAttribute('data-theme');
-                const root = document.documentElement;
-                document.body.style.backgroundImage = 'none';
+        // ---- Reatividade de botões/cartões (brilho que segue o mouse + ripple) ----
+        // Delegado no document: vale pra elementos criados depois também, e
+        // não mexe em nenhum handler existente.
+        (function () {
+            const SPOT = '.product-card, .bp-fonte, .welcome-action-btn, .btn-primary, .dm-card, .bp-chip, .bp-marco';
+            const RIPPLE = '.btn, .btn-cancel, .bz-pill-btn';
+            let quadro = null, ultimo = null;
+            document.addEventListener('pointermove', (e) => {
+                const alvo = e.target.closest && e.target.closest(SPOT);
+                if (!alvo) return;
+                ultimo = { alvo, x: e.clientX, y: e.clientY };
+                if (quadro) return;
+                quadro = requestAnimationFrame(() => {
+                    quadro = null;
+                    const r = ultimo.alvo.getBoundingClientRect();
+                    ultimo.alvo.style.setProperty('--mx', (ultimo.x - r.left) + 'px');
+                    ultimo.alvo.style.setProperty('--my', (ultimo.y - r.top) + 'px');
+                });
+            }, { passive: true });
 
-                if(theme === 'dark') {
-                    root.style.setProperty('--bg-primary', '#313338'); root.style.setProperty('--bg-secondary', '#2b2d31');
-                    root.style.setProperty('--bg-tertiary', '#1e1f22'); root.style.setProperty('--bg-quaternary', '#111214');
-                    root.style.setProperty('--text-normal', '#dbdee1'); root.style.setProperty('--text-header', '#f2f3f5');
-                } else if(theme === 'light') {
-                    root.style.setProperty('--bg-primary', '#ffffff'); root.style.setProperty('--bg-secondary', '#f2f3f5');
-                    root.style.setProperty('--bg-tertiary', '#e3e5e8'); root.style.setProperty('--bg-quaternary', '#ebedef');
-                    root.style.setProperty('--text-normal', '#313338'); root.style.setProperty('--text-header', '#111214');
-                } else if(theme === 'amoled') {
-                    root.style.setProperty('--bg-primary', '#000000'); root.style.setProperty('--bg-secondary', '#0a0a0a');
-                    root.style.setProperty('--bg-tertiary', '#050505'); root.style.setProperty('--bg-quaternary', '#000000');
-                    root.style.setProperty('--text-normal', '#dbdee1'); root.style.setProperty('--text-header', '#ffffff');
-                }
+            document.addEventListener('pointerdown', (e) => {
+                const btn = e.target.closest && e.target.closest(RIPPLE);
+                if (!btn || btn.disabled) return;
+                const r = btn.getBoundingClientRect();
+                const d = Math.max(r.width, r.height) * 2;
+                const o = document.createElement('span');
+                o.className = 'ripple';
+                o.style.width = o.style.height = d + 'px';
+                o.style.left = (e.clientX - r.left - d / 2) + 'px';
+                o.style.top = (e.clientY - r.top - d / 2) + 'px';
+                btn.appendChild(o);
+                setTimeout(() => o.remove(), 650);
+            }, { passive: true });
+        })();
+
+        // Temas Globais (JS Injetor)
+        // O tema mora na conta (Person.tema), igual ao Modo Fantasma: o valor
+        // inicial vem no HTML (sem piscar) e `preferencias_carregadas` mantém
+        // outras abas/aparelhos em sincronia.
+        const TEMAS = {
+            dark:   { '--bg-primary': '#36393f', '--bg-secondary': '#2f3136', '--bg-tertiary': '#202225', '--bg-quaternary': '#18191c', '--text-normal': '#dcddde', '--text-header': '#ffffff' },
+            light:  { '--bg-primary': '#ffffff', '--bg-secondary': '#f2f3f5', '--bg-tertiary': '#e3e5e8', '--bg-quaternary': '#ebedef', '--text-normal': '#313338', '--text-header': '#111214' },
+            amoled: { '--bg-primary': '#000000', '--bg-secondary': '#0a0a0a', '--bg-tertiary': '#050505', '--bg-quaternary': '#000000', '--text-normal': '#dbdee1', '--text-header': '#ffffff' }
+        };
+
+        function aplicarTema(theme) {
+            if (!TEMAS[theme]) return;
+            const root = document.documentElement;
+            root.dataset.tema = theme;
+            document.body.style.backgroundImage = 'none';
+            Object.entries(TEMAS[theme]).forEach(([k, v]) => root.style.setProperty(k, v));
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-theme') === theme));
+        }
+
+        aplicarTema("{{ usuario_atual.tema or 'dark' }}");
+
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.getAttribute('data-theme');
+                aplicarTema(theme);
+                socket.emit('mudar_tema', { tema: theme });
             });
+        });
+
+        socket.on('preferencias_carregadas', (prefs) => {
+            if (prefs.tema && prefs.tema !== document.documentElement.dataset.tema) aplicarTema(prefs.tema);
         });
 
         document.getElementById('bg-image-input').addEventListener('input', (e) => {

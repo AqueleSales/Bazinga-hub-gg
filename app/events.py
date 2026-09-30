@@ -206,7 +206,7 @@ def handle_connect():
 
         # Preferências que moram na conta (não no navegador): o cliente aplica
         # ao conectar, então valem em qualquer aparelho/rede.
-        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode)})
+        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'tema': usuario.tema or 'dark'})
 
         # Bônus diário: a primeira conexão do dia paga XP e mantém a sequência.
         # Em try próprio: falhar aqui não pode derrubar presença/amigos abaixo.
@@ -1541,6 +1541,29 @@ def alternar_fantasma(dados):
         db.session.rollback()
         print(f"[ERRO ALTERNAR FANTASMA] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível mudar o Modo Fantasma: {e}'})
+
+
+@socketio.on('mudar_tema')
+def mudar_tema(dados):
+    """Guarda o tema visual na conta e sincroniza as outras abas/aparelhos."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    tema = (dados or {}).get('tema')
+    if tema not in ('dark', 'light', 'amoled'):
+        return
+
+    try:
+        def preparar():
+            usuario.tema = tema
+
+        comitar_com_retry(preparar)
+        emit('preferencias_carregadas', {'tema': tema}, to=sala_pessoal(usuario.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MUDAR TEMA] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível salvar o tema: {e}'})
 
 
 @socketio.on('mudar_status')
