@@ -59,6 +59,15 @@ class Person(db.Model):
     # subir de nível só mandando mensagem vazia em loop).
     xp = db.Column(db.Integer, default=0, nullable=False)
     xp_ganho_em = db.Column(db.DateTime, nullable=True)
+    # Sequência de dias seguidos entrando no app (bônus diário do Battle Pass).
+    # `streak_em` é o último DIA (sem hora) em que o bônus foi pago.
+    streak_dias = db.Column(db.Integer, default=0, nullable=False)
+    streak_em = db.Column(db.Date, nullable=True)
+
+    # Modo Fantasma mora no servidor (e não no localStorage) pra acompanhar a
+    # pessoa entre dispositivos - e pra o servidor poder barrar a posição dela
+    # de verdade, em vez de confiar que o navegador se comporta.
+    ghost_mode = db.Column(db.Boolean, default=False, nullable=False)
 
     # Perfil (editável na tela de Configurações)
     bio = db.Column(db.Text, nullable=True)

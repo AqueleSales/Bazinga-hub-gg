@@ -10,7 +10,7 @@ from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship)
 from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
-                    conceder_xp_por_mensagem, nivel_da_pessoa, progresso_de_nivel)
+                    conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass)
 
 
 def usuario_logado():
@@ -202,12 +202,21 @@ def handle_connect():
 
         emit('carregar_meus_servidores', servidores)
 
-        xp_atual, xp_por_nivel = progresso_de_nivel(usuario.xp)
-        emit('xp_atualizado', {
-            'xp': usuario.xp or 0, 'nivel': nivel_da_pessoa(usuario.xp),
-            'xp_atual_nivel': xp_atual, 'xp_por_nivel': xp_por_nivel,
-            'coins': usuario.bazinga_coins, 'subiu_nivel': False
-        })
+        emit('xp_atualizado', estado_battlepass(usuario))
+
+        # Preferências que moram na conta (não no navegador): o cliente aplica
+        # ao conectar, então valem em qualquer aparelho/rede.
+        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode)})
+
+        # Bônus diário: a primeira conexão do dia paga XP e mantém a sequência.
+        # Em try próprio: falhar aqui não pode derrubar presença/amigos abaixo.
+        try:
+            bonus = conceder_bonus_diario(usuario)
+            if bonus:
+                emit('xp_atualizado', bonus)
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO BONUS DIARIO] {e}")
 
         # Só avisa quem divide servidor com ela quando é o PRIMEIRO socket
         # dela (outra aba/dispositivo já conectado não deve gerar aviso de novo).
@@ -1430,6 +1439,12 @@ def atualizar_localizacao(dados):
     if not usuario:
         return
 
+    # Fantasma valendo de verdade: a posição nem sai do servidor. Antes só o
+    # navegador se continha, então um cliente adulterado (ou o teletransporte
+    # por duplo clique) vazava a posição mesmo com o modo ligado.
+    if usuario.ghost_mode:
+        return
+
     try:
         payload = {
             'usuario_id': usuario.id,
@@ -1492,6 +1507,40 @@ def atualizar_perfil(dados):
         db.session.rollback()
         print(f"[ERRO ATUALIZAR PERFIL] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível salvar o perfil: {e}'})
+
+
+@socketio.on('alternar_fantasma')
+def alternar_fantasma(dados):
+    """Liga/desliga o Modo Fantasma e guarda na conta.
+
+    Aceita o valor explícito (`ativo`) em vez de só inverter: duas abas
+    clicando quase juntas não podem acabar uma contra a outra.
+    """
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        ativo = bool(dados.get('ativo'))
+
+        def preparar():
+            usuario.ghost_mode = ativo
+
+        comitar_com_retry(preparar)
+
+        # Todas as abas/aparelhos da própria pessoa acompanham.
+        emit('preferencias_carregadas', {'ghost_mode': ativo}, to=sala_pessoal(usuario.id))
+
+        # Ligou: quem já via o pino dela precisa tirar agora (antes o pino
+        # ficava parado no mapa dos outros até F5).
+        if ativo:
+            for srv in usuario.servers:
+                emit('posicao_amigo_removida', {'usuario_id': usuario.id},
+                     to=sala_servidor(srv.id), include_self=False)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ALTERNAR FANTASMA] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível mudar o Modo Fantasma: {e}'})
 
 
 @socketio.on('mudar_status')

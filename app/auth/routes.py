@@ -35,6 +35,11 @@ def cargo_padrao_id():
     return cargo.id if cargo else None
 
 
+def _avatar_e_do_google(url):
+    """True se a pessoa não escolheu foto própria (vazio ou foto do Google)."""
+    return not url or 'googleusercontent.com' in url
+
+
 @auth_bp.route('/login')
 def login():
     redirect_uri = url_for('auth.callback', _external=True)
@@ -61,7 +66,12 @@ def callback():
             return novo
 
         user = comitar_com_retry(criar)
-    elif user.avatar != avatar:
+    elif avatar and user.avatar != avatar and _avatar_e_do_google(user.avatar):
+        # Só sincroniza com o Google se a pessoa ainda usa uma foto DO GOOGLE
+        # (ou nenhuma). Antes isto sobrescrevia o avatar a cada login, então
+        # o GIF/foto escolhido no perfil sumia toda vez que a sessão nova
+        # (outro dispositivo, outra rede, cookie limpo) passava por aqui.
+        #
         # comitar_com_retry e não com_retry(db.session.commit): se o commit
         # falha, o rollback do retry descarta a alteração e a tentativa
         # seguinte comitaria uma sessão vazia.

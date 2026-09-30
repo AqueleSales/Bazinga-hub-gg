@@ -143,30 +143,114 @@ def gerar_codigo_convite(tamanho=8):
 # ==========================================
 # BATTLE PASS: nível/XP pessoal
 # ==========================================
-XP_POR_NIVEL = 100          # XP fixo por nível - simples de propósito, dá pra
-                             # progredir pra curva depois sem migração nenhuma.
+# Curva progressiva: subir do nível N pro N+1 custa XP_BASE + XP_CRESCIMENTO*(N-1).
+# Nível 1->2 = 100 XP, 2->3 = 130, 3->4 = 160... Quem começa sobe rápido (dá
+# vontade de continuar) e o topo exige constância. O XP é guardado TOTAL em
+# Person.xp - trocar a curva aqui não precisa de migração, só muda o nível
+# calculado.
+XP_BASE = 100
+XP_CRESCIMENTO = 30
+NIVEL_MAXIMO = 100
 COINS_POR_NIVEL = 50         # Bazinga Coins pagos ao subir de nível.
 GANHO_XP_INTERVALO_SEGUNDOS = 30   # Sem isso, mandar mensagem vazia em loop
                                     # virava fábrica de XP infinita.
 XP_POR_MENSAGEM = 5
+XP_BONUS_DIARIO = 25         # Pago uma vez por dia, ao abrir o app.
+XP_BONUS_SEQUENCIA = 5       # Extra por dia seguido (até SEQUENCIA_MAXIMA dias).
+SEQUENCIA_MAXIMA = 7
+
+# Título que a pessoa ostenta a partir de cada nível (o maior já alcançado vale).
+TITULOS_POR_NIVEL = [
+    (1, 'Novato'), (5, 'Explorador'), (10, 'Desbravador'), (15, 'Veterano'),
+    (20, 'Lenda Local'), (30, 'Mestre do Radar'), (40, 'Elite Bazinga'),
+    (50, 'Imortal'),
+]
+
+
+def xp_do_nivel(nivel):
+    """XP total necessário pra ALCANÇAR `nivel` (nível 1 = 0 XP)."""
+    n = max(nivel, 1) - 1
+    return XP_BASE * n + XP_CRESCIMENTO * n * (n - 1) // 2
 
 
 def nivel_da_pessoa(xp):
-    """Nível 1 começa em 0 XP; cada nível seguinte custa XP_POR_NIVEL a mais."""
-    return 1 + (xp or 0) // XP_POR_NIVEL
+    xp = xp or 0
+    nivel = 1
+    while nivel < NIVEL_MAXIMO and xp >= xp_do_nivel(nivel + 1):
+        nivel += 1
+    return nivel
 
 
 def progresso_de_nivel(xp):
     """(xp dentro do nível atual, xp necessário pro próximo) - pra desenhar a barrinha."""
     xp = xp or 0
-    return xp % XP_POR_NIVEL, XP_POR_NIVEL
+    nivel = nivel_da_pessoa(xp)
+    if nivel >= NIVEL_MAXIMO:
+        return 1, 1
+    return xp - xp_do_nivel(nivel), xp_do_nivel(nivel + 1) - xp_do_nivel(nivel)
+
+
+def titulo_do_nivel(nivel):
+    titulo = TITULOS_POR_NIVEL[0][1]
+    for minimo, nome in TITULOS_POR_NIVEL:
+        if nivel >= minimo:
+            titulo = nome
+    return titulo
+
+
+def recompensa_do_nivel(nivel):
+    """O que ganha ao ALCANÇAR `nivel`. Marcos de 5/10 níveis pagam mais."""
+    coins = COINS_POR_NIVEL
+    if nivel % 10 == 0:
+        coins = 300
+    elif nivel % 5 == 0:
+        coins = 150
+    novo_titulo = next((nome for minimo, nome in TITULOS_POR_NIVEL if minimo == nivel and nivel > 1), None)
+    return {'nivel': nivel, 'coins': coins, 'titulo': novo_titulo}
+
+
+def _estado_xp(usuario, nivel_antes, ganho_xp=0, motivo=None, bonus_diario=False):
+    nivel = nivel_da_pessoa(usuario.xp)
+    xp_atual, xp_por_nivel = progresso_de_nivel(usuario.xp)
+    # Janela de marcos: o que acabou de passar + os próximos 8, pra trilha.
+    primeiro = max(nivel - 1, 1)
+    marcos = [recompensa_do_nivel(n) for n in range(primeiro, min(primeiro + 9, NIVEL_MAXIMO) + 1)]
+    return {
+        'xp': usuario.xp or 0,
+        'nivel': nivel,
+        'xp_atual_nivel': xp_atual,
+        'xp_por_nivel': xp_por_nivel,
+        'titulo': titulo_do_nivel(nivel),
+        'subiu_nivel': nivel > nivel_antes,
+        'recompensas': [recompensa_do_nivel(n) for n in range(nivel_antes + 1, nivel + 1)],
+        'marcos': marcos,
+        'coins': usuario.bazinga_coins,
+        'ganho_xp': ganho_xp,
+        'motivo': motivo,
+        'bonus_diario': bonus_diario,
+        'streak': usuario.streak_dias or 0,
+        'nivel_maximo': nivel >= NIVEL_MAXIMO,
+    }
+
+
+def estado_battlepass(usuario):
+    """Foto atual do Battle Pass, sem ganhar nada (usada ao conectar)."""
+    return _estado_xp(usuario, nivel_da_pessoa(usuario.xp))
+
+
+def _somar_xp(usuario, quantidade, nivel_antes):
+    """Soma XP e paga as moedas dos níveis cruzados. Chamar DENTRO do preparar()
+    de um comitar_com_retry (precisa refazer a soma a cada tentativa)."""
+    usuario.xp = (usuario.xp or 0) + quantidade
+    for n in range(nivel_antes + 1, nivel_da_pessoa(usuario.xp) + 1):
+        usuario.bazinga_coins = (usuario.bazinga_coins or 0) + recompensa_do_nivel(n)['coins']
 
 
 def conceder_xp_por_mensagem(usuario):
     """Dá XP por mandar mensagem, com cooldown pra não virar spam de XP.
 
     Devolve None se não ganhou XP agora (cooldown), ou um dict com o
-    resultado (pra montar o toast/evento de subiu de nível) se ganhou.
+    estado completo (pra montar o toast/evento de subiu de nível) se ganhou.
     Quem chama decide o que fazer com `subiu_nivel` (emitir evento, etc);
     esta função só mexe no usuário e comita.
     """
@@ -177,21 +261,32 @@ def conceder_xp_por_mensagem(usuario):
     nivel_antes = nivel_da_pessoa(usuario.xp)
 
     def preparar():
-        usuario.xp = (usuario.xp or 0) + XP_POR_MENSAGEM
+        _somar_xp(usuario, XP_POR_MENSAGEM, nivel_antes)
         usuario.xp_ganho_em = agora
-        nivel_depois = nivel_da_pessoa(usuario.xp)
-        if nivel_depois > nivel_antes:
-            usuario.bazinga_coins = (usuario.bazinga_coins or 0) + COINS_POR_NIVEL * (nivel_depois - nivel_antes)
 
     comitar_com_retry(preparar)
+    return _estado_xp(usuario, nivel_antes, XP_POR_MENSAGEM, 'mensagem')
 
-    nivel_depois = nivel_da_pessoa(usuario.xp)
-    xp_atual, xp_por_nivel = progresso_de_nivel(usuario.xp)
-    return {
-        'xp': usuario.xp,
-        'nivel': nivel_depois,
-        'xp_atual_nivel': xp_atual,
-        'xp_por_nivel': xp_por_nivel,
-        'subiu_nivel': nivel_depois > nivel_antes,
-        'coins': usuario.bazinga_coins,
-    }
+
+def conceder_bonus_diario(usuario):
+    """Bônus de quem abre o app no dia: XP + sequência de dias seguidos.
+
+    Devolve None se hoje já foi pago. Falha em dia pulado volta a sequência
+    pra 1 (só o dia de ontem mantém a corrente).
+    """
+    hoje = br_now().date()
+    if usuario.streak_em == hoje:
+        return None
+
+    nivel_antes = nivel_da_pessoa(usuario.xp)
+    seguiu = usuario.streak_em is not None and (hoje - usuario.streak_em).days == 1
+    nova_sequencia = (usuario.streak_dias or 0) + 1 if seguiu else 1
+    ganho = XP_BONUS_DIARIO + XP_BONUS_SEQUENCIA * (min(nova_sequencia, SEQUENCIA_MAXIMA) - 1)
+
+    def preparar():
+        _somar_xp(usuario, ganho, nivel_antes)
+        usuario.streak_dias = nova_sequencia
+        usuario.streak_em = hoje
+
+    comitar_com_retry(preparar)
+    return _estado_xp(usuario, nivel_antes, ganho, 'diario', bonus_diario=True)

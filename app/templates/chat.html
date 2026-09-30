@@ -398,23 +398,128 @@
            tirar o "active" de todo mundo - reaproveitar ela aqui deixava o
            Battle Pass invisível pra sempre depois de clicar em qualquer
            aba do Mercado uma vez (a classe "active" nunca voltava). */
-        .bp-content { flex-grow: 1; overflow-y: auto; padding: 24px 32px; }
-        .bp-card { display: flex; align-items: center; gap: 24px; background-color: var(--bg-tertiary); border-radius: 12px; padding: 24px; }
-        .bp-nivel-badge { width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(135deg, #ffd76a, #ff9b3f); display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 900; color: #1a1b1e; flex-shrink: 0; box-shadow: 0 0 0 4px var(--bg-quaternary), 0 4px 16px rgba(255, 179, 71, 0.35); }
-        @keyframes bpPulso { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
-        .bp-nivel-badge.subiu { animation: bpPulso 0.6s ease; }
+        .bp-content { flex-grow: 1; overflow-y: auto; padding: 24px 32px 40px; }
+
+        /* Cartão principal: borda de gradiente girando devagar + brilho de fundo */
+        @property --bp-angulo { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes bpGira { to { --bp-angulo: 360deg; } }
+        @keyframes bpEntra { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+        @keyframes bpBrilho { 0% { transform: translateX(-120%); } 60%, 100% { transform: translateX(260%); } }
+        @keyframes bpPulso { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+        @keyframes bpFlutua { 0% { opacity: 0; transform: translateY(6px) scale(.8); } 15% { opacity: 1; transform: translateY(-2px) scale(1.05); } 100% { opacity: 0; transform: translateY(-26px) scale(1); } }
+        @keyframes bpChama { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.14) rotate(3deg); } }
+        @keyframes bpAtual { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,106,.45), 0 6px 18px rgba(0,0,0,.35); } 50% { box-shadow: 0 0 0 7px rgba(255,215,106,0), 0 6px 18px rgba(0,0,0,.35); } }
+
+        .bp-hero { position: relative; display: flex; align-items: center; gap: 28px; padding: 28px; border-radius: 16px; isolation: isolate; overflow: hidden;
+                   background: linear-gradient(var(--bg-tertiary), var(--bg-tertiary)) padding-box,
+                               conic-gradient(from var(--bp-angulo), #5865F2, #eb459e, #ffd76a, #23a559, #5865F2) border-box;
+                   border: 2px solid transparent; animation: bpGira 7s linear infinite, bpEntra .5s cubic-bezier(.16,.84,.44,1) both; }
+        .bp-hero::before { content: ''; position: absolute; inset: -40% -10% auto auto; width: 420px; height: 420px; border-radius: 50%; z-index: -1; pointer-events: none;
+                           background: radial-gradient(circle, rgba(88,101,242,.28), transparent 65%); }
+
+        .bp-anel { position: relative; width: 132px; height: 132px; flex-shrink: 0; }
+        .bp-anel svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+        .bp-anel-fundo { fill: none; stroke: rgba(255,255,255,.08); stroke-width: 7; }
+        .bp-anel-prog { fill: none; stroke: url(#bp-grad-anel); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset .9s cubic-bezier(.22,1,.36,1); filter: drop-shadow(0 0 6px rgba(255,215,106,.55)); }
+        .bp-nivel-badge { position: absolute; inset: 14px; border-radius: 50%; background: linear-gradient(135deg, #ffd76a, #ff9b3f); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 900; color: #1a1b1e; box-shadow: 0 0 0 4px var(--bg-quaternary), 0 6px 22px rgba(255,179,71,.4); font-variant-numeric: tabular-nums; }
+        .bp-nivel-badge.subiu { animation: bpPulso .7s cubic-bezier(.34,1.56,.64,1); }
+
         .bp-info { flex: 1; min-width: 0; }
-        .bp-titulo { font-size: 18px; font-weight: 800; color: var(--text-header); margin-bottom: 10px; }
+        .bp-rank { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #ffd76a; background: rgba(255,215,106,.12); padding: 3px 10px; border-radius: 20px; margin-bottom: 8px; }
+        .bp-titulo { font-size: 26px; font-weight: 900; color: var(--text-header); margin-bottom: 12px; letter-spacing: -.01em; }
         .bp-barra-wrapper { position: relative; }
-        .bp-barra-fundo { height: 22px; border-radius: 11px; background-color: var(--bg-quaternary); overflow: hidden; }
-        .bp-barra-preenchida { height: 100%; border-radius: 11px; background: linear-gradient(90deg, var(--brand-color), #8a6ff2); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-        .bp-barra-texto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        .bp-marcos { display: flex; gap: 16px; flex-wrap: wrap; }
-        .bp-marco { background-color: var(--bg-tertiary); border-radius: 8px; padding: 16px; width: 140px; text-align: center; opacity: 0.55; transition: 0.2s; border: 1px solid transparent; }
-        .bp-marco.alcancado { opacity: 1; border-color: var(--green-color); }
-        .bp-marco i { font-size: 22px; color: #ffd76a; margin-bottom: 8px; display: block; }
+        .bp-barra-fundo { height: 24px; border-radius: 12px; background-color: var(--bg-quaternary); overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,.4); }
+        .bp-barra-preenchida { position: relative; height: 100%; border-radius: 12px; background: linear-gradient(90deg, var(--brand-color), #8a6ff2 60%, #eb459e); transition: width .9s cubic-bezier(.22,1,.36,1); overflow: hidden; }
+        .bp-barra-preenchida::after { content: ''; position: absolute; inset: 0; width: 40%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); animation: bpBrilho 2.8s ease-in-out infinite; }
+        .bp-barra-texto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
+        .bp-faltam { color: var(--text-muted); font-size: 13px; margin-top: 10px; }
+        .bp-faltam b { color: var(--text-header); }
+
+        .bp-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+        .bp-chip { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 7px 12px; font-size: 13px; font-weight: 700; color: var(--text-header); transition: transform .2s, background .2s; }
+        .bp-chip:hover { transform: translateY(-2px); background: rgba(255,255,255,.1); }
+        .bp-chip small { color: var(--text-muted); font-weight: 600; font-size: 11px; }
+        .bp-chip .fa-fire { color: #ff7a2f; animation: bpChama 1.3s ease-in-out infinite; }
+        .bp-chip.apagada .fa-fire { color: var(--text-muted); animation: none; }
+        .bp-chip .fa-coins { color: #ffd76a; }
+
+        /* Trilha de recompensas */
+        .bp-marcos { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
+        .bp-marco { position: relative; background-color: var(--bg-tertiary); border-radius: 12px; padding: 16px 12px 14px; text-align: center; border: 1px solid rgba(255,255,255,.06); transition: transform .2s, border-color .2s, opacity .2s; animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) both; animation-delay: calc(var(--i, 0) * 55ms); }
+        .bp-marco:hover { transform: translateY(-4px); }
+        .bp-marco i.bp-ico { font-size: 24px; color: #ffd76a; margin-bottom: 8px; display: block; }
         .bp-marco-nivel { font-weight: 800; font-size: 14px; color: var(--text-header); }
-        .bp-marco-premio { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .bp-marco-premio { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 600; }
+        .bp-marco-titulo { margin-top: 8px; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #ffd76a; background: rgba(255,215,106,.12); border-radius: 10px; padding: 2px 8px; display: inline-block; }
+        .bp-marco.concluido { border-color: rgba(35,165,89,.55); }
+        .bp-marco.concluido::after { content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--green-color); color: #fff; font-size: 9px; display: flex; align-items: center; justify-content: center; }
+        .bp-marco.atual { border-color: #ffd76a; background: linear-gradient(180deg, rgba(255,215,106,.12), var(--bg-tertiary)); animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) both, bpAtual 2.2s ease-in-out infinite; animation-delay: calc(var(--i, 0) * 55ms), 0s; }
+        .bp-marco.bloqueado { opacity: .5; }
+        .bp-marco.bloqueado:hover { opacity: .85; }
+        .bp-marco.especial { background: linear-gradient(160deg, rgba(235,69,158,.14), rgba(88,101,242,.14)), var(--bg-tertiary); }
+        .bp-marco.especial i.bp-ico { color: #ff9bd2; }
+
+        /* Como ganhar XP */
+        .bp-fontes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+        .bp-fonte { display: flex; gap: 14px; align-items: center; background-color: var(--bg-tertiary); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,.06); transition: transform .2s, border-color .2s; }
+        .bp-fonte:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.14); }
+        .bp-fonte-ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: rgba(88,101,242,.18); color: #8f9bff; }
+        .bp-fonte-ico.fogo { background: rgba(255,122,47,.16); color: #ff7a2f; }
+        .bp-fonte b { display: block; color: var(--text-header); font-size: 14px; }
+        .bp-fonte span { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+
+        /* "+5 XP" flutuando no botão da barra lateral */
+        #btn-battlepass { position: relative; }
+        .bp-xp-flutuante { position: absolute; right: 38px; top: 2px; font-size: 12px; font-weight: 800; color: #ffd76a; text-shadow: 0 1px 3px rgba(0,0,0,.7); pointer-events: none; animation: bpFlutua 1.3s ease-out forwards; }
+        #sidebar-nivel-badge.subiu { animation: bpPulso .7s cubic-bezier(.34,1.56,.64,1); }
+
+        /* Comemoração de nível novo */
+        @keyframes bpCelebraFundo { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes bpCelebraCartao { 0% { opacity: 0; transform: scale(.6) translateY(30px); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: none; } }
+        @keyframes bpConfete { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); } }
+        .bp-celebra { position: fixed; inset: 0; z-index: 10600; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 45%, rgba(88,101,242,.35), rgba(0,0,0,.82) 70%); animation: bpCelebraFundo .3s ease both; cursor: pointer; }
+        .bp-celebra-cartao { position: relative; text-align: center; padding: 36px 48px; border-radius: 20px; background: var(--bg-tertiary); border: 2px solid #ffd76a; box-shadow: 0 0 60px rgba(255,215,106,.35); animation: bpCelebraCartao .6s cubic-bezier(.34,1.56,.64,1) both; max-width: min(420px, 90vw); }
+        .bp-celebra-topo { font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #ffd76a; }
+        .bp-celebra-num { font-size: 92px; font-weight: 900; line-height: 1.05; margin: 6px 0; background: linear-gradient(135deg, #ffd76a, #ff9b3f); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .bp-celebra-rank { font-size: 18px; font-weight: 800; color: var(--text-header); }
+        .bp-celebra-premios { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-normal); font-weight: 600; }
+        .bp-celebra-premios .bp-chip { justify-content: center; }
+        .bp-celebra-dica { margin-top: 18px; font-size: 11px; color: var(--text-muted); }
+        .bp-confete { position: absolute; left: 50%; top: 45%; width: 8px; height: 14px; border-radius: 2px; pointer-events: none; animation: bpConfete var(--dur, 1.6s) cubic-bezier(.15,.7,.3,1) forwards; animation-delay: var(--atraso, 0s); }
+
+        @media (max-width: 720px) {
+            .bp-content { padding: 16px; }
+            .bp-hero { flex-direction: column; text-align: center; padding: 22px 16px; }
+            .bp-chips { justify-content: center; }
+        }
+
+        /* ==========================================================================
+           POLIMENTO GERAL: transições entre abas, microinterações e modais.
+           Tudo via CSS (sem JS): a animação roda sozinha toda vez que o elemento
+           sai de display:none. Só opacity/translate - o "backwards" garante que
+           não sobra transform depois (um transform ficando no pai quebraria o
+           position:fixed dos filhos).
+           ========================================================================== */
+        @keyframes vistaEntra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        @keyframes modalPop { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+        #home-content-wrapper, #server-content-wrapper, #market-content-wrapper,
+        #battlepass-content-wrapper, #calendar-content-wrapper, #dm-chat-view { animation: vistaEntra .28s cubic-bezier(.16,.84,.44,1) backwards; }
+        .bazinga-modal { animation: modalPop .22s cubic-bezier(.16,.84,.44,1) backwards; }
+
+        .btn, .btn-cancel, .bz-pill-btn { transition: background-color .2s, color .2s, border-color .2s, transform .12s, box-shadow .2s; }
+        .btn:active, .btn-cancel:active, .bz-pill-btn:active { transform: scale(.96); }
+        .btn-primary:hover { box-shadow: 0 6px 16px rgba(88,101,242,.4); transform: translateY(-1px); }
+        .btn-primary:active { transform: scale(.96); }
+        .channel-item { transition: background-color .15s, color .15s, transform .15s; }
+        .channel-item:hover { transform: translateX(3px); }
+        .server-icon:active { transform: scale(.92); }
+        .server-icon:hover img { transform: scale(1.06); }
+        .server-icon img { transition: transform .25s; }
+        .bazinga-toast { backdrop-filter: blur(6px); }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+        }
 
         /* ==========================================================================
            5. ÁREA DE VÍDEO E CALL (WebRTC P2P)
@@ -1497,20 +1602,41 @@
                     </h2>
                 </header>
                 <div class="bp-content">
-                    <div class="bp-card">
-                        <div class="bp-nivel-badge" id="bp-nivel-numero">1</div>
+                    <div class="bp-hero">
+                        <div class="bp-anel">
+                            <svg viewBox="0 0 120 120" aria-hidden="true">
+                                <defs><linearGradient id="bp-grad-anel" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ffd76a"/><stop offset="100%" stop-color="#ff7a2f"/></linearGradient></defs>
+                                <circle class="bp-anel-fundo" cx="60" cy="60" r="52"/>
+                                <circle class="bp-anel-prog" id="bp-anel-prog" cx="60" cy="60" r="52" pathLength="100"/>
+                            </svg>
+                            <div class="bp-nivel-badge" id="bp-nivel-numero">1</div>
+                        </div>
                         <div class="bp-info">
+                            <div class="bp-rank"><i class="fa-solid fa-shield-halved"></i> <span id="bp-rank-texto">Novato</span></div>
                             <div class="bp-titulo">Nível <span id="bp-nivel-texto">1</span></div>
                             <div class="bp-barra-wrapper">
                                 <div class="bp-barra-fundo"><div class="bp-barra-preenchida" id="bp-barra-preenchida" style="width: 0%;"></div></div>
                                 <div class="bp-barra-texto" id="bp-barra-texto">0 / 100 XP</div>
                             </div>
-                            <div style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">Manda mensagem pra ganhar XP. A cada nível, uma recompensa em Bazinga Coins cai direto na sua carteira.</div>
+                            <div class="bp-faltam" id="bp-faltam"></div>
+                            <div class="bp-chips">
+                                <div class="bp-chip apagada" id="bp-chip-streak" title="Dias seguidos entrando no app"><i class="fa-solid fa-fire"></i> <span id="bp-streak-num">0</span> <small>dias seguidos</small></div>
+                                <div class="bp-chip" title="Seus Bazinga Coins"><i class="fa-solid fa-coins"></i> <span id="bp-coins-num">0</span> <small>BZC</small></div>
+                                <div class="bp-chip" title="XP total acumulado"><i class="fa-solid fa-bolt"></i> <span id="bp-xp-total">0</span> <small>XP total</small></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="market-section-title">Próximos marcos</div>
+                    <div class="market-section-title">Trilha de recompensas</div>
                     <div class="bp-marcos" id="bp-marcos-lista"></div>
+
+                    <!-- Valores daqui espelham XP_POR_MENSAGEM / XP_BONUS_DIARIO / XP_BONUS_SEQUENCIA em app/utils.py -->
+                    <div class="market-section-title">Como ganhar XP</div>
+                    <div class="bp-fontes">
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-comment-dots"></i></div><div><b>Converse: +5 XP</b><span>Em canais e DMs, no máximo 1 vez a cada 30 segundos.</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico fogo"><i class="fa-solid fa-fire"></i></div><div><b>Bônus diário: +25 XP</b><span>Abra o app todo dia. Cada dia seguido soma +5 XP (até 7 dias).</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: BZC</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Títulos novos nos marcos.</span></div></div>
+                    </div>
                 </div>
             </div>
             <!-- ==========================================
@@ -2923,44 +3049,151 @@
             });
         }
 
-        // Desenha nível/XP - chamado tanto ao conectar (xp_atualizado sem
-        // subiu_nivel) quanto depois de mandar mensagem (com XP ganho).
-        function desenharMarcosBattlePass(nivelAtual) {
+        // ---- Battle Pass: desenho do estado + animações --------------------------
+        // `xp_atualizado` chega ao conectar (foto do estado, sem ganho), depois
+        // de mandar mensagem (+XP) e no bônus diário. Tudo sai do servidor
+        // (app/utils.py) - aqui só desenha, sem recalcular nível nenhum.
+        let bpUltimoNivel = null;
+
+        function animarNumero(el, ate, ms = 700) {
+            if (!el) return;
+            const de = parseInt(el.textContent.replace(/\D/g, ''), 10) || 0;
+            if (de === ate) { el.textContent = ate; return; }
+            const t0 = performance.now();
+            const passo = (t) => {
+                const k = Math.min((t - t0) / ms, 1);
+                el.textContent = Math.round(de + (ate - de) * (1 - Math.pow(1 - k, 3)));
+                if (k < 1) requestAnimationFrame(passo);
+            };
+            requestAnimationFrame(passo);
+        }
+
+        function piscar(el, classe = 'subiu') {
+            if (!el) return;
+            el.classList.remove(classe); void el.offsetWidth; el.classList.add(classe);
+        }
+
+        function desenharMarcosBattlePass(marcos, nivelAtual) {
             const lista = document.getElementById('bp-marcos-lista');
-            if (!lista) return;
-            let html = '';
-            for (let n = nivelAtual; n < nivelAtual + 5; n++) {
-                html += `<div class="bp-marco ${n === nivelAtual ? 'alcancado' : ''}">
-                    <i class="fa-solid fa-medal"></i>
-                    <div class="bp-marco-nivel">Nível ${n}</div>
-                    <div class="bp-marco-premio">+50 BZC</div>
+            if (!lista || !Array.isArray(marcos)) return;
+            lista.innerHTML = marcos.map((m, i) => {
+                const estado = m.nivel < nivelAtual ? 'concluido' : (m.nivel === nivelAtual ? 'atual' : 'bloqueado');
+                const especial = m.titulo || m.coins >= 150;
+                const icone = m.titulo ? 'fa-crown' : (m.coins >= 300 ? 'fa-gem' : (m.coins >= 150 ? 'fa-trophy' : 'fa-coins'));
+                return `<div class="bp-marco ${estado} ${especial ? 'especial' : ''}" style="--i:${i}">
+                    <i class="fa-solid ${icone} bp-ico"></i>
+                    <div class="bp-marco-nivel">Nível ${Number(m.nivel)}</div>
+                    <div class="bp-marco-premio">+${Number(m.coins)} BZC</div>
+                    ${m.titulo ? `<div class="bp-marco-titulo">${esc(m.titulo)}</div>` : ''}
                 </div>`;
+            }).join('');
+        }
+
+        function mostrarXpFlutuante(qtd) {
+            const botao = document.getElementById('btn-battlepass');
+            if (!botao || !qtd) return;
+            const el = document.createElement('span');
+            el.className = 'bp-xp-flutuante';
+            el.textContent = `+${qtd} XP`;
+            botao.appendChild(el);
+            setTimeout(() => el.remove(), 1400);
+        }
+
+        function mostrarSubidaDeNivel(dados) {
+            document.getElementById('bp-celebra')?.remove();
+            const coins = (dados.recompensas || []).reduce((t, r) => t + (r.coins || 0), 0);
+            const titulos = (dados.recompensas || []).map(r => r.titulo).filter(Boolean);
+            const overlay = document.createElement('div');
+            overlay.id = 'bp-celebra';
+            overlay.className = 'bp-celebra';
+            overlay.innerHTML = `<div class="bp-celebra-cartao">
+                <div class="bp-celebra-topo">Subiu de nível!</div>
+                <div class="bp-celebra-num">${Number(dados.nivel)}</div>
+                <div class="bp-celebra-rank">${esc(dados.titulo || '')}</div>
+                <div class="bp-celebra-premios">
+                    <div class="bp-chip"><i class="fa-solid fa-coins"></i> +${coins} Bazinga Coins</div>
+                    ${titulos.map(t => `<div class="bp-chip"><i class="fa-solid fa-crown" style="color:#ff9bd2;"></i> Novo título: ${esc(t)}</div>`).join('')}
+                </div>
+                <div class="bp-celebra-dica">clique para fechar</div>
+            </div>`;
+
+            const cores = ['#ffd76a', '#ff7a2f', '#eb459e', '#5865F2', '#23a559', '#ffffff'];
+            for (let i = 0; i < 46; i++) {
+                const c = document.createElement('span');
+                c.className = 'bp-confete';
+                const ang = Math.random() * Math.PI * 2, dist = 140 + Math.random() * 320;
+                c.style.setProperty('--dx', `${Math.cos(ang) * dist}px`);
+                c.style.setProperty('--dy', `${Math.sin(ang) * dist + 120}px`);
+                c.style.setProperty('--rot', `${Math.random() * 900 - 450}deg`);
+                c.style.setProperty('--dur', `${1.3 + Math.random() * 0.9}s`);
+                c.style.setProperty('--atraso', `${Math.random() * 0.25}s`);
+                c.style.background = cores[i % cores.length];
+                overlay.appendChild(c);
             }
-            lista.innerHTML = html;
+
+            const fechar = () => { overlay.remove(); document.removeEventListener('keydown', aoTeclar); };
+            const aoTeclar = (e) => { if (e.key === 'Escape' || e.key === 'Enter') fechar(); };
+            overlay.addEventListener('click', fechar);
+            document.addEventListener('keydown', aoTeclar);
+            document.body.appendChild(overlay);
+            setTimeout(fechar, 6000);
         }
 
         socket.on('xp_atualizado', (dados) => {
             const badgeSidebar = document.getElementById('sidebar-nivel-badge');
             if (badgeSidebar) badgeSidebar.textContent = dados.nivel;
             const badgePopout = document.getElementById('popout-nivel-badge');
-            if (badgePopout) badgePopout.textContent = `Nv. ${dados.nivel}`;
+            if (badgePopout) { badgePopout.textContent = `Nv. ${dados.nivel}`; badgePopout.title = dados.titulo || 'Seu nível no Battle Pass'; }
 
+            const pct = dados.nivel_maximo ? 100 : Math.round((dados.xp_atual_nivel / dados.xp_por_nivel) * 100);
             const badge = document.getElementById('bp-nivel-numero');
             if (badge) {
-                badge.textContent = dados.nivel;
                 document.getElementById('bp-nivel-texto').textContent = dados.nivel;
-                const pct = Math.round((dados.xp_atual_nivel / dados.xp_por_nivel) * 100);
-                document.getElementById('bp-barra-preenchida').style.width = pct + '%';
-                document.getElementById('bp-barra-texto').textContent = `${dados.xp_atual_nivel} / ${dados.xp_por_nivel} XP`;
-                desenharMarcosBattlePass(dados.nivel);
+                document.getElementById('bp-rank-texto').textContent = dados.titulo || '';
+                document.getElementById('bp-barra-texto').textContent = dados.nivel_maximo ? 'Nível máximo' : `${dados.xp_atual_nivel} / ${dados.xp_por_nivel} XP`;
+                document.getElementById('bp-faltam').innerHTML = dados.nivel_maximo
+                    ? 'Você chegou ao topo. Lenda.'
+                    : `Faltam <b>${dados.xp_por_nivel - dados.xp_atual_nivel} XP</b> pro nível ${dados.nivel + 1}`;
+
+                const barra = document.getElementById('bp-barra-preenchida');
+                const anel = document.getElementById('bp-anel-prog');
+                const aplicar = (v) => { barra.style.width = v + '%'; anel.style.strokeDashoffset = 100 - v; };
+                if (dados.subiu_nivel) {
+                    // Enche até o fim, e só então recomeça no nível novo.
+                    aplicar(100);
+                    setTimeout(() => { aplicar(pct); }, 650);
+                } else {
+                    aplicar(pct);
+                }
+
+                animarNumero(badge, dados.nivel, 500);
+                animarNumero(document.getElementById('bp-xp-total'), dados.xp);
+                animarNumero(document.getElementById('bp-coins-num'), dados.coins);
+
+                const streak = dados.streak || 0;
+                document.getElementById('bp-streak-num').textContent = streak;
+                document.getElementById('bp-chip-streak').classList.toggle('apagada', streak === 0);
+
+                desenharMarcosBattlePass(dados.marcos, dados.nivel);
+            }
+
+            if (dados.coins !== undefined) {
+                const saldoEl = document.getElementById('meu-saldo-bzc');
+                if (saldoEl) saldoEl.textContent = dados.coins;
+            }
+
+            if (dados.motivo === 'mensagem' && dados.ganho_xp) mostrarXpFlutuante(dados.ganho_xp);
+
+            if (dados.bonus_diario) {
+                showToast(`Bônus diário: +${dados.ganho_xp} XP · ${dados.streak} ${dados.streak === 1 ? 'dia' : 'dias'} seguidos`, 'success');
             }
 
             if (dados.subiu_nivel) {
-                showToast(`Subiu pro nível ${dados.nivel}! +50 Bazinga Coins`, 'success');
-                const saldoEl = document.getElementById('meu-saldo-bzc');
-                if (saldoEl) saldoEl.textContent = dados.coins;
-                if (badge) { badge.classList.remove('subiu'); void badge.offsetWidth; badge.classList.add('subiu'); }
+                piscar(badge);
+                piscar(badgeSidebar);
+                mostrarSubidaDeNivel(dados);
             }
+            bpUltimoNivel = dados.nivel;
         });
 
         const btnVoltarRadar = document.getElementById('btn-voltar-radar');
@@ -4810,7 +5043,14 @@
         let geoNotesAtivas = []; // Array para monitorar proximidade
         let serverMarkersAtivos = [];
 
-        let ghostMode = localStorage.getItem('bzGhostMode') === 'true';
+        // Modo Fantasma mora NA CONTA (Person.ghost_mode), não no navegador -
+        // antes era localStorage e voltava pra OFF em todo aparelho/rede nova.
+        // O valor vem da conta já no HTML; `preferencias_carregadas` (ao
+        // conectar) só mantém outras abas/aparelhos em sincronia. O servidor
+        // também barra a posição sozinho quando está ON.
+        let ghostMode = "{{ 1 if usuario_atual.ghost_mode else 0 }}" === "1";   // valor da conta, já no HTML (sem piscar OFF->ON)
+        let fantasmaAguardando = false;   // true = o clique foi meu, toast quando confirmar
+        try { localStorage.removeItem('bzGhostMode'); } catch (e) {}
         const btnToggleGhost = document.getElementById('btn-toggle-ghost');
 
         function updateGhostVisuals() {
@@ -4826,18 +5066,38 @@
         }
 
         btnToggleGhost?.addEventListener('click', function() {
-            ghostMode = !ghostMode;
-            localStorage.setItem('bzGhostMode', ghostMode);
-            updateGhostVisuals();
-            showToast(ghostMode ? "Modo Fantasma Ativado. Você está invisível para os outros." : "Modo Fantasma Desativado. Cuidado na rua!", ghostMode ? "warning" : "success");
+            // Manda o valor desejado (não "inverter"): duas abas clicando juntas
+            // não se anulam. A tela só muda quando o servidor confirmar.
+            fantasmaAguardando = true;
+            socket.emit('alternar_fantasma', { ativo: !ghostMode });
+        });
 
-            if(!ghostMode && myMapMarker && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    atualizarMinhaPosicao(pos.coords.latitude, pos.coords.longitude);
-                    if(typeof socket !== 'undefined' && socket.connected) {
-                        socket.emit('atualizar_localizacao', { lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    }
-                });
+        updateGhostVisuals();   // botão já nasce com o valor certo da conta
+
+        socket.on('preferencias_carregadas', (prefs) => {
+            if (typeof prefs.ghost_mode !== 'boolean') return;
+            const mudou = prefs.ghost_mode !== ghostMode;
+            ghostMode = prefs.ghost_mode;
+            updateGhostVisuals();
+
+            if (fantasmaAguardando) {
+                fantasmaAguardando = false;
+                showToast(ghostMode ? "Modo Fantasma Ativado. Você está invisível para os outros." : "Modo Fantasma Desativado. Cuidado na rua!", ghostMode ? "warning" : "success");
+            }
+
+            // Desligou: anuncia a posição atual na hora (sem esperar o GPS andar).
+            if (mudou && !ghostMode && myMapMarker) {
+                const pos = myMapMarker.getLatLng();
+                socket.emit('atualizar_localizacao', { lat: pos.lat, lng: pos.lng });
+            }
+        });
+
+        // Alguém ligou o fantasma: some do meu mapa na hora.
+        socket.on('posicao_amigo_removida', (dados) => {
+            const marcador = mapMarkers[dados.usuario_id];
+            if (marcador && bazingaMap) {
+                bazingaMap.removeLayer(marcador);
+                delete mapMarkers[dados.usuario_id];
             }
         });
 

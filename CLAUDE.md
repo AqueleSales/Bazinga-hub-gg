@@ -547,6 +547,63 @@ antes de reemitir; sem isso, um `temp_id` malicioso (aspas/colchetes)
 quebraria o `querySelector` de `receber_mensagem` em **todo mundo** que
 está no canal, não só em quem mandou.
 
+## Perfil e preferências moram na conta, não no navegador
+
+**O bug**: o avatar (e o GIF escolhido) "resetava" ao trocar de dispositivo ou
+rede. Causa: o callback do Google (`auth/routes.py`) sobrescrevia
+`Person.avatar` com a foto do Google **a cada login**, e sessão nova (outro
+aparelho, cookie limpo) = login novo. Hoje só sincroniza se a pessoa ainda
+usa foto do Google ou nenhuma (`_avatar_e_do_google()`); avatar próprio
+(Cloudinary) nunca é tocado. Quem já teve o avatar sobrescrito no passado
+precisa escolher de novo — não há de onde recuperar.
+
+**Regra**: preferência de usuário que precisa acompanhar a pessoa vai pro
+banco, não pro `localStorage` (que é por navegador). `localStorage` fica só
+pra conveniência de UI (ex.: lista de membros recolhida).
+
+- **Modo Fantasma** = `Person.ghost_mode`. O cliente emite
+  `alternar_fantasma {ativo}` (valor explícito, não "inverter" — duas abas
+  clicando juntas não se anulam) e só muda a tela quando o servidor devolve
+  `preferencias_carregadas` (que também é enviado ao conectar, então vale em
+  qualquer aparelho; o valor inicial já vem no HTML pra não piscar OFF→ON).
+  `atualizar_localizacao` **descarta** a posição no servidor se o fantasma
+  estiver ligado (antes só o navegador se continha — o teletransporte por
+  duplo clique vazava). Ao ligar, emite `posicao_amigo_removida` pra
+  `sala_servidor` (o pino some do mapa de quem já via — regra 6).
+
+## Battle Pass (nível/XP)
+
+Tudo calculado no servidor (`app/utils.py`); o cliente só desenha o dict que
+chega em `xp_atualizado` (nunca recalcula nível).
+
+- **Curva progressiva**: subir do nível N pro N+1 custa `100 + 30·(N-1)` XP
+  (1→2 = 100, 2→3 = 130...), teto nível 100. `Person.xp` guarda o TOTAL, então
+  mudar a curva não precisa de migração.
+- **Recompensas** (`recompensa_do_nivel`): +50 BZC por nível, +150 a cada 5,
+  +300 a cada 10; títulos (Novato → Explorador → ... → Imortal) nos marcos de
+  `TITULOS_POR_NIVEL`. As moedas dos níveis cruzados são pagas dentro do
+  mesmo `comitar_com_retry` que soma o XP (regra 2).
+- **Fontes de XP**: mensagem (+5, cooldown 30s) e **bônus diário** (+25, +5
+  por dia seguido até 7 — `Person.streak_dias`/`streak_em`; pular um dia zera a
+  sequência). O bônus é pago no `connect`, em `try` próprio pra falha nele não
+  derrubar a presença. O texto "Como ganhar XP" em `chat.html` é fixo e
+  **espelha** essas constantes — mudou uma, mude a outra.
+- UI: anel de progresso + barra com brilho, trilha de 10 marcos
+  (concluído/atual/bloqueado), "+N XP" flutuando no botão da barra lateral e
+  tela de comemoração com confete em `subiu_nivel` (clique/ESC/6s fecham).
+
+## Animações e polimento
+
+Bloco "POLIMENTO GERAL" no CSS de `chat.html`: transição de aba
+(`vistaEntra` nos wrappers `#...-content-wrapper`), `modalPop` em
+`.bazinga-modal`, microinterações de botão/canal/ícone de servidor e
+`prefers-reduced-motion` desligando tudo. A entrada das abas é puro CSS
+(roda sozinha quando o elemento sai de `display:none`) e só usa
+opacity/translate com `backwards` — **não** deixe `transform` fixo num
+wrapper de aba, senão os `position:fixed` de dentro passam a se ancorar
+nele. O mapa (`#bazinga-map`) fica de fora de propósito (Leaflet usa
+transform).
+
 ## Mensagens fixadas
 
 `Message.is_pinned` (coluna nova, precisa de `atualizar_banco.py`). Fixar é
@@ -861,7 +918,8 @@ vetorial e busca de GIF (Giphy).
 
 **Rodar `python atualizar_banco.py` depois do deploy** — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
-`person.created_at` ("Membro desde"). Configurar `GIPHY_API_KEY` no
+`person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
+`person.streak_dias` e `person.streak_em`. Configurar `GIPHY_API_KEY` no
 Environment do Render (ver seção Deploy) pra busca de GIF funcionar em
 produção.
 
@@ -898,10 +956,6 @@ produção.
   mão. Enquanto não existir, uma tela de "Cargos" seria decorativa.
 - **Inventário sem UI**: a compra grava um `Purchase` e existe
   `/api/inventario`, mas o usuário compra e não vê o que tem.
-- **Modo Fantasma** salva só no `localStorage`, não no banco (troca de
-  aparelho e volta ligado); o duplo clique no mapa ("teletransporte") ainda
-  emite a posição sem checar o modo; e ativar o fantasma não remove seu
-  marcador de quem já te via — só para de atualizar.
 - **Canais globais** (`server_id=NULL`) continuam liberados para qualquer
   logado em `pode_ver_canal()`, por compatibilidade. Não há UI que leve até
   eles. Se forem removidos de vez, dá para apertar essa checagem.
