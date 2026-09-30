@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat - Bazinga Hub</title>
+    <title>Chat - {{ app_nome }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}" type="image/svg+xml">
     <!-- Fonte: Nunito Sans (humanista arredondada, parente próxima da fonte do Discord clássico) -->
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&display=swap">
@@ -455,7 +456,7 @@
 
         /* Trilha de recompensas */
         .bp-marcos { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
-        .bp-marco { position: relative; background-color: var(--bg-tertiary); border-radius: 12px; padding: 16px 12px 14px; text-align: center; border: 1px solid rgba(255,255,255,.06); transition: transform .2s, border-color .2s, opacity .2s; animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) both; animation-delay: calc(var(--i, 0) * 55ms); }
+        .bp-marco { position: relative; background-color: var(--bg-tertiary); border-radius: 12px; padding: 16px 12px 14px; text-align: center; border: 1px solid rgba(255,255,255,.06); transition: transform .2s, border-color .2s, opacity .2s; animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) backwards; animation-delay: calc(var(--i, 0) * 55ms); }
         .bp-marco:hover { transform: translateY(-4px); }
         .bp-marco i.bp-ico { font-size: 24px; color: #ffd76a; margin-bottom: 8px; display: block; }
         .bp-marco-nivel { font-weight: 800; font-size: 14px; color: var(--text-header); }
@@ -463,7 +464,7 @@
         .bp-marco-titulo { margin-top: 8px; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #ffd76a; background: rgba(255,215,106,.12); border-radius: 10px; padding: 2px 8px; display: inline-block; }
         .bp-marco.concluido { border-color: rgba(35,165,89,.55); }
         .bp-marco.concluido::after { content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--green-color); color: #fff; font-size: 9px; display: flex; align-items: center; justify-content: center; }
-        .bp-marco.atual { border-color: #ffd76a; background: linear-gradient(180deg, rgba(255,215,106,.12), var(--bg-tertiary)); animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) both, bpAtual 2.2s ease-in-out infinite; animation-delay: calc(var(--i, 0) * 55ms), 0s; }
+        .bp-marco.atual { border-color: #ffd76a; background: linear-gradient(180deg, rgba(255,215,106,.12), var(--bg-tertiary)); animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) backwards, bpAtual 2.2s ease-in-out infinite; animation-delay: calc(var(--i, 0) * 55ms), 0s; }
         .bp-marco.bloqueado { opacity: .5; }
         .bp-marco.bloqueado:hover { opacity: .85; }
         .bp-marco.especial { background: linear-gradient(160deg, rgba(235,69,158,.14), rgba(114,137,218,.14)), var(--bg-tertiary); }
@@ -1317,6 +1318,127 @@
         :root[data-tema="light"] .bp-rank, :root[data-tema="light"] .bp-marco-titulo { color: #a06800; }
 
         @media (max-width: 720px) { body::before, body::after { display: none; } }
+
+        /* ==========================================================================
+           SISTEMA DE CARTÕES (mesma linguagem do Battle Pass em todas as telas)
+           + ESCURO/AMOLED SEM MANCHAS
+           ========================================================================== */
+        /* Escuro e AMOLED: sem as manchas de luz (estranhas, e o azul atrapalhava
+           a leitura do texto). Painéis quase sólidos; o vidro fica nos cartões,
+           modais e popups, onde tem conteúdo de verdade atrás. O Claro mantém o fundo vivo. */
+        :root:not([data-tema="light"]) body::before, :root:not([data-tema="light"]) body::after { display: none; }
+        :root:not([data-tema="light"]) .servers-sidebar { background-color: color-mix(in srgb, var(--bg-quaternary) 96%, transparent); }
+        :root:not([data-tema="light"]) .channels-sidebar, :root:not([data-tema="light"]) .members-sidebar { background-color: color-mix(in srgb, var(--bg-secondary) 94%, transparent); }
+        :root:not([data-tema="light"]) .chat-area, :root:not([data-tema="light"]) .market-wrapper { background-color: color-mix(in srgb, var(--bg-primary) 96%, transparent); }
+        :root:not([data-tema="light"]) .chat-header, :root:not([data-tema="light"]) .market-header, :root:not([data-tema="light"]) .channels-header { background-color: color-mix(in srgb, var(--bg-primary) 88%, transparent); }
+        :root:not([data-tema="light"]) .user-controls { background-color: color-mix(in srgb, var(--bg-tertiary) 94%, transparent); }
+
+        /* Anel de gradiente girando (BP, destaque do Mercado). Fica num pseudo
+           com máscara: a borda é SÓ o anel - antes era um fundo em camadas e o
+           arco-íris vazava por dentro do cartão translúcido. */
+        .cartao-anel { position: relative; isolation: isolate; }
+        .cartao-anel::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none; z-index: 3;
+            background: conic-gradient(from var(--bp-angulo), #7289da, #eb459e, #ffd76a, #43b581, #7289da);
+            -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+            animation: bpGira 7s linear infinite; }
+        .bp-hero.cartao-anel { background: color-mix(in srgb, var(--bg-secondary) 72%, transparent); border: 0; animation: bpEntra .5s cubic-bezier(.16,.84,.44,1) backwards; }
+
+        .mkt-destaque { width: 100%; min-height: 200px; border-radius: 16px; padding: 32px; margin-bottom: 32px; display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+            background: linear-gradient(135deg, rgba(114,137,218,.55), rgba(235,69,158,.42)), color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: bpEntra .5s cubic-bezier(.16,.84,.44,1) backwards; }
+        .mkt-destaque::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+            background: radial-gradient(320px circle at var(--mx, 70%) var(--my, 30%), rgba(255,255,255,.16), transparent 65%); }
+
+        /* Títulos de seção com filete de cor (igual ao do Battle Pass) */
+        .market-section-title { position: relative; border-bottom: 0; padding-bottom: 12px; }
+        .market-section-title::after { content: ''; position: absolute; left: 0; bottom: 0; width: 56px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--brand-color), #eb459e); }
+
+        /* --- Barra lateral (Radar, Mercado, Battle Pass, Todos...) --- */
+        #dms-sidebar .channel-item { border-radius: 10px; }
+        #dms-sidebar .channel-item i { transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+        #dms-sidebar .channel-item:hover i { transform: scale(1.18) rotate(-8deg); }
+        #dms-sidebar .channel-item.active { box-shadow: inset 3px 0 0 var(--brand-color), 0 4px 16px rgba(114,137,218,.18); }
+        #dms-sidebar .channel-item::after, .set-tab::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .25s;
+            background: radial-gradient(180px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.12), transparent 65%); }
+        #dms-sidebar .channel-item:hover::after, .set-tab:hover::after { opacity: 1; }
+        #dms-sidebar .channel-item, .set-tab { position: relative; }
+        .dm-card .user-avatar-wrapper { transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
+        .dm-card:hover .user-avatar-wrapper { transform: scale(1.1); }
+        .dm-card.active { box-shadow: inset 3px 0 0 var(--brand-color), 0 4px 16px rgba(114,137,218,.18); }
+        #dms-sidebar .channels-list > *:nth-child(2), #dm-list-container > *:nth-child(2) { animation-delay: 70ms; }
+        #dms-sidebar .channels-list > *:nth-child(3), #dm-list-container > *:nth-child(3) { animation-delay: 105ms; }
+        #dms-sidebar .channels-list > *:nth-child(4), #dm-list-container > *:nth-child(4) { animation-delay: 140ms; }
+        #dms-sidebar .channels-list > *:nth-child(5), #dm-list-container > *:nth-child(5) { animation-delay: 175ms; }
+        #dms-sidebar .channels-list > *:nth-child(6), #dm-list-container > *:nth-child(6) { animation-delay: 210ms; }
+        #dms-sidebar .channels-list > *:nth-child(7), #dm-list-container > *:nth-child(7) { animation-delay: 245ms; }
+        #dms-sidebar .channels-list > *:nth-child(8), #dm-list-container > *:nth-child(8) { animation-delay: 280ms; }
+        #dms-sidebar .channels-list > *:nth-child(9), #dm-list-container > *:nth-child(9) { animation-delay: 315ms; }
+        #dms-sidebar .channels-list > *:nth-child(10), #dm-list-container > *:nth-child(10) { animation-delay: 350ms; }
+        #dms-sidebar .channels-list > *:nth-child(11), #dm-list-container > *:nth-child(11) { animation-delay: 385ms; }
+        #dms-sidebar .channels-list > *:nth-child(12), #dm-list-container > *:nth-child(12) { animation-delay: 420ms; }
+
+        /* --- Radar: cabeçalho e botões de vidro --- */
+        #radar-header { background-color: color-mix(in srgb, var(--bg-primary) 60%, transparent) !important; border-bottom: 1px solid var(--glass-borda) !important; backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); }
+        #radar-header-actions .btn, #btn-toggle-ghost { white-space: nowrap; background: rgba(255,255,255,.07) !important; color: var(--text-normal) !important; border: 1px solid var(--glass-borda); border-radius: 10px; padding: 6px 12px; transition: background-color .2s, transform .15s, box-shadow .2s, border-color .2s; }
+        #radar-header-actions .btn:hover, #btn-toggle-ghost:hover { background: rgba(255,255,255,.14) !important; transform: translateY(-1px); }
+        #radar-header-actions .btn-primary { background: linear-gradient(180deg, #5fcf9b, #43b581 60%, #389c70) !important; color: #fff !important; border-color: rgba(255,255,255,.2); box-shadow: 0 4px 16px rgba(67,181,129,.35), inset 0 1px 0 rgba(255,255,255,.25); }
+        #radar-header-actions .btn-primary:hover { background: linear-gradient(180deg, #74dba9, #4cc18d 60%, #3fae7c) !important; box-shadow: 0 8px 22px rgba(67,181,129,.5), inset 0 1px 0 rgba(255,255,255,.3); }
+        @keyframes fantasmaPulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(240,71,71,.45); } 50% { box-shadow: 0 0 0 7px rgba(240,71,71,0); } }
+        #btn-toggle-ghost.ghost-on { background: rgba(240,71,71,.16) !important; border-color: rgba(240,71,71,.55); animation: fantasmaPulso 2.4s ease-in-out infinite; }
+
+        /* --- Mapa: controles de vidro, vinheta e pino que pulsa --- */
+        .leaflet-control-zoom { border: 1px solid var(--glass-borda) !important; border-radius: 12px !important; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.4) !important; }
+        .leaflet-control-zoom a { background-color: color-mix(in srgb, var(--bg-secondary) 76%, transparent) !important; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 0 !important; transition: background-color .2s; }
+        .leaflet-control-zoom a:hover { background-color: var(--brand-color) !important; }
+        #bazinga-map::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 450; box-shadow: inset 0 0 90px rgba(0,0,0,.38); }
+        :root[data-tema="light"] #bazinga-map::after { box-shadow: inset 0 0 90px rgba(0,0,0,.12); }
+        @keyframes marcadorPulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(114,137,218,.6), 0 0 15px var(--brand-color); } 50% { box-shadow: 0 0 0 12px rgba(114,137,218,0), 0 0 15px var(--brand-color); } }
+        .user-marker:not(.ghost) { animation: marcadorPulso 2.8s ease-in-out infinite; }
+
+        /* --- Mercado --- */
+        .market-tab { padding: 0 6px; }
+        .market-tab::after, .market-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 3px; border-radius: 3px 3px 0 0; background: linear-gradient(90deg, var(--brand-color), #eb459e); transform: scaleX(0); transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+        .market-tab.active::after { transform: scaleX(1); }
+        .market-header .price-bzc { background: rgba(255,255,255,.07); border: 1px solid var(--glass-borda); border-radius: 999px; padding: 6px 14px; transition: transform .2s, background .2s; }
+        .market-header .price-bzc:hover { transform: translateY(-2px); background: rgba(255,255,255,.12); }
+        .market-content.active { animation: vistaEntra .3s cubic-bezier(.16,.84,.44,1) backwards; }
+        .market-grid > * { animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) backwards; }
+        .market-grid > *:nth-child(2) { animation-delay: 55ms; }
+        .market-grid > *:nth-child(3) { animation-delay: 110ms; }
+        .market-grid > *:nth-child(4) { animation-delay: 165ms; }
+        .market-grid > *:nth-child(5) { animation-delay: 220ms; }
+        .market-grid > *:nth-child(6) { animation-delay: 275ms; }
+        .market-grid > *:nth-child(7) { animation-delay: 330ms; }
+        .market-grid > *:nth-child(8) { animation-delay: 385ms; }
+        .market-grid > *:nth-child(9) { animation-delay: 440ms; }
+        .market-grid > *:nth-child(10) { animation-delay: 495ms; }
+        .market-grid > *:nth-child(11) { animation-delay: 550ms; }
+        .market-grid > *:nth-child(12) { animation-delay: 550ms; }
+        .product-card { border-radius: 14px; }
+        .product-img { transition: transform .5s cubic-bezier(.16,.84,.44,1); }
+        .product-card:hover .product-img { transform: scale(1.07); }
+
+        /* --- Configurações (usuário e servidor) --- */
+        .set-tab, .sf-item { border-radius: 10px; transition: background-color .2s, color .2s, transform .2s, box-shadow .2s; }
+        .set-tab:hover, .sf-item:hover { transform: translateX(3px); }
+        .set-tab.active, .sf-item.active { background: linear-gradient(90deg, rgba(114,137,218,.3), rgba(114,137,218,.08)); box-shadow: inset 3px 0 0 var(--brand-color); color: var(--text-header); }
+        .set-section { animation: none; }
+        .set-section.active > * { animation: bpEntra .4s cubic-bezier(.16,.84,.44,1) backwards; }
+        .set-section.active > *:nth-child(2) { animation-delay: 45ms; }
+        .set-section.active > *:nth-child(3) { animation-delay: 90ms; }
+        .set-section.active > *:nth-child(4) { animation-delay: 135ms; }
+        .set-section.active > *:nth-child(5) { animation-delay: 180ms; }
+        .set-section.active > *:nth-child(6) { animation-delay: 225ms; }
+        .set-section.active > *:nth-child(7) { animation-delay: 270ms; }
+        .set-section.active > *:nth-child(8) { animation-delay: 315ms; }
+        .set-section.active > *:nth-child(9) { animation-delay: 360ms; }
+        .settings-content input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), .settings-content textarea, .settings-content select { transition: border-color .2s, box-shadow .2s; }
+        .settings-content input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):focus, .settings-content textarea:focus, .settings-content select:focus { outline: none; border-color: rgba(114,137,218,.7); box-shadow: 0 0 0 3px rgba(114,137,218,.2); }
+        .settings-close-btn { transition: background-color .2s, color .2s, transform .3s cubic-bezier(.34,1.56,.64,1); }
+        .settings-close-btn:hover { transform: rotate(90deg); }
+        .toggle-switch::after { transition: transform .3s cubic-bezier(.34,1.56,.64,1); box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+        .toggle-switch.active { box-shadow: 0 0 12px rgba(67,181,129,.45); }
     </style>
 </head>
 <body>
@@ -1332,8 +1454,8 @@
 
                     <!-- BOTÃO HOME/AMIGOS (O Infinito) -->
                     <div class="server-wrapper">
-                        <div class="server-icon home-icon active" id="btn-home-view" title="Radar Bazinga (Mensagens Diretas)" style="background-color: var(--bg-primary); padding: 10px;">
-                            <img src="{{ url_for('static', filename='css/img/bazinga_logo.png') }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-infinity\' style=\'font-size: 24px;\'></i>';">
+                        <div class="server-icon home-icon active" id="btn-home-view" title="{{ app_nome }} (Radar e Mensagens Diretas)" style="background-color: transparent; padding: 0;">
+                            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ app_nome }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fa-solid fa-landmark\' style=\'font-size: 24px;\'></i>';">
                         </div>
                     </div>
 
@@ -1361,7 +1483,7 @@
                     </div>
 
                     <div class="channels-list">
-                        <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA BAZINGA</div>
+                        <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA {{ app_nome|upper }}</div>
                         <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
                         <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
                         <div class="channel-item" id="btn-battlepass" style="gap: 12px; margin: 0 8px; padding: 8px; justify-content: space-between;" title="Seu nível e progresso">
@@ -1415,7 +1537,7 @@
 
                 <!-- SIDEBAR: Canais do Servidor (ESCONDIDA POR PADRÃO) -->
                 <aside class="channels-sidebar scroll-invisivel" id="bazinga-sidebar" style="display: none;">
-                    <header class="channels-header"><h3>Bazinga Hub <i class="fa-solid fa-chevron-down" style="font-size: 12px;"></i></h3></header>
+                    <header class="channels-header"><h3>{{ app_nome }} <i class="fa-solid fa-chevron-down" style="font-size: 12px;"></i></h3></header>
                     <div class="channels-list">
 
                         <div class="channel-category"><i class="fa-solid fa-chevron-down"></i> CANAIS DE TEXTO</div>
@@ -1447,7 +1569,7 @@
                     <div class="voice-info-row">
                         <div class="voice-status">
                             <span class="voice-status-text"><i class="fa-solid fa-signal"></i> Voz conectada</span>
-                            <span class="voice-channel-name" id="connected-voice-name">LOBBY / Bazinga Hub</span>
+                            <span class="voice-channel-name" id="connected-voice-name">LOBBY / {{ app_nome }}</span>
                         </div>
                         <button class="disconnect-btn" id="btn-side-disconnect" title="Desconectar"><i class="fa-solid fa-phone-slash"></i></button>
                     </div>
@@ -1526,7 +1648,7 @@
             <div id="home-content-wrapper" style="display: flex; flex-direction: column; flex-grow: 1; height: 100%; position: relative;">
                 <header class="chat-header" id="radar-header" style="background: var(--bg-primary); border-bottom: 1px solid rgba(0,0,0,0.2); gap: 16px; z-index: 10;">
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--text-header); padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.1);" id="radar-header-title">
-                        <i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar Bazinga
+                        <i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar
                     </div>
                     <div style="display: flex; gap: 12px; align-items: center; flex-grow: 1; margin-left: 16px;" id="radar-header-actions">
                         <div class="bz-pill-btn active" id="btn-toggle-ghost" style="background: rgba(255,255,255,0.1); color: var(--text-header); cursor: pointer;"><i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF</div>
@@ -1675,29 +1797,29 @@
                         <i class="fa-solid fa-store" style="color: var(--text-muted);"></i> Mercado Elite
                     </h2>
                     <div style="display: flex; gap: 24px; height: 100%;">
-                        <div class="market-tab active" data-tab="tab-loja">Loja Bazinga</div>
+                        <div class="market-tab active" data-tab="tab-loja">Loja {{ app_nome }}</div>
                         <div class="market-tab" data-tab="tab-bazar">Bazar da Comunidade</div>
                     </div>
                     <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
                         <!-- DINÂMICO: PUXANDO DO BANCO DE DADOS -->
-                        <div class="price-bzc" title="Seus Bazinga Coins"><img src="{{ url_for('static', filename='css/img/bazinga_logo.png') }}" style="width: 16px; filter: brightness(0) saturate(100%) invert(77%) sepia(50%) saturate(1048%) hue-rotate(345deg) brightness(101%) contrast(92%);"> <span id="meu-saldo-bzc">{{ usuario_atual.bazinga_coins }}</span></div>
+                        <div class="price-bzc" title="Suas {{ moeda_nome }}"><i class="fa-solid fa-coins" style="color: #ffd76a;"></i> <span id="meu-saldo-bzc">{{ usuario_atual.bazinga_coins }}</span></div>
                     </div>
                 </header>
 
-                <!-- ABA 1: LOJA OFICIAL (Cosméticos com BZC) -->
+                <!-- ABA 1: LOJA OFICIAL (Cosméticos com {{ moeda_sigla }}) -->
                 <div class="market-content active" id="tab-loja">
 
                     <div class="market-section-title">Em Destaque</div>
-                    <div style="width: 100%; height: 200px; border-radius: 8px; background: linear-gradient(45deg, #5865F2, #ab5d8a); display: flex; flex-direction: column; justify-content: center; padding: 32px; position: relative; overflow: hidden; margin-bottom: 32px;">
+                    <div class="mkt-destaque cartao-anel">
                         <div style="position: absolute; right: -20px; bottom: -40px; font-size: 200px; color: rgba(255,255,255,0.1); transform: rotate(-15deg);"><i class="fa-solid fa-bolt"></i></div>
                         <span style="background: rgba(0,0,0,0.5); color: white; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; width: fit-content; text-transform: uppercase; margin-bottom: 12px;">Novo Lançamento</span>
                         <h1 style="color: white; font-size: 32px; font-weight: 800; margin-bottom: 8px;">Pacote Cyberpunk</h1>
                         <p style="color: rgba(255,255,255,0.8); max-width: 400px; font-size: 14px;">Domine o radar com um pino de nave neon e uma borda de avatar hacker. Exclusivo por tempo limitado.</p>
-                        <button class="btn btn-primary" style="width: fit-content; margin-top: 16px; background: white; color: black;"><i class="fa-solid fa-cart-shopping"></i> Comprar por 800 BZC</button>
+                        <button class="btn btn-primary" style="width: fit-content; margin-top: 16px; background: white; color: black;"><i class="fa-solid fa-cart-shopping"></i> Comprar por 800 {{ moeda_sigla }}</button>
                     </div>
 
                     <div class="market-section-title">Catálogo Oficial</div>
-                    <!-- AQUI O JAVASCRIPT INJETA OS ITENS DE BZC -->
+                    <!-- AQUI O JAVASCRIPT INJETA OS ITENS DE {{ moeda_sigla }} -->
                     <div class="market-grid" id="loja-grid-container"></div>
                 </div>
 
@@ -1726,7 +1848,7 @@
                     </h2>
                 </header>
                 <div class="bp-content">
-                    <div class="bp-hero">
+                    <div class="bp-hero cartao-anel">
                         <div class="bp-anel">
                             <svg viewBox="0 0 120 120" aria-hidden="true">
                                 <defs><linearGradient id="bp-grad-anel" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ffd76a"/><stop offset="100%" stop-color="#ff7a2f"/></linearGradient></defs>
@@ -1745,7 +1867,7 @@
                             <div class="bp-faltam" id="bp-faltam"></div>
                             <div class="bp-chips">
                                 <div class="bp-chip apagada" id="bp-chip-streak" title="Dias seguidos entrando no app"><i class="fa-solid fa-fire"></i> <span id="bp-streak-num">0</span> <small>dias seguidos</small></div>
-                                <div class="bp-chip" title="Seus Bazinga Coins"><i class="fa-solid fa-coins"></i> <span id="bp-coins-num">0</span> <small>BZC</small></div>
+                                <div class="bp-chip" title="Suas {{ moeda_nome }}"><i class="fa-solid fa-coins"></i> <span id="bp-coins-num">0</span> <small>{{ moeda_sigla }}</small></div>
                                 <div class="bp-chip" title="XP total acumulado"><i class="fa-solid fa-bolt"></i> <span id="bp-xp-total">0</span> <small>XP total</small></div>
                             </div>
                         </div>
@@ -1759,7 +1881,7 @@
                     <div class="bp-fontes">
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-comment-dots"></i></div><div><b>Converse: +5 XP</b><span>Em canais e DMs, no máximo 1 vez a cada 30 segundos.</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico fogo"><i class="fa-solid fa-fire"></i></div><div><b>Bônus diário: +25 XP</b><span>Abra o app todo dia. Cada dia seguido soma +5 XP (até 7 dias).</span></div></div>
-                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: BZC</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Títulos novos nos marcos.</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: {{ moeda_sigla }}</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Títulos novos nos marcos.</span></div></div>
                     </div>
                 </div>
             </div>
@@ -1842,7 +1964,7 @@
                 <div class="control-group" style="width: 100%; text-align: left; border: none; padding: 0; margin-top: 24px;">
                     <span class="control-label" style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block;">Nome do servidor <span style="color: var(--red-color);">*</span></span>
                     <input type="text" class="discord-input" id="new-server-name-input" value="Servidor de {{ usuario_atual.name }}">
-                    <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Ao criar um servidor, você concorda em manter o clima da Bazinga.</span>
+                    <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Ao criar um servidor, você concorda em manter o clima do {{ app_nome }}.</span>
                 </div>
             </div>
             <div class="modal-footer" style="justify-content: space-between; align-items: center; background-color: var(--bg-secondary); border-top: none;">
@@ -1952,7 +2074,7 @@
         <div class="bazinga-modal" style="width: 440px;">
             <div class="modal-header">
                 <h2>Adicionar Amigo</h2>
-                <p>Você pode adicionar um amigo com o nome ou e-mail dele na Bazinga.</p>
+                <p>Você pode adicionar um amigo com o nome ou e-mail dele no {{ app_nome }}.</p>
             </div>
             <div class="modal-content">
                 <div class="control-group" style="border: none; padding: 0;">
@@ -2855,7 +2977,7 @@
 
                     <h3 class="set-title" style="margin-bottom: 16px;">Perfil de entrada</h3>
                     <div class="radio-card" data-profile="isolamento">
-                        <div class="radio-circle"></div><div class="radio-text"><h4>Isolamento de Voz</h4><p>Só a sua linda voz: deixe o Bazinga equalizar o ruído.</p></div>
+                        <div class="radio-circle"></div><div class="radio-text"><h4>Isolamento de Voz</h4><p>Só a sua linda voz: deixe o {{ app_nome }} equalizar o ruído.</p></div>
                     </div>
                     <div class="radio-card" data-profile="estudio">
                         <div class="radio-circle"></div><div class="radio-text"><h4>Estúdio</h4><p>Áudio puro: microfone aberto e sem processamento.</p></div>
@@ -2893,7 +3015,7 @@
         let currentChannelId = rawChannelId.includes("{" + "{") ? 1 : parseInt(rawChannelId.replace(/[^0-9]/g, ''));
 
         const rawUserName = "{{ usuario_atual.name }}";
-        let currentUserName = rawUserName.includes("{" + "{") ? "Bazinga User" : rawUserName;
+        let currentUserName = rawUserName.includes("{" + "{") ? "Visitante" : rawUserName;
 
         // Id numérico do usuário: usado para saber quem é dono de nota/pino no
         // mapa (comparar pelo nome falhava com nomes repetidos).
@@ -3105,7 +3227,7 @@
                 if(bazingaMap) setTimeout(() => bazingaMap.invalidateSize(), 100);
                 document.getElementById('radar-header-actions').style.display = 'flex';
                 document.getElementById('dm-header-actions').style.display = 'flex';
-                document.getElementById('radar-header-title').innerHTML = `<i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar Bazinga`;
+                document.getElementById('radar-header-title').innerHTML = `<i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar`;
             } else if (viewName === 'dm') {
                 if(homeContent) homeContent.style.display = 'flex';
                 if(dmChat) dmChat.style.display = 'flex';
@@ -3207,7 +3329,7 @@
                 return `<div class="bp-marco ${estado} ${especial ? 'especial' : ''}" style="--i:${i}">
                     <i class="fa-solid ${icone} bp-ico"></i>
                     <div class="bp-marco-nivel">Nível ${Number(m.nivel)}</div>
-                    <div class="bp-marco-premio">+${Number(m.coins)} BZC</div>
+                    <div class="bp-marco-premio">+${Number(m.coins)} {{ moeda_sigla }}</div>
                     ${m.titulo ? `<div class="bp-marco-titulo">${esc(m.titulo)}</div>` : ''}
                 </div>`;
             }).join('');
@@ -3235,7 +3357,7 @@
                 <div class="bp-celebra-num">${Number(dados.nivel)}</div>
                 <div class="bp-celebra-rank">${esc(dados.titulo || '')}</div>
                 <div class="bp-celebra-premios">
-                    <div class="bp-chip"><i class="fa-solid fa-coins"></i> +${coins} Bazinga Coins</div>
+                    <div class="bp-chip"><i class="fa-solid fa-coins"></i> +${coins} {{ moeda_nome }}</div>
                     ${titulos.map(t => `<div class="bp-chip"><i class="fa-solid fa-crown" style="color:#ff9bd2;"></i> Novo título: ${esc(t)}</div>`).join('')}
                 </div>
                 <div class="bp-celebra-dica">clique para fechar</div>
@@ -3542,12 +3664,22 @@
             });
         }
 
-        socket.on('carregar_meus_servidores', function(servidores) {
+        function aplicarMeusServidores(servidores) {
             meUserServers = servidores;
             renderizarMeusServidores();
             if (typeof atualizarCarrossel === 'function') atualizarCarrossel();
             restaurarUltimaVista();
-        });
+        }
+
+        socket.on('carregar_meus_servidores', aplicarMeusServidores);
+
+        // Desenha já com o que veio no HTML, sem esperar o socket conectar
+        // (o servidor reenvia a lista ao conectar e isso reconcilia).
+        // setTimeout 0: só roda depois do script inteiro ser avaliado (várias
+        // variáveis `let` usadas por entrarNoServidor()/restaurarUltimaVista()
+        // são declaradas mais abaixo).
+        const servidoresIniciais = {{ servidores_iniciais|tojson }};
+        setTimeout(() => { if (!meUserServers.length) aplicarMeusServidores(servidoresIniciais); }, 0);
 
         socket.on('servidor_discord_criado', function(srv) {
             // Este evento serve pra duas coisas: servidor NOVO (criado ou
@@ -5178,6 +5310,7 @@
         const btnToggleGhost = document.getElementById('btn-toggle-ghost');
 
         function updateGhostVisuals() {
+            btnToggleGhost.classList.toggle('ghost-on', ghostMode);
             if(ghostMode) {
                 btnToggleGhost.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: ON';
                 btnToggleGhost.style.color = 'var(--red-color)';
@@ -7419,7 +7552,7 @@
         // Delegado no document: vale pra elementos criados depois também, e
         // não mexe em nenhum handler existente.
         (function () {
-            const SPOT = '.product-card, .bp-fonte, .welcome-action-btn, .btn-primary, .dm-card, .bp-chip, .bp-marco';
+            const SPOT = '.product-card, .bp-fonte, .welcome-action-btn, .btn-primary, .dm-card, .bp-chip, .bp-marco, #dms-sidebar .channel-item, .set-tab, .mkt-destaque';
             const RIPPLE = '.btn, .btn-cancel, .bz-pill-btn';
             let quadro = null, ultimo = null;
             document.addEventListener('pointermove', (e) => {
@@ -7924,7 +8057,7 @@
 
                 voicePanel.classList.add('active');
                 document.getElementById('connected-voice-name').innerText =
-                    `${voiceName} / ${(servidorAtivo() || {}).name || 'Bazinga'}`;
+                    `${voiceName} / ${(servidorAtivo() || {}).name || '{{ app_nome }}'}`;
 
                 // Só existe pra canal de servidor (widget de presença na
                 // sidebar) - numa call de DM esse elemento não existe.
@@ -8784,7 +8917,7 @@
                         `;
                         if(bazarContainer) bazarContainer.appendChild(card);
                     } else {
-                        // LOJA BAZINGA OFICIAL (Via BZC)
+                        // LOJA BAZINGA OFICIAL (Via {{ moeda_sigla }})
                         let imgHtml = '';
 
                         // O JAVASCRIPT INTELIGENTE: Restaura os efeitos visuais Premium baseados no nome!
@@ -8815,11 +8948,11 @@
                             ${imgHtml}
                             <div class="product-info">
                                 <div class="product-title">${esc(prod.name)}</div>
-                                <div class="product-author"><i class="fa-solid fa-check-circle" style="color: var(--brand-color);"></i> Oficial Bazinga</div>
+                                <div class="product-author"><i class="fa-solid fa-check-circle" style="color: var(--brand-color);"></i> Oficial {{ app_nome }}</div>
                                 <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${esc(prod.description)}</p>
                                 <div class="product-footer">
-                                    <div class="price-bzc">${Number(prod.price_bzc || 0)} BZC</div>
-                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="abrirModalCompra(${Number(prod.id)}, ${escJs(prod.name)}, ${Number(prod.price_bzc || 0)}, 'BZC')">Comprar</button>
+                                    <div class="price-bzc">${Number(prod.price_bzc || 0)} {{ moeda_sigla }}</div>
+                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="abrirModalCompra(${Number(prod.id)}, ${escJs(prod.name)}, ${Number(prod.price_bzc || 0)}, '{{ moeda_sigla }}')">Comprar</button>
                                 </div>
                             </div>
                         `;
@@ -8840,7 +8973,7 @@
 
             openConfirmModal(
                 "Confirmar Compra",
-                `Comprar "${nome}" por ${preco} BZC?`,
+                `Comprar "${nome}" por ${preco} {{ moeda_sigla }}?`,
                 async () => {
                     try {
                         const resp = await fetch(`/api/produtos/${id}/comprar`, { method: 'POST' });

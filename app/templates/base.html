@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Bazinga Hub{% endblock %}</title>
+  <title>{% block title %}{{ app_nome }}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -14,7 +14,7 @@
 
   <nav class="navbar">
     <a class="brand" href="{{ url_for('main.index') }}">
-      <span class="dot"></span> Bazinga Hub
+      <span class="dot"></span> {{ app_nome }}
     </a>
     <div class="nav-links">
       <a href="{{ url_for('main.index') }}">Início</a>

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Bazinga Hub{% endblock %}
+{% block title %}{{ app_nome }}{% endblock %}
 {% block content %}
 <section class="lobby">
-  <p class="eyebrow">Bazinga · Central</p>
-  <h1>{% if user %}Fala, {{ user.name.split(' ')[0] }}.{% else %}Bem-vindo à Bazinga.{% endif %}</h1>
+  <p class="eyebrow">{{ app_nome }} · Central</p>
+  <h1>{% if user %}Fala, {{ user.name.split(' ')[0] }}.{% else %}Bem-vindo ao {{ app_nome }}.{% endif %}</h1>
   <p class="subtitle">O ponto de partida do grupo. Premiação, chat e o campeonato, tudo daqui.</p>
 
   <div class="cards">
@@ -18,9 +18,9 @@
     <div class="card card--soon">
       <div class="card-do-chat" onclick="window.location.href='{{ url_for('main.chat') }}'" style="cursor: pointer;">
           <h3>Chat</h3>
-          <p>Central de comunicação da Bazinga.</p>
+          <p>Central de comunicação do {{ app_nome }}.</p>
       </div>
-      <p>Central de comunicação da Bazinga.</p>
+      <p>Central de comunicação do {{ app_nome }}.</p>
     </div>
 
     <div class="card card--soon">

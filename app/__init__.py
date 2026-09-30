@@ -10,6 +10,13 @@ from .models import db
 
 socketio = SocketIO()
 
+# Nome exibido do app. Trocar aqui troca no chat, login, manifesto do PWA etc.
+# (identificadores internos - colunas do banco, eventos do socket - mantêm o
+# nome antigo de propósito: renomear isso exigiria migração sem ganho nenhum.)
+APP_NOME = "Panteão"
+MOEDA_NOME = "Dracmas"
+MOEDA_SIGLA = "DRC"
+
 
 def create_app():
     app = Flask(__name__)
@@ -37,6 +44,10 @@ def create_app():
     app.register_blueprint(main_bp)
 
     from . import events
+
+    @app.context_processor
+    def _injetar_marca():
+        return {'app_nome': APP_NOME, 'moeda_nome': MOEDA_NOME, 'moeda_sigla': MOEDA_SIGLA}
 
     with app.app_context():
         try:

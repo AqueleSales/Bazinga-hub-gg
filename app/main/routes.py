@@ -10,8 +10,8 @@ import requests
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
 from ..utils import com_retry, comitar_com_retry, canal_permitido
-from .. import socketio
-from ..events import sala_servidor
+from .. import socketio, APP_NOME, MOEDA_NOME
+from ..events import sala_servidor, servidor_para_json
 
 main_bp = Blueprint("main", __name__)
 
@@ -122,18 +122,22 @@ def manifest():
     """Manifesto do PWA - é o que faz o botão 'Instalar app' existir de verdade
     (o navegador só oferece a instalação se achar este arquivo + service worker)."""
     return jsonify({
-        "name": "Bazinga Hub",
-        "short_name": "Bazinga",
-        "description": "Chat, mapa e eventos da Bazinga.",
+        "name": APP_NOME,
+        "short_name": APP_NOME,
+        "description": f"Chat, mapa e eventos do {APP_NOME}.",
         "start_url": "/chat",
         "scope": "/",
         "display": "standalone",
         "background_color": "#0b0c10",
-        "theme_color": "#5865F2",
+        "theme_color": "#7289da",
         "orientation": "any",
         "icons": [
-            {"src": url_for('static', filename='css/img/bazinga_logo.png'),
-             "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+            {"src": url_for('static', filename='img/icone-192.png'),
+             "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": url_for('static', filename='img/icone-512.png'),
+             "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": url_for('static', filename='img/logo.svg'),
+             "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
         ]
     })
 
@@ -188,13 +192,20 @@ def chat():
             ids_amigos = [f.addressee_id if f.requester_id == usuario_atual.id else f.requester_id for f in aceitas]
             amigos = Person.query.filter(Person.id.in_(ids_amigos)).all() if ids_amigos else []
 
-            return usuario_atual, text_channels, voice_channels, default_channel, messages, amigos
+            # Lista de servidores já no HTML: antes ela só chegava pelo socket
+            # (`carregar_meus_servidores`), então com o Render/Neon "acordando"
+            # a barra de servidores ficava vazia por vários segundos - parecia
+            # que os servidores tinham sumido. O socket ainda reenvia e
+            # reconcilia depois.
+            servidores_iniciais = [servidor_para_json(srv, usuario_atual) for srv in usuario_atual.servers]
+
+            return usuario_atual, text_channels, voice_channels, default_channel, messages, amigos, servidores_iniciais
 
         resultado = com_retry(carregar)
         if resultado is None:
             session.pop('user_id', None)
             return redirect(url_for('main.index'))
-        usuario_atual, text_channels, voice_channels, default_channel, messages, amigos = resultado
+        usuario_atual, text_channels, voice_channels, default_channel, messages, amigos, servidores_iniciais = resultado
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -213,6 +224,7 @@ def chat():
         default_channel=default_channel,
         messages=messages,
         amigos=amigos,
+        servidores_iniciais=servidores_iniciais,
         membro_desde_texto=membro_desde_texto(usuario_atual.created_at)
     )
 
@@ -384,7 +396,7 @@ def get_produtos():
                 'image_url': p.image_url,
                 'is_official': p.is_official,
                 # Pega o nome do vendedor se existir, senão é a Bazinga Oficial
-                'seller': p.seller.name if p.seller else 'Bazinga Oficial'
+                'seller': p.seller.name if p.seller else f'{APP_NOME} Oficial'
             })
         return jsonify(dados)
     except Exception as e:
@@ -409,10 +421,10 @@ def comprar_produto(produto_id):
         produto = com_retry(lambda: Product.query.get(produto_id))
 
         if not produto or not produto.is_official or produto.price_bzc is None:
-            return jsonify({'error': 'Este item não pode ser comprado com Bazinga Coins aqui.'}), 400
+            return jsonify({'error': f'Este item não pode ser comprado com {MOEDA_NOME} aqui.'}), 400
 
         if (usuario.bazinga_coins or 0) < produto.price_bzc:
-            return jsonify({'error': 'Você não tem Bazinga Coins suficientes.'}), 400
+            return jsonify({'error': f'Você não tem {MOEDA_NOME} suficientes.'}), 400
 
         # Registra a compra: antes as moedas eram descontadas e nada era
         # guardado, então o usuário pagava e não recebia nada.

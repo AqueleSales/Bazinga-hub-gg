@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0c10">
-  <title>Entrar · Bazinga</title>
+  <title>Entrar · {{ app_nome }}</title>
 
   <meta name="description" content="Chat, mapa e eventos. Entre com o Google e comece.">
   <link rel="manifest" href="{{ url_for('main.manifest') }}">
-  <link rel="icon" href="{{ url_for('static', filename='css/img/bazinga_logo.png') }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}" type="image/svg+xml">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -245,7 +245,7 @@
   </style>
 </head>
 <body>
-  <a class="voltar" href="{{ url_for('main.index') }}" title="Voltar pra Bazinga Hub" aria-label="Voltar pra Bazinga Hub">←</a>
+  <a class="voltar" href="{{ url_for('main.index') }}" title="Voltar pra {{ app_nome }}" aria-label="Voltar pra {{ app_nome }}">←</a>
 
   <div class="aurora a1"></div>
   <div class="aurora a2"></div>
@@ -254,9 +254,9 @@
   <main class="porta">
     <section class="lado lado-login">
       <div class="logo">
-        <img src="{{ url_for('static', filename='css/img/bazinga_logo.png') }}" alt="Bazinga">
+        <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ app_nome }}">
       </div>
-      <h1>Entra na Bazinga</h1>
+      <h1>Entra no {{ app_nome }}</h1>
       <p class="sub">Chat, mapa com servidores plantados e calendário de eventos. Sem cadastro — usa a sua conta do Google.</p>
 
       <a class="btn-google" href="{{ url_for('auth.login') }}">
@@ -301,7 +301,7 @@
 
     <section class="lado lado-download">
       <div class="icone-download">📲</div>
-      <h2 class="titulo-lado">Leve a Bazinga com você</h2>
+      <h2 class="titulo-lado">Leve o {{ app_nome }} com você</h2>
       <p class="sub">Instale como app: sem barra de navegador, ícone na tela inicial, abre rapidinho.</p>
 
       <button class="btn-instalar" id="btn-instalar" hidden>Instalar o app</button>
@@ -315,7 +315,7 @@
     </section>
   </main>
 
-  <p class="rodape">Bazinga Hub</p>
+  <p class="rodape">{{ app_nome }}</p>
 
   <script>
     // ---- Instalar como app (PWA) ----

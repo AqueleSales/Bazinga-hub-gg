@@ -1,4 +1,4 @@
-# Bazinga Hub
+# Panteão (repositório: Bazinga Hub)
 
 Clone do Discord em Flask + Socket.IO, com um diferencial: um mapa (Leaflet)
 onde os usuários "plantam" servidores e deixam notas geolocalizadas.
@@ -597,8 +597,10 @@ chega em `xp_atualizado` (nunca recalcula nível).
 Direção: estrutura e paleta do Discord antigo (cinza-azulado
 `#36393f/#2f3136/#202225`, blurple suave `#7289da`, cantos arredondados), com
 camadas de **vidro fosco** (blur + borda de luz) flutuando sobre um fundo vivo
-(`body::before/::after`: duas manchas de cor à deriva, só `transform`). Fonte:
-Nunito Sans (parente da do Discord clássico).
+(`body::before/::after`: duas manchas de cor à deriva, só `transform`) **só no
+tema Claro**. No Escuro/AMOLED as manchas foram removidas de propósito: ficavam
+estranhas e o azul atrapalhava a leitura do texto — lá os painéis são quase
+sólidos e o vidro fica nos cartões/modais/popups. Fonte: Nunito Sans.
 
 - O bloco **"TEMA VIDRO" fica no FIM do `<style>`** de propósito: sobrescreve
   por ordem de declaração. Não mova pro meio nem quebre em vários.
@@ -624,6 +626,48 @@ Nunito Sans (parente da do Discord clássico).
   paletas Claro/AMOLED existem também em CSS puro (primeiro paint sem piscar);
   `TEMAS`/`aplicarTema()` no JS cuidam da troca ao vivo. Mudou uma paleta,
   mude nos dois lugares.
+
+## Nome, logo e moeda ("Panteão")
+
+O app foi renomeado (Bazinga tem cara de marca de terceiro). **Uma constante só**:
+`APP_NOME`, `MOEDA_NOME` (Dracmas) e `MOEDA_SIGLA` (DRC) em `app/__init__.py`,
+injetadas em todo template como `{{ app_nome }}`/`{{ moeda_nome }}`/
+`{{ moeda_sigla }}` (context processor) e usadas no manifesto do PWA. Trocar o
+nome de novo = mudar ali (e, se o artigo importar, "no/do" nos textos).
+
+- **Só o texto exibido mudou.** Identificadores internos ficam como estavam
+  (`bazinga_coins`, `price_bzc`, `erro_bazinga`, `bazingaMap`, `bazinga-map`):
+  renomear coluna de banco exigiria migração sem ganho nenhum.
+- "Bazinga Awards" e "Ultimate Bazinga" (`base.html`/`index.html`) são outros
+  produtos do dono e **não** foram renomeados.
+- Logo: `app/static/img/logo.svg` (templo com um ponto de mapa no frontão).
+  `icone-192.png`/`icone-512.png` são a mesma arte rasterizada (o manifesto do
+  PWA precisa de PNG); se mexer no SVG, refaça os PNGs.
+
+## Sistema de cartões (mesma linguagem do Battle Pass em todas as telas)
+
+Bloco "SISTEMA DE CARTÕES" no fim do `<style>`: anel de gradiente girando
+(`.cartao-anel`), títulos de seção com filete, sidebar/DMs/Mercado/Radar/
+Configurações com entrada escalonada, hover com brilho que segue o mouse e
+estados ativos com barra de acento.
+
+- **`.cartao-anel` usa pseudo-elemento com máscara**, não fundo em camadas: com
+  fundo em camadas o arco-íris vazava por dentro do cartão translúcido.
+- **`animation-fill-mode: both` em entrada de cartão é bug**: segura o último
+  keyframe (`opacity: 1`) e anula qualquer `opacity` de estado (`.bloqueado`).
+  Use `backwards`.
+- O `#radar-header` tem `style` inline; a versão de vidro usa `!important`.
+- Listas injetadas por JS (`.market-grid`, `#dm-list-container`) ganham o
+  escalonamento por `nth-child` (até 12); a partir daí todos entram juntos.
+
+## Servidores da barra lateral vêm no HTML
+
+`carregar_meus_servidores` só chegava pelo socket, então com Render/Neon
+"acordando" a barra ficava vazia por segundos e parecia que os servidores
+tinham sumido. Agora `/chat` já manda `servidores_iniciais` e o cliente desenha
+na hora (`aplicarMeusServidores` em `setTimeout 0`, porque várias variáveis
+`let` usadas por `entrarNoServidor()` só existem depois do script inteiro ser
+avaliado); o socket reenvia e reconcilia.
 
 ## Mensagens fixadas
 
