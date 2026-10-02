@@ -2321,6 +2321,13 @@
         .user-info { flex: 1; min-width: 0; }
         .user-info .username { text-overflow: clip; white-space: nowrap; overflow: hidden; }
         .chat-messages, #dm-messages-container { overscroll-behavior: contain; }
+
+        /* ---- rolagem das configurações sem "elementos que voam": o anel da moldura (@property) e a placa animam na thread
+           principal; com o sticky da prévia isso deixava as peças atrasadas em relação ao scroll e elas "voltavam" ao parar.
+           Durante a rolagem as animações pausam (classe .rolando, ligada em JS) e os sticky ganham camada própria. ---- */
+        .settings-content.rolando *, .settings-content.rolando *::before, .settings-content.rolando *::after { animation-play-state: paused !important; transition: none !important; }
+        .pf-previa, .pf-barra { transform: translateZ(0); backface-visibility: hidden; }
+        .settings-content { overscroll-behavior: contain; }
 </style>
 </head>
 <body>
@@ -12563,6 +12570,7 @@
         function mqAvaliar(el) {
             if (!el.isConnected) return;
             if (el.clientWidth <= 0) return;                         // escondido ou sem largura própria
+            if (el.dataset.mqEnc) { el.style.fontSize = el.dataset.mqFs || ''; delete el.dataset.mqEnc; }   // desfaz o "encolher" e mede de novo
             let inner = el.querySelector(':scope > .mq-in');
             // Medida FRACIONÁRIA: scrollWidth/clientWidth arredondam, e basta 1-2px a mais pro
             // text-overflow mostrar "..." (era o "Conversa rápi..." que não rolava, com 2px de sobra).
@@ -12571,6 +12579,12 @@
             if (inner) largura = inner.getBoundingClientRect().width;
             else { const r = document.createRange(); r.selectNodeContents(el); largura = r.getBoundingClientRect().width; }
             if (largura <= caixa + 0.01) { if (inner) mqDesfazer(el, inner); return; }
+            // Sobra pequena (até ~14%): em vez de ligar a rolagem (que liga/desliga no limiar e "buga"), encolhe a fonte
+            // um pouco pra caber inteiro. Só nome realmente grande rola.
+            if (!inner && largura <= caixa * 1.14) {
+                const fs = parseFloat(getComputedStyle(el).fontSize);
+                if (fs > 9) { el.dataset.mqFs = el.style.fontSize || ''; el.dataset.mqEnc = '1'; el.style.fontSize = Math.max(9, fs * (caixa - 0.5) / largura) + 'px'; return; }
+            }
             if (!inner) {
                 inner = document.createElement('span');
                 inner.className = 'mq-in';
@@ -12628,6 +12642,15 @@
             if (window.ResizeObserver) new ResizeObserver(ajustar).observe(el.parentElement);
             window.addEventListener('resize', ajustar);
             ajustar(); setTimeout(ajustar, 600);
+        })();
+
+
+        // pausa as animações das configurações enquanto rola (ver .settings-content.rolando)
+        (function () {
+            document.querySelectorAll('.settings-content').forEach(sc => {
+                let t = null;
+                sc.addEventListener('scroll', () => { sc.classList.add('rolando'); clearTimeout(t); t = setTimeout(() => sc.classList.remove('rolando'), 160); }, { passive: true });
+            });
         })();
 
         // ---------- barras laterais redimensionáveis ----------
