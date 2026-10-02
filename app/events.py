@@ -20,6 +20,9 @@ from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_cana
                     distancia_m, coordenada_valida, dados_do_mapa_perto, nota_para_json,
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
+from .cosmeticos import (CATALOGO, PACOTES, TIPOS_COLUNA, TIPOS_JSON, TIPOS_EQUIPAVEIS, item_exclusivo, efeito_servidor_valido,
+                         posses_da_pessoa, equipados_da_pessoa, definir_slot, badges_do_conjunto,
+                         catalogo_para_json, patentes_para_json, patente_do_nivel, valor_atual_do_slot)
 
 
 def usuario_logado():
@@ -66,7 +69,8 @@ _call_por_sid = {}
 def _entrar_em_call(chave, peer_id, usuario):
     lista = participantes_call.setdefault(chave, [])
     lista[:] = [p for p in lista if p['peer_id'] != peer_id]
-    lista.append({'peer_id': peer_id, 'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar})
+    lista.append({'peer_id': peer_id, 'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
+                  'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario)})
     _call_por_sid[request.sid] = (chave, peer_id)
 
 
@@ -227,6 +231,7 @@ def _json_de_servidor(srv, dados, usuario=None):
         'iconUrl': srv.icon_url,
         'description': srv.description,
         'bannerColor': srv.banner_color,
+        'efeito': efeito_servidor_valido(srv.efeito),
         'owner_id': srv.owner_id,
         'membros': contagem.get(srv.id, 0),
         'channels': visiveis
@@ -551,7 +556,7 @@ def lidar_com_mensagem(dados):
         'usuario': usuario.name,
         'usuario_id': usuario.id,
         'avatar': usuario.avatar,
-        'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura,
+        'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura, 'equipados': equipados_da_pessoa(usuario),
         'texto': nova_msg.text or '',
         'anexo_url': nova_msg.attachment_url,
         'anexo_tipo': nova_msg.attachment_type,
@@ -806,7 +811,7 @@ def lidar_entrar_call(dados):
             _entrar_em_call(canal_id_bruto, peer_id, usuario)
             emit('novo_usuario_call', {
                 'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
-                'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo,
+                'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario),
                 'canal_id': canal_id_bruto
             }, to=sala_call, include_self=False)
             payload = {'canal_id': canal_id_bruto, 'participantes': participantes_call.get(canal_id_bruto, [])}
@@ -828,7 +833,7 @@ def lidar_entrar_call(dados):
             'peer_id': peer_id,
             'usuario': usuario.name,
             'avatar': usuario.avatar,
-            'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo,
+            'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario),
             'canal_id': chave
         }, to=sala_call, include_self=False)
 
@@ -1285,6 +1290,7 @@ def editar_servidor(dados):
                 'id': pino.id,
                 'nome': srv.name,
                 'icon_url': srv.icon_url,
+                'efeito': efeito_servidor_valido(srv.efeito),
                 'vagas': pino.max_tickets if pino.max_tickets else 'ilimitado',
                 'online': len(srv.members)
             }, broadcast=True)
@@ -1292,6 +1298,50 @@ def editar_servidor(dados):
         db.session.rollback()
         print(f"[ERRO EDITAR SERVIDOR] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível salvar o servidor: {e}'})
+
+
+@socketio.on('aplicar_efeito_servidor')
+def aplicar_efeito_servidor(dados):
+    """O dono aplica (ou tira, com valor vazio) um efeito cosmético do inventário num servidor dele.
+
+    Duas checagens no servidor (regra 4): a pessoa administra o servidor E possui o item. Depois, todos os
+    membros recebem o servidor de novo (`avisar_servidor`) e o pino do mapa é atualizado (regra 6)."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    dados = dados or {}
+
+    try:
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        if not srv:
+            emit('erro_bazinga', {'msg': 'Só o dono pode mexer nos efeitos do servidor.'})
+            return
+        valor = (dados.get('valor') or '').strip()
+        if valor:
+            if not efeito_servidor_valido(valor):
+                emit('erro_bazinga', {'msg': 'Efeito de servidor inválido.'})
+                return
+            if f'efeito_servidor:{valor}' not in com_retry(lambda: posses_da_pessoa(usuario.id)):
+                emit('erro_bazinga', {'msg': 'Você ainda não tem esse efeito.'})
+                return
+
+        def preparar():
+            srv.efeito = valor or None
+
+        comitar_com_retry(preparar)
+        avisar_servidor(srv)
+        pino = MapServer.query.filter_by(server_id=srv.id).first()
+        if pino:
+            emit('servidor_mapa_editado', {
+                'id': pino.id, 'nome': srv.name, 'icon_url': srv.icon_url,
+                'efeito': efeito_servidor_valido(srv.efeito),
+                'vagas': pino.max_tickets if pino.max_tickets else 'ilimitado', 'online': len(srv.members)
+            }, broadcast=True)
+        emit('efeito_servidor_aplicado', {'server_id': srv.id, 'efeito': efeito_servidor_valido(srv.efeito)})
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO EFEITO SERVIDOR] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível aplicar o efeito: {e}'})
 
 
 @socketio.on('apagar_servidor')
@@ -1919,6 +1969,67 @@ def atualizar_localizacao(dados):
 # ==========================================
 # PERFIL DO USUÁRIO
 # ==========================================
+def _payload_perfil(usuario):
+    """O que a própria pessoa recebe (em todas as abas) depois de mudar o perfil."""
+    return {
+        'name': usuario.name,
+        'custom_status': usuario.custom_status,
+        'bio': usuario.bio,
+        'banner_color': usuario.banner_color,
+        'banner_url': usuario.banner_url,
+        'banner_ajuste': usuario.banner_ajuste,
+        'pronomes': usuario.pronomes,
+        'username': usuario.username,
+        'status_emoji': usuario.status_emoji,
+        'pensando': usuario.pensando,
+        'perfil_tema': usuario.perfil_tema,
+        'nome_estilo': usuario.nome_estilo,
+        'placa': usuario.placa,
+        'moldura': usuario.moldura,
+        'equipados': equipados_da_pessoa(usuario),
+        'avatar': usuario.avatar
+    }
+
+
+def _difundir_aparencia(usuario):
+    """Avisa quem convive (servidores e amigos) que o visual mudou - sem isso só quem editou
+    via a mudança até um F5 (regra 6)."""
+    payload_publico = {'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
+                       'placa': usuario.placa, 'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura,
+                       'equipados': equipados_da_pessoa(usuario),
+                       'pensando': usuario.pensando, 'status_texto': texto_do_status(usuario)}
+    for srv in usuario.servers:
+        emit('perfil_membro_mudou', payload_publico, to=sala_servidor(srv.id), include_self=False)
+    for amigo in amigos_de(usuario):
+        emit('perfil_membro_mudou', payload_publico, to=sala_pessoal(amigo.id))
+    _atualizar_visual_na_call(usuario)
+
+
+def _atualizar_visual_na_call(usuario):
+    """Quem equipa algo no meio de uma call: os outros participantes (e quem só está olhando a prévia do canal de
+    voz) precisam ver o visual novo agora, não só quando a pessoa sair e entrar de novo (regra 6)."""
+    try:
+        for chave, lista in list(participantes_call.items()):
+            meus = [p for p in lista if p.get('usuario_id') == usuario.id]
+            if not meus:
+                continue
+            for p in meus:
+                p.update({'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo,
+                          'equipados': equipados_da_pessoa(usuario)})
+            payload = {'canal_id': chave, 'participantes': lista}
+            if chave.startswith('dm_'):
+                _, id_a, id_b = chave.split('_')
+                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_a)))
+                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_b)))
+            else:
+                canal = com_retry(lambda: Channel.query.get(int(chave)))
+                if canal and canal.server_id:
+                    emit('participantes_call_mudou', payload, to=sala_servidor(canal.server_id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO VISUAL NA CALL] {e}")   # nunca derruba o equipar
+
+
 @socketio.on('atualizar_perfil')
 def atualizar_perfil(dados):
     usuario = usuario_logado()
@@ -1938,6 +2049,22 @@ def atualizar_perfil(dados):
             else:
                 username_novo = candidato
 
+    # Enfeite EXCLUSIVO (laboratório) só se a pessoa tem a posse (regra 4): o cliente pode
+    # mandar qualquer id, o servidor é quem confere. Livre passa direto.
+    posses = {}
+    negados = []
+
+    def pode_usar(tipo, valor):
+        if not valor or not item_exclusivo(tipo, valor):
+            return True
+        if 'conjunto' not in posses:
+            posses['conjunto'] = posses_da_pessoa(usuario.id)
+        if f'{tipo}:{valor}' in posses['conjunto']:
+            return True
+        if valor not in negados:
+            negados.append(valor)
+        return False
+
     try:
         def preparar():
             if 'name' in dados:
@@ -1953,7 +2080,10 @@ def atualizar_perfil(dados):
                 # no cliente de todo mundo.
                 cor = (dados.get('banner_color') or '').strip()
                 valida = bool(re.match(r'^#[0-9a-fA-F]{6}$', cor)) or (cor.startswith('anim:') and cor[5:] in FAIXAS_ANIMADAS)
-                usuario.banner_color = cor if valida else None
+                if not valida:
+                    usuario.banner_color = None
+                elif pode_usar('faixa', cor[5:] if cor.startswith('anim:') else None):
+                    usuario.banner_color = cor
             if 'pronomes' in dados:
                 usuario.pronomes = (dados.get('pronomes') or '').strip()[:LIM_PRONOMES] or None
             if 'banner_url' in dados:
@@ -1974,15 +2104,29 @@ def atualizar_perfil(dados):
             if 'perfil_tema' in dados:
                 tema = (dados.get('perfil_tema') or '').strip()
                 usuario.perfil_tema = tema if tema and tema_perfil_valido(tema) else None
+            # Id fora do catálogo/'padrao' limpa o slot; exclusivo sem posse NÃO muda nada
+            # (não pode apagar o que a pessoa já tinha equipado só porque pediu o que não tem).
             if 'nome_estilo' in dados:
                 estilo = dados.get('nome_estilo')
-                usuario.nome_estilo = estilo if estilo in ESTILOS_NOME and estilo != 'padrao' else None
+                if estilo in ESTILOS_NOME and estilo != 'padrao':
+                    if pode_usar('nome', estilo):
+                        usuario.nome_estilo = estilo
+                else:
+                    usuario.nome_estilo = None
             if 'placa' in dados:
                 placa = dados.get('placa')
-                usuario.placa = placa if placa in PLACAS and placa != 'nenhuma' else None
+                if placa in PLACAS and placa != 'nenhuma':
+                    if pode_usar('placa', placa):
+                        usuario.placa = placa
+                else:
+                    usuario.placa = None
             if 'moldura' in dados:
                 moldura = dados.get('moldura')
-                usuario.moldura = moldura if moldura in MOLDURAS and moldura != 'nenhuma' else None
+                if moldura in MOLDURAS and moldura != 'nenhuma':
+                    if pode_usar('moldura', moldura):
+                        usuario.moldura = moldura
+                else:
+                    usuario.moldura = None
             if username_novo:
                 usuario.username = username_novo
             avatar = dados.get('avatar')
@@ -1992,36 +2136,16 @@ def atualizar_perfil(dados):
                 usuario.avatar = avatar
 
         comitar_com_retry(preparar)
-        emit('perfil_atualizado', {
-            'name': usuario.name,
-            'custom_status': usuario.custom_status,
-            'bio': usuario.bio,
-            'banner_color': usuario.banner_color,
-            'banner_url': usuario.banner_url,
-            'banner_ajuste': usuario.banner_ajuste,
-            'pronomes': usuario.pronomes,
-            'username': usuario.username,
-            'status_emoji': usuario.status_emoji,
-            'pensando': usuario.pensando,
-            'perfil_tema': usuario.perfil_tema,
-            'nome_estilo': usuario.nome_estilo,
-            'placa': usuario.placa,
-            'moldura': usuario.moldura,
-            'avatar': usuario.avatar
-        })
+        emit('perfil_atualizado', _payload_perfil(usuario))
+        if negados:
+            emit('erro_bazinga', {'msg': 'Você ainda não tem esse item exclusivo: ' + ', '.join(negados) + '.'})
 
         # Nome/avatar aparecem em telas de quem não é "eu": lista de membros
         # de cada servidor. Sem isso, só quem editou via as próprias
         # (várias abas dele) via perfil_atualizado; o resto via F5.
-        visual = ('name', 'avatar', 'placa', 'nome_estilo', 'status_emoji', 'pensando', 'custom_status')
+        visual = ('name', 'avatar', 'placa', 'nome_estilo', 'moldura', 'status_emoji', 'pensando', 'custom_status')
         if any(k in dados for k in visual):
-            payload_publico = {'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
-                               'placa': usuario.placa, 'nome_estilo': usuario.nome_estilo,
-                               'pensando': usuario.pensando, 'status_texto': texto_do_status(usuario)}
-            for srv in usuario.servers:
-                emit('perfil_membro_mudou', payload_publico, to=sala_servidor(srv.id), include_self=False)
-            for amigo in amigos_de(usuario):
-                emit('perfil_membro_mudou', payload_publico, to=sala_pessoal(amigo.id))
+            _difundir_aparencia(usuario)
         if ('status_emoji' in dados or 'custom_status' in dados) and (usuario.status or 'online') == 'custom':
             aviso = {'usuario_id': usuario.id, 'status': status_visivel(usuario), 'emoji': usuario.status_emoji,
                      'texto': usuario.custom_status}
@@ -2033,6 +2157,108 @@ def atualizar_perfil(dados):
         db.session.rollback()
         print(f"[ERRO ATUALIZAR PERFIL] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível salvar o perfil: {e}'})
+
+
+# ==========================================
+# INVENTÁRIO: equipar / desequipar (itens com posse + livres)
+# ------------------------------------------------------------
+# O cliente manda só "<tipo>:<id>"; o servidor confere se o id existe e, se o item é exclusivo,
+# se a pessoa TEM a posse. Pacote = equipa todos os itens do tema de uma vez.
+# ==========================================
+_TUPLAS_LIVRES = {'moldura': MOLDURAS, 'placa': PLACAS, 'nome': ESTILOS_NOME, 'faixa': FAIXAS_ANIMADAS}
+
+
+def _equipavel(tipo, valor, posses):
+    """True se `valor` existe pra esse tipo e (sendo exclusivo) a pessoa o possui."""
+    if tipo in TIPOS_COLUNA:
+        if valor not in _TUPLAS_LIVRES[tipo] or valor in ('padrao', 'nenhuma'):
+            return False
+    elif tipo in TIPOS_JSON:
+        if not item_exclusivo(tipo, valor):
+            return False
+    else:
+        return False
+    return (not item_exclusivo(tipo, valor)) or f'{tipo}:{valor}' in posses
+
+
+def _estado_inventario(usuario, posses):
+    """Foto do inventário da pessoa: o que possui, o que está equipado e a tabela de patentes."""
+    equipados = {t: valor_atual_do_slot(usuario, t) for t in TIPOS_EQUIPAVEIS}
+    return {'posses': sorted(posses), 'catalogo': catalogo_para_json(posses),
+            'equipados': {t: v for t, v in equipados.items() if v},
+            'patentes': patentes_para_json(), 'nivel': nivel_da_pessoa(usuario.xp)}
+
+
+@socketio.on('listar_inventario')
+def listar_inventario(dados=None):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        emit('inventario', _estado_inventario(usuario, com_retry(lambda: posses_da_pessoa(usuario.id))))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO LISTAR INVENTARIO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível abrir o inventário: {e}'})
+
+
+@socketio.on('equipar_item')
+def equipar_item(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    item_id = str((dados or {}).get('item_id') or '')[:60]
+    tipo, _, valor = item_id.partition(':')
+
+    try:
+        posses = com_retry(lambda: posses_da_pessoa(usuario.id))
+        if tipo == 'pacote':
+            if item_id not in CATALOGO or item_id not in posses:
+                emit('erro_bazinga', {'msg': 'Você ainda não tem esse pacote.'})
+                return
+            escolhas = {t: v for t, v in PACOTES.get(valor, {}).items() if _equipavel(t, v, posses)}
+        else:
+            if not _equipavel(tipo, valor, posses):
+                emit('erro_bazinga', {'msg': 'Você ainda não tem esse item.' if item_exclusivo(tipo, valor) else 'Item inválido.'})
+                return
+            escolhas = {tipo: valor}
+
+        def preparar():
+            for t, v in escolhas.items():
+                definir_slot(usuario, t, v)
+
+        comitar_com_retry(preparar)
+        emit('perfil_atualizado', _payload_perfil(usuario), to=sala_pessoal(usuario.id))
+        emit('inventario', _estado_inventario(usuario, posses), to=sala_pessoal(usuario.id))
+        _difundir_aparencia(usuario)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO EQUIPAR ITEM] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível equipar: {e}'})
+
+
+@socketio.on('desequipar_item')
+def desequipar_item(dados):
+    """Tira o que está equipado num slot (volta ao padrão). `tipo` = moldura, placa, nome, faixa, efeito_*..."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    tipo = str((dados or {}).get('tipo') or '')
+    if tipo not in TIPOS_EQUIPAVEIS:
+        return
+    try:
+        def preparar():
+            definir_slot(usuario, tipo, None)
+
+        comitar_com_retry(preparar)
+        posses = com_retry(lambda: posses_da_pessoa(usuario.id))
+        emit('perfil_atualizado', _payload_perfil(usuario), to=sala_pessoal(usuario.id))
+        emit('inventario', _estado_inventario(usuario, posses), to=sala_pessoal(usuario.id))
+        _difundir_aparencia(usuario)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO DESEQUIPAR ITEM] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível desequipar: {e}'})
 
 
 @socketio.on('alternar_fantasma')
@@ -2159,6 +2385,7 @@ def obter_perfil(dados):
             ).first() is not None
 
         nivel = nivel_da_pessoa(alvo.xp)
+        badges = badges_do_conjunto(com_retry(lambda: posses_da_pessoa(alvo.id)))
         emit('perfil_publico', {
             'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': False,
             'bio': alvo.bio, 'custom_status': alvo.custom_status, 'pronomes': alvo.pronomes,
@@ -2170,7 +2397,8 @@ def obter_perfil(dados):
             'banner_ajuste': alvo.banner_ajuste,
             'status': (alvo.status or 'online') if sou_eu else status_visivel(alvo),
             'membro_desde': membro_desde_texto(alvo.created_at),
-            'nivel': nivel, 'titulo': titulo_do_nivel(nivel),
+            'nivel': nivel, 'titulo': titulo_do_nivel(nivel), 'patente': patente_do_nivel(nivel),
+            'badges': badges, 'equipados': equipados_da_pessoa(alvo),
             'eh_amigo': amigo, 'pedido_pendente': pendente, 'sou_eu': sou_eu,
             'tem_loja': Product.query.filter_by(seller_id=alvo.id).count() > 0
         })
@@ -2875,7 +3103,7 @@ def on_enviar_mensagem_direta(data):
             'usuario_id': usuario.id,
             'destinatario_id': target_id,
             'avatar': usuario.avatar,
-            'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura,
+            'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura, 'equipados': equipados_da_pessoa(usuario),
             'texto': nova_msg.content or '',
             'anexo_url': nova_msg.attachment_url,
             'anexo_tipo': nova_msg.attachment_type,

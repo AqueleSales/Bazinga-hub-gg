@@ -11,9 +11,12 @@ import string
 import time
 from datetime import timedelta
 
+from bisect import bisect_right
+
 from sqlalchemy.exc import OperationalError
 
 from .models import db, Channel, Server, MissaoProgresso, Person, br_now, server_members, channel_members
+from .cosmeticos import patente_do_nivel, patente_comeca_em, ids_do_tipo, equipados_da_pessoa, efeito_servidor_valido
 
 
 def com_retry(fn, tentativas=4, espera=1.0):
@@ -158,14 +161,20 @@ def gerar_codigo_convite(tamanho=8):
 # ==========================================
 # BATTLE PASS: nível/XP pessoal + missões
 # ==========================================
-# 100 níveis. Subir do nível N pro N+1 custa XP_BASE + XP_CRESCIMENTO*(N-1):
-#   1->2 = 100 XP, 50->51 = 10.096 XP, 99->100 = 20.092 XP
-# e chegar ao nível 100 soma 999.504 XP (~1 milhão). Quem começa sobe rápido
-# (dá vontade de continuar) e o topo é coisa de meses. `Person.xp` guarda o
-# TOTAL, então mexer na curva não precisa de migração, só muda o nível calculado.
+# O NÍVEL é a experiência TOTAL acumulada e nunca zera: de 1 a 1000 numa tabela e, depois,
+# um nível a cada passo fixo ("1000+"). Nada a ver com o Battle Pass, que vai virar trilhas
+# temáticas de 1 a 100 (o dono vai refazer a economia). Os 100 primeiros níveis seguem a curva
+# antiga, então quem já tinha nível não mudou: subir do nível N pro N+1 custa
+# XP_BASE + XP_CRESCIMENTO*(N-1)  (1->2 = 100 XP, 50->51 = 10.096 XP, 99->100 = 20.092 XP;
+# chegar ao 100 = 999.504 XP). Do 100 em diante o passo cresce só XP_CRESCIMENTO_ALEM por nível
+# (100->101 = 20.117 XP, 999->1000 = 42.592 XP; chegar ao 1000 = ~29,2 milhões de XP) e, no 1000+,
+# fica parado em 42.617 XP por nível. `Person.xp` guarda o TOTAL, então mexer na curva não
+# precisa de migração, só muda o nível calculado.
 XP_BASE = 100
 XP_CRESCIMENTO = 204
-NIVEL_MAXIMO = 100
+XP_CRESCIMENTO_ALEM = 25
+NIVEL_TABELA = 1000          # até aqui há tabela; depois é um passo fixo
+NIVEIS_POR_PAGINA_TRILHA = 100   # a trilha de marcos mostra um bloco de 100 níveis por vez
 COINS_POR_NIVEL = 50         # Dracmas pagas ao subir de nível.
 GANHO_XP_INTERVALO_SEGUNDOS = 30   # Sem isso, mandar mensagem vazia em loop
                                     # virava fábrica de XP infinita.
@@ -180,76 +189,93 @@ XP_POR_MINUTO_ATIVO = 3
 MINUTOS_ATIVOS_MAX_POR_DIA = 60      # = no máximo 180 XP/dia só por ficar
 BATIMENTO_MIN_SEGUNDOS = 50
 
-# Título que a pessoa ostenta a partir de cada nível (o maior já alcançado vale).
-TITULOS_POR_NIVEL = [
-    (1, 'Novato'), (5, 'Explorador'), (10, 'Desbravador'), (15, 'Veterano'),
-    (20, 'Lenda Local'), (30, 'Mestre do Radar'), (40, 'Elite'),
-    (50, 'Imortal'), (60, 'Semideus'), (75, 'Titã'), (90, 'Olimpiano'),
-    (100, 'Panteão'),
-]
+def custo_do_passo(nivel):
+    """XP pra subir do `nivel` pro seguinte."""
+    n = max(nivel, 1)
+    if n < 100:
+        return XP_BASE + XP_CRESCIMENTO * (n - 1)
+    n = min(n, NIVEL_TABELA)
+    return XP_BASE + XP_CRESCIMENTO * 98 + XP_CRESCIMENTO_ALEM * (n - 99)
+
+
+def _montar_limiares():
+    """_LIMIARES[i] = XP total pra ALCANÇAR o nível i+1 (nível 1 = 0 XP), até o NIVEL_TABELA."""
+    limiares, soma = [0], 0
+    for n in range(1, NIVEL_TABELA):
+        soma += custo_do_passo(n)
+        limiares.append(soma)
+    return limiares
+
+
+_LIMIARES = _montar_limiares()
 
 
 def xp_do_nivel(nivel):
     """XP total necessário pra ALCANÇAR `nivel` (nível 1 = 0 XP)."""
-    n = max(nivel, 1) - 1
-    return XP_BASE * n + XP_CRESCIMENTO * n * (n - 1) // 2
+    nivel = max(int(nivel), 1)
+    if nivel <= NIVEL_TABELA:
+        return _LIMIARES[nivel - 1]
+    return _LIMIARES[-1] + (nivel - NIVEL_TABELA) * custo_do_passo(NIVEL_TABELA)
 
 
 def nivel_da_pessoa(xp):
-    xp = xp or 0
-    nivel = 1
-    while nivel < NIVEL_MAXIMO and xp >= xp_do_nivel(nivel + 1):
-        nivel += 1
-    return nivel
+    xp = max(xp or 0, 0)
+    if xp >= _LIMIARES[-1]:
+        return NIVEL_TABELA + (xp - _LIMIARES[-1]) // custo_do_passo(NIVEL_TABELA)
+    return bisect_right(_LIMIARES, xp)
 
 
 def progresso_de_nivel(xp):
     """(xp dentro do nível atual, xp necessário pro próximo) - pra desenhar a barrinha."""
-    xp = xp or 0
+    xp = max(xp or 0, 0)
     nivel = nivel_da_pessoa(xp)
-    if nivel >= NIVEL_MAXIMO:
-        return 1, 1
-    return xp - xp_do_nivel(nivel), xp_do_nivel(nivel + 1) - xp_do_nivel(nivel)
+    return xp - xp_do_nivel(nivel), custo_do_passo(nivel)
 
 
 def titulo_do_nivel(nivel):
-    titulo = TITULOS_POR_NIVEL[0][1]
-    for minimo, nome in TITULOS_POR_NIVEL:
-        if nivel >= minimo:
-            titulo = nome
-    return titulo
+    """Nome da patente com o subnível (ex.: 'Aprendiz II') - era Novato/Explorador/..."""
+    return patente_do_nivel(nivel)['nome_completo']
 
 
 def recompensa_do_nivel(nivel):
-    """O que ganha ao ALCANÇAR `nivel`. Marcos de 5/10 níveis pagam mais."""
+    """O que ganha ao ALCANÇAR `nivel`. Marcos de 5/10 níveis pagam mais; o 1º nível de
+    cada patente nova vem com o nome dela (`titulo`)."""
     coins = COINS_POR_NIVEL
     if nivel % 10 == 0:
         coins = 300
     elif nivel % 5 == 0:
         coins = 150
-    novo_titulo = next((nome for minimo, nome in TITULOS_POR_NIVEL if minimo == nivel and nivel > 1), None)
-    return {'nivel': nivel, 'coins': coins, 'titulo': novo_titulo}
+    return {'nivel': nivel, 'coins': coins, 'titulo': patente_comeca_em(nivel)}
+
+
+def marcos_da_pagina(nivel):
+    """Bloco de 100 níveis que contém `nivel` (101-200 pra quem está no 150...). Mandar os
+    1000 de uma vez pesaria à toa: o cliente só rola por um bloco."""
+    inicio = ((max(nivel, 1) - 1) // NIVEIS_POR_PAGINA_TRILHA) * NIVEIS_POR_PAGINA_TRILHA + 1
+    return [recompensa_do_nivel(n) for n in range(inicio, inicio + NIVEIS_POR_PAGINA_TRILHA)]
 
 
 def _estado_xp(usuario, nivel_antes, ganho_xp=0, motivo=None, bonus_diario=False):
     nivel = nivel_da_pessoa(usuario.xp)
     xp_atual, xp_por_nivel = progresso_de_nivel(usuario.xp)
+    patente = patente_do_nivel(nivel)
     return {
         'xp': usuario.xp or 0,
         'nivel': nivel,
         'xp_atual_nivel': xp_atual,
         'xp_por_nivel': xp_por_nivel,
-        'titulo': titulo_do_nivel(nivel),
+        'titulo': patente['nome_completo'],
+        'patente': patente,
         'subiu_nivel': nivel > nivel_antes,
+        'patente_subiu': patente['idx'] > patente_do_nivel(nivel_antes)['idx'],
         'recompensas': [recompensa_do_nivel(n) for n in range(nivel_antes + 1, nivel + 1)],
-        # A trilha inteira (100 marcos) - é pouca coisa e o cliente rola até o atual.
-        'marcos': [recompensa_do_nivel(n) for n in range(1, NIVEL_MAXIMO + 1)],
+        'marcos': marcos_da_pagina(nivel),
         'coins': usuario.bazinga_coins,
         'ganho_xp': ganho_xp,
         'motivo': motivo,
         'bonus_diario': bonus_diario,
         'streak': usuario.streak_dias or 0,
-        'nivel_maximo': nivel >= NIVEL_MAXIMO,
+        'nivel_maximo': False,       # 1000+ não tem teto
     }
 
 
@@ -499,12 +525,14 @@ def membro_desde_texto(criado_em):
 # Os ids abaixo precisam bater com o catálogo do chat.html (CSS .ne-*, .placa-*,
 # .moldura-*). O servidor só guarda id conhecido - nunca texto livre num class="".
 # ==========================================
-ESTILOS_NOME = ('padrao', 'neon', 'ouro', 'fogo', 'gelo', 'arco', 'sakura', 'glitch', 'retro')
-PLACAS = ('nenhuma', 'aurora', 'ouro', 'neon', 'oceano', 'sakura', 'lava', 'galaxia')
-MOLDURAS = ('nenhuma', 'aurora', 'neon', 'ouro', 'fogo', 'gelo', 'arco')
+# Os ids EXCLUSIVOS (laboratório) vêm do catálogo em cosmeticos.py e só podem ser equipados por
+# quem tem a posse (ver `atualizar_perfil`/`equipar_item`); os livres continuam aqui.
+ESTILOS_NOME = ('padrao', 'neon', 'ouro', 'fogo', 'gelo', 'arco', 'sakura', 'glitch', 'retro') + ids_do_tipo('nome')
+PLACAS = ('nenhuma', 'aurora', 'ouro', 'neon', 'oceano', 'sakura', 'lava', 'galaxia') + ids_do_tipo('placa')
+MOLDURAS = ('nenhuma', 'aurora', 'neon', 'ouro', 'fogo', 'gelo', 'arco') + ids_do_tipo('moldura')
 STATUS_VALIDOS = ('online', 'idle', 'dnd', 'invisible', 'custom')
 # Faixas animadas do perfil (guardadas em banner_color como 'anim:<id>'; vazio = arco-íris padrão)
-FAIXAS_ANIMADAS = ('aurora', 'oceano', 'fogo', 'sakura', 'neon', 'galaxia', 'ouro', 'menta', 'cereja', 'gelo')
+FAIXAS_ANIMADAS = ('aurora', 'oceano', 'fogo', 'sakura', 'neon', 'galaxia', 'ouro', 'menta', 'cereja', 'gelo') + ids_do_tipo('faixa')
 
 _RE_TEMA_COR = re.compile(r'^(grad:#[0-9a-fA-F]{6},#[0-9a-fA-F]{6}|solid:#[0-9a-fA-F]{6})$')
 _RE_GIPHY = re.compile(r'^https://media\d*\.giphy\.com/')
@@ -671,7 +699,8 @@ def nota_para_json(n, agora=None):
     return {
         'id': n.id, 'lat': n.lat, 'lng': n.lng, 'texto': n.text,
         'autor': n.author.name if n.author else '???', 'autor_id': n.author_id,
-        'cor': n.color, 'icone': n.icone, 'restante_s': restante
+        'cor': n.color, 'icone': n.icone, 'restante_s': restante,
+        'pin': equipados_da_pessoa(n.author).get('pin_nota') if n.author else None
     }
 
 
@@ -683,6 +712,7 @@ def servidor_mapa_para_json(s):
         'id': s.id, 'lat': s.lat, 'lng': s.lng,
         'name': srv.name if srv else s.name,
         'icon_url': srv.icon_url if srv else None,
+        'efeito': efeito_servidor_valido(srv.efeito) if srv else None,
         'banner_color': srv.banner_color if srv else None,
         'description': srv.description if srv else None,
         'owner': s.owner.name if s.owner else '???', 'owner_id': s.owner_id,

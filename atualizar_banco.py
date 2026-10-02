@@ -209,6 +209,19 @@ def atualizar_banco():
                     db.session.rollback()
                     print(f"⚠️ Tabela '{tabela}' não encontrada - o db.create_all() do boot cria.")
 
+            # 24. Cosméticos: coluna dos slots extras (efeitos) + tabela `posse` (nova -> create_all) e a
+            # concessão do laboratório (insígnias e itens dos temas Gogeta/Sasuke/Fusão) aos dois testers.
+            # Idempotente: rodar de novo só dá o que faltar. Quem não for achado (por @) vira um aviso;
+            # use `python conceder_item.py <@usuario> tudo` quando a conta existir.
+            add_column_se_nao_existir("person", "equipados TEXT")
+            add_column_se_nao_existir("server", "efeito VARCHAR(24)")
+            try:
+                from app.cosmeticos import conceder_laboratorio
+                conceder_laboratorio(print)
+            except Exception as e:
+                db.session.rollback()
+                print(f"⚠️ Não consegui conceder o laboratório: {e}")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

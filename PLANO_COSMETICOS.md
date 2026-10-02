@@ -1,8 +1,29 @@
 # Plano: patentes, badges e cosméticos (temas Gogeta e Sasuke)
 
-Escrito em 02/10/2026 para abrir uma conversa nova. Leia junto com `CLAUDE.md` (regras 1–6 e a seção
-"Perfil v2") e `BACKLOG.md`. **Nada deste plano foi implementado ainda.** É um laboratório: tudo é
+Escrito em 02/10/2026 para abrir uma conversa nova. Leia junto com `CLAUDE.md` (regras 1–6, a seção
+"Perfil v2" e a **"Rodada 5"**, que descreve como tudo isto foi feito) e `BACKLOG.md`. É um laboratório: tudo é
 **só para o dono e o amigo beta tester**, com os temas pessoais de cada um, antes de virar loja.
+
+## STATUS (fim da Rodada 5, 02/10/2026) — a maior parte já está feita
+
+Decisões tomadas (as "perguntas abertas" da seção 1): **sem teto** (1–1000 em tabela e 1000+ com passo fixo; nível ≠ Battle Pass),
+**12 patentes × 3 subníveis** (nomes mitológicos, combinam com Panteão/Dracmas), nível + patente aparecem no **cartão de perfil**,
+Meu Perfil, Battle Pass e tela de "subiu de nível" (mensagens/lista de membros ficaram para depois).
+
+| Item do plano | Estado |
+|---|---|
+| Nível 1–1000+, patentes em ícone SVG animado (mais animação quanto maior), popover "orb" | ✅ feito (galeria na aba Patentes do Inventário) |
+| Insígnias Criador / Beta Tester / Coder / **Só nós** (duas chamas que se fundem no hover) | ✅ feito |
+| Catálogo único + **posse** por pessoa (`Posse`), servidor confere ao equipar | ✅ feito (`app/cosmeticos.py`, `equipar_item`, `atualizar_perfil` com checagem) |
+| Inventário nas Configurações **e** embaixo do Mercado Elite | ✅ feito (mesmo componente) |
+| Laboratório Gogeta / Sasuke / **Fusão (só nós)**: moldura, placa, nome, faixa, efeito de avatar, efeito de perfil, efeito de fala, radar, efeito do chat (digitar/enviar), som de entrada na call, pin de nota, pacotes de tema | ✅ feito |
+| Efeitos para servidores e pin de servidor no mapa | ✅ feito (um item só: o dono aplica ao servidor; ícone na barra, cabeçalho e pino) |
+| Gadget do mapa (música tipo Spotify) | ⏳ não feito (pedido ambíguo: confirmar com o dono o que é) |
+| Patente/insígnia ao lado do nome em mensagens e lista de membros | ⏳ não feito (precisa do nível do autor em cada payload) |
+| Loja/economia/Battle Pass temático (comprar com Dracmas, raridade, bazar) | ⏳ o dono vai refazer; a posse (`origem`) já está pronta pra isso |
+| Arte/áudio próprios para a loja pública | ⏳ o laboratório usa só forma/cor/som sintetizado; **não** usar sprite/áudio de Dragon Ball/Naruto na loja |
+
+O texto abaixo é o plano original (mantido como referência das ideias por tipo de item).
 
 ## Os dois usuários de teste e os temas
 
@@ -51,7 +72,7 @@ Implementação sugerida:
 Insígnias colecionáveis no cartão de perfil (ícone pequeno ao lado do nome), com o mesmo popover de hover.
 
 **Exclusivas do dono e do amigo (não vendáveis):**
-- **Criador** (só o dono) — ex.: coroa/cristal com chama Gogeta.
+- **Criador** (dono e amigo, decisão do dono) — ex.: coroa/cristal com chama Gogeta.
 - **Beta Tester** (dono + amigo) — ex.: selo com engrenagem/estrela.
 - **Coder** — ex.: `</>` luminoso (dono; amigo se ajudou a programar).
 - **"Só nós"** — badge que só os dois têm (algo como duas chamas/fusão: Gogeta = fusão de dois!). Boa ideia visual: dois

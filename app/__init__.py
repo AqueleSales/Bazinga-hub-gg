@@ -45,9 +45,17 @@ def create_app():
 
     from . import events
 
+    def _versao_estatico(caminho):
+        """Data de modificação do arquivo estático: vira ?v=<n> na URL, então um deploy novo nunca serve CSS/JS velho do cache."""
+        try:
+            return int(os.path.getmtime(os.path.join(app.static_folder, caminho)))
+        except OSError:
+            return 0
+
     @app.context_processor
     def _injetar_marca():
-        return {'app_nome': APP_NOME, 'moeda_nome': MOEDA_NOME, 'moeda_sigla': MOEDA_SIGLA}
+        return {'app_nome': APP_NOME, 'moeda_nome': MOEDA_NOME, 'moeda_sigla': MOEDA_SIGLA,
+                'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js')}
 
     with app.app_context():
         try:

@@ -1,0 +1,456 @@
+/* ==========================================================================
+   COSMÉTICOS: patentes, insígnias, popover "orb", inventário e o laboratório
+   (temas Gogeta / Sasuke / Fusão). Carregado DEPOIS do <style> do chat.html, então
+   ganha por ordem de declaração em empates de especificidade.
+   Os ids .moldura-* / .placa-* / .ne-* / .banner-anim-* / .ef-* precisam bater com
+   app/cosmeticos.py (catálogo) e com o JS (static/js/cosmeticos.js).
+   ========================================================================== */
+
+/* ---------- PATENTES (ícones SVG): a animação sobe com a patente ---------- */
+.pt { display: inline-flex; width: var(--pt-tam, 28px); height: var(--pt-tam, 28px); flex: none; vertical-align: middle; position: relative; outline: none; cursor: default; }
+.pt .pt-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.pt:focus-visible { filter: drop-shadow(0 0 4px #fff); }
+
+/* anim-1+: aura suave e um brilho que varre o ícone de tempos em tempos */
+.pt-halo { transform-origin: 32px 31px; animation: ptHalo 3.4s ease-in-out infinite; }
+.pt-varre { transform: translateX(-30px) skewX(-18deg); animation: ptVarre 6s ease-in-out infinite; }
+.pt-anim-2 .pt-varre { animation-duration: 4.6s; }
+.pt-anim-3 .pt-varre { animation-duration: 3.8s; }
+.pt-anim-4 .pt-varre { animation-duration: 3.1s; }
+.pt-anim-2 .pt-halo, .pt-anim-3 .pt-halo { animation-duration: 2.8s; }
+.pt-anim-4 .pt-halo { animation-duration: 2.2s; }
+@keyframes ptHalo { 0%, 100% { transform: scale(.86); opacity: .5; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes ptVarre { 0%, 58% { transform: translateX(-30px) skewX(-18deg); } 100% { transform: translateX(120px) skewX(-18deg); } }
+
+/* anim-3+: faíscas piscando nos cantos */
+.pt-fa { transform-origin: 0 0; transform: scale(0); opacity: 0; animation: ptFa 2.8s ease-in-out infinite; }
+@keyframes ptFa { 0%, 100% { transform: scale(0) rotate(0); opacity: 0; } 40% { transform: scale(1) rotate(45deg); opacity: 1; } 72% { transform: scale(.35) rotate(90deg); opacity: .25; } }
+
+/* anim-4: raios girando atrás do ícone */
+.pt-gira { animation: ptGira 16s linear infinite; }
+@keyframes ptGira { to { transform: rotate(360deg); } }
+/* Panteão: as cores do prisma rodam */
+.pt-id-panteao .pt-corpo { animation: ptMatiz 7s linear infinite; }
+@keyframes ptMatiz { to { filter: hue-rotate(360deg); } }
+/* Titã: respira como brasa */
+.pt-id-tita .pt-corpo { animation: ptBrasa 2.4s ease-in-out infinite; }
+@keyframes ptBrasa { 0%, 100% { filter: brightness(1) drop-shadow(0 0 1px #f97316); } 50% { filter: brightness(1.18) drop-shadow(0 0 4px #f97316); } }
+
+.pt-pip { transition: fill .2s; }
+
+/* ---------- INSÍGNIAS ---------- */
+.bd { display: inline-flex; width: var(--pt-tam, 22px); height: var(--pt-tam, 22px); flex: none; vertical-align: middle; cursor: default; outline: none; transition: transform .2s cubic-bezier(.34, 1.56, .64, 1), filter .2s; }
+.bd .bd-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.bd:hover, .bd:focus-visible { transform: translateY(-1px) scale(1.14); filter: drop-shadow(0 0 5px var(--bd-cor, #fff)); }
+.bd-chama { transform-origin: 32px 44px; animation: bdChama 1.1s ease-in-out infinite alternate; }
+.bd-chama2 { animation-duration: .8s; animation-delay: -.3s; }
+@keyframes bdChama { from { transform: scale(1, .93); } to { transform: scale(1.07, 1.07); } }
+.bd-gira { transform-origin: 32px 32px; animation: bdGira 16s linear infinite; }
+@keyframes bdGira { to { transform: rotate(360deg); } }
+.bd-estrela { transform-origin: 32px 32px; animation: bdEstrela 2.6s ease-in-out infinite; }
+@keyframes bdEstrela { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.12) rotate(8deg); } }
+.bd-codigo { animation: bdCodigo 2.4s ease-in-out infinite; }
+@keyframes bdCodigo { 0%, 100% { filter: drop-shadow(0 0 1px #22d3ee); } 50% { filter: drop-shadow(0 0 4px #22d3ee); } }
+
+/* "Só nós": duas chamas (laranja = Gogeta, roxa = Sasuke) que se fundem numa só.
+   Em repouso, lado a lado; no hover (e em loop dentro do popover) elas se juntam e a chama fundida nasce. */
+.bd-fl-a, .bd-fl-b, .bd-fl-f { transform-origin: 32px 54px; transition: transform .7s cubic-bezier(.5, 0, .2, 1), opacity .5s ease; }
+.bd-fl-a, .bd-fl-b { animation: bdTremor 1.3s ease-in-out infinite alternate; }
+.bd-fl-b { animation-delay: -.5s; }
+.bd-fl-f { opacity: 0; transform: scale(.55); }
+@keyframes bdTremor { from { filter: brightness(1); } to { filter: brightness(1.2); } }
+.bd-wrap-so_nos:hover .bd-fl-a, .bd-wrap-so_nos:focus-visible .bd-fl-a { transform: translateX(10px) scale(.7); opacity: 0; }
+.bd-wrap-so_nos:hover .bd-fl-b, .bd-wrap-so_nos:focus-visible .bd-fl-b { transform: translateX(-10px) scale(.7); opacity: 0; }
+.bd-wrap-so_nos:hover .bd-fl-f, .bd-wrap-so_nos:focus-visible .bd-fl-f { opacity: 1; transform: scale(1); animation: bdFusaoPulso 1s ease-in-out .5s infinite alternate; }
+@keyframes bdFusaoPulso { from { filter: brightness(1) drop-shadow(0 0 2px #f06ab8); } to { filter: brightness(1.2) drop-shadow(0 0 7px #f06ab8); } }
+.bd-fa circle { opacity: 0; transition: opacity .4s .3s; }
+.bd-wrap-so_nos:hover .bd-fa circle { opacity: 1; animation: bdFaisca 1s ease-in-out infinite alternate; }
+@keyframes bdFaisca { from { transform: translateY(2px); opacity: .3; } to { transform: translateY(-3px); opacity: 1; } }
+/* dentro do popover (grande): o ciclo é automático - separa, junta, funde, separa */
+.orb-grande .bd-svg.bd-so_nos .bd-fl-a { animation: bdOrbA 5s ease-in-out infinite; }
+.orb-grande .bd-svg.bd-so_nos .bd-fl-b { animation: bdOrbB 5s ease-in-out infinite; }
+.orb-grande .bd-svg.bd-so_nos .bd-fl-f { animation: bdOrbF 5s ease-in-out infinite; }
+.orb-grande .bd-svg.bd-so_nos .bd-fa circle { animation: bdOrbFa 5s ease-in-out infinite; transition: none; }
+@keyframes bdOrbA { 0%, 22% { transform: none; opacity: 1; } 42%, 62% { transform: translateX(10px) scale(.7); opacity: 0; } 82%, 100% { transform: none; opacity: 1; } }
+@keyframes bdOrbB { 0%, 22% { transform: none; opacity: 1; } 42%, 62% { transform: translateX(-10px) scale(.7); opacity: 0; } 82%, 100% { transform: none; opacity: 1; } }
+@keyframes bdOrbF { 0%, 36% { opacity: 0; transform: scale(.55); } 48%, 60% { opacity: 1; transform: scale(1); filter: brightness(1.15) drop-shadow(0 0 8px #f06ab8); } 76%, 100% { opacity: 0; transform: scale(.55); } }
+@keyframes bdOrbFa { 0%, 40% { opacity: 0; transform: translateY(2px); } 52%, 62% { opacity: 1; transform: translateY(-4px); } 78%, 100% { opacity: 0; transform: translateY(-6px); } }
+
+/* ---------- POPOVER "ORB": ícone grande em cima, nome embaixo ---------- */
+#orb-pop { position: fixed; display: none; z-index: 12000; pointer-events: none; min-width: 176px; max-width: 270px; padding: 20px 22px 16px; border-radius: 16px; text-align: center;
+    background: linear-gradient(180deg, #2b2d31, #1e1f22); border: 1px solid rgba(255, 255, 255, .08); box-shadow: 0 22px 60px rgba(0, 0, 0, .65), inset 0 1px 0 rgba(255, 255, 255, .06);
+    opacity: 0; transform: translateY(6px) scale(.96); transition: opacity .14s ease, transform .16s cubic-bezier(.34, 1.56, .64, 1); }
+#orb-pop.on { opacity: 1; transform: none; }
+#orb-pop::after { content: ''; position: absolute; left: var(--seta, 50%); bottom: -7px; width: 14px; height: 14px; margin-left: -7px; background: #1e1f22; border-right: 1px solid rgba(255, 255, 255, .08); border-bottom: 1px solid rgba(255, 255, 255, .08); transform: rotate(45deg); }
+#orb-pop.abaixo::after { bottom: auto; top: -7px; transform: rotate(225deg); background: #2b2d31; }
+#orb-pop .orb-ico { margin: 0 auto 10px; }
+#orb-pop .orb-ico.bd { width: 112px; height: 112px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .5)); }
+#orb-pop .orb-ico.bd:hover { transform: none; }
+#orb-pop .orb-rotulo { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #949ba4; }
+#orb-pop .orb-nome { margin-top: 3px; font-size: 22px; font-weight: 800; line-height: 1.15; color: #fff; word-break: break-word; }
+#orb-pop .orb-nome.pequeno { font-size: 15px; }
+#orb-pop .orb-linha { margin-top: 7px; font-size: 12.5px; line-height: 1.4; color: #c4c9d0; }
+#orb-pop .orb-linha.suave { margin-top: 3px; font-size: 11.5px; color: #8b929b; }
+
+/* ---------- no cartão de perfil: nível + patente + insígnias ---------- */
+.pc-chips { align-items: center; }
+.pc-chip.nivel { cursor: default; }
+.pc-patente { display: inline-flex; align-items: center; margin-left: 2px; }
+.pc-sep-ins { width: 1px; height: 18px; margin: 0 4px; background: rgba(255, 255, 255, .16); }
+.pc-insignias { display: inline-flex; align-items: center; gap: 7px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .pt *, .bd *, .pt, .bd { animation: none !important; transition: none !important; }
+    .pt-varre, .pt-fa { display: none; }
+}
+
+/* ---------- onde a patente aparece ---------- */
+/* Battle Pass: ícone grande ao lado do nome da patente */
+.bp-rank.bp-rank-patente { display: inline-flex; align-items: center; gap: 10px; padding: 4px 16px 4px 8px; }
+.bp-patente-ico { display: inline-flex; }
+.bp-celebra-rank { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bp-celebra-pt { display: inline-flex; margin-bottom: 4px; }
+/* Meu Perfil > Conta: "Nv. 9 · Iniciado III [ícone]" */
+.pf-nivel-linha { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ==========================================================================
+   INVENTÁRIO
+   ========================================================================== */
+.inv-raiz { display: flex; flex-direction: column; gap: 16px; }
+.inv-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; position: sticky; top: -28px; z-index: 4; padding: 10px 0; margin-top: -10px;
+    background: linear-gradient(180deg, var(--bg-primary) 70%, transparent); }
+.inv-abas { display: flex; gap: 6px; flex-wrap: wrap; }
+.inv-aba { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--glass-borda); background: rgba(255, 255, 255, .04); color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .2s, color .2s, transform .15s, border-color .2s; }
+.inv-aba:hover { color: var(--text-header); background: rgba(255, 255, 255, .09); transform: translateY(-1px); }
+.inv-aba.on { color: #fff; background: linear-gradient(135deg, #7d92e0, var(--brand-color)); border-color: rgba(255, 255, 255, .2); box-shadow: 0 4px 14px rgba(114, 137, 218, .35); }
+.inv-resumo { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.inv-resumo b { color: var(--text-header); }
+.inv-sec-tit { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-header); }
+.inv-sec-tit small { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0; }
+.inv-dica { margin: 2px 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--text-muted); }
+.inv-sec + .inv-sec { margin-top: 10px; }
+.inv-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; }
+
+.inv-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 12px 12px; border-radius: 16px; text-align: center; cursor: pointer;
+    background: rgba(255, 255, 255, .04); border: 1px solid var(--glass-borda); transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), border-color .2s, background-color .2s, box-shadow .2s; }
+.inv-item:hover { transform: translateY(-3px); background: rgba(255, 255, 255, .075); }
+.inv-item.eq { border-color: var(--brand-color); background: rgba(114, 137, 218, .13); box-shadow: 0 0 0 1px var(--brand-color), 0 8px 24px rgba(114, 137, 218, .2); }
+.inv-item.rar-lendario { border-color: rgba(251, 191, 36, .38); }
+.inv-item.rar-unico { border-color: rgba(232, 121, 249, .45); }
+.inv-item.rar-lendario.eq, .inv-item.rar-unico.eq { border-color: var(--brand-color); }
+.inv-item[data-tipo="badge"] { cursor: default; }
+.inv-selo { position: absolute; right: 9px; top: 8px; font-size: 11px; color: #fbbf24; filter: drop-shadow(0 0 4px rgba(251, 191, 36, .6)); }
+.inv-item.rar-unico .inv-selo { color: #e879f9; filter: drop-shadow(0 0 4px rgba(232, 121, 249, .6)); }
+.inv-prev { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 84px; margin-bottom: 6px; }
+.inv-nome { font-size: 14px; font-weight: 800; color: var(--text-header); }
+.inv-sub { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.inv-desc { margin-top: 2px; font-size: 11.5px; line-height: 1.4; color: var(--text-muted); }
+.inv-btn { margin-top: 8px; padding: 7px 14px; border-radius: 10px; border: 1px solid var(--glass-borda); background: rgba(255, 255, 255, .08); color: var(--text-normal); font-size: 12px; font-weight: 800; cursor: pointer; transition: background-color .2s, transform .12s; }
+.inv-btn:hover { background: rgba(255, 255, 255, .16); }
+.inv-btn:active { transform: scale(.95); }
+.inv-btn.eq { background: var(--brand-color); border-color: transparent; color: #fff; }
+.inv-btn.eq:hover { background: var(--red-color); }
+.inv-fixo { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--green-color); }
+.inv-vazio { padding: 48px 12px; text-align: center; color: var(--text-muted); font-size: 14px; }
+.inv-vazio i { font-size: 30px; margin-bottom: 8px; }
+
+/* prévias */
+.inv-prev .pf-tile-av { width: 58px; height: 58px; }
+.inv-prev .pf-placa-linha { width: 100%; }
+.inv-prev .cat-nome { font-size: 19px; }
+.inv-faixa { display: block; width: 100%; height: 58px; border-radius: 10px; position: relative; overflow: hidden; }
+.inv-av-ef { position: relative; display: inline-flex; width: 58px; height: 58px; }
+.inv-av-img { position: relative; z-index: 1; display: flex; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: var(--brand-color); align-items: center; justify-content: center; font-weight: 800; color: #fff; }
+.inv-av-img img { width: 100%; height: 100%; object-fit: cover; }
+.inv-perfil-ef { position: relative; display: block; width: 100%; height: 86px; border-radius: 12px; overflow: hidden; background: #17181c; }
+.inv-perfil-fundo { position: absolute; inset: 0; background: linear-gradient(165deg, #2a2d36, #15161a); }
+.inv-pacote { display: inline-flex; align-items: center; justify-content: center; width: 62px; height: 62px; border-radius: 18px; font-size: 26px; color: #fff;
+    background: linear-gradient(135deg, var(--tema), color-mix(in srgb, var(--tema) 35%, #000)); box-shadow: 0 6px 20px color-mix(in srgb, var(--tema) 45%, transparent); }
+.inv-icone { display: inline-flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 16px; font-size: 22px; color: var(--text-header); background: rgba(255, 255, 255, .07); }
+
+/* coleção de patentes */
+.inv-pat-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(206px, 1fr)); gap: 12px; }
+.inv-pat { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, .04); border: 1px solid var(--glass-borda); }
+.inv-pat.atual { border-color: var(--brand-color); background: rgba(114, 137, 218, .13); box-shadow: 0 0 0 1px var(--brand-color); }
+.inv-pat.trancada .inv-pat-nome, .inv-pat.trancada .inv-pat-faixa { opacity: .55; }
+.inv-pat-icos { display: flex; gap: 6px; align-items: flex-end; margin-bottom: 8px; }
+.inv-pat-sub.bloq { filter: grayscale(1) brightness(.45); opacity: .85; }
+.inv-pat-sub.bloq .pt * { animation: none !important; }
+.inv-pat-nome { font-size: 15px; font-weight: 800; color: var(--text-header); }
+.inv-pat-nome small { display: block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-color); }
+.inv-pat-faixa { font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
+
+/* ==========================================================================
+   LABORATÓRIO: GOGETA (ouro, laranja, aura) · SASUKE (roxo, relâmpago, Sharingan) · FUSÃO (os dois)
+   Tudo CSS (sem imagem), inspirado nos temas mas desenhado do zero.
+   ========================================================================== */
+
+/* ---------- molduras (anel do avatar: ::before já vem de .moldura-* no chat.html) ---------- */
+.moldura-gogeta::before { background: conic-gradient(from var(--bp-angulo), #fff6b0, #ffc936, #ff8a00, #ff5a00, #ffc936, #fff6b0); filter: drop-shadow(0 0 6px #ffae2e) drop-shadow(0 0 2px #fff3b0); animation: bpGira 3.4s linear infinite, molduraKi 1.1s ease-in-out infinite alternate; }
+@keyframes molduraKi { from { opacity: .82; } to { opacity: 1; } }
+.moldura-fusao::before { background: conic-gradient(from var(--bp-angulo), #ff8a1f, #ff5fa8 20%, #8b5cf6 50%, #ff5fa8 80%, #ff8a1f); filter: drop-shadow(0 0 6px #e879f9); animation: bpGira 4.2s linear infinite; }
+
+/* ---------- placas (a barra atrás do nome): brasas e cinzas subindo ---------- */
+.placa-gogeta, .user-profile-bar.placa-gogeta {
+    background-color: rgba(48, 8, 0, .72) !important;
+    background-image:
+        radial-gradient(circle at 50% 78%, rgba(255, 238, 170, .95) 0 1.5px, transparent 2.5px),
+        radial-gradient(circle at 50% 78%, rgba(255, 168, 56, .95) 0 1.3px, transparent 2.2px),
+        radial-gradient(circle at 50% 78%, rgba(255, 214, 102, .9) 0 1.8px, transparent 2.8px),
+        linear-gradient(90deg, rgba(255, 106, 10, .4), rgba(255, 176, 50, .28) 50%, rgba(255, 106, 10, .4)),
+        linear-gradient(0deg, rgba(255, 150, 30, .42), transparent 62%) !important;
+    background-size: 37px 26px, 53px 34px, 29px 22px, 120px 100%, 100% 100% !important;
+    background-repeat: repeat, repeat, repeat, repeat-x, no-repeat !important;
+    animation: placaGogeta 2.4s linear infinite !important;
+}
+@keyframes placaGogeta { from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; } to { background-position: 0 -26px, 0 -34px, 0 -22px, -120px 0, 0 0; } }
+.placa-sasuke, .user-profile-bar.placa-sasuke {
+    background-color: rgba(10, 4, 24, .78) !important;
+    background-image:
+        radial-gradient(circle at 50% 78%, rgba(214, 204, 235, .8) 0 1.2px, transparent 2px),
+        radial-gradient(circle at 50% 78%, rgba(168, 148, 214, .75) 0 1.6px, transparent 2.4px),
+        radial-gradient(circle at 50% 78%, rgba(235, 228, 250, .7) 0 1px, transparent 1.8px),
+        linear-gradient(90deg, rgba(76, 29, 149, .45), rgba(139, 92, 246, .26) 50%, rgba(76, 29, 149, .45)),
+        linear-gradient(0deg, rgba(139, 92, 246, .38), transparent 68%) !important;
+    background-size: 41px 30px, 57px 38px, 31px 24px, 140px 100%, 100% 100% !important;
+    background-repeat: repeat, repeat, repeat, repeat-x, no-repeat !important;
+    animation: placaSasuke 4.2s linear infinite !important;
+}
+@keyframes placaSasuke { from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; } to { background-position: 5px -30px, -4px -38px, 3px -24px, -140px 0, 0 0; } }
+.placa-fusao, .user-profile-bar.placa-fusao {
+    background-color: rgba(40, 10, 40, .6) !important;
+    background-image:
+        radial-gradient(circle at 50% 78%, rgba(255, 190, 90, .95) 0 1.5px, transparent 2.5px),
+        radial-gradient(circle at 50% 78%, rgba(196, 150, 255, .95) 0 1.5px, transparent 2.5px),
+        linear-gradient(90deg, rgba(255, 120, 20, .6), rgba(240, 106, 184, .45) 33%, rgba(139, 92, 246, .55) 66%, rgba(255, 120, 20, .6)),
+        linear-gradient(0deg, rgba(240, 106, 184, .4), transparent 65%) !important;
+    background-size: 39px 28px, 47px 32px, 180px 100%, 100% 100% !important;
+    background-repeat: repeat, repeat, repeat-x, no-repeat !important;
+    animation: placaFusao 3s linear infinite !important;
+}
+@keyframes placaFusao { from { background-position: 0 0, 0 0, 0 0, 0 0; } to { background-position: 0 -28px, 0 -32px, -180px 0, 0 0; } }
+
+/* ---------- estilos de nome ---------- */
+.ne-gogeta, .ne-sasuke, .ne-fusao { color: transparent !important; -webkit-background-clip: text; background-clip: text; font-weight: 800; -webkit-text-stroke: .5px rgba(20, 8, 40, .45); }   /* o contorno escuro mantém o nome legível no tema Claro */
+.inv-nome-prev { display: inline-flex; padding: 9px 16px; border-radius: 10px; background: #1b1c20; max-width: 100%; }
+.ne-gogeta { background-image: linear-gradient(90deg, #ffc15a, #fff0b0, #ffffff, #fff0b0, #ffc15a); background-size: 260% auto; animation: neBrilho 2.2s linear infinite, neKi 1.4s ease-in-out infinite alternate; }
+@keyframes neKi { from { filter: drop-shadow(0 0 1px rgba(255, 170, 40, .5)); } to { filter: drop-shadow(0 0 5px rgba(255, 190, 60, .95)); } }
+.ne-sasuke { background-image: linear-gradient(90deg, #b9a4fb, #ede9fe, #ffffff, #ede9fe, #b9a4fb); background-size: 260% auto; animation: neBrilho 3.2s linear infinite, neSharingan 3.1s steps(1, end) infinite; }
+@keyframes neSharingan { 0%, 86%, 100% { filter: drop-shadow(0 0 3px rgba(139, 92, 246, .8)); } 88% { filter: drop-shadow(-1.5px 0 0 rgba(239, 68, 68, .95)) drop-shadow(1.5px 0 0 rgba(125, 211, 252, .8)); } 91% { filter: drop-shadow(1.5px 0 0 rgba(239, 68, 68, .95)) drop-shadow(-1.5px 0 0 rgba(125, 211, 252, .8)); } 94% { filter: drop-shadow(0 0 7px rgba(239, 68, 68, .9)); } }
+.ne-fusao { background-image: linear-gradient(90deg, #ff8a1f, #ff5fa8, #8b5cf6, #ff5fa8, #ff8a1f); background-size: 300% auto; animation: neBrilho 3.4s linear infinite; filter: drop-shadow(0 0 3px rgba(232, 121, 249, .6)); }
+
+/* ---------- faixas do perfil ---------- */
+.banner-anim-gogeta { background-color: #1a0702; background-repeat: no-repeat; background-position: 50% 100%;
+    background-image:
+        radial-gradient(ellipse 26% 80% at 16% 108%, #fff3b0 0, #ffc13a 36%, rgba(255, 120, 20, .78) 70%, transparent 100%),
+        radial-gradient(ellipse 22% 96% at 46% 110%, #fff7c8 0, #ffd34d 32%, rgba(255, 110, 10, .78) 66%, transparent 100%),
+        radial-gradient(ellipse 28% 86% at 78% 108%, #ffe58a 0, #ffa11f 40%, rgba(235, 80, 10, .78) 72%, transparent 100%),
+        linear-gradient(0deg, rgba(255, 140, 30, .5), transparent 72%),
+        linear-gradient(180deg, #14060a, #5a1707);
+    background-size: 100% 100%; animation: faixaGogeta 2.4s ease-in-out infinite alternate; }
+@keyframes faixaGogeta { from { background-size: 100% 92%, 100% 82%, 100% 96%, 100% 100%, 100% 100%; } to { background-size: 116% 128%, 108% 138%, 120% 118%, 100% 100%, 100% 100%; } }
+.banner-anim-gogeta::before, .banner-anim-sasuke::before, .banner-anim-fusao::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.banner-anim-gogeta::before { background-image: radial-gradient(circle at 50% 80%, #fff7c2 0 1.4px, transparent 2.4px), radial-gradient(circle at 50% 80%, #ffd23d 0 1.8px, transparent 2.8px);
+    background-size: 43px 40px, 61px 52px; animation: faixaFaisca 3.4s linear infinite; opacity: .9; }
+@keyframes faixaFaisca { from { background-position: 0 0, 0 0; } to { background-position: 4px -40px, -6px -52px; } }
+
+.banner-anim-sasuke { background-color: #0b0720; background-repeat: no-repeat;
+    background-image:
+        radial-gradient(ellipse 40% 70% at 25% 20%, rgba(109, 40, 217, .75), transparent 70%),
+        radial-gradient(ellipse 45% 80% at 75% 30%, rgba(76, 29, 149, .85), transparent 72%),
+        radial-gradient(ellipse 60% 50% at 50% 100%, rgba(139, 92, 246, .45), transparent 70%),
+        linear-gradient(180deg, #0a0618, #1a0f3c 70%, #2a1257);
+    background-size: 160% 100%, 160% 100%, 100% 100%, 100% 100%; animation: faixaSasuke 7s ease-in-out infinite alternate; }
+@keyframes faixaSasuke { from { background-position: 0% 0, 100% 0, 0 0, 0 0; } to { background-position: 100% 0, 0% 0, 0 0, 0 0; } }
+.banner-anim-sasuke::before { background-repeat: no-repeat; background-size: 22% 100%, 18% 100%;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 100' preserveAspectRatio='none'><path d='M24 0 L13 36 L26 40 L9 100' fill='none' stroke='%23f5f3ff' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/><path d='M24 0 L13 36 L26 40 L9 100' fill='none' stroke='%238b5cf6' stroke-width='8' opacity='.5' stroke-linejoin='round'/></svg>"),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 100' preserveAspectRatio='none'><path d='M16 0 L26 30 L13 36 L28 100' fill='none' stroke='%23e9d5ff' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/><path d='M16 0 L26 30 L13 36 L28 100' fill='none' stroke='%237c3aed' stroke-width='8' opacity='.5' stroke-linejoin='round'/></svg>");
+    background-position: 22% 0, 71% 0; opacity: 0; animation: faixaRaio 5.5s linear infinite; }
+@keyframes faixaRaio { 0%, 84%, 100% { opacity: 0; } 85% { opacity: 1; } 86.5% { opacity: .15; } 88% { opacity: .95; } 91% { opacity: 0; } }
+
+.banner-anim-fusao { background-color: #14061c; background-repeat: no-repeat; background-position: 50% 100%;
+    background-image:
+        radial-gradient(ellipse 30% 90% at 22% 108%, #ffe0a0 0, #ff9d2e 36%, rgba(255, 100, 20, .75) 70%, transparent 100%),
+        radial-gradient(ellipse 30% 90% at 78% 108%, #f0d4ff 0, #a78bfa 36%, rgba(124, 58, 237, .78) 70%, transparent 100%),
+        radial-gradient(ellipse 26% 100% at 50% 110%, #fff 0, #f06ab8 34%, rgba(240, 106, 184, .6) 68%, transparent 100%),
+        linear-gradient(0deg, rgba(232, 121, 249, .35), transparent 70%),
+        linear-gradient(180deg, #12051c, #2d0f3d);
+    background-size: 100% 100%; animation: faixaFusao 3s ease-in-out infinite alternate; }
+@keyframes faixaFusao { from { background-size: 100% 90%, 100% 96%, 100% 70%, 100% 100%, 100% 100%; } to { background-size: 120% 126%, 120% 120%, 100% 120%, 100% 100%, 100% 100%; } }
+.banner-anim-fusao::before { background-image: radial-gradient(circle at 50% 80%, #ffd9a0 0 1.4px, transparent 2.4px), radial-gradient(circle at 50% 80%, #e9d5ff 0 1.6px, transparent 2.6px);
+    background-size: 47px 44px, 59px 50px; animation: faixaFaisca 3.8s linear infinite; opacity: .9; }
+.inv-faixa.banner-anim-gogeta::before, .inv-faixa.banner-anim-sasuke::before, .inv-faixa.banner-anim-fusao::before { z-index: 1; }
+
+/* ---------- efeito de avatar: aura (Gogeta) e tomoe (Sasuke) ---------- */
+.ef-av { position: absolute; inset: -30%; z-index: -1; pointer-events: none; }
+.ef-av b { position: absolute; inset: 0; display: block; }
+.ef-av-gogeta b:nth-child(1) { background: radial-gradient(circle, #fff7c2 0%, #ffd23d 34%, #ff9d2e 60%, rgba(255, 90, 0, 0) 78%); clip-path: polygon(50.0% 0.0%, 57.6% 16.9%, 68.7% 11.3%, 71.2% 23.4%, 89.1% 18.8%, 80.6% 35.2%, 94.8% 39.8%, 84.0% 50.0%, 90.0% 59.1%, 80.6% 64.8%, 89.1% 81.2%, 71.2% 76.6%, 69.5% 90.5%, 57.6% 83.1%, 50.0% 100.0%, 42.4% 83.1%, 31.3% 88.7%, 28.8% 76.6%, 10.9% 81.2%, 19.4% 64.8%, 5.2% 60.2%, 16.0% 50.0%, 10.0% 40.9%, 19.4% 35.2%, 10.9% 18.8%, 28.8% 23.4%, 30.5% 9.5%, 42.4% 16.9%); animation: auraGogetaA 1.1s ease-in-out infinite alternate; opacity: .95; }
+.ef-av-gogeta b:nth-child(2) { background: radial-gradient(circle, #fffbe0 0%, #ffe27a 30%, #ffae2e 58%, rgba(255, 120, 0, 0) 76%); clip-path: polygon(62.7% 6.8%, 69.5% 19.7%, 87.8% 17.3%, 82.7% 35.0%, 91.6% 44.0%, 85.6% 55.1%, 95.5% 70.8%, 77.2% 73.6%, 75.4% 89.5%, 60.1% 84.5%, 50.0% 93.0%, 39.9% 84.5%, 25.7% 87.9%, 22.8% 73.6%, 4.5% 70.8%, 14.4% 55.1%, 8.4% 44.0%, 17.3% 35.0%, 12.2% 17.3%, 30.5% 19.7%, 36.8% 4.9%, 50.0% 14.0%); animation: auraGogetaB 0.8s ease-in-out infinite alternate; opacity: .85; mix-blend-mode: screen; }
+@keyframes auraGogetaA { from { transform: scale(.9) rotate(-3deg); } to { transform: scale(1.06) rotate(4deg); } }
+@keyframes auraGogetaB { from { transform: scale(1.04) rotate(5deg); } to { transform: scale(.86) rotate(-4deg); } }
+.ef-av-gogeta { filter: drop-shadow(0 0 8px rgba(255, 170, 40, .75)); }
+
+
+/* ---------- efeito de perfil (por cima do cartão): faíscas de ki e relâmpagos ---------- */
+.ef-pf { position: absolute; inset: 0; z-index: 6; overflow: hidden; border-radius: 22px; pointer-events: none; }
+.ef-pf-gogeta i { position: absolute; bottom: -8px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%; background: radial-gradient(circle, #fff7c2, #ffc83d 55%, rgba(255, 120, 0, 0)); box-shadow: 0 0 7px 1px rgba(255, 190, 60, .85); opacity: 0; animation: efSobe var(--t) linear var(--d) infinite; }
+@keyframes efSobe { 0% { transform: translate(0, 0) scale(.7); opacity: 0; } 12% { opacity: 1; } 55% { transform: translate(10px, -230px) scale(1); opacity: .9; } 100% { transform: translate(-6px, -470px) scale(.25); opacity: 0; } }
+.ef-pf-clarao { position: absolute; inset: 0; background: radial-gradient(circle at 50% 18%, rgba(167, 139, 250, .38), transparent 62%); opacity: 0; animation: efClarao 4.6s linear infinite; }
+@keyframes efClarao { 0%, 90%, 100% { opacity: 0; } 91% { opacity: 1; } 94% { opacity: .3; } 96.5% { opacity: 0; } }
+.inv-perfil-ef .ef-pf { border-radius: 12px; }
+.inv-perfil-ef .ef-pf-gogeta i { bottom: -6px; }
+@keyframes efSobeMini { 0% { transform: translate(0, 0) scale(.7); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(6px, -96px) scale(.25); opacity: 0; } }
+.inv-perfil-ef .ef-pf-gogeta i { animation-name: efSobeMini; }
+.pf-previa .ef-pf, #user-popout .ef-pf { border-radius: 22px; }
+.inv-av-ef { isolation: isolate; }
+
+/* ---------- avatar com aura: a aura vaza pra fora (mensagens e call) ---------- */
+.com-ef { isolation: isolate; overflow: visible !important; position: relative; }
+.message .chat-avatar.com-ef { position: absolute; }
+.com-ef img { border-radius: 50%; }
+.video-avatar.com-ef { overflow: visible; }
+.pc-avatar .ef-av, .video-avatar .ef-av { z-index: -1; }
+
+/* ---------- efeito de fala (call): só vale enquanto a pessoa fala (.is-speaking vem do monitor de volume) ---------- */
+.video-card.fala-gogeta.is-speaking { box-shadow: 0 0 0 3px #ffc93d, 0 0 26px 6px rgba(255, 150, 20, .65) !important; animation: falaKi .45s ease-in-out infinite alternate; }
+.video-card.fala-gogeta.is-speaking .video-avatar, .inv-fala.fala-gogeta .inv-av-img { box-shadow: 0 0 0 4px rgba(255, 214, 90, .95), 0 0 30px 10px rgba(255, 140, 10, .75); animation: falaKiAv .45s ease-in-out infinite alternate; }
+@keyframes falaKi { from { filter: brightness(1); } to { filter: brightness(1.18); } }
+@keyframes falaKiAv { from { transform: scale(1); } to { transform: scale(1.07); } }
+.video-card.fala-sasuke.is-speaking { box-shadow: 0 0 0 3px #a78bfa, 0 0 26px 6px rgba(139, 92, 246, .75) !important; animation: falaChidori .55s steps(1, end) infinite; }
+.video-card.fala-sasuke.is-speaking .video-avatar, .inv-fala.fala-sasuke .inv-av-img { box-shadow: 0 0 0 3px #ddd6fe, 0 0 26px 8px rgba(139, 92, 246, .8); animation: falaChidoriAv .55s steps(1, end) infinite; }
+@keyframes falaChidori { 0% { filter: brightness(1); } 30% { filter: brightness(1.35) saturate(1.3); } 55% { filter: brightness(.95); } 80% { filter: brightness(1.5) hue-rotate(-12deg); } }
+@keyframes falaChidoriAv { 0% { box-shadow: 0 0 0 3px #ddd6fe, 0 0 26px 8px rgba(139, 92, 246, .8); } 35% { box-shadow: 0 0 0 5px #fff, 0 0 38px 14px rgba(167, 139, 250, .95); } 70% { box-shadow: 0 0 0 3px #a5f3fc, 0 0 22px 6px rgba(125, 211, 252, .8); } }
+.inv-fala .inv-av-img { box-shadow: none; }
+
+/* ---------- radar: as ondas saindo de você (só você as vê) ---------- */
+.raio-onda.radar-gogeta i { border: 2px solid rgba(255, 176, 48, .95); background: radial-gradient(circle, rgba(255, 150, 20, 0) 50%, rgba(255, 190, 60, .22) 100%); box-shadow: 0 0 22px rgba(255, 150, 20, .55), inset 0 0 22px rgba(255, 190, 60, .3); }
+.raio-onda.radar-sasuke i { border: 2px dashed rgba(167, 139, 250, .95); background: radial-gradient(circle, rgba(139, 92, 246, 0) 50%, rgba(139, 92, 246, .22) 100%); box-shadow: 0 0 20px rgba(139, 92, 246, .6), inset 0 0 20px rgba(167, 139, 250, .3); animation-name: raioOnda, radarEstalo; animation-duration: 5.2s, .8s; animation-timing-function: cubic-bezier(.2, .6, .3, 1), steps(1, end); animation-iteration-count: infinite; }
+@keyframes radarEstalo { 0%, 100% { filter: brightness(1); } 40% { filter: brightness(1.5); } 70% { filter: brightness(.8); } }
+.inv-radar { position: relative; display: block; width: 76px; height: 76px; }
+.inv-radar i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(114, 137, 218, .85); opacity: 0; transform: scale(0); animation: raioOnda 3s cubic-bezier(.2, .6, .3, 1) infinite; }
+.inv-radar i:nth-child(2) { animation-delay: 1s; }
+.inv-radar i:nth-child(3) { animation-delay: 2s; }
+.inv-radar b { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px #fff; }
+.inv-radar.radar-gogeta i { border-color: rgba(255, 176, 48, .95); box-shadow: 0 0 14px rgba(255, 150, 20, .55); }
+.inv-radar.radar-sasuke i { border: 2px dashed rgba(167, 139, 250, .95); box-shadow: 0 0 14px rgba(139, 92, 246, .6); }
+
+/* ---------- chat: brilho enquanto digita + efeito ao enviar ---------- */
+.chat-input-container.chat-ef-gogeta.digitando, .inv-chat.chat-ef-gogeta { border-color: #ffc93d !important; box-shadow: 0 0 0 1px rgba(255, 201, 61, .8), 0 0 20px rgba(255, 150, 20, .55) !important; animation: chatKi .6s ease-in-out infinite alternate; }
+@keyframes chatKi { from { box-shadow: 0 0 0 1px rgba(255, 201, 61, .6), 0 0 12px rgba(255, 150, 20, .4); } to { box-shadow: 0 0 0 1px rgba(255, 224, 120, .95), 0 0 26px rgba(255, 150, 20, .75); } }
+.chat-input-container.chat-ef-sasuke.digitando, .inv-chat.chat-ef-sasuke { border-color: #a78bfa !important; box-shadow: 0 0 0 1px rgba(167, 139, 250, .85), 0 0 18px rgba(139, 92, 246, .6) !important; animation: chatChidori .5s steps(1, end) infinite; }
+@keyframes chatChidori { 0% { box-shadow: 0 0 0 1px rgba(167, 139, 250, .85), 0 0 14px rgba(139, 92, 246, .5); } 33% { box-shadow: 0 0 0 1px #fff, 0 0 28px rgba(196, 181, 253, .9); } 66% { box-shadow: 0 0 0 1px rgba(165, 243, 252, .9), 0 0 20px rgba(125, 211, 252, .7); } }
+.inv-chat { display: flex; align-items: center; width: 100%; height: 40px; padding: 0 14px; border-radius: 12px; background: var(--bg-secondary); border: 1px solid var(--glass-borda); font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+
+.ef-envio { position: fixed; z-index: 11000; pointer-events: none; overflow: visible; }
+.ef-envio-gogeta i { position: absolute; bottom: 4px; border-radius: 50%; background: radial-gradient(circle, #fff7c2, #ffc83d 55%, rgba(255, 120, 0, 0)); box-shadow: 0 0 8px 1px rgba(255, 190, 60, .9); opacity: 0; animation: envioSobe var(--t) ease-out forwards; }
+@keyframes envioSobe { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
+.ef-envio-sasuke svg { position: absolute; inset: -14px 0; width: 100%; height: calc(100% + 28px); overflow: visible; filter: drop-shadow(0 0 6px #8b5cf6); animation: envioRaio .5s linear forwards; }
+@keyframes envioRaio { 0% { opacity: 0; } 8% { opacity: 1; } 20% { opacity: .2; } 32% { opacity: 1; } 100% { opacity: 0; } }
+.ef-envio-clarao { position: absolute; inset: 0; border-radius: 12px; background: rgba(167, 139, 250, .22); animation: envioRaio .5s linear forwards; }
+
+/* ---------- pin de nota no mapa (bolinha minimizada; aberta ganha só o brilho do tema) ---------- */
+.geo-note-bubble.pin-gogeta.minimized { background: radial-gradient(circle at 35% 30%, #ffe1a0, #ff9d2e 48%, #b93a0a 100%) !important; border: 2px solid #ffe9b0 !important; border-radius: 50% !important; overflow: hidden;
+    box-shadow: 0 0 14px 3px rgba(255, 160, 40, .75), inset -3px -4px 6px rgba(120, 30, 0, .4) !important; opacity: 1 !important; animation: pinKi 1.6s ease-in-out infinite alternate; }
+.geo-note-bubble.pin-gogeta.minimized::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 50% 22%, #c1121f 0 1.8px, transparent 2.3px), radial-gradient(circle at 24% 52%, #c1121f 0 1.8px, transparent 2.3px), radial-gradient(circle at 76% 52%, #c1121f 0 1.8px, transparent 2.3px), radial-gradient(circle at 50% 82%, #c1121f 0 1.8px, transparent 2.3px); }
+.geo-note-bubble.pin-gogeta.minimized > .note-emoji { position: relative; z-index: 1; font-size: 12px !important; filter: drop-shadow(0 0 2px rgba(255, 255, 255, .8)); }
+@keyframes pinKi { from { filter: brightness(1); } to { filter: brightness(1.2); } }
+.geo-note-bubble.pin-sasuke.minimized { background: radial-gradient(circle at 35% 30%, #5b21b6, #1e1040 70%) !important; border: 2px solid #c4b5fd !important; border-radius: 50% !important; overflow: hidden;
+    box-shadow: 0 0 14px 3px rgba(139, 92, 246, .8), inset 0 0 8px rgba(0, 0, 0, .6) !important; opacity: 1 !important; animation: pinChidori 1.1s steps(1, end) infinite; }
+.geo-note-bubble.pin-sasuke.minimized::before { content: ''; position: absolute; inset: 3px 7px; background: linear-gradient(180deg, #f5f3ff, #a78bfa 70%, #6d28d9);
+    clip-path: polygon(50% 0, 66% 36%, 56% 44%, 56% 68%, 70% 72%, 70% 82%, 30% 82%, 30% 72%, 44% 68%, 44% 44%, 34% 36%); opacity: .55; }
+.geo-note-bubble.pin-sasuke.minimized > .note-emoji { position: relative; z-index: 1; font-size: 12px !important; }
+@keyframes pinChidori { 0% { filter: brightness(1); } 35% { filter: brightness(1.5); } 60% { filter: brightness(.9); } }
+.geo-note-bubble.pin-gogeta:not(.minimized) { box-shadow: 0 0 16px rgba(255, 150, 30, .6), 0 8px 24px rgba(0, 0, 0, .7); }
+.geo-note-bubble.pin-sasuke:not(.minimized) { box-shadow: 0 0 16px rgba(139, 92, 246, .65), 0 8px 24px rgba(0, 0, 0, .7); }
+.inv-pin { display: inline-flex; padding: 12px; }
+.inv-pin .geo-note-bubble.minimized { transform: none; margin: 0; }
+
+.inv-ouvir { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--glass-borda); background: rgba(255, 255, 255, .08); color: var(--text-header); font-size: 13px; font-weight: 800; cursor: pointer; transition: background-color .2s, transform .15s; }
+.inv-ouvir:hover { background: rgba(255, 255, 255, .16); transform: translateY(-1px); }
+.inv-ouvir i { font-size: 11px; }
+
+/* A aura de Gogeta fica só do lado de FORA da foto (furo no meio): sem isso ela pintava por cima do fundo colorido de
+   quem não tem foto (a letra do avatar sumia). 62,5% = raio da foto / raio da caixa da aura (inset -30%). */
+.ef-av-gogeta { -webkit-mask: radial-gradient(closest-side, transparent 60%, #000 65%); mask: radial-gradient(closest-side, transparent 60%, #000 65%); }
+.message .ef-av { inset: -24%; }
+.message .ef-av-gogeta { -webkit-mask: radial-gradient(closest-side, transparent 66%, #000 71%); mask: radial-gradient(closest-side, transparent 66%, #000 71%); opacity: .85; }
+
+/* quem pede menos movimento: o laboratório inteiro fica parado (mantém as cores, tira as animações) */
+@media (prefers-reduced-motion: reduce) {
+    [class*="moldura-"]::before, [class*="placa-"], [class*="banner-anim-"], [class*="banner-anim-"]::before,
+    .ne-gogeta, .ne-sasuke, .ne-fusao, .ef-av, .ef-av *, .ef-pf *, .ef-pf, .video-card[class*="fala-"], .video-card[class*="fala-"] .video-avatar,
+    .raio-onda i, .chat-input-container[class*="chat-ef-"], .geo-note-bubble[class*="pin-"] { animation: none !important; }
+    .ef-pf-gogeta i { display: none; }
+}
+
+/* ---------- efeito de servidor: ícone na barra, pino no mapa e prévia do inventário (o nome do cabeçalho usa .ne-*) ---------- */
+.sv-ef-gogeta { box-shadow: 0 0 0 2px #ffc93d, 0 0 10px 3px rgba(255, 150, 20, .8) !important; animation: svKi 1.1s ease-in-out infinite alternate; }
+@keyframes svKi { from { box-shadow: 0 0 0 2px #ffb62e, 0 0 6px 1px rgba(255, 150, 20, .6); } to { box-shadow: 0 0 0 2px #fff0b0, 0 0 14px 4px rgba(255, 170, 40, .95); } }
+.sv-ef-sasuke { box-shadow: 0 0 0 2px #a78bfa, 0 0 10px 3px rgba(139, 92, 246, .8) !important; animation: svChidori .7s steps(1, end) infinite; }
+@keyframes svChidori { 0% { box-shadow: 0 0 0 2px #a78bfa, 0 0 8px 2px rgba(139, 92, 246, .7); } 30% { box-shadow: 0 0 0 2px #fff, 0 0 16px 5px rgba(196, 181, 253, .95); } 60% { box-shadow: 0 0 0 2px #a5f3fc, 0 0 10px 3px rgba(125, 211, 252, .8); } }
+.sv-ef-fusao { box-shadow: 0 0 0 2px #ff9d2e, 0 0 10px 3px rgba(255, 150, 20, .75) !important; animation: svFusao 2.4s ease-in-out infinite alternate; }
+@keyframes svFusao { from { box-shadow: 0 0 0 2px #ff9d2e, 0 0 10px 3px rgba(255, 150, 20, .75); } to { box-shadow: 0 0 0 2px #a78bfa, 0 0 10px 3px rgba(139, 92, 246, .8); } }
+.pino-foto.sv-ef-gogeta { border-color: #ffe9b0; }
+.pino-foto.sv-ef-sasuke { border-color: #ddd6fe; }
+.pino-foto.sv-ef-fusao { border-color: #f5c4ff; }
+.inv-servidor { display: inline-flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 16px; background: var(--brand-color); color: #fff; font-weight: 800; font-size: 20px; }
+.inv-escolha-lista { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; max-height: 50vh; overflow-y: auto; }
+.inv-escolha-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); border: 1px solid var(--glass-borda); }
+.inv-escolha-nome { font-weight: 700; color: var(--text-header); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv-escolha-linha .inv-btn { margin-top: 0; flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) { .sv-ef-gogeta, .sv-ef-sasuke, .sv-ef-fusao { animation: none !important; } }
+
+
+/* ==========================================================================
+   SASUKE v2 (feedback do teste): Sharingan na moldura, olho brilhante, raios caindo e chama de Amaterasu
+   ========================================================================== */
+
+/* ---------- moldura: Sharingan (anel vermelho com 3 tomoe; nada de cor girando) ---------- */
+.moldura-sasuke::before { background: conic-gradient(from 0deg, #b30d0d, #ff4b3b 8%, #8f0a0a 17%, #ff3b2e 30%, #b30d0d 42%, #ff5a47 55%, #8f0a0a 67%, #ff3b2e 80%, #b30d0d);
+    filter: drop-shadow(0 0 5px #ff2a2a); animation: sharinganPulso 2.6s ease-in-out infinite alternate; }
+@keyframes sharinganPulso { from { filter: drop-shadow(0 0 3px #ff2a2a) brightness(.9); } 50% { filter: drop-shadow(0 0 6px #ff3030) brightness(1.05); } 88% { filter: drop-shadow(0 0 7px #ff4d4d) brightness(1.15); } to { filter: drop-shadow(0 0 12px #c4b5fd) brightness(1.4); } }
+.moldura-sasuke::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; z-index: 0;
+    background:
+        radial-gradient(circle at 50% 4.2%, #060203 0 3.2px, transparent 3.7px), radial-gradient(circle at calc(50% + 3.6px) calc(4.2% + 1.2px), #060203 0 1.8px, transparent 2.2px),
+        radial-gradient(circle at 89.8% 72.9%, #060203 0 3.2px, transparent 3.7px), radial-gradient(circle at calc(89.8% - 1.8px) calc(72.9% + 3px), #060203 0 1.8px, transparent 2.2px),
+        radial-gradient(circle at 10.2% 72.9%, #060203 0 3.2px, transparent 3.7px), radial-gradient(circle at calc(10.2% - 1.8px) calc(72.9% - 3px), #060203 0 1.8px, transparent 2.2px);
+    animation: sharinganGira 9s linear infinite; }
+@keyframes sharinganGira { to { transform: rotate(360deg); } }
+.pf-tile-av.moldura-sasuke::after { inset: -5px; }
+.message .chat-avatar.moldura-sasuke::after { inset: -4px; }
+.video-avatar.moldura-sasuke::after { inset: -6px; }
+
+/* ---------- efeito de avatar do Sasuke: olho brilhante (o anel do Sharingan acende em vermelho e volta ao normal) ---------- */
+.ef-av-sasuke, .message .ef-av-sasuke, .video-avatar .ef-av-sasuke { inset: 0; border-radius: 50%; animation: olhoBrilha 7s ease-in-out infinite; }
+@keyframes olhoBrilha {
+    0%, 62%, 100% { box-shadow: 0 0 0 0 rgba(255, 40, 40, 0); }
+    70% { box-shadow: 0 0 8px 3px rgba(255, 40, 40, .55); }
+    78% { box-shadow: 0 0 26px 11px rgba(255, 30, 30, .95), 0 0 6px 4px rgba(255, 190, 190, .9); }
+    84% { box-shadow: 0 0 20px 8px rgba(255, 30, 30, .8); }
+    92% { box-shadow: 0 0 8px 2px rgba(255, 40, 40, .3); }
+}
+.moldura-sasuke:has(.ef-av-sasuke)::before { animation: sharinganPulso 2.6s ease-in-out infinite alternate, olhoAnel 7s ease-in-out infinite; }
+@keyframes olhoAnel { 0%, 66%, 100% { opacity: 1; } 78% { opacity: 1; filter: drop-shadow(0 0 14px #ff1010) brightness(1.7); } }
+
+/* ---------- efeito de perfil do Sasuke: raios CAINDO (traço desenhando de cima pra baixo) + chama de Amaterasu ---------- */
+.ef-pf-sasuke .ef-raio { position: absolute; top: 0; opacity: 0; filter: drop-shadow(0 0 6px #8b5cf6); animation: efRaioPisca var(--t) linear var(--d) infinite; }
+.ef-pf-sasuke .ef-raio path { stroke-dasharray: 100; stroke-dashoffset: 100; animation: efRaioTraco var(--t) linear var(--d) infinite; }
+@keyframes efRaioPisca { 0%, 86%, 100% { opacity: 0; } 86.4% { opacity: 1; } 89.5% { opacity: .2; } 91% { opacity: 1; } 94% { opacity: .55; } 96.5% { opacity: 0; } }
+@keyframes efRaioTraco { 0%, 86% { stroke-dashoffset: 100; } 88.6%, 100% { stroke-dashoffset: 0; } }
+/* a chama vem de baixo, cresce até quase metade do cartão, fica um pouco e volta; o resto do ciclo fica escondida */
+.ef-amaterasu { position: absolute; left: -2%; right: -2%; bottom: -3%; height: 48%; transform-origin: 50% 100%; transform: scaleY(0); opacity: 0; animation: efAmaterasu 12s ease-in-out -2s infinite; }
+.ef-amaterasu svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ef-ama-luz path { fill: rgba(255, 255, 255, .22); filter: blur(1.5px); }
+.ef-ama-negra { filter: drop-shadow(0 0 5px rgba(167, 139, 250, .85)); }
+.ef-lingua { fill: rgba(5, 2, 10, .86); stroke: rgba(233, 213, 255, .9); stroke-width: .7; vector-effect: non-scaling-stroke; transform-origin: 50% 100%; transform-box: fill-box; animation: efLingua .9s ease-in-out infinite alternate; }
+@keyframes efAmaterasu { 0%, 14% { transform: scaleY(0); opacity: 0; } 22% { opacity: 1; } 46%, 58% { transform: scaleY(1); opacity: 1; } 78% { transform: scaleY(.1); opacity: .6; } 84%, 100% { transform: scaleY(0); opacity: 0; } }
+@keyframes efLingua { from { transform: scaleY(.86) skewX(-4deg); } to { transform: scaleY(1.1) skewX(4deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .ef-amaterasu, .ef-lingua, .ef-raio, .ef-raio path, .ef-av-sasuke, .moldura-sasuke::after { animation: none !important; }
+    .ef-amaterasu { opacity: 0; }
+}
+
+/* aura de Gogeta maior no cartão (a foto de lá é grande): o furo acompanha o novo tamanho */
+.pc-avatar .ef-av-gogeta { inset: -40%; -webkit-mask: radial-gradient(closest-side, transparent 54%, #000 59%); mask: radial-gradient(closest-side, transparent 54%, #000 59%); }

@@ -15,7 +15,9 @@ from ..utils import (com_retry, comitar_com_retry, canal_permitido, membro_desde
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                      recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO)
 from .. import socketio, APP_NOME, MOEDA_NOME
-from ..events import sala_servidor, servidor_para_json, servidores_para_json
+from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
+from ..cosmeticos import posses_da_pessoa, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
+from ..utils import nivel_da_pessoa
 
 main_bp = Blueprint("main", __name__)
 
@@ -216,13 +218,18 @@ def chat():
             # reconcilia depois.
             servidores_iniciais = servidores_para_json(list(usuario_atual.servers), usuario_atual)
 
-            return usuario_atual, text_channels, voice_channels, default_channel, messages, amigos, servidores_iniciais
+            # Inventário já no HTML (1 query): moldura/efeitos/insígnias nascem desenhados, sem esperar o socket.
+            inventario_inicial = _estado_inventario(usuario_atual, posses_da_pessoa(usuario_atual.id))
+
+            return (usuario_atual, text_channels, voice_channels, default_channel, messages, amigos,
+                    servidores_iniciais, inventario_inicial)
 
         resultado = com_retry(carregar)
         if resultado is None:
             session.pop('user_id', None)
             return redirect(url_for('main.index'))
-        usuario_atual, text_channels, voice_channels, default_channel, messages, amigos, servidores_iniciais = resultado
+        (usuario_atual, text_channels, voice_channels, default_channel, messages, amigos,
+         servidores_iniciais, inventario_inicial) = resultado
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -248,6 +255,9 @@ def chat():
         messages=messages,
         amigos=amigos,
         servidores_iniciais=servidores_iniciais,
+        inventario_inicial=inventario_inicial,
+        patente_inicial=patente_do_nivel(nivel_da_pessoa(usuario_atual.xp)),
+        badges_iniciais=badges_do_conjunto(set(inventario_inicial['posses'])),
         membro_desde_texto=membro_desde_texto(usuario_atual.created_at)
     )
 
@@ -345,7 +355,7 @@ def pegar_mensagens(canal_id):
             'autor': msg.author.name,
             'autor_id': msg.person_id,
             'avatar': msg.author.avatar,
-            'nome_estilo': msg.author.nome_estilo, 'moldura': msg.author.moldura,
+            'nome_estilo': msg.author.nome_estilo, 'moldura': msg.author.moldura, 'equipados': equipados_da_pessoa(msg.author),
             'texto': msg.text or '',
             'anexo_url': msg.attachment_url,
             'anexo_tipo': msg.attachment_type,
@@ -396,7 +406,7 @@ def get_dms(target_id):
             'autor': msg.sender.name,
             'autor_id': msg.sender_id,
             'avatar': msg.sender.avatar,
-            'nome_estilo': msg.sender.nome_estilo, 'moldura': msg.sender.moldura,
+            'nome_estilo': msg.sender.nome_estilo, 'moldura': msg.sender.moldura, 'equipados': equipados_da_pessoa(msg.sender),
             'texto': msg.content or '',
             'anexo_url': msg.attachment_url,
             'anexo_tipo': msg.attachment_type,

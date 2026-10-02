@@ -101,6 +101,9 @@ class Person(db.Model):
     nome_estilo = db.Column(db.String(24), nullable=True)
     placa = db.Column(db.String(24), nullable=True)
     moldura = db.Column(db.String(24), nullable=True)
+    # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
+    # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
+    equipados = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default="online")  # online, idle, dnd, invisible
     # Conta antiga (de antes dessa coluna existir) fica None de propósito -
     # não dá pra inventar uma data de quando a pessoa entrou de verdade.
@@ -128,6 +131,9 @@ class Server(db.Model):
     # Configurações editáveis depois da criação
     description = db.Column(db.Text, nullable=True)
     banner_color = db.Column(db.String(50), nullable=True)
+    # Cosmético do servidor (ícone na barra, cabeçalho e pino no mapa): id do catálogo (cosmeticos.py, tipo
+    # 'efeito_servidor'). Só o dono aplica e só se tiver a posse do item.
+    efeito = db.Column(db.String(24), nullable=True)
 
     # Relacionamentos
     # Quando o servidor for deletado, os canais somem junto (cascade)
@@ -476,3 +482,20 @@ class Silenciado(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
     alvo_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+
+
+# ==========================================
+# POSSE DE COSMÉTICOS (inventário)
+# ------------------------------------------------------------
+# Uma linha por (pessoa, item). `item_id` = "<tipo>:<id>" do catálogo em cosmeticos.py
+# (ex.: "badge:criador", "moldura:gogeta"). Item livre não tem linha aqui: todo mundo
+# tem. O servidor só aceita equipar item exclusivo se existir a linha (regra 4).
+# ==========================================
+class Posse(db.Model):
+    __tablename__ = 'posse'
+    __table_args__ = (db.UniqueConstraint('person_id', 'item_id', name='uq_posse_unica'),)
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    item_id = db.Column(db.String(60), nullable=False)
+    origem = db.Column(db.String(20), default='sistema')   # laboratorio | loja | battlepass | sistema
+    created_at = db.Column(db.DateTime, default=br_now)

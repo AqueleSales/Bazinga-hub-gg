@@ -26,7 +26,11 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 |---|---|
 | `app/models.py` | Todos os modelos SQLAlchemy |
 | `app/utils.py` | `com_retry()`, `comitar_com_retry()` e **todas** as checagens de permissão |
-| `app/events.py` | ~52 handlers de Socket.IO (`@socketio.on(...)`) |
+| `app/events.py` | ~55 handlers de Socket.IO (`@socketio.on(...)`) |
+| `app/cosmeticos.py` | Catálogo de itens exclusivos, **posse**, patentes (nível → ícone), insígnias e slots equipados (ver "Rodada 5") |
+| `app/static/js/cosmeticos.js` | Ícones SVG das patentes/insígnias, popover "orb", inventário e efeitos (objeto global `Cosm`) |
+| `app/static/css/cosmeticos.css` | Animações das patentes, inventário e o laboratório (Gogeta/Sasuke/Fusão) |
+| `conceder_item.py` | Dá/retira item do inventário de alguém (`python conceder_item.py <@usuario> tudo`) |
 | `app/main/routes.py` | Rotas REST (`/chat`, `/api/...`, `/convite/<code>`) |
 | `app/auth/routes.py` | Login Google OAuth |
 | `app/templates/chat.html` | O app inteiro (HTML+CSS+JS) — ~8100 linhas |
@@ -246,7 +250,7 @@ e o template só mostra a linha quando tem valor.
 
 ## Eventos de Socket.IO
 
-~52 handlers em `events.py`. Agrupados:
+~55 handlers em `events.py`. Agrupados:
 
 - **Canal/mensagem**: `entrar_canal`, `sair_canal`, `enviar_mensagem`,
   `editar_mensagem`, `apagar_mensagem`, `reagir_mensagem`
@@ -582,14 +586,16 @@ pra conveniência de UI (ex.: lista de membros recolhida).
 Tudo calculado no servidor (`app/utils.py`); o cliente só desenha o que chega em
 `xp_atualizado` e `missoes_atualizadas` (nunca recalcula nível nem progresso).
 
-- **100 níveis, ~1 milhão de XP**: subir do nível N pro N+1 custa
-  `100 + 204·(N-1)` (1→2 = 100, 99→100 = 20.092); o total até o 100 é
-  **999.504 XP**. `Person.xp` guarda o TOTAL, então mexer em `XP_BASE`/
-  `XP_CRESCIMENTO` não precisa de migração (só muda o nível calculado). O
-  servidor manda a trilha inteira (`marcos`, 100 itens); o cliente rola até o
-  nível atual.
+- **Nível 1–1000+ (desde a Rodada 5)**: subir do nível N pro N+1 custa
+  `100 + 204·(N-1)` até o 100 (1→2 = 100, 99→100 = 20.092; total até o 100 =
+  **999.504 XP**) e, do 100 em diante, `+25 XP` a mais por nível (até ~42,6 mil
+  por nível; do 1000+ um passo fixo, sem teto). `Person.xp` guarda o TOTAL, então
+  mexer na curva não precisa de migração (só muda o nível calculado). O servidor
+  manda o **bloco de 100 níveis** onde a pessoa está (`marcos`, `marcos_da_pagina`);
+  o cliente rola até o nível atual. Detalhes e as **patentes** em "Rodada 5".
 - **Recompensas** (`recompensa_do_nivel`): +50 DRC por nível, +150 a cada 5,
-  +300 a cada 10; títulos em `TITULOS_POR_NIVEL` (Novato … Panteão). As moedas
+  +300 a cada 10; o 1º nível de cada **patente** nova carrega o nome dela
+  (`titulo`; as patentes substituíram `TITULOS_POR_NIVEL`). As moedas
   dos níveis cruzados são pagas na MESMA transação que soma o XP (regra 2).
 - **Fontes de XP**: mensagem (+10, cooldown 30s), **tempo ativo** (+3 XP/min,
   teto 60 min/dia), **bônus diário** (+50, +10 por dia seguido até 7; pular um
@@ -1346,10 +1352,112 @@ pessoa — não enviamos e-mail do servidor).
   clique reseta). A janela mini da call também redimensiona.
 - DM: `relacao_entre` era consultada 2x por mensagem (permissão + conversa rápida); agora 1x (`pode_trocar_dm(..., rel)`).
 
-## Próxima frente: patentes, badges e cosméticos (Gogeta/Sasuke)
-Plano completo em **`PLANO_COSMETICOS.md`** (níveis 1–1000+ com patentes em ícone animado e hover "orb", badges exclusivos
-Criador/Beta Tester/Coder/"Só nós", laboratório de cosméticos só para o dono e o amigo, fundação de catálogo/inventário).
-Nada implementado ainda — leia aquele arquivo antes de começar.
+## Rodada 5 de 02/10/2026 — patentes, insígnias, inventário e laboratório (Gogeta / Sasuke / Fusão)
+
+Saiu do `PLANO_COSMETICOS.md` (que agora só guarda o histórico e o que falta). **Os dois usuários de teste**: o dono
+(`@aquele.sales`, tema **Gogeta**) e o amigo beta tester (`@filippo.chiarion`, tema **Sasuke**). Tudo que é "só nosso" fica
+travado **por id de pessoa no servidor** (tabela `Posse`), nunca por regra do cliente. Se algum dos dois trocar o `@`,
+a posse continua (é por id); para conceder de novo: `python conceder_item.py <@usuario> tudo`.
+
+### Nível 1–1000+ e patentes (substituem Novato/Explorador/...)
+- **Nível = XP total** e nunca zera. Os 100 primeiros níveis seguem a curva antiga (quem já tinha nível não mudou: 1→2 = 100 XP,
+  99→100 = 20.092, total até o 100 = 999.504). Do 100 em diante o passo cresce só **+25 XP por nível** (`XP_CRESCIMENTO_ALEM`):
+  100→101 = 20.117, 999→1000 = 42.592, e do **1000+** é um passo fixo de 42.617 XP por nível (sem teto). Tabela pré-calculada
+  (`_LIMIARES`) + `bisect` — `nivel_da_pessoa()` é O(log n). `NIVEL_MAXIMO` deixou de existir (`nivel_maximo` do payload é sempre `False`).
+- **Battle Pass é outra coisa** (trilhas temáticas de 1–100, o dono vai refazer). Por enquanto a trilha de marcos mostra o **bloco
+  de 100 níveis** onde a pessoa está (`marcos_da_pagina()`: nível 150 → "níveis 101 a 200"). As moedas por nível seguem iguais.
+- **12 patentes** em `cosmeticos.PATENTES` (Iniciado 1–9, Aprendiz 10–24, Explorador 25–49, Desbravador 50–89, Veterano 90–149,
+  Herói 150–229, Lenda 230–329, Campeão 330–449, Semideus 450–599, Titã 600–749, Olimpiano 750–899, Panteão 900+), cada uma com
+  **3 subníveis** (I/II/III em terços da faixa; Panteão = 900/950/1000) e `anim` 0–4: **quanto maior a patente, mais animação**
+  (0–1 brilho que varre → 2 pulsa → 3 faíscas → 4 raios girando; Panteão roda as cores, Titã respira como brasa).
+- `patente_do_nivel(n)` devolve tudo que a tela precisa (id, subnível, nome completo, `proximo`); o servidor manda em
+  `xp_atualizado`, `perfil_publico` e no HTML do `/chat` — **o cliente só desenha**. `titulo`/`titulo_do_nivel()` agora são
+  "Aprendiz II"; a `recompensa_do_nivel()` leva o nome da patente nova no 1º nível dela.
+- **Ícones** (`Cosm.svgPatente(id, sub, {anim})` em `static/js/cosmeticos.js`): SVG 64×64 por patente, gradientes **globais**
+  num `<svg id="cosm-defs">` injetado por `Cosm.iniciar()` (cada ícone só referencia por id) e um `clipPath` por instância
+  (`ptc-<n>`) para o brilho que varre. Patente nova = entrada em `PATENTES` (py) **e** em `PAL`/`EMBLEMAS` (js), mesmo id.
+- **Popover "orb"** (ícone grande em cima, nome embaixo, próxima evolução): qualquer elemento com `data-orb="patente|badge|texto"`
+  abre; um só popover, delegado no `document`. `Cosm.htmlPatente()`/`htmlBadge()` já saem com o atributo.
+- Onde aparece: cartão de perfil (chip "Nv. N" + ícone + insígnias), Meu Perfil > Conta, Battle Pass (ícone grande ao lado do nome),
+  tela de "subiu de nível" e a **galeria da aba Patentes do Inventário** (as não alcançadas ficam cinza). Ainda **não** aparece ao lado
+  do nome nas mensagens/lista de membros (precisaria do nível do autor em cada payload).
+
+### Insígnias (não equipáveis: aparecem sempre)
+`badge:criador`, `badge:beta_tester`, `badge:coder` e `badge:so_nos` (os quatro são dos dois testers). **"Só nós"** = duas chamas
+(laranja = Gogeta, roxa = Sasuke) que **se fundem numa só ao passar o mouse** (transições em `.bd-so_nos:hover`; dentro do popover o
+ciclo separa→junta→funde roda sozinho, `.orb-grande`). Desenho em `DESENHO_BADGE`; nomes/descrições espelham `cosmeticos.CATALOGO`.
+
+### Catálogo, posse e inventário (regra 4 em ação)
+- `app/cosmeticos.py` é a fonte da verdade dos itens **exclusivos**: `CATALOGO["<tipo>:<id>"]`. Os itens **livres** (neon, ouro,
+  lava...) continuam nas tuplas de `utils.py` e nos catálogos do `chat.html`; os ids exclusivos entram nas mesmas tuplas
+  (`ESTILOS_NOME`, `PLACAS`, `MOLDURAS`, `FAIXAS_ANIMADAS`) só pra validar.
+- Tipos: colunas já existentes (`moldura`, `placa`, `nome` = `nome_estilo`, `faixa` = `banner_color 'anim:<id>'`) e **slots em JSON**
+  `Person.equipados` (`efeito_avatar`, `efeito_perfil`, `efeito_fala`, `efeito_radar`, `efeito_chat`, `som_call`, `pin_nota`).
+  `equipados_da_pessoa()` **só devolve ids que o catálogo conhece** (JSON adulterado/quebrado vira vazio, nunca vira `class=""`).
+- Tabela nova **`Posse`** (`person_id`, `item_id`, `origem`; única por par). `atualizar_perfil` confere a posse (`pode_usar()`): exclusivo
+  sem posse **não muda o slot** (não apaga o que já estava equipado) e avisa com `erro_bazinga`. Eventos novos: `listar_inventario`
+  → `inventario`, `equipar_item {item_id}` (inclusive `pacote:<tema>`), `desequipar_item {tipo}`; os dois últimos mandam
+  `perfil_atualizado` + `inventario` pras abas da pessoa e `perfil_membro_mudou` pra quem convive.
+- **Conceder** é um ato explícito: `atualizar_banco.py` (passo 24, idempotente) ou `conceder_item.py` — a identidade (@ → id) é resolvida **uma
+  vez**. Não roda sozinho no boot de propósito: se alguém trocasse o @ e outra pessoa pegasse o antigo, herdaria o item.
+- **Inventário** = aba "Inventário" nas Configurações (embaixo de Meu Perfil) **e** botão "Inventário" na barra lateral embaixo do
+  Mercado Elite (os dois abrem o mesmo `#inv-raiz`; `Cosm.renderInventario`). Abas Tudo/Insígnias/Molduras/Placas/Nomes/Faixas/Efeitos/Pacotes/
+  Patentes; cada item tem prévia animada; "Ouvir" nos sons; clicar equipa (só muda quando o servidor confirma). Os catálogos do editor de
+  perfil também listam os exclusivos que a pessoa possui (`exclusivosDe()`).
+- O `/chat` já embute o inventário (`inventario_inicial`): +1 query (`/chat` foi de 9 pra **10**).
+
+### Laboratório: o que existe (CSS/SVG puro, nada de imagem)
+| Tipo | Gogeta | Sasuke | Fusão |
+|---|---|---|---|
+| Moldura (`::before` do `.moldura-*`) | Aura Dourada | **Sharingan** (anel vermelho + 3 tomoe em `::after`, sem cor girando) | Fusão |
+| Placa (várias camadas de `background` animadas) | Em Chamas (brasas) | Cinzas Roxas | Duas Chamas |
+| Nome (`background-clip:text`) | Super Saiyajin | Mangekyō (tremor vermelho) | Fusão |
+| Faixa (`.banner-anim-*` + `::before` de faíscas/raios) | Aura Saiyajin | Tempestade Roxa | Fusão |
+| Efeito de avatar (`.ef-av`) | aura de chamas | **Olho Brilhante** (o anel do Sharingan acende em vermelho e volta ao normal, ciclo de 7 s) | — |
+| Efeito de perfil (`.ef-pf` por cima do cartão) | faíscas de ki (poeira cósmica) | raios caindo + chama negra de Amaterasu que sobe de baixo, cresce e volta | — |
+| Efeito de fala (`.video-card.fala-X.is-speaking`) | ki explode | Chidori | — |
+| Efeito do radar (classe na `.raio-onda`) | ondas douradas | ondas roxas | — |
+| Efeito do chat (digitando = brilho; Enter = faíscas/raio) | Ki no Teclado | Raio no Teclado | — |
+| Som de entrada na call (Web Audio sintetizado) | Power Up | Chidori | — |
+| Pin de nota no mapa (`.pin-X.minimized`) | Esfera de Estrelas | Kunai Roxa | — |
+| **Efeito de servidor** (ícone na barra + nome no cabeçalho + pino no mapa) | Chamas do Servidor | Tempestade do Servidor | Fusão do Servidor |
+| Pacote (equipa o tema inteiro) | ✓ | ✓ | ✓ (só os 4 visuais) |
+
+**Efeito de servidor** é diferente dos outros: não é um slot da pessoa, é do **servidor** (`Server.efeito`, coluna nova). O inventário tem o botão
+"Aplicar a um servidor" (lista só os servidores onde a pessoa é dono). Evento `aplicar_efeito_servidor {server_id, valor}`: o servidor confere que a pessoa
+administra o servidor (`servidor_gerenciavel`) **e** possui o item, grava, reenvia o servidor a todos os membros (`avisar_servidor`) e atualiza o pino do mapa
+(`servidor_mapa_editado`). O cliente aplica `sv-ef-<id>` no ícone da barra e no `.pino-foto`, e `ne-<id>` no nome do cabeçalho. `efeito_servidor_valido()`
+filtra o valor em todo payload (`_json_de_servidor`, `servidor_mapa_para_json`).
+
+**Como o Sasuke v2 funciona** (feedback do 1º teste; asas de Susanoo, fogo em partículas e Punição de Alma foram testados e **descartados**): os **raios**
+desenham o traço de cima pra baixo (`stroke-dashoffset` 100→0 em ~0,1 s, `pathLength=100`); ao fim de cada ciclo (invisíveis) o evento `animationiteration`
+chama `sortearPosicao()` (`iniciar()` liga um listener só), que sorteia o `left` da próxima queda (elementos com `data-aleatorio="<nome da animação>"`). A **Amaterasu**
+é UMA faixa (`.ef-amaterasu`, 10 línguas de fogo geradas com `chamaD()`) que sobe de baixo, cresce até ~48% do cartão e volta (`efAmaterasu`, 12 s) — não são partículas. Os **tomoe**
+do Sharingan são 6 `radial-gradient` no `::after` da moldura (o `inset` dele acompanha o do `::before` em cada contexto). O **Olho Brilhante** é só `box-shadow` animado no `.ef-av`.
+O pacote de cada tema pega o **1º item de cada tipo** (`_pacote`), então extras opcionais futuros não entram sozinhos.
+
+Pegadinhas que apareceram (já resolvidas — não desfaça):
+- **Aura de Gogeta cobria a foto** de quem não tem imagem: `z-index:-1` ainda pinta *por cima* do `background` do próprio avatar. Hoje a aura tem
+  um **furo no meio** (`mask: radial-gradient(closest-side, transparent 60%, #000 65%)`); `.com-ef` (+ `isolation:isolate`) é a classe do avatar que carrega aura.
+- **`.user-profile-bar[class*="placa-"]` força `animation` e `background-size` com `!important`** (chat.html, bloco da barra do usuário). Placa nova com
+  várias camadas precisa também do seletor `.user-profile-bar.placa-X { ... !important }` (já feito pras três).
+- Efeito no **nome** usa `filter: drop-shadow`, não `text-shadow`: com `color: transparent` + `background-clip:text` o text-shadow pinta por cima do degradê.
+- A **call mostra o visual que o SERVIDOR mandou** (`novo_usuario_call`/`participantes_call_mudou` → `visualPorPeer`), não o `metadata` do peer
+  (cliente adulterado afirmaria ter item que não tem). `adicionarVideoCard` só usa o metadata para moldura **livre**, e só se o aviso do servidor
+  ainda não chegou. Equipar no meio da call reemite `participantes_call_mudou` (`_atualizar_visual_na_call`, regra 6).
+- Em teste, `socketio.test_client()` criado **antes** do servidor existir não está na `sala_servidor` (o `join_room` é no `connect`): reconecte o cliente.
+
+**Criar item novo do laboratório**: (1) `_item(...)` em `cosmeticos.py` (acima de `recalcular_pacotes()`); (2) CSS com o id (`.moldura-<id>`, `.placa-<id>`
++ `.user-profile-bar.placa-<id>`, `.ne-<id>`, `.banner-anim-<id>`, `.ef-av-<id>`, `.ef-pf-<id>`, `.fala-<id>`, `.radar-<id>`, `.chat-ef-<id>`, `.pin-<id>`);
+(3) pros efeitos com HTML/JS, o id na lista de `cosmeticos.js` (`EFEITOS_AVATAR`, `EFEITOS_PERFIL`, `IDS_EFEITO`) e, se for som, o ramo em `somEntrada`;
+(4) `LABORATORIO` já pega o tema sozinho (`_itens_do_tema`); rode `conceder_item.py` ou `atualizar_banco.py`.
+Para a loja pública, **refazer com arte/áudio próprios** (nada de sprite/som de Dragon Ball ou Naruto): o laboratório só usa formas, cores e sons sintetizados.
+
+Teste: `python testes/fumaca_cosmeticos.py` (curva 1–1000+, patentes, catálogo, posse, equipar/recusar, JSON adulterado, insígnias, call, pin, efeito de servidor, regra 6).
+**Rodar `python atualizar_banco.py` depois do deploy**: cria `person.equipados` e `server.efeito`, a tabela `posse` nasce no `create_all()` e os itens do laboratório são concedidos.
+
+**O que ficou de fora** (ver `PLANO_COSMETICOS.md`): gadget do mapa (música tipo Spotify — o pedido ficou ambíguo), patente ao lado do nome
+em mensagens/listas, loja/economia (Mercado e Battle Pass temático seguem para refazer).
 
 ---
 
@@ -1484,6 +1592,9 @@ por raio com denúncia/cópia de nota, GIF enquadrável na faixa e no fundo do c
 completo em português, reconexão do socket e uma queda grande no número de queries. Detalhes na
 seção "Rodada de 01/10/2026" e "Rodada 2" (feedback do teste: conversa rápida, Amigos simples, GIF recortado no servidor com **Pillow** - instale com `pip install -r requirements.txt`). **Fora de escopo de propósito: Mercado e Battle Pass/nível.**
 
+**Rodada 5 (patentes, insígnias, inventário, laboratório)**: ainda sem commit/deploy quando isto foi escrito. Depois do deploy, rodar
+`python atualizar_banco.py` também cria `person.equipados` e `server.efeito` e concede os itens do laboratório aos dois testers.
+
 **Rodar `python atualizar_banco.py` depois do deploy** (colunas novas de perfil: `pronomes`, `banner_url`, `username`, `status_emoji`, `pensando`, `perfil_tema`, `nome_estilo`, `placa`, `moldura`) — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
 `person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
@@ -1546,7 +1657,8 @@ produção.
 - **Trim do clipe não recodifica**: a tela de edição só ajusta a prévia
   (in/out points); o arquivo enviado/baixado é o clipe inteiro. Cortar de
   verdade precisaria de algo como ffmpeg.wasm.
-- **Decorações de perfil (efeitos, molduras, badges)** ficaram de fora
+- **Decorações de perfil**: viraram o laboratório da Rodada 5 (só os dois testers). Abrir para todo mundo (loja) fica para depois da economia;
+  o texto abaixo é histórico: ficaram de fora
   desta rodada por decisão — a Bazinga não tem produto tipo Nitro pra
   vender, e o card de "Apenas usuários Nitro" foi removido em vez de virar
   outra trava. Se um dia existir alguma forma de desbloquear isso (badge de

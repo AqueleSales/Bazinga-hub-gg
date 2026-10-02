@@ -54,6 +54,19 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [x] Mapa: amigos aparecem (mesmo sem servidor em comum), notas de amigos no alcance grande, GPS sem fallback silencioso.
 - [x] Missões em cartões estilo Quests; barras laterais redimensionáveis.
 
+## Rodada 5 (02/10) - patentes, insígnias, inventário e laboratório - feito, AINDA SEM TESTE COM 2 PESSOAS REAIS NO NAVEGADOR
+- [x] Nível 1–1000+ (curva antiga até o 100, depois +25 XP/nível; 1000+ com passo fixo) e 12 patentes com ícone SVG animado + popover "orb".
+- [x] Insígnias Criador, Beta Tester, Coder e "Só nós" (duas chamas que se fundem no hover).
+- [x] Catálogo + posse (`Posse`), `equipar_item`/`desequipar_item`/`listar_inventario`, checagem no servidor, `conceder_item.py`.
+- [x] Inventário (Configurações e atalho embaixo do Mercado Elite), galeria de patentes, pacotes de tema.
+- [x] Laboratório Gogeta/Sasuke/Fusão: moldura, placa, nome, faixa, aura de avatar, efeito de perfil, efeito de fala, radar, chat, som de entrada, pin de nota, efeito de servidor.
+- [ ] **Testar com 2 pessoas no navegador**: equipar o pacote e ver (um no outro) cartão, mensagens, call (efeito de fala/aura), mapa (pin), som de entrada.
+- [ ] Rodar `python atualizar_banco.py` no deploy (colunas `person.equipados` e `server.efeito` + concede o laboratório).
+- [ ] Patente/insígnia ao lado do nome em mensagens e lista de membros (precisa do nível do autor no payload).
+- [x] Efeito de servidor (ícone na barra, cabeçalho e pino no mapa), aplicado pelo dono.
+- [ ] Gadget do mapa (música tipo Spotify): confirmar com o dono o que ele imagina.
+- [ ] Loja/economia/Battle Pass temático (Dracmas, raridade) em cima da `Posse`.
+
 ## Falta da rodada 4 / dúvidas
 - [ ] **Testar com 2 pessoas**: câmera (liga/desliga/entrada tardia), compartilhar tela + zoom, call mini ao trocar de servidor/DM.
 - [ ] "Mudar a fonte do status na conversa" (lista de DMs): o pedido não ficou claro; os kaomojis do "pensando" caem em outra fonte do sistema.

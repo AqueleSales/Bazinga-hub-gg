@@ -2329,6 +2329,8 @@
         .pf-previa, .pf-barra { transform: translateZ(0); backface-visibility: hidden; }
         .settings-content { overscroll-behavior: contain; }
 </style>
+<!-- Cosméticos (patentes, insígnias, popover orb, inventário, laboratório): depois do <style> acima, pra ganhar por ordem -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
 </head>
 <body>
     <div class="discord-app">
@@ -2375,6 +2377,7 @@
                         <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA {{ app_nome|upper }}</div>
                         <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
                         <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
+                        <div class="channel-item" id="btn-inventario" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Suas insígnias, molduras, efeitos e patentes"><i class="fa-solid fa-box-open" style="font-size: 16px; color: #c4b5fd;"></i> Inventário</div>
                         <div class="channel-item" id="btn-battlepass" style="gap: 12px; margin: 0 8px; padding: 8px; justify-content: space-between;" title="Seu nível e progresso">
                             <div style="display:flex; align-items:center; gap:12px;"><i class="fa-solid fa-ranking-star" style="font-size: 16px; color: #ffd76a;"></i> Battle Pass</div>
                             <span id="sidebar-nivel-badge" style="background: var(--brand-color); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">1</span>
@@ -2777,7 +2780,7 @@
                             <div class="bp-nivel-badge" id="bp-nivel-numero">1</div>
                         </div>
                         <div class="bp-info">
-                            <div class="bp-rank"><i class="fa-solid fa-shield-halved"></i> <span id="bp-rank-texto">Novato</span></div>
+                            <div class="bp-rank bp-rank-patente"><span id="bp-patente-ico" class="bp-patente-ico"></span> <span id="bp-rank-texto">{{ patente_inicial.nome_completo }}</span></div>
                             <div class="bp-titulo">Nível <span id="bp-nivel-texto">1</span></div>
                             <div class="bp-barra-wrapper">
                                 <div class="bp-barra-fundo"><div class="bp-barra-preenchida" id="bp-barra-preenchida" style="width: 0%;"></div></div>
@@ -2804,7 +2807,7 @@
                     <div class="bp-missoes" id="bp-missoes-lista"><div class="bp-vazio">Carregando missões...</div></div>
 
                     <div class="bp-secao-cab">
-                        <div class="market-section-title">Trilha de recompensas <span class="bp-sub">100 níveis</span></div>
+                        <div class="market-section-title">Trilha de recompensas <span class="bp-sub" id="bp-trilha-sub">níveis 1 a 100</span></div>
                         <div class="bp-setas">
                             <button class="bp-seta" id="bp-trilha-esq" title="Voltar"><i class="fa-solid fa-chevron-left"></i></button>
                             <button class="bp-seta" id="bp-trilha-atual" title="Ir pro meu nível"><i class="fa-solid fa-crosshairs"></i></button>
@@ -2820,7 +2823,7 @@
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>Tempo ativo: +3 XP/min</b><span>Mexendo no app ou numa call. Vale até 60 minutos por dia (180 XP).</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico fogo"><i class="fa-solid fa-fire"></i></div><div><b>Bônus diário: +50 XP</b><span>Abra o app todo dia. Cada dia seguido soma +10 XP (até 7 dias).</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-list-check"></i></div><div><b>Missões: até +1.800 XP</b><span>3 diárias e 3 semanais novas pra você. O XP cai assim que completar.</span></div></div>
-                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: {{ moeda_sigla }}</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Títulos novos nos marcos.</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: {{ moeda_sigla }}</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Patente nova a cada grande marco (passe o mouse no ícone).</span></div></div>
                     </div>
                 </div>
             </div>
@@ -3740,6 +3743,7 @@
                 <div class="set-tab-group">
                     <div class="set-tab-header">Configurações de Usuário</div>
                     <div class="set-tab active" data-target="set-perfil">Meu Perfil</div>
+                    <div class="set-tab" data-target="set-inventario">Inventário</div>
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
                     <div class="set-tab-header">Configurações do App</div>
                     <div class="set-tab" data-target="set-voz">Voz e Vídeo</div>
@@ -3871,6 +3875,12 @@
 
                     <!-- Barra de salvar: só aparece quando há alteração pendente -->
                     <div class="pf-barra" id="pf-barra"><button type="button" class="pf-barra-desc" id="pf-descartar">Descartar</button><button type="button" class="pf-barra-salvar" id="pf-salvar">Salvar</button></div>
+                </div>
+
+                <!-- ABA: INVENTÁRIO (insígnias, enfeites exclusivos e livres, patentes; desenhado por Cosm.renderInventario) -->
+                <div class="set-section" id="set-inventario" style="max-width: 1000px;">
+                    <h2 class="set-title">Inventário</h2>
+                    <div id="inv-raiz" class="inv-raiz"></div>
                 </div>
 
                 <!-- ABA: APARÊNCIA -->
@@ -4023,6 +4033,7 @@
     <!-- Menu de contexto do contato (DM): remover / bloquear -->
     <div id="dm-contato-menu" class="dm-contato-menu" style="display:none;"></div>
 
+    <script src="{{ url_for('static', filename='js/cosmeticos.js') }}?v={{ cosm_js_v }}"></script>
     <script>
         // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
         const rawChannelId = "{{ default_channel.id if default_channel else 1 }}";
@@ -4056,6 +4067,7 @@
         // 2. SOCKET.IO SETUP (precisa vir cedo: vários handlers abaixo dependem de `socket`)
         const socket = typeof io !== 'undefined' ? io() : { emit: () => {}, on: () => {}, connected: false };
         const presencaPorId = {};   // id -> { status, emoji, texto }: UMA fonte da verdade da presença de amigos
+        Cosm.iniciar();   // gradientes das patentes/insígnias + popover "orb" (static/js/cosmeticos.js)
 
         // ==========================================
         // SEGURANÇA: escapando texto de usuário antes de jogar em innerHTML
@@ -4465,10 +4477,10 @@
             overlay.innerHTML = `<div class="bp-celebra-cartao">
                 <div class="bp-celebra-topo">Subiu de nível!</div>
                 <div class="bp-celebra-num">${Number(dados.nivel)}</div>
-                <div class="bp-celebra-rank">${esc(dados.titulo || '')}</div>
+                <div class="bp-celebra-rank">${dados.patente ? `<span class="bp-celebra-pt">${Cosm.htmlPatente(dados.patente, 92, { nivel: dados.nivel })}</span>` : ''}${esc(dados.titulo || '')}</div>
                 <div class="bp-celebra-premios">
                     <div class="bp-chip"><i class="fa-solid fa-coins"></i> +${coins} {{ moeda_nome }}</div>
-                    ${titulos.map(t => `<div class="bp-chip"><i class="fa-solid fa-crown" style="color:#ff9bd2;"></i> Novo título: ${esc(t)}</div>`).join('')}
+                    ${titulos.map(t => `<div class="bp-chip"><i class="fa-solid fa-crown" style="color:#ff9bd2;"></i> Nova patente: ${esc(t)}</div>`).join('')}
                 </div>
                 <div class="bp-celebra-dica">clique para fechar</div>
             </div>`;
@@ -4506,6 +4518,8 @@
             if (badge) {
                 document.getElementById('bp-nivel-texto').textContent = dados.nivel;
                 document.getElementById('bp-rank-texto').textContent = dados.titulo || '';
+                if (dados.patente) document.getElementById('bp-patente-ico').innerHTML = Cosm.htmlPatente(dados.patente, 54, { nivel: dados.nivel });
+                if (dados.marcos && dados.marcos.length) document.getElementById('bp-trilha-sub').textContent = `níveis ${dados.marcos[0].nivel} a ${dados.marcos[dados.marcos.length - 1].nivel}`;
                 document.getElementById('bp-barra-texto').textContent = dados.nivel_maximo ? 'Nível máximo' : `${dados.xp_atual_nivel} / ${dados.xp_por_nivel} XP`;
                 document.getElementById('bp-faltam').innerHTML = dados.nivel_maximo
                     ? 'Você chegou ao topo. Lenda.'
@@ -4764,7 +4778,7 @@
                     : esc(iniciaisServidor(srv.name || '?'));
 
                 wrapper.innerHTML = `
-                    <div class="server-icon ${activeMyServerId === srv.id ? 'active' : ''}" id="my-server-icon-${Number(srv.id)}" title="${esc(srv.name)}">
+                    <div class="server-icon ${activeMyServerId === srv.id ? 'active' : ''} ${esc(Cosm.classeServidor(srv.efeito))}" id="my-server-icon-${Number(srv.id)}" title="${esc(srv.name)}">
                         ${iconHtml}
                     </div>
                 `;
@@ -4919,7 +4933,7 @@
 
             serverSidebar.querySelector('.channels-header').innerHTML =
                 `<h3 style="display:flex; align-items:center; gap:6px; overflow:hidden;">
-                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(srv.name)}</span>
+                    <span class="${esc(Cosm.classeNomeServidor(srv.efeito))}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(srv.name)}</span>
                     <i class="fa-solid fa-chevron-down" style="font-size: 12px; flex-shrink:0;"></i>
                  </h3>`;
 
@@ -7010,7 +7024,7 @@
                 aneisDoRaio = {
                     servidores: L.circle([lat, lng], { radius: raioServidoresM, color: '#3ba55d', weight: 1.2, opacity: .45, dashArray: '2 9', fill: false, interactive: false }).addTo(bazingaMap),
                     notas: L.circle([lat, lng], { radius: raioNotasM, color: '#7289da', weight: 1.4, opacity: .6, dashArray: '7 8', fillColor: '#7289da', fillOpacity: .035, interactive: false }).addTo(bazingaMap),
-                    onda: L.marker([lat, lng], { icon: L.divIcon({ className: 'raio-onda', html: '<i></i><i></i><i></i>', iconSize: [0, 0] }), interactive: false, keyboard: false, zIndexOffset: -1000 }).addTo(bazingaMap)
+                    onda: L.marker([lat, lng], { icon: L.divIcon({ className: ('raio-onda ' + Cosm.classeRadar((perfilMeu.equipados || {}).efeito_radar)).trim(), html: '<i></i><i></i><i></i>', iconSize: [0, 0] }), interactive: false, keyboard: false, zIndexOffset: -1000 }).addTo(bazingaMap)
                 };
                 bazingaMap.on('zoomend', ajustarTamanhoDaOnda);
             } else {
@@ -7167,7 +7181,7 @@
                 iconAnchor: [20, 40], // Fica perfeitamente cravado no chão (base)
                 html: `
                 <div class="geo-note-wrapper">
-                    <div class="geo-note-bubble minimized" style="--note-color: ${esc(cor)};">
+                    <div class="geo-note-bubble minimized ${esc(Cosm.classePin(extras && extras.pin))}" style="--note-color: ${esc(cor)};">
                         <button class="nota-x" title="Minimizar" onclick="event.stopPropagation(); minimizarNotaPorId(${Number(id)})"><i class="fa-solid fa-xmark"></i></button>
                         <span class="note-emoji">${esc(icone)}</span>
                         <div class="note-content-area">
@@ -7183,7 +7197,8 @@
 
             // Joga no radar! (texto/cor guardados para redesenhar na edição)
             const nota = { id: id, lat: lat, lng: lng, marker: marker, texto: texto, cor: cor, autor: autor,
-                           autorId: autorId, icone: icone, venceEm: venceEm, perto: false, fixaAberta: false };
+                           autorId: autorId, icone: icone, venceEm: venceEm, perto: false, fixaAberta: false,
+                           pin: (extras && extras.pin) || null };
             geoNotesAtivas.push(nota);
             emojificar(marker.getElement() || document.createElement('div'));
 
@@ -7230,7 +7245,7 @@
             const serverIcon = L.divIcon({
                 className: '',   // sem classe do Leaflet pra não brigar com o CSS
                 html: `<div class="pino-servidor">
-                           <div class="pino-foto">${miolo}</div>
+                           <div class="pino-foto ${esc(Cosm.classeServidor(extras && extras.efeito))}">${miolo}</div>
                            <div class="pino-nome">${esc(nome)}</div>
                        </div>`,
                 iconSize: [56, 70], iconAnchor: [28, 70]
@@ -7422,7 +7437,7 @@
                 if (!nota) return;
                 removerDoMapa('nota', dados.id);
                 renderizarGeoNote(dados.id, nota.lat, nota.lng, dados.texto, nota.autor, dados.cor, nota.autorId,
-                                  { icone: dados.icone, restante_s: dados.restante_s });
+                                  { icone: dados.icone, restante_s: dados.restante_s, pin: nota.pin });
             });
 
             socket.on('servidor_mapa_editado', function(dados) {
@@ -7436,7 +7451,7 @@
                     dados.online ?? pino.online,
                     pino.serverId, pino.ownerId,
                     dados.icon_url !== undefined ? dados.icon_url : pino.iconUrl,
-                    dados
+                    { ...dados, efeito: dados.efeito !== undefined ? dados.efeito : (pino.extras || {}).efeito }
                 );
             });
 
@@ -7571,6 +7586,7 @@
             // mas passam por esc() mesmo assim - viram `class=""`.
             const estiloNome = classeNome(extras.nome_estilo);
             const classeMold = classeMoldura(extras.moldura);
+            const efAv = (extras.equipados || {}).efeito_avatar;   // aura (Cosm só aceita ids conhecidos)
 
             const marcaEditada = extras.editada
                 ? `<span class="msg-editada">(editada)</span>` : '';
@@ -7598,7 +7614,7 @@
             } else {
                 div.innerHTML = `
                     ${acoesHtml}
-                    <div class="chat-avatar ${esc(classeMold)}" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${avatarHtml}</div>
+                    <div class="chat-avatar ${efAv ? 'com-ef ' : ''}${esc(classeMold)}" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${Cosm.htmlEfeitoAvatar(efAv)}${avatarHtml}</div>
                     <div class="message-content">
                         <div class="message-header">
                             <span class="message-author ${esc(estiloNome)}" style="${estiloNome ? '' : `color: ${corSegura};`}">${esc(autor)}</span>
@@ -7697,7 +7713,8 @@
             const container = document.getElementById('messages-container');
             appendMessageGrouped(container, tempId, currentUserName, currentUserAvatar, texto,
                 horaAgoraCliente(), 'var(--brand-color)',
-                { ...extrasAnexo, autor_id: currentUserId, animar: true, pendente: true });
+                { ...extrasAnexo, autor_id: currentUserId, animar: true, pendente: true,
+                  nome_estilo: perfilMeu.nome_estilo, moldura: perfilMeu.moldura, equipados: perfilMeu.equipados });
 
             setTimeout(() => {
                 const el = document.querySelector(`.message.pendente[data-msg-id="${tempId}"]`);
@@ -8350,7 +8367,12 @@
             status: {{ (usuario_atual.status or 'online')|tojson }},
             email: {{ usuario_atual.email|tojson }},
             membro_desde: {{ (membro_desde_texto or '')|tojson }},
-            nivel: 1, titulo: 'Novato'
+            // patente/nível já no HTML (o xp_atualizado do socket só confirma): o cartão nasce certo
+            nivel: {{ inventario_inicial.nivel|tojson }},
+            titulo: {{ patente_inicial.nome_completo|tojson }},
+            patente: {{ patente_inicial|tojson }},
+            badges: {{ badges_iniciais|tojson }},
+            equipados: {{ inventario_inicial.equipados|tojson }}
         };
 
         // ---- Catálogos (ids validados no servidor: utils.ESTILOS_NOME/PLACAS/MOLDURAS) ----
@@ -8383,6 +8405,8 @@
         const ROTULO_STATUS = { online: 'Disponível', idle: 'Ausente', dnd: 'Não perturbar', invisible: 'Invisível', custom: 'Personalizado', offline: 'Offline' };
         const DESC_STATUS = { online: 'Tudo certo por aqui', idle: 'Você aparece como ausente', dnd: 'Sem notificações', invisible: 'Você aparece como offline', custom: 'Seu emoji no lugar da bolinha' };
 
+        // exclusivos (laboratório) que a pessoa possui, no formato dos catálogos acima; o servidor confere a posse de novo ao salvar
+        const exclusivosDe = (tipo) => ((typeof inventario !== 'undefined' && inventario.catalogo) || []).filter(d => d.tipo === tipo).map(d => ({ id: d.valor, nome: d.nome }));
         const classeNome = (est) => (est && est !== 'padrao') ? 'ne-' + est : '';
         const classePlaca = (pl) => (pl && pl !== 'nenhuma') ? 'placa-' + pl : '';
         const classeMoldura = (m) => (m && m !== 'nenhuma') ? 'moldura-' + m : '';
@@ -8497,9 +8521,12 @@
             const pilulaStatus = (pf.restrito || popoutProprio || !rotuloSt || pf.status === 'offline') ? ''
                 : `<div class="pc-status-pill">${htmlBolinha(pf.status, pf.emoji, 'pc-ponto')}<span>${esc(rotuloSt)}</span></div>`;
 
+            // Nível (XP total) + patente (ícone animado; o hover abre o "orb") + insígnias exclusivas
+            const pat = pf.patente || { id: 'iniciado', sub: 1, anim: 0, nome_completo: pf.titulo || 'Iniciado I' };
             const chips = pf.restrito ? '' : `<div class="pc-chips">
-                <span class="pc-chip" title="Nível no Battle Pass">Nv. ${Number(pf.nivel || 1)}</span>
-                <span class="pc-chip titulo">${esc(pf.titulo || 'Novato')}</span>
+                <span class="pc-chip nivel" title="Nível: experiência total acumulada">Nv. ${Number(pf.nivel || 1)}</span>
+                <span class="pc-patente">${Cosm.htmlPatente(pat, 34, { nivel: pf.nivel })}</span>
+                ${(pf.badges && pf.badges.length) ? `<span class="pc-sep-ins"></span><span class="pc-insignias">${Cosm.htmlBadges(pf.badges, 24)}</span>` : ''}
             </div>`;
 
             const linhaUsuario = (pf.username || pf.pronomes)
@@ -8555,11 +8582,12 @@
 
             const tema = pf.restrito ? '' : estiloTema(pf.perfil_tema);
             const camadaTema = pf.restrito ? '' : temaCamadaHtml(pf.perfil_tema);
+            const efs = pf.restrito ? {} : (pf.equipados || {});
             return `<div class="pc ${modo === 'previa' ? 'pc-previa' : ''} ${tema ? 'com-tema' : ''} ${camadaTema ? 'com-tema-gif' : ''}" style="${tema}">
                 ${camadaTema}
                 <div class="pc-banner ${faixa.classe}" style="${faixa.estilo}">${faixa.camada || ''}</div>
                 <div class="pc-topo">
-                    <div class="pc-avatar ${classeMoldura(pf.moldura)}"><div class="pc-avatar-img" style="${avUrl ? 'background:transparent;' : ''}">${avatar}</div>${htmlBolinha(statusDot, pf.emoji)}</div>
+                    <div class="pc-avatar ${classeMoldura(pf.moldura)}">${Cosm.htmlEfeitoAvatar(efs.efeito_avatar)}<div class="pc-avatar-img" style="${avUrl ? 'background:transparent;' : ''}">${avatar}</div>${htmlBolinha(statusDot, pf.emoji)}</div>
                     ${balao}
                 </div>
                 <div class="pc-corpo">
@@ -8571,6 +8599,7 @@
                     ${secoes}
                     ${lista}
                 </div>
+                ${Cosm.htmlEfeitoPerfil(efs.efeito_perfil)}
             </div>`;
         }
 
@@ -8932,7 +8961,7 @@
             document.getElementById('pf-email').textContent = perfilMeu.email;
             document.getElementById('pf-id').textContent = perfilMeu.id;
             document.getElementById('pf-desde').textContent = perfilMeu.membro_desde || 'Conta antiga (sem data guardada)';
-            document.getElementById('pf-nivel').textContent = `Nv. ${perfilMeu.nivel} · ${perfilMeu.titulo}`;
+            document.getElementById('pf-nivel').innerHTML = `<span class="pf-nivel-linha">Nv. ${Number(perfilMeu.nivel)} · ${esc(perfilMeu.titulo)} ${Cosm.htmlPatente(perfilMeu.patente, 30, { nivel: perfilMeu.nivel })}</span>`;
             document.querySelectorAll('#pf-presenca button').forEach(b => b.classList.toggle('ativo', b.dataset.status === perfilMeu.status));
         }
 
@@ -8997,7 +9026,7 @@
                     <input type="color" id="sm-cor-input" value="${corDeFaixa(rascunho.banner_color) || '#e91e63'}" style="display:none;">
                     <span class="control-label" style="margin-top:12px;">Faixas animadas</span>
                     <div class="sm-anim-grade" id="sm-anim-grade">
-                        ${FAIXAS_ANIM.map(f => {
+                        ${FAIXAS_ANIM.concat(exclusivosDe('faixa')).map(f => {
                             const valor = f.id ? 'anim:' + f.id : '';
                             const sel = (rascunho.banner_color || '') === valor && !rascunho.banner_url;
                             return `<button type="button" class="sm-anim-tile ${f.id ? 'banner-anim-' + f.id : 'banner-animado'} ${sel ? 'sel' : ''}" data-valor="${valor}" title="${esc(f.nome)}"><span>${esc(f.nome)}</span></button>`;
@@ -9086,11 +9115,11 @@
             const corpo = document.getElementById('pfc-corpo');
             const nome = esc(rascunho.nome || perfilMeu.nome);
             if (catTipo === 'estilo') {
-                corpo.innerHTML = `<div class="cat-grade">${ESTILOS_NOME.map(o => `<button class="cat-tile ${(rascunho.nome_estilo || 'padrao') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="cat-nome ${classeNome(o.id)}">${nome}</span><small>${o.nome}</small></button>`).join('')}</div>`;
+                corpo.innerHTML = `<div class="cat-grade">${ESTILOS_NOME.concat(exclusivosDe('nome')).map(o => `<button class="cat-tile ${(rascunho.nome_estilo || 'padrao') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="cat-nome ${classeNome(o.id)}">${nome}</span><small>${o.nome}</small></button>`).join('')}</div>`;
             } else if (catTipo === 'placa') {
-                corpo.innerHTML = `<div class="cat-grade larga">${PLACAS.map(o => `<button class="cat-tile ${(rascunho.placa || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-placa-linha ${classePlaca(o.id)}"><span class="pf-mini-av">${avatarMini()}</span>${nome}</span><small>${o.nome}</small></button>`).join('')}</div>`;
+                corpo.innerHTML = `<div class="cat-grade larga">${PLACAS.concat(exclusivosDe('placa')).map(o => `<button class="cat-tile ${(rascunho.placa || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-placa-linha ${classePlaca(o.id)}"><span class="pf-mini-av">${avatarMini()}</span>${nome}</span><small>${o.nome}</small></button>`).join('')}</div>`;
             } else if (catTipo === 'moldura') {
-                corpo.innerHTML = `<div class="cat-grade">${MOLDURAS.map(o => `<button class="cat-tile ${(rascunho.moldura || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-tile-av ${classeMoldura(o.id)}">${avatarMini()}</span><small>${o.nome}</small></button>`).join('')}</div>`;
+                corpo.innerHTML = `<div class="cat-grade">${MOLDURAS.concat(exclusivosDe('moldura')).map(o => `<button class="cat-tile ${(rascunho.moldura || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-tile-av ${classeMoldura(o.id)}">${avatarMini()}</span><small>${o.nome}</small></button>`).join('')}</div>`;
             } else if (catTipo === 'tema') {
                 const atual = rascunho.perfil_tema || '';
                 corpo.innerHTML = `
@@ -9180,6 +9209,7 @@
             ['custom_status', 'status_emoji', 'pensando', 'bio', 'banner_color', 'banner_url', 'banner_ajuste', 'pronomes', 'username',
              'perfil_tema', 'nome_estilo', 'placa', 'moldura'].forEach(k => { if (k in d) perfilMeu[k] = d[k] || ''; });
             if (d.avatar) perfilMeu.avatar = d.avatar;
+            if (d.equipados) perfilMeu.equipados = d.equipados;
 
             CAMPOS_PERFIL.forEach(k => { if (!pendentes.includes(k)) rascunho[k] = perfilMeu[k] || ''; });
             // o que acabou de ser salvo deixa de ser rascunho
@@ -9195,6 +9225,7 @@
             preencherCamposDoRascunho();
             pintarPrevia();
             if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
+            if (typeof inventario !== 'undefined') { inventario.equipados = equipadosDoPerfil(); desenharInventario(); aplicarEfeitosPessoais(); }
 
             showToast('Perfil atualizado!', 'success');
         });
@@ -9202,6 +9233,7 @@
         // Nível/título do cartão acompanham o Battle Pass
         socket.on('xp_atualizado', (d) => {
             perfilMeu.nivel = d.nivel; perfilMeu.titulo = d.titulo || perfilMeu.titulo;
+            if (d.patente) perfilMeu.patente = d.patente;
             pintarPrevia();
             if (cartaoAberto && cartaoAberto.dados && cartaoAberto.dados.sou_eu) { cartaoAberto.dados = perfilMeuParaCartao(); pintarCartao(); }
         });
@@ -9229,6 +9261,126 @@
                 if (nm) { nm.textContent = dados.nome; trocarClasse(nm, 'ne-', classeNome(dados.nome_estilo)); }
             }
         });
+
+
+        // ==========================================
+        // INVENTÁRIO (aba nas Configurações + atalho abaixo do Mercado Elite)
+        // ------------------------------------------------------------------
+        // O servidor é quem diz o que a pessoa TEM (posse) e o que está equipado; equipar é um emit e a tela
+        // só muda quando o servidor confirma (`perfil_atualizado` + `inventario`). Itens livres aparecem junto
+        // dos exclusivos, vindos dos catálogos do editor de perfil (MOLDURAS, PLACAS, ESTILOS_NOME, FAIXAS_ANIM).
+        // O desenho vive em static/js/cosmeticos.js (Cosm.renderInventario).
+        // ==========================================
+        let inventario = {{ inventario_inicial|tojson }};
+        let invAba = 'tudo';
+        const TEMAS_COSM = { gogeta: { cor: '#ff9d2e' }, sasuke: { cor: '#8b5cf6' }, fusao: { cor: '#e879f9' } };
+
+        function livresDoInventario() {
+            const l = [];
+            MOLDURAS.filter(o => o.id !== 'nenhuma').forEach(o => l.push({ tipo: 'moldura', valor: o.id, nome: o.nome }));
+            PLACAS.filter(o => o.id !== 'nenhuma').forEach(o => l.push({ tipo: 'placa', valor: o.id, nome: o.nome }));
+            ESTILOS_NOME.filter(o => o.id !== 'padrao').forEach(o => l.push({ tipo: 'nome', valor: o.id, nome: o.nome }));
+            FAIXAS_ANIM.filter(o => o.id).forEach(o => l.push({ tipo: 'faixa', valor: o.id, nome: o.nome }));
+            return l;
+        }
+
+        // O que está equipado, segundo o perfil que o cliente conhece (editor de perfil também mexe nisso)
+        function equipadosDoPerfil() {
+            const eq = { ...(perfilMeu.equipados || {}) };
+            if (perfilMeu.moldura) eq.moldura = perfilMeu.moldura;
+            if (perfilMeu.placa) eq.placa = perfilMeu.placa;
+            if (perfilMeu.nome_estilo) eq.nome = perfilMeu.nome_estilo;
+            if ((perfilMeu.banner_color || '').startsWith('anim:')) eq.faixa = perfilMeu.banner_color.slice(5);
+            return eq;
+        }
+
+        function desenharInventario() {
+            const raiz = document.getElementById('inv-raiz');
+            if (!raiz) return;
+            Cosm.renderInventario(raiz, inventario, {
+                livres: livresDoInventario(), nome: perfilMeu.nome, avatarHtml: avatarMini(), aba: invAba, temas: TEMAS_COSM,
+                aoAba: (aba) => { invAba = aba; desenharInventario(); },
+                aoEquipar: (id) => {
+                    if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
+                    socket.emit('equipar_item', { item_id: id });
+                },
+                aoRemover: (tipo) => {
+                    if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
+                    socket.emit('desequipar_item', { tipo });
+                },
+                servidoresComEfeito: (valor) => meUserServers.filter(s => s.efeito === valor).map(s => s.name),
+                aoServidor: (valor) => abrirEscolhaDeServidor(valor),
+                aoOuvir: (idSom) => {
+                    const ctx = garantirAudio();
+                    if (!ctx) { showToast('O navegador bloqueou o áudio - clique na página e tente de novo.', 'warning'); return; }
+                    if (ctx.state !== 'running') ctx.resume();
+                    Cosm.somEntrada(idSom, ctx);
+                }
+            });
+            emojificar(raiz);
+        }
+
+        socket.on('inventario', (estado) => {
+            inventario = estado;
+            perfilMeu.badges = Object.keys(Cosm.BADGES).filter(id => (estado.posses || []).includes('badge:' + id));
+            desenharInventario();
+            pintarPrevia();
+        });
+
+        // Efeitos que só mexem na MINHA tela: onda do radar, barra de mensagem e meu card na call
+        function aplicarEfeitosPessoais() {
+            const eq = perfilMeu.equipados || {};
+            if (typeof aneisDoRaio !== 'undefined' && aneisDoRaio && aneisDoRaio.onda) {
+                const el = aneisDoRaio.onda.getElement();
+                if (el) trocarClasse(el, 'radar-', Cosm.classeRadar(eq.efeito_radar));
+            }
+            Cosm.aplicarEfeitoChat(eq.efeito_chat);
+            aplicarMeuVisualNaCall();
+        }
+        Cosm.ligarEfeitoChat(() => (perfilMeu.equipados || {}).efeito_chat);
+        aplicarEfeitosPessoais();
+
+        // Efeito de servidor: o dono escolhe em qual servidor dele aplicar (ou tirar). O servidor confere dono + posse.
+        function abrirEscolhaDeServidor(valor) {
+            const meus = meUserServers.filter(s => Number(s.owner_id) === Number(currentUserId));
+            if (!meus.length) { showToast('Você ainda não tem um servidor seu pra aplicar o efeito.', 'info'); return; }
+            document.getElementById('escolha-servidor')?.remove();
+            const ov = document.createElement('div');
+            ov.id = 'escolha-servidor'; ov.className = 'modal-overlay'; ov.style.display = 'flex';
+            ov.innerHTML = `<div class="modal-content" style="max-width: 420px;">
+                <div class="modal-header"><h2>Aplicar a qual servidor?</h2></div>
+                <div class="inv-escolha-lista">${meus.map(s => `<div class="inv-escolha-linha">
+                    <span class="inv-escolha-nome">${esc(s.name)}</span>
+                    <button type="button" class="inv-btn ${s.efeito === valor ? 'eq' : ''}" data-srv="${Number(s.id)}" data-tira="${s.efeito === valor ? 1 : 0}">${s.efeito === valor ? 'Em uso · remover' : 'Aplicar'}</button>
+                </div>`).join('')}</div>
+                <div class="modal-footer" style="justify-content:flex-end;"><button class="btn btn-secondary" id="escolha-servidor-fechar">Fechar</button></div>
+            </div>`;
+            document.body.appendChild(ov);
+            const fechar = () => ov.remove();
+            ov.addEventListener('click', (e) => {
+                if (e.target === ov || e.target.id === 'escolha-servidor-fechar') return fechar();
+                const b = e.target.closest('[data-srv]');
+                if (!b) return;
+                if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
+                socket.emit('aplicar_efeito_servidor', { server_id: Number(b.dataset.srv), valor: b.dataset.tira === '1' ? '' : valor });
+                fechar();
+            });
+        }
+        socket.on('efeito_servidor_aplicado', (d) => {
+            showToast(d.efeito ? 'Efeito aplicado ao servidor!' : 'Efeito removido do servidor.', 'success');
+            desenharInventario();
+        });
+
+        function abrirInventario(aba) {
+            if (aba) invAba = aba;
+            settingsModal.classList.add('active');
+            document.querySelector('.set-tab[data-target="set-inventario"]').click();
+        }
+        document.querySelector('.set-tab[data-target="set-inventario"]').addEventListener('click', () => {
+            desenharInventario();
+            if (socket.connected) socket.emit('listar_inventario');   // foto fresca (posse pode ter mudado em outro aparelho)
+        });
+        document.getElementById('btn-inventario').addEventListener('click', () => abrirInventario());
 
         preencherCamposDoRascunho();
         pintarPrevia();
@@ -10469,8 +10621,7 @@
                 // Ficava hardcoded em "Membro" - seu nome nunca aparecia
                 // no seu próprio card.
                 document.getElementById('my-video-label').textContent = currentUserName;
-                const meuAv = document.getElementById('my-avatar-placeholder');
-                meuAv.className = 'video-avatar ' + classeMoldura(perfilMeu.moldura);
+                aplicarMeuVisualNaCall();
 
                 voicePanel.classList.add('active');
                 document.getElementById('connected-voice-name').innerText =
@@ -10515,7 +10666,7 @@
                     }
                 });
                 mePeer.on('open', id => {
-                    tocarSom('call_entrar');
+                    tocarSomDeEntrada((perfilMeu.equipados || {}).som_call);
                     myPeerId = id; socket.emit('entrar_call', { canal_id: voiceId, peer_id: id, usuario: currentUserName });
                 });
 
@@ -10622,7 +10773,46 @@
 
         document.querySelectorAll('.voice-channel').forEach(initVoiceChannel);
 
+        // Visual (moldura, aura, efeito de fala) de cada participante da call. Vem do SERVIDOR (`novo_usuario_call` e
+        // `participantes_call_mudou`), não do `metadata` do peer: um cliente adulterado afirmaria ter um item exclusivo
+        // que não tem. peer_id -> { moldura, nome_estilo, equipados }
+        const visualPorPeer = {};
+        const MOLDURAS_EXCLUSIVAS = ['gogeta', 'sasuke', 'fusao'];
+
+        function aplicarVisualAoCard(peerId) {
+            const card = document.getElementById(`vc-${peerId}`);
+            const v = visualPorPeer[peerId];
+            if (!card || !v) return;
+            const av = card.querySelector('.video-avatar');
+            if (av) {
+                trocarClasse(av, 'moldura-', classeMoldura(v.moldura));
+                av.querySelectorAll('.ef-av').forEach(e => e.remove());
+                const ef = (v.equipados || {}).efeito_avatar;
+                av.classList.toggle('com-ef', !!ef);
+                if (ef) av.insertAdjacentHTML('afterbegin', Cosm.htmlEfeitoAvatar(ef));
+            }
+            trocarClasse(card, 'fala-', Cosm.classeFala((v.equipados || {}).efeito_fala));
+        }
+        function registrarVisual(peerId, v) {
+            if (!peerId || !v) return;
+            visualPorPeer[peerId] = { moldura: v.moldura || '', nome_estilo: v.nome_estilo || '', equipados: v.equipados || {} };
+            aplicarVisualAoCard(peerId);
+        }
+        // Meu próprio card (e o efeito de fala dele): vem de perfilMeu
+        function aplicarMeuVisualNaCall() {
+            const meuAv = document.getElementById('my-avatar-placeholder');
+            if (!meuAv) return;
+            meuAv.className = 'video-avatar ' + classeMoldura(perfilMeu.moldura);
+            meuAv.querySelectorAll('.ef-av').forEach(e => e.remove());
+            const ef = (perfilMeu.equipados || {}).efeito_avatar;
+            meuAv.classList.toggle('com-ef', !!ef);
+            if (ef) meuAv.insertAdjacentHTML('afterbegin', Cosm.htmlEfeitoAvatar(ef));
+            const meuCard = meuAv.closest('.video-card');
+            if (meuCard) trocarClasse(meuCard, 'fala-', Cosm.classeFala((perfilMeu.equipados || {}).efeito_fala));
+        }
+
         socket.on('novo_usuario_call', (dados) => {
+            registrarVisual(dados.peer_id, dados);
             const voiceUsersDiv = document.getElementById(`voice-users-${dados.canal_id}`);
             if(voiceUsersDiv && !document.getElementById(`vu-${dados.peer_id}`)) {
                 const presence = document.createElement('div');
@@ -10663,6 +10853,7 @@
         // novo_usuario_call/usuario_saiu_call - não mexe aqui pra não
         // duplicar/piscar.
         socket.on('participantes_call_mudou', (dados) => {
+            (dados.participantes || []).forEach(p => registrarVisual(p.peer_id, p));
             if (inCall && String(currentVoiceChannelId) === String(dados.canal_id)) return;
 
             const box = document.getElementById(`voice-users-${dados.canal_id}`);
@@ -10716,7 +10907,10 @@
             videoGrid.appendChild(card);
             card.querySelector('video').srcObject = stream;
             aplicarSaida(card);
-            if (orn && orn.moldura) card.querySelector('.video-avatar').classList.add(...classeMoldura(orn.moldura).split(' ').filter(Boolean));
+            // O servidor já avisou quem é cada peer (visualPorPeer). Se o stream chegou antes do aviso, usa o metadata só
+            // pra molduras livres e corrige quando o aviso do servidor chegar.
+            if (visualPorPeer[peerId]) aplicarVisualAoCard(peerId);
+            else if (orn && orn.moldura && !MOLDURAS_EXCLUSIVAS.includes(orn.moldura)) card.querySelector('.video-avatar').classList.add(...classeMoldura(orn.moldura).split(' ').filter(Boolean));
 
             // Ligar/desligar câmera no meio da call não reabre a conexão -
             // só troca o sender por null (ver pararVideoParaAmigos) - então
@@ -11543,6 +11737,15 @@
             toque:   [[880, 0, .16], [1100, .2, .16], [880, .6, .16], [1100, .8, .16]],  // chamada chegando (em loop)
             ligando: [[440, 0, .45, .09], [480, 0, .45, .09]]                           // chamando (em loop)
         };
+        // Som de entrada equipado por quem entrou (só quem tem o item); sem ele, o bipe padrão.
+        function tocarSomDeEntrada(idSom) {
+            if (idSom) {
+                if (!somLigado() || perfilMeu.status === 'dnd') return;
+                const ctx = garantirAudio();
+                if (ctx && ctx.state === 'running' && Cosm.somEntrada(idSom, ctx)) return;
+            }
+            tocarSom('call_entrar');
+        }
         function tocarSom(tipo) {
             // "Não perturbar" cala o som (a notificação continua na caixa de entrada)
             if (!somLigado() || (typeof perfilMeu !== 'undefined' && perfilMeu.status === 'dnd')) return;
@@ -12553,7 +12756,7 @@
             if (d.subiu_nivel) tocarSom('nivel');
         });
         socket.on('missao_concluida', () => tocarSom('missao'));
-        socket.on('novo_usuario_call', () => tocarSom('call_entrar'));   // alguém entrou na call em que eu estou
+        socket.on('novo_usuario_call', (d) => tocarSomDeEntrada(((d && d.equipados) || {}).som_call));   // alguém entrou na call em que eu estou
         socket.on('usuario_saiu_call', () => tocarSom('call_sair'));
 
         // ---------- MARQUEE: texto grande rola devagar (3s parado no começo, vai até o fim, 3s, volta) ----------
