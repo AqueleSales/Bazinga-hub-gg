@@ -13,7 +13,7 @@ from datetime import timedelta
 
 from sqlalchemy.exc import OperationalError
 
-from .models import db, Channel, Server, MissaoProgresso, Person, br_now
+from .models import db, Channel, Server, MissaoProgresso, Person, br_now, server_members, channel_members
 
 
 def com_retry(fn, tentativas=4, espera=1.0):
@@ -57,6 +57,13 @@ def comitar_com_retry(preparar):
 # ==========================================
 # PERMISSÕES
 # ==========================================
+def eh_membro(usuario, server_id):
+    """True se a pessoa é membro do servidor (uma consulta leve, sem carregar a lista de membros)."""
+    return db.session.query(server_members.c.person_id).filter(
+        server_members.c.server_id == server_id,
+        server_members.c.person_id == usuario.id).first() is not None
+
+
 def pode_ver_canal(usuario, canal):
     """True se o usuário pode ler/escrever neste canal.
 
@@ -80,16 +87,20 @@ def pode_ver_canal(usuario, canal):
     # função (entrar_call, listar_participantes_call...) não tinha
     # try/except, o handler inteiro morria em silêncio - por isso às vezes
     # alguém "sumia" da call ou a prévia de quem já está nela não aparecia.
-    servidor = com_retry(lambda: Server.query.get(canal.server_id))
-    if servidor is None:
-        return False
-    if usuario not in servidor.members:
+    # Consultas pequenas e diretas (EXISTS) em vez de carregar a lista inteira de membros:
+    # em servidor grande, `usuario in servidor.members` baixava todo mundo a cada mensagem.
+    if not com_retry(lambda: eh_membro(usuario, canal.server_id)):
         return False
 
     if canal.is_private:
+        servidor = com_retry(lambda: Server.query.get(canal.server_id))
+        if servidor is None:
+            return False
         if servidor.owner_id == usuario.id:
             return True
-        return usuario in canal.allowed_members
+        return com_retry(lambda: db.session.query(channel_members.c.person_id).filter(
+            channel_members.c.channel_id == canal.id,
+            channel_members.c.person_id == usuario.id).first() is not None)
 
     return True
 
@@ -389,10 +400,12 @@ def _missao_para_json(linha):
     }
 
 
-def missoes_do_usuario(usuario):
+def missoes_do_usuario(usuario, linhas=None):
+    """`linhas` = (diárias, semanais) já carregadas - evita reler o banco logo depois de registrar_eventos."""
+    diarias, semanais = linhas if linhas else (_linhas_do_periodo(usuario, 'diaria'), _linhas_do_periodo(usuario, 'semanal'))
     return {
-        'diarias': [_missao_para_json(l) for l in _linhas_do_periodo(usuario, 'diaria')],
-        'semanais': [_missao_para_json(l) for l in _linhas_do_periodo(usuario, 'semanal')],
+        'diarias': [_missao_para_json(l) for l in diarias],
+        'semanais': [_missao_para_json(l) for l in semanais],
         'reseta_diarias': _segundos_ate_reset('diaria'),
         'reseta_semanais': _segundos_ate_reset('semanal'),
     }
@@ -405,7 +418,9 @@ def registrar_eventos(usuario, eventos, xp_extra=0, motivo=None):
     tempo ativo) somado na MESMA transação. Devolve None se nada mudou, ou
     {'missoes': payload, 'concluidas': [...], 'estado': estado_xp_ou_None}.
     """
-    linhas = [l for l in (_linhas_do_periodo(usuario, 'diaria') + _linhas_do_periodo(usuario, 'semanal'))
+    diarias = _linhas_do_periodo(usuario, 'diaria')
+    semanais = _linhas_do_periodo(usuario, 'semanal')
+    linhas = [l for l in (diarias + semanais)
               if not l.concluida and MISSOES[l.codigo]['evento'] in eventos]
     if not linhas and not xp_extra:
         return None
@@ -430,7 +445,7 @@ def registrar_eventos(usuario, eventos, xp_extra=0, motivo=None):
 
     ganho_total = xp_extra + sum(c['xp'] for c in concluidas)
     return {
-        'missoes': missoes_do_usuario(usuario),
+        'missoes': missoes_do_usuario(usuario, (diarias, semanais)),
         'concluidas': concluidas,
         'estado': _estado_xp(usuario, nivel_antes, ganho_total, motivo or ('missao' if concluidas else 'tempo')) if ganho_total else None,
     }
@@ -504,13 +519,59 @@ def url_de_imagem_ok(url):
         url.startswith('/') or url.startswith('https://res.cloudinary.com/') or bool(_RE_GIPHY.match(url)))
 
 
+_RE_AJUSTE = re.compile(r'^-?\d{1,2}(\.\d{1,3})?,-?\d{1,2}(\.\d{1,3})?,\d{1,2}(\.\d{1,3})?,[01],[01]$')
+
+
+def ajuste_de_imagem_valido(valor):
+    """Enquadramento de GIF: 'x,y,zoom,espelhoH,espelhoV' (frações, ex.: '-0.2,-0.1,1.5,0,0').
+    Vai parar num style="" no cliente de todo mundo, então só aceita esse formato."""
+    valor = (valor or '').strip()
+    return valor if valor and _RE_AJUSTE.match(valor) else None
+
+
 def tema_perfil_valido(valor):
-    """'' (sem tema), cor sólida, gradiente ou 'img:<url permitida>'."""
+    """'' (sem tema), cor sólida, gradiente ou 'img:<url permitida>[|ajuste]'."""
     if not valor:
         return True
     if valor.startswith('img:'):
-        return url_de_imagem_ok(valor[4:])
+        url, _, ajuste = valor[4:].partition('|')
+        if ajuste and not ajuste_de_imagem_valido(ajuste):
+            return False
+        return len(valor) <= 300 and url_de_imagem_ok(url)
     return bool(_RE_TEMA_COR.match(valor))
+
+
+# ==========================================
+# MAPA: raio de privacidade
+# ------------------------------------------------------------
+# Notas e servidores só aparecem (e só chegam ao navegador) dentro de um raio
+# ao redor de quem está olhando. Servidores têm alcance maior que notas.
+# O cliente recebe estes valores junto com os dados, então muda aqui e vale lá.
+# ==========================================
+RAIO_NOTAS_M = 2000
+RAIO_SERVIDORES_M = 15000
+MAX_NOTAS_ATIVAS_POR_PESSOA = 20
+DENUNCIAS_PARA_OCULTAR = 3
+MOTIVOS_DENUNCIA = ('+18', 'assedio', 'spam', 'ilegal', 'outro')
+
+
+def distancia_m(lat1, lng1, lat2, lng2):
+    """Distância em metros entre dois pontos (haversine)."""
+    from math import radians, sin, cos, asin, sqrt
+    p1, p2 = radians(lat1), radians(lat2)
+    dp, dl = p2 - p1, radians(lng2 - lng1)
+    a = sin(dp / 2) ** 2 + cos(p1) * cos(p2) * sin(dl / 2) ** 2
+    return 2 * 6371000 * asin(sqrt(a))
+
+
+def coordenada_valida(lat, lng):
+    try:
+        lat, lng = float(lat), float(lng)
+    except (TypeError, ValueError):
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return None
+    return lat, lng
 
 
 def username_valido(nome):
@@ -545,3 +606,170 @@ def garantir_username(usuario):
             usuario.username = gerar_username(usuario.name, usuario.email)
 
     comitar_com_retry(preparar)
+
+
+def dados_do_mapa_perto(lat, lng):
+    """Notas e servidores plantados dentro do raio de quem está olhando.
+
+    Só o que está perto sai do servidor (privacidade); o resto nem chega ao
+    navegador. Itens expirados ou escondidos por denúncia ficam de fora.
+    """
+    from math import cos, radians
+    from sqlalchemy import or_, and_
+    from sqlalchemy.orm import joinedload
+    from .models import GeoNote, MapServer
+
+    agora = br_now()
+
+    def caixa(r):
+        dlat = r / 111000.0
+        dlng = r / (111000.0 * max(0.2, cos(radians(lat))))
+        return lat - dlat, lat + dlat, lng - dlng, lng + dlng
+
+    a, b, c, d = caixa(RAIO_NOTAS_M)
+    # Nota ANTIGA sem prazo (criada antes de a duração passar a valer) só vale por 24h desde que
+    # nasceu - senão ficava eterna no mapa.
+    notas_db = GeoNote.query.filter(
+        GeoNote.lat.between(a, b), GeoNote.lng.between(c, d),
+        or_(GeoNote.expires_at > agora,
+            and_(GeoNote.expires_at == None, GeoNote.timestamp > agora - timedelta(hours=24))),   # noqa: E711
+        or_(GeoNote.oculta == None, GeoNote.oculta == False),            # noqa: E711,E712
+    ).options(joinedload(GeoNote.author)).all()
+    notas = [nota_para_json(n, agora) for n in notas_db
+             if distancia_m(lat, lng, n.lat, n.lng) <= RAIO_NOTAS_M]
+
+    a, b, c, d = caixa(RAIO_SERVIDORES_M)
+    servers_db = MapServer.query.filter(
+        MapServer.lat.between(a, b), MapServer.lng.between(c, d),
+        or_(MapServer.expires_at == None, MapServer.expires_at > agora),  # noqa: E711
+        or_(MapServer.oculta == None, MapServer.oculta == False),         # noqa: E711,E712
+    ).options(joinedload(MapServer.server), joinedload(MapServer.owner)).all()
+    servers = [servidor_mapa_para_json(s) for s in servers_db
+               if distancia_m(lat, lng, s.lat, s.lng) <= RAIO_SERVIDORES_M]
+
+    return {'notas': notas, 'servers': servers,
+            'raio_notas_m': RAIO_NOTAS_M, 'raio_servidores_m': RAIO_SERVIDORES_M}
+
+
+def nota_para_json(n, agora=None):
+    agora = agora or br_now()
+    restante = None
+    if n.expires_at:
+        restante = max(0, int((n.expires_at - agora).total_seconds()))
+    elif n.timestamp:       # nota antiga sem prazo: 24h a partir de quando nasceu
+        restante = max(0, int((n.timestamp + timedelta(hours=24) - agora).total_seconds()))
+    # autor_id/owner_id vão junto porque o frontend decidia quem é dono
+    # comparando o NOME - dois usuários com o mesmo nome do Google viam
+    # os botões de editar/apagar um do outro.
+    return {
+        'id': n.id, 'lat': n.lat, 'lng': n.lng, 'texto': n.text,
+        'autor': n.author.name if n.author else '???', 'autor_id': n.author_id,
+        'cor': n.color, 'icone': n.icone, 'restante_s': restante
+    }
+
+
+def servidor_mapa_para_json(s):
+    # Nome e ícone vêm do Servidor ligado, não da cópia feita na hora de plantar:
+    # senão renomear o servidor não mudava nada no mapa.
+    srv = s.server
+    return {
+        'id': s.id, 'lat': s.lat, 'lng': s.lng,
+        'name': srv.name if srv else s.name,
+        'icon_url': srv.icon_url if srv else None,
+        'banner_color': srv.banner_color if srv else None,
+        'description': srv.description if srv else None,
+        'owner': s.owner.name if s.owner else '???', 'owner_id': s.owner_id,
+        'vagas': s.max_tickets if s.max_tickets else 'ilimitado',
+        'online': len(srv.members) if srv else 1,
+        'server_id': s.server_id
+    }
+
+
+# ==========================================
+# GIF/animação: recorte no servidor (mantém a animação)
+# ------------------------------------------------------------
+# O <canvas> do navegador só captura UM quadro, então recortar GIF lá mata a animação. Aqui cada
+# quadro é espelhado/ampliado/recortado com o Pillow e o resultado sai como WebP animado (bem
+# menor que GIF). Mesma conta do editor de foto parada: cobre a área ("cover"), com zoom e
+# deslocamento em frações da área (ox/oy), pra que "o que eu vejo é o que sai".
+# ==========================================
+FORMATOS_ANIMADOS = {
+    'circulo': (256, 256), 'quadrado': (256, 256),
+    'faixa': (816, 260),      # mesma proporção da faixa do cartão (340x108)
+    'painel': (480, 608),     # fundo do cartão (300x380)
+}
+MAX_QUADROS_ANIMACAO = 90
+
+
+def recortar_animacao(dados, formato, escala=1.0, ox=0.0, oy=0.0, espelho_h=False, espelho_v=False):
+    """Recorta/ajusta uma animação (GIF, WebP animado...) e devolve os bytes de um WebP animado."""
+    from io import BytesIO
+    from PIL import Image, ImageOps, ImageSequence
+
+    SW, SH = FORMATOS_ANIMADOS.get(formato, FORMATOS_ANIMADOS['quadrado'])
+    escala = min(4.0, max(1.0, float(escala)))
+    ox, oy = min(10.0, max(-10.0, float(ox))), min(10.0, max(-10.0, float(oy)))
+
+    im = Image.open(BytesIO(dados))
+    total = getattr(im, 'n_frames', 1)
+    passo = max(1, -(-total // MAX_QUADROS_ANIMACAO))     # ceil: no máximo ~90 quadros
+
+    quadros, duracoes, acumulado = [], [], 0
+    for i, quadro in enumerate(ImageSequence.Iterator(im)):
+        acumulado += int(quadro.info.get('duration') or 100)
+        if i % passo:
+            continue
+        f = quadro.convert('RGBA')
+        if espelho_h:
+            f = ImageOps.mirror(f)
+        if espelho_v:
+            f = ImageOps.flip(f)
+        bw, bh = f.size
+        s = max(SW / bw, SH / bh) * escala
+        f = f.resize((max(1, round(bw * s)), max(1, round(bh * s))), Image.LANCZOS)
+        tela = Image.new('RGBA', (SW, SH), (0, 0, 0, 0))
+        tela.paste(f, (round(ox * SW), round(oy * SH)))
+        quadros.append(tela)
+        duracoes.append(max(20, acumulado))
+        acumulado = 0
+
+    saida = BytesIO()
+    if len(quadros) == 1:
+        quadros[0].save(saida, format='WEBP', quality=88)
+    else:
+        quadros[0].save(saida, format='WEBP', save_all=True, append_images=quadros[1:],
+                        duration=duracoes, loop=0, quality=78, method=3)
+    return saida.getvalue()
+
+
+# ------------------------------------------------------------
+# Vídeo -> animação SEM ffmpeg: o navegador decodifica o vídeo (ele já sabe), tira ~12 quadros por
+# segundo num canvas e manda os JPEGs; aqui o Pillow só monta o WebP animado. O resultado entra no
+# mesmo editor de GIF (arrastar/zoom/espelhar) e no mesmo /api/gif/recortar.
+# ------------------------------------------------------------
+MAX_LADO_QUADRO_VIDEO = 800
+MAX_FPS_VIDEO = 15
+
+
+def animar_quadros(lista_bytes, fps):
+    """Junta quadros JPEG (na ordem) num WebP animado e devolve os bytes."""
+    from io import BytesIO
+    from PIL import Image
+
+    fps = min(MAX_FPS_VIDEO, max(1, int(fps)))
+    quadros, tamanho = [], None
+    for dados in lista_bytes[:MAX_QUADROS_ANIMACAO]:
+        im = Image.open(BytesIO(dados)).convert('RGB')
+        im.thumbnail((MAX_LADO_QUADRO_VIDEO, MAX_LADO_QUADRO_VIDEO), Image.LANCZOS)
+        if tamanho is None:
+            tamanho = im.size
+        elif im.size != tamanho:
+            im = im.resize(tamanho, Image.LANCZOS)
+        quadros.append(im)
+    if len(quadros) < 2:
+        raise ValueError('quadros insuficientes')
+
+    saida = BytesIO()
+    quadros[0].save(saida, format='WEBP', save_all=True, append_images=quadros[1:],
+                    duration=round(1000 / fps), loop=0, quality=75, method=3)
+    return saida.getvalue()

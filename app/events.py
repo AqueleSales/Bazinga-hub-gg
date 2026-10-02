@@ -1,21 +1,25 @@
 from flask import session, request
 from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload
 from datetime import timedelta
 import re
 import time
 from . import socketio
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
-                     GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product)
+                     GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product,
+                     Denuncia, Notificacao, Silenciado, server_members, channel_members)
 from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
                     BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
                     ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok,
-                    tema_perfil_valido, username_valido)
+                    tema_perfil_valido, username_valido, ajuste_de_imagem_valido,
+                    distancia_m, coordenada_valida, dados_do_mapa_perto, nota_para_json,
+                    servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
+                    MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
 
 
 def usuario_logado():
@@ -24,7 +28,7 @@ def usuario_logado():
     if not user_id:
         return None
     try:
-        return com_retry(lambda: Person.query.get(user_id))
+        return com_retry(lambda: Person.query.options(joinedload(Person.role)).get(user_id))
     except SQLAlchemyError as e:
         db.session.rollback()
         # Se isso aparecer, o banco provavelmente está com colunas faltando -
@@ -171,17 +175,40 @@ def canal_para_json(c):
     }
 
 
-def servidor_para_json(srv, usuario=None):
-    """Servidor + canais. Canal privado só entra na lista de quem tem acesso.
+def _dados_de_servidores(servidores):
+    """Canais, quem pode ver cada canal privado e contagem de membros de VÁRIOS servidores
+    em 3 consultas no total (antes eram ~5 por servidor, e carregava todos os membros)."""
+    servidores = list(servidores)
+    ids = [s.id for s in servidores]
+    if not ids:
+        return {}, {}, {}
+    canais = Channel.query.filter(Channel.server_id.in_(ids)).order_by(
+        Channel.server_id.asc(), Channel.position.asc(), Channel.id.asc()).all()
+    privados = [c.id for c in canais if c.is_private]
+    permitidos = {}
+    if privados:
+        for cid, pid in db.session.query(channel_members.c.channel_id, channel_members.c.person_id).filter(
+                channel_members.c.channel_id.in_(privados)).all():
+            permitidos.setdefault(cid, set()).add(pid)
+    contagem = dict(db.session.query(server_members.c.server_id, func.count(server_members.c.person_id)).filter(
+        server_members.c.server_id.in_(ids)).group_by(server_members.c.server_id).all())
+    return canais, permitidos, contagem
 
-    Sem o `usuario`, devolve todos os canais - use só quando o destinatário
-    for o próprio dono.
-    """
-    canais = Channel.query.filter_by(server_id=srv.id).order_by(
-        Channel.position.asc(), Channel.id.asc()).all()
-    if usuario is not None:
-        canais = [c for c in canais if pode_ver_canal(usuario, c)]
 
+def _json_de_servidor(srv, dados, usuario=None):
+    canais, permitidos, contagem = dados
+    visiveis = []
+    for c in canais:
+        if c.server_id != srv.id:
+            continue
+        # mesma regra do pode_ver_canal para quem já é membro: canal privado só pro dono e convidados
+        if usuario is not None and c.is_private and usuario.id != srv.owner_id and usuario.id not in permitidos.get(c.id, ()):
+            continue
+        visiveis.append({
+            'id': c.id, 'name': c.name, 'type': c.channel_type, 'topic': c.topic,
+            'is_private': bool(c.is_private),
+            'membros': sorted(permitidos.get(c.id, ())) if c.is_private else []
+        })
     return {
         'id': srv.id,
         'name': srv.name,
@@ -189,9 +216,26 @@ def servidor_para_json(srv, usuario=None):
         'description': srv.description,
         'bannerColor': srv.banner_color,
         'owner_id': srv.owner_id,
-        'membros': len(srv.members),
-        'channels': [canal_para_json(c) for c in canais]
+        'membros': contagem.get(srv.id, 0),
+        'channels': visiveis
     }
+
+
+def servidores_para_json(servidores, usuario=None):
+    """Vários servidores de uma vez (barra lateral, conexão). Canal privado só entra
+    na lista de quem tem acesso; sem `usuario` devolve todos os canais (só pro dono)."""
+    servidores = list(servidores)
+    dados = _dados_de_servidores(servidores)
+    return [_json_de_servidor(s, dados, usuario) for s in servidores]
+
+
+def servidor_para_json(srv, usuario=None):
+    """Servidor + canais. Canal privado só entra na lista de quem tem acesso.
+
+    Sem o `usuario`, devolve todos os canais - use só quando o destinatário
+    for o próprio dono.
+    """
+    return servidores_para_json([srv], usuario)[0]
 
 
 def avisar_servidor(srv):
@@ -201,8 +245,9 @@ def avisar_servidor(srv):
     membro recebe a sua própria versão, porque a lista de canais depende de
     quais canais privados a pessoa pode ver.
     """
+    dados = _dados_de_servidores([srv])
     for membro in srv.members:
-        emit('servidor_discord_criado', servidor_para_json(srv, membro),
+        emit('servidor_discord_criado', _json_de_servidor(srv, dados, membro),
              to=sala_pessoal(membro.id))
 
 
@@ -267,8 +312,9 @@ def handle_connect():
     try:
         join_room(sala_pessoal(usuario.id))
 
-        servidores = [servidor_para_json(srv, usuario) for srv in usuario.servers]
-        for srv in usuario.servers:
+        meus_servidores = list(usuario.servers)
+        servidores = servidores_para_json(meus_servidores, usuario)
+        for srv in meus_servidores:
             join_room(sala_servidor(srv.id))
 
         emit('carregar_meus_servidores', servidores)
@@ -296,28 +342,41 @@ def handle_connect():
             db.session.rollback()
             print(f"[ERRO MISSOES CONNECT] {e}")
 
+        # Amizades (amigos, pedidos de 24h, bloqueados), DMs não lidas e caixa de entrada
+        # já na conexão: a tela de Amigos e os badges nascem certos, em qualquer aparelho.
+        # O retrato das amizades também serve pra avisar presença (abaixo): uma consulta só.
+        snap_amizades = None
+        try:
+            snap_amizades = montar_amizades(usuario)
+            emit('amizades', snap_amizades)
+            emit('dms_nao_lidas', contagem_dms_nao_lidas(usuario))
+            enviar_notificacoes(usuario)
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO CONNECT SOCIAL] {e}")
+
         # Só avisa quem divide servidor com ela quando é o PRIMEIRO socket
         # dela (outra aba/dispositivo já conectado não deve gerar aviso de novo).
         era_offline = not esta_online(usuario.id)
         usuarios_conectados[usuario.id] = usuarios_conectados.get(usuario.id, 0) + 1
-        amigos = amigos_de(usuario)
+        amigos_snap = (snap_amizades or {}).get('amigos', [])
         if era_offline and (usuario.status or 'online') != 'invisible':
             aviso = {'usuario_id': usuario.id, 'status': usuario.status or 'online', 'emoji': emoji_do_status(usuario),
                      'texto': texto_do_status(usuario)}
-            for srv in usuario.servers:
+            for srv in meus_servidores:
                 emit('usuario_ficou_online', aviso, to=sala_servidor(srv.id), include_self=False)
-            for amigo in amigos:
-                emit('usuario_ficou_online', aviso, to=sala_pessoal(amigo.id))
+            for a in amigos_snap:
+                emit('usuario_ficou_online', aviso, to=sala_pessoal(a['id']))
 
         # Snapshot de quem já tá online agora, pra corrigir a lista de amigos
         # que a página carregou "todo mundo offline" por padrão. Quem está
         # Invisível fica de fora (e o status de cada um vai junto).
-        visiveis = {a.id: status_visivel(a) for a in amigos}
+        on = [a for a in amigos_snap if a['online']]
         emit('status_amigos_ao_conectar', {
-            'online_ids': [i for i, st in visiveis.items() if st != 'offline'],
-            'status_por_id': {str(i): st for i, st in visiveis.items() if st != 'offline'},
-            'emoji_por_id': {str(a.id): emoji_do_status(a) for a in amigos if visiveis[a.id] != 'offline' and emoji_do_status(a)},
-            'texto_por_id': {str(a.id): texto_do_status(a) for a in amigos if visiveis[a.id] != 'offline' and texto_do_status(a)}
+            'online_ids': [a['id'] for a in on],
+            'status_por_id': {str(a['id']): a['status'] for a in on},
+            'emoji_por_id': {str(a['id']): a['emoji'] for a in on if a['emoji']},
+            'texto_por_id': {str(a['id']): a['status_texto'] for a in on if a['status_texto']}
         })
     except Exception as e:
         db.session.rollback()
@@ -330,6 +389,7 @@ def handle_disconnect():
     # beforeunload do navegador manda isso, e ele nem sempre roda a tempo) -
     # sem isso, quem caiu ficava "fantasma" na prévia de participantes da
     # call pro resto da sessão de todo mundo.
+    centros_mapa.pop(request.sid, None)
     call_info = _call_por_sid.pop(request.sid, None)
     if call_info:
         chave, peer_id = call_info
@@ -412,6 +472,8 @@ def _notificar_mencoes(autor, canal, msg):
                     'canal_id': canal.id, 'canal_nome': canal.name, 'server_id': canal.server_id,
                     'autor': autor.name, 'trecho': trecho, 'msg_id': msg.id
                 }, to=sala_pessoal(alvo.id))
+                criar_notificacao(alvo.id, 'mencao', f'{autor.name} te citou em #{canal.name}', trecho,
+                                  de_id=autor.id, ref=f'{canal.server_id}:{canal.id}')
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MENCOES] {e}")
@@ -468,8 +530,9 @@ def lidar_com_mensagem(dados):
 
     cor = usuario.role.color if usuario.role else '#23a559'
 
-    emit('receber_mensagem', {
+    payload_msg = {
         'id': nova_msg.id,
+        'canal_id': canal.id,
         'usuario': usuario.name,
         'usuario_id': usuario.id,
         'avatar': usuario.avatar,
@@ -482,7 +545,12 @@ def lidar_com_mensagem(dados):
         # Ecoa de volta pra quem mandou trocar a bolha otimista pela real
         # sem duplicar (ver enviarMensagemOtimista() no chat.html).
         'temp_id': temp_id_seguro(dados)
-    }, to=str(canal.id))
+    }
+    emit('receber_mensagem', payload_msg, to=str(canal.id))
+    # Quem mandou recebe a confirmação mesmo que o socket dele tenha saído da sala do canal
+    # (reconexão, troca de aba): sem isso a bolha ficava "pendente" até o F5. O cliente
+    # ignora a repetição pelo id da mensagem.
+    emit('receber_mensagem', payload_msg, to=request.sid)
 
     # Battle Pass: XP por mensagem (com cooldown - ver conceder_xp_por_mensagem).
     # Só pra quem mandou, não pra sala inteira - ninguém mais precisa saber.
@@ -1353,7 +1421,25 @@ def entrar_servidor_pin(dados):
 
 # ==========================================
 # MAPA: Notas HQ (GeoNote) e Servidores Plantados (MapServer)
+# ------------------------------------------------------------
+# PRIVACIDADE POR RAIO: nota e servidor só chegam ao navegador de quem está perto
+# (RAIO_NOTAS_M / RAIO_SERVIDORES_M em utils.py; servidor tem alcance maior).
+# `centros_mapa` guarda, em memória, onde cada socket está olhando - é o que decide
+# quem recebe cada aviso ao vivo. Nunca é repassado a ninguém (vale também no Modo
+# Fantasma: a posição só serve pro servidor filtrar, não aparece pra outros).
 # ==========================================
+centros_mapa = {}   # sid -> (lat, lng)
+
+
+def _emitir_perto(evento, payload, lat, lng, raio_m, tambem_sid=None):
+    """Manda só pra quem está dentro do raio (mais quem fez a ação)."""
+    alvos = {sid for sid, (la, ln) in list(centros_mapa.items()) if distancia_m(lat, lng, la, ln) <= raio_m}
+    if tambem_sid:
+        alvos.add(tambem_sid)
+    for sid in alvos:
+        emit(evento, payload, to=sid)
+
+
 def _parse_ilimitado(valor):
     """Converte 'ilimitado'/'permanente'/vazio em None, senão retorna int."""
     if valor is None:
@@ -1367,6 +1453,37 @@ def _parse_ilimitado(valor):
         return None
 
 
+def _dentro_do_alcance(pos, raio_m):
+    """True se `pos` está dentro do raio do que este socket está olhando.
+    Sem centro conhecido (ainda não mandou posição) não dá pra checar: deixa passar."""
+    centro = centros_mapa.get(request.sid)
+    return centro is None or distancia_m(centro[0], centro[1], pos[0], pos[1]) <= raio_m * 1.15
+
+
+@socketio.on('mapa_pedir_arredores')
+def mapa_pedir_arredores(dados):
+    """O cliente avisa onde está olhando e recebe SÓ o que está no raio."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    pos = coordenada_valida((dados or {}).get('lat'), (dados or {}).get('lng'))
+    if not pos:
+        return
+    centros_mapa[request.sid] = pos
+    try:
+        d = com_retry(lambda: dados_do_mapa_perto(*pos))
+        d['centro'] = {'lat': pos[0], 'lng': pos[1]}
+        emit('mapa_arredores', d)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MAPA ARREDORES] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível carregar o mapa: {e}'})
+
+
+def _validar_nota_texto(dados):
+    return (dados.get('texto') or '').strip()[:280]
+
+
 @socketio.on('criar_geonote')
 def criar_geonote(dados):
     usuario = usuario_logado()
@@ -1374,29 +1491,43 @@ def criar_geonote(dados):
         return
 
     try:
-        texto = (dados.get('texto') or '').strip()[:280] or "Loot raro aqui!"
+        pos = coordenada_valida(dados.get('lat'), dados.get('lng'))
+        if not pos:
+            emit('erro_bazinga', {'msg': 'Local inválido para a nota.'})
+            return
+        if not _dentro_do_alcance(pos, RAIO_NOTAS_M):
+            emit('erro_bazinga', {'msg': 'Esse ponto está fora do seu alcance - chegue mais perto pra deixar a nota.'})
+            return
+
+        texto = _validar_nota_texto(dados) or "Loot raro aqui!"
         cor = dados.get('cor') or '#5865F2'
+        icone = (dados.get('icone') or '').strip()[:16] or None
         # Duração: o modelo e o /api/mapa/dados já filtram por expires_at, mas
         # isso aqui nunca era preenchido - toda nota virava eterna.
         duracao = _parse_ilimitado(dados.get('duracao'))
-        expira_em = br_now() + timedelta(hours=duracao) if duracao else None
+        agora = br_now()
+        expira_em = agora + timedelta(hours=duracao) if duracao else None
+
+        ativas = com_retry(lambda: GeoNote.query.filter(
+            GeoNote.author_id == usuario.id,
+            or_(GeoNote.expires_at == None, GeoNote.expires_at > agora)).count())  # noqa: E711
+        if ativas >= MAX_NOTAS_ATIVAS_POR_PESSOA:
+            emit('erro_bazinga', {'msg': f'Você já tem {ativas} notas ativas no mapa (o limite é {MAX_NOTAS_ATIVAS_POR_PESSOA}). Apague alguma antes.'})
+            return
 
         def preparar():
+            # Faxina de quebra: nota vencida há mais de 1 dia não serve pra nada.
+            GeoNote.query.filter(GeoNote.expires_at != None, GeoNote.expires_at < agora - timedelta(days=1)).delete()  # noqa: E711
             nota = GeoNote(
-                lat=float(dados['lat']), lng=float(dados['lng']),
-                text=texto, color=cor, author_id=usuario.id,
-                duration_hours=duracao, expires_at=expira_em
+                lat=pos[0], lng=pos[1], text=texto, color=cor, icone=icone,
+                author_id=usuario.id, duration_hours=duracao, expires_at=expira_em
             )
             db.session.add(nota)
             return nota
 
         nota = comitar_com_retry(preparar)
 
-        emit('nova_geonote', {
-            'id': nota.id, 'lat': nota.lat, 'lng': nota.lng,
-            'texto': nota.text, 'autor': usuario.name, 'autor_id': usuario.id,
-            'cor': nota.color
-        }, broadcast=True)
+        _emitir_perto('nova_geonote', nota_para_json(nota), nota.lat, nota.lng, RAIO_NOTAS_M, tambem_sid=request.sid)
         _emitir_progresso(usuario, {'nota': 1})
     except Exception as e:
         db.session.rollback()
@@ -1417,15 +1548,14 @@ def editar_geonote(dados):
 
         def preparar():
             if 'texto' in dados:
-                nota.text = (dados.get('texto') or '').strip()[:280] or nota.text
+                nota.text = _validar_nota_texto(dados) or nota.text
             if 'cor' in dados:
                 nota.color = dados.get('cor') or nota.color
+            if 'icone' in dados:
+                nota.icone = (dados.get('icone') or '').strip()[:16] or None
 
         comitar_com_retry(preparar)
-
-        emit('geonote_editada', {
-            'id': nota.id, 'texto': nota.text, 'cor': nota.color
-        }, broadcast=True)
+        _emitir_perto('geonote_editada', nota_para_json(nota), nota.lat, nota.lng, RAIO_NOTAS_M, tambem_sid=request.sid)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO EDITAR GEONOTE] {e}")
@@ -1448,11 +1578,59 @@ def apagar_geonote(dados):
             db.session.delete(nota)
 
         comitar_com_retry(preparar)
+        # Só o id vai pra todo mundo (não vaza nada) - quem tinha a nota na tela tira.
         emit('geonote_apagada', {'id': nota_id}, broadcast=True)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO APAGAR GEONOTE] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível apagar a nota: {e}'})
+
+
+@socketio.on('copiar_geonote')
+def copiar_geonote(dados):
+    """Copia uma nota que a pessoa está vendo pra dentro do SEU alcance. Não copia
+    link nem texto pra área de transferência - cria uma nota nova, dela, igual à outra."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    try:
+        centro = centros_mapa.get(request.sid)
+        nota = com_retry(lambda: GeoNote.query.get(dados.get('id')))
+        agora = br_now()
+        if not centro or not nota or nota.oculta or (nota.expires_at and nota.expires_at <= agora):
+            emit('erro_bazinga', {'msg': 'Essa nota não está mais disponível.'})
+            return
+        if distancia_m(centro[0], centro[1], nota.lat, nota.lng) > RAIO_NOTAS_M * 1.15:
+            emit('erro_bazinga', {'msg': 'Essa nota está longe demais pra copiar.'})
+            return
+
+        pos = coordenada_valida(dados.get('lat'), dados.get('lng')) or centro
+        if distancia_m(centro[0], centro[1], pos[0], pos[1]) > RAIO_NOTAS_M * 1.15:
+            pos = centro
+
+        ativas = com_retry(lambda: GeoNote.query.filter(
+            GeoNote.author_id == usuario.id,
+            or_(GeoNote.expires_at == None, GeoNote.expires_at > agora)).count())  # noqa: E711
+        if ativas >= MAX_NOTAS_ATIVAS_POR_PESSOA:
+            emit('erro_bazinga', {'msg': f'Você já tem {ativas} notas ativas (limite {MAX_NOTAS_ATIVAS_POR_PESSOA}).'})
+            return
+
+        horas = nota.duration_hours or 24
+
+        def preparar():
+            copia = GeoNote(lat=pos[0], lng=pos[1], text=nota.text, color=nota.color, icone=nota.icone,
+                            author_id=usuario.id, duration_hours=horas, expires_at=agora + timedelta(hours=horas))
+            db.session.add(copia)
+            return copia
+
+        copia = comitar_com_retry(preparar)
+        _emitir_perto('nova_geonote', nota_para_json(copia), copia.lat, copia.lng, RAIO_NOTAS_M, tambem_sid=request.sid)
+        emit('nota_copiada', {'id': copia.id})
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO COPIAR GEONOTE] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível copiar a nota: {e}'})
 
 
 @socketio.on('plantar_servidor')
@@ -1468,13 +1646,21 @@ def plantar_servidor(dados):
             emit('erro_bazinga', {'msg': 'Você só pode plantar um servidor que você é dono.'})
             return
 
+        pos = coordenada_valida(dados.get('lat'), dados.get('lng'))
+        if not pos:
+            emit('erro_bazinga', {'msg': 'Local inválido para o servidor.'})
+            return
+        if not _dentro_do_alcance(pos, RAIO_SERVIDORES_M):
+            emit('erro_bazinga', {'msg': 'Esse ponto está fora do seu alcance.'})
+            return
+
         vagas = _parse_ilimitado(dados.get('vagas'))
         duracao = _parse_ilimitado(dados.get('duracao'))
         expira_em = br_now() + timedelta(hours=duracao) if duracao else None
 
         def preparar():
             pino = MapServer(
-                name=srv.name, lat=float(dados['lat']), lng=float(dados['lng']),
+                name=srv.name, lat=pos[0], lng=pos[1],
                 max_tickets=vagas, duration_hours=duracao, expires_at=expira_em,
                 owner_id=usuario.id, server_id=srv.id
             )
@@ -1483,14 +1669,8 @@ def plantar_servidor(dados):
 
         pino = comitar_com_retry(preparar)
 
-        emit('novo_servidor_mapa', {
-            'id': pino.id, 'lat': pino.lat, 'lng': pino.lng,
-            'nome': srv.name, 'icon_url': srv.icon_url,
-            'owner': usuario.name, 'owner_id': usuario.id,
-            'vagas': vagas if vagas else 'ilimitado',
-            'online': len(srv.members),
-            'server_id': srv.id
-        }, broadcast=True)
+        _emitir_perto('novo_servidor_mapa', servidor_mapa_para_json(pino), pino.lat, pino.lng,
+                      RAIO_SERVIDORES_M, tambem_sid=request.sid)
         _emitir_progresso(usuario, {'plantar': 1})
     except Exception as e:
         db.session.rollback()
@@ -1518,15 +1698,8 @@ def editar_servidor_mapa(dados):
             pino.expires_at = br_now() + timedelta(hours=duracao) if duracao else None
 
         comitar_com_retry(preparar)
-
-        srv = Server.query.get(pino.server_id) if pino.server_id else None
-        emit('servidor_mapa_editado', {
-            'id': pino.id,
-            'nome': srv.name if srv else pino.name,
-            'icon_url': srv.icon_url if srv else None,
-            'vagas': vagas if vagas else 'ilimitado',
-            'online': len(srv.members) if srv else 1
-        }, broadcast=True)
+        _emitir_perto('servidor_mapa_editado', servidor_mapa_para_json(pino), pino.lat, pino.lng,
+                      RAIO_SERVIDORES_M, tambem_sid=request.sid)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO EDITAR SERVIDOR MAPA] {e}")
@@ -1556,6 +1729,63 @@ def apagar_servidor_mapa(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível apagar o servidor plantado: {e}'})
 
 
+@socketio.on('denunciar')
+def denunciar(dados):
+    """Denuncia uma nota ou um servidor plantado (conteúdo +18, assédio, spam...).
+    Com DENUNCIAS_PARA_OCULTAR pessoas diferentes denunciando, o alvo some do mapa
+    até alguém revisar. Quem denuncia também deixa de ver na hora (cliente)."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    tipo = (dados or {}).get('tipo')
+    motivo = (dados or {}).get('motivo')
+    if tipo not in ('nota', 'servidor', 'usuario') or motivo not in MOTIVOS_DENUNCIA:
+        emit('erro_bazinga', {'msg': 'Denúncia inválida.'})
+        return
+    try:
+        alvo_id = int(dados.get('id'))
+    except (TypeError, ValueError):
+        return
+
+    try:
+        modelo = {'nota': GeoNote, 'servidor': MapServer, 'usuario': Person}[tipo]
+        alvo = com_retry(lambda: modelo.query.get(alvo_id))
+        if not alvo:
+            emit('erro_bazinga', {'msg': 'Isso já não existe mais.'})
+            return
+        dono_id = alvo.id if tipo == 'usuario' else (alvo.author_id if tipo == 'nota' else alvo.owner_id)
+        if dono_id == usuario.id:
+            emit('erro_bazinga', {'msg': 'Você não pode denunciar o seu próprio conteúdo.'})
+            return
+        if com_retry(lambda: Denuncia.query.filter_by(denunciante_id=usuario.id, tipo=tipo, alvo_id=alvo_id).first()):
+            emit('denuncia_registrada', {'tipo': tipo, 'id': alvo_id, 'repetida': True})
+            return
+
+        detalhe = (dados.get('detalhe') or '').strip()[:300] or None
+        escondeu = {'v': False}
+
+        def preparar():
+            db.session.add(Denuncia(denunciante_id=usuario.id, tipo=tipo, alvo_id=alvo_id, motivo=motivo, detalhe=detalhe))
+            db.session.flush()
+            total = Denuncia.query.filter_by(tipo=tipo, alvo_id=alvo_id).count()
+            # Pessoa denunciada não "some": a denúncia fica registrada pra revisão humana.
+            if tipo != 'usuario' and total >= DENUNCIAS_PARA_OCULTAR and not alvo.oculta:
+                alvo.oculta = True
+                escondeu['v'] = True
+
+        comitar_com_retry(preparar)
+        emit('denuncia_registrada', {'tipo': tipo, 'id': alvo_id})
+        if escondeu['v']:
+            evento = 'geonote_apagada' if tipo == 'nota' else 'servidor_mapa_apagado'
+            emit(evento, {'id': alvo_id}, broadcast=True)
+        print(f"[DENUNCIA] {usuario.name} denunciou {tipo} #{alvo_id} ({motivo})")
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO DENUNCIAR] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível registrar a denúncia: {e}'})
+
+
 @socketio.on('atualizar_localizacao')
 def atualizar_localizacao(dados):
     """Posição ao vivo: não é persistida no banco.
@@ -1568,6 +1798,14 @@ def atualizar_localizacao(dados):
     if not usuario:
         return
 
+    pos = coordenada_valida((dados or {}).get('lat'), (dados or {}).get('lng'))
+    if not pos:
+        return
+
+    # O servidor sempre sabe onde este socket está olhando (pro filtro por raio),
+    # mas isso nunca sai daqui - o Fantasma só controla se OUTROS veem o pino.
+    centros_mapa[request.sid] = pos
+
     # Fantasma valendo de verdade: a posição nem sai do servidor. Antes só o
     # navegador se continha, então um cliente adulterado (ou o teletransporte
     # por duplo clique) vazava a posição mesmo com o modo ligado.
@@ -1579,8 +1817,8 @@ def atualizar_localizacao(dados):
             'usuario_id': usuario.id,
             'nome': usuario.name,
             'avatar': usuario.avatar,
-            'lat': float(dados['lat']),
-            'lng': float(dados['lng'])
+            'lat': pos[0],
+            'lng': pos[1]
         }
         for srv in usuario.servers:
             emit('posicao_amigo_atualizada', payload,
@@ -1631,10 +1869,16 @@ def atualizar_perfil(dados):
             if 'pronomes' in dados:
                 usuario.pronomes = (dados.get('pronomes') or '').strip()[:40] or None
             if 'banner_url' in dados:
-                # Só caminho do próprio site ou Cloudinary (mesma regra dos anexos);
-                # vazio limpa e volta pra cor.
+                # Caminho do site, Cloudinary ou Giphy (mesma regra do avatar e do tema -
+                # antes só aceitava os dois primeiros, então o GIF escolhido nas
+                # sugestões era descartado em silêncio e a faixa "não salvava").
+                # Vazio limpa e volta pra cor.
                 url = (dados.get('banner_url') or '').strip()
-                usuario.banner_url = url[:255] if url.startswith('/') or url.startswith('https://res.cloudinary.com/') else None
+                usuario.banner_url = url if url_de_imagem_ok(url) else None
+                if not usuario.banner_url:
+                    usuario.banner_ajuste = None
+            if 'banner_ajuste' in dados:
+                usuario.banner_ajuste = ajuste_de_imagem_valido(dados.get('banner_ajuste')) if usuario.banner_url else None
             if 'status_emoji' in dados:
                 usuario.status_emoji = (dados.get('status_emoji') or '').strip()[:16] or None
             if 'pensando' in dados:
@@ -1666,6 +1910,7 @@ def atualizar_perfil(dados):
             'bio': usuario.bio,
             'banner_color': usuario.banner_color,
             'banner_url': usuario.banner_url,
+            'banner_ajuste': usuario.banner_ajuste,
             'pronomes': usuario.pronomes,
             'username': usuario.username,
             'status_emoji': usuario.status_emoji,
@@ -1834,6 +2079,7 @@ def obter_perfil(dados):
             'perfil_tema': alvo.perfil_tema, 'nome_estilo': alvo.nome_estilo,
             'placa': alvo.placa, 'moldura': alvo.moldura,
             'banner_color': alvo.banner_color, 'banner_url': alvo.banner_url,
+            'banner_ajuste': alvo.banner_ajuste,
             'status': (alvo.status or 'online') if sou_eu else status_visivel(alvo),
             'membro_desde': membro_desde_texto(alvo.created_at),
             'nivel': nivel, 'titulo': titulo_do_nivel(nivel),
@@ -1854,10 +2100,176 @@ def obter_perfil(dados):
 # ==========================================
 def pessoa_para_json_amigo(p):
     sv = status_visivel(p)
-    return {'id': p.id, 'nome': p.name, 'avatar': p.avatar,
+    return {'id': p.id, 'nome': p.name, 'avatar': p.avatar, 'username': p.username,
             'status': sv if sv != 'offline' else (p.status or 'online'), 'online': sv != 'offline',
             'emoji': emoji_do_status(p), 'status_texto': texto_do_status(p), 'pensando': p.pensando,
             'placa': p.placa, 'nome_estilo': p.nome_estilo}
+
+
+# ------------------------------------------------------------
+# Regras do pedido de amizade
+#   - quem ENVIA fica "aguardando" (não tem botão de aceitar o próprio pedido);
+#   - quem RECEBE vê a pessoa na lista de DMs como temporária, com Aceitar /
+#     Recusar / Bloquear, e na tela de Amigos > Pendente;
+#   - o pedido vale 24h (VALIDADE_PEDIDO) e some sozinho depois;
+#   - bloqueio: quem bloqueou é o `requester_id` da linha 'blocked'.
+# ------------------------------------------------------------
+VALIDADE_PEDIDO = timedelta(hours=24)
+
+
+def relacao_entre(id1, id2):
+    """Linha de Friendship entre duas pessoas (qualquer sentido/status), ou None."""
+    return Friendship.query.filter(
+        or_(and_(Friendship.requester_id == id1, Friendship.addressee_id == id2),
+            and_(Friendship.requester_id == id2, Friendship.addressee_id == id1))
+    ).first()
+
+
+def pedido_expirou(f):
+    return f.status == 'pending' and f.created_at is not None and br_now() - f.created_at > VALIDADE_PEDIDO
+
+
+def limpar_pedidos_expirados(pessoa_id):
+    """Apaga os pedidos pendentes com mais de 24h que envolvem a pessoa."""
+    corte = br_now() - VALIDADE_PEDIDO
+    velhos = Friendship.query.filter(
+        Friendship.status == 'pending', Friendship.created_at < corte,
+        or_(Friendship.requester_id == pessoa_id, Friendship.addressee_id == pessoa_id)).all()
+    if velhos:
+        ids = [f.id for f in velhos]
+        pares = [(f.requester_id, f.addressee_id) for f in velhos]
+
+        def preparar():
+            Friendship.query.filter(Friendship.id.in_(ids)).delete(synchronize_session=False)
+            # Mensagem entre quem NÃO virou amigo é temporária: some junto com o pedido.
+            for a, b in pares:
+                DirectMessage.query.filter(
+                    or_(and_(DirectMessage.sender_id == a, DirectMessage.receiver_id == b),
+                        and_(DirectMessage.sender_id == b, DirectMessage.receiver_id == a))
+                ).delete(synchronize_session=False)
+
+        comitar_com_retry(preparar)
+    return len(velhos)
+
+
+def compartilham_servidor(a, b):
+    return bool({s.id for s in a.servers} & {s.id for s in b.servers})
+
+
+def pode_trocar_dm(usuario, destinatario):
+    """DM só entre quem se conhece: a si mesmo (Anotações), amigos, pedido de amizade
+    pendente (em qualquer sentido) ou quem divide um servidor. Bloqueio corta tudo.
+    Antes qualquer pessoa mandava DM pra qualquer id do banco."""
+    if usuario.id == destinatario.id:
+        return True
+    rel = relacao_entre(usuario.id, destinatario.id)
+    if rel:
+        if rel.status == 'blocked':
+            return False
+        if rel.status == 'accepted':
+            return True
+        if rel.status == 'pending' and not pedido_expirou(rel):
+            return True
+    return compartilham_servidor(usuario, destinatario)
+
+
+def _pedido_json(f, eu_id):
+    enviado = f.requester_id == eu_id
+    outro = f.addressee if enviado else f.requester
+    restante = 0
+    if f.created_at:
+        restante = max(0, int((f.created_at + VALIDADE_PEDIDO - br_now()).total_seconds()))
+    d = pessoa_para_json_amigo(outro)
+    d.update({'pedido_id': f.id, 'direcao': 'enviado' if enviado else 'recebido', 'restante_s': restante,
+              'rapida': bool(f.rapida)})
+    return d
+
+
+def oculta_pra(f, pessoa_id):
+    """True se esta ponta já fechou a conversa/recusou (some só do lado dela)."""
+    return bool(f.oculta_req if f.requester_id == pessoa_id else f.oculta_dest)
+
+
+def montar_amizades(pessoa):
+    """Tudo da tela de Amigos de uma vez: amigos, pedidos (enviados e recebidos) e bloqueados."""
+    limpar_pedidos_expirados(pessoa.id)
+    todas = Friendship.query.filter(
+        or_(Friendship.requester_id == pessoa.id, Friendship.addressee_id == pessoa.id)
+    ).options(joinedload(Friendship.requester), joinedload(Friendship.addressee)).all()
+    amigos, pedidos, bloqueados = [], [], []
+    for f in todas:
+        outro = f.addressee if f.requester_id == pessoa.id else f.requester
+        if f.status == 'accepted':
+            amigos.append(pessoa_para_json_amigo(outro))
+        elif f.status == 'pending':
+            if not oculta_pra(f, pessoa.id):
+                pedidos.append(_pedido_json(f, pessoa.id))
+        elif f.status == 'blocked' and f.requester_id == pessoa.id:
+            bloqueados.append({'id': outro.id, 'nome': outro.name, 'avatar': outro.avatar, 'username': outro.username})
+    silenciados = [s.alvo_id for s in Silenciado.query.filter_by(person_id=pessoa.id).all()]
+    return {'amigos': amigos, 'pedidos': pedidos, 'bloqueados': bloqueados, 'silenciados': silenciados}
+
+
+def emitir_amizades(pessoa_id):
+    """Manda o retrato atual das amizades pra TODAS as abas de uma pessoa (regra 6:
+    a outra ponta do pedido precisa ver a mudança agora, não só quem agiu)."""
+    try:
+        pessoa = com_retry(lambda: Person.query.get(pessoa_id))
+        if pessoa:
+            emit('amizades', com_retry(lambda: montar_amizades(pessoa)), to=sala_pessoal(pessoa_id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO EMITIR AMIZADES] {e}")
+
+
+@socketio.on('listar_amizades')
+def listar_amizades(dados=None):
+    usuario = usuario_logado()
+    if usuario:
+        emitir_amizades(usuario.id)
+
+
+def _aceitar_pedido(pedido, quem_aceitou):
+    """Marca como aceito e avisa os dois lados. `quem_aceitou` é o destinatário."""
+    solicitante = pedido.requester
+    solicitante_id = solicitante.id
+
+    if pedido.rapida and pedido.oculta_req:
+        # Quem puxou a conversa já a tinha fechado: aceitar NÃO faz virar amigo na hora - o pedido
+        # volta pra ele (com as mensagens) e agora é ele quem decide aceitar, recusar ou bloquear.
+        def trocar():
+            pedido.requester_id, pedido.addressee_id = quem_aceitou.id, solicitante_id
+            pedido.rapida = False
+            pedido.oculta_req = False
+            pedido.oculta_dest = False
+            pedido.created_at = br_now()
+
+        comitar_com_retry(trocar)
+        emit('pedido_amizade_recebido', {
+            'de_id': quem_aceitou.id, 'de_nome': quem_aceitou.name, 'de_avatar': quem_aceitou.avatar,
+            'pedido_id': pedido.id
+        }, to=sala_pessoal(solicitante_id))
+        criar_notificacao(solicitante_id, 'amizade', f'{quem_aceitou.name} quer ser seu amigo',
+                          'Vocês já tinham trocado mensagens. O pedido vale por 24 horas.',
+                          de_id=quem_aceitou.id, ref=str(quem_aceitou.id))
+        emit('pedido_amizade_enviado', {'para': solicitante.name, 'para_id': solicitante_id}, to=sala_pessoal(quem_aceitou.id))
+        emitir_amizades(quem_aceitou.id)
+        emitir_amizades(solicitante_id)
+        return
+
+    def preparar():
+        pedido.status = 'accepted'
+        pedido.rapida = False
+
+    comitar_com_retry(preparar)
+    emit('pedido_amizade_respondido', {'aceito': True, 'amigo': pessoa_para_json_amigo(solicitante)},
+         to=sala_pessoal(quem_aceitou.id))
+    emit('pedido_amizade_respondido', {'aceito': True, 'amigo': pessoa_para_json_amigo(quem_aceitou)},
+         to=sala_pessoal(solicitante_id))
+    criar_notificacao(solicitante_id, 'amizade', f'{quem_aceitou.name} aceitou seu pedido de amizade',
+                      de_id=quem_aceitou.id, ref=str(quem_aceitou.id))
+    emitir_amizades(quem_aceitou.id)
+    emitir_amizades(solicitante_id)
 
 
 @socketio.on('enviar_pedido_amizade')
@@ -1879,9 +2291,18 @@ def enviar_pedido_amizade(dados):
                 return
         else:
             arroba = busca.lstrip('@').lower()
+            # @conta e e-mail são únicos. O nome de EXIBIÇÃO pode repetir: com mais de uma pessoa
+            # com o mesmo nome não dá pra adivinhar quem é - pede o @ em vez de escolher qualquer uma.
             alvo = com_retry(lambda: Person.query.filter(
-                or_(Person.username == arroba, Person.name == busca, Person.email == busca)
-            ).first())
+                or_(Person.username == arroba, Person.email == busca)).first())
+            if not alvo:
+                iguais = com_retry(lambda: Person.query.filter(
+                    func.lower(Person.name) == busca.lower(), Person.id != usuario.id).limit(6).all())
+                if len(iguais) > 1:
+                    lista = ', '.join('@' + (p.username or str(p.id)) for p in iguais[:5])
+                    emit('erro_bazinga', {'msg': f'Tem mais de uma pessoa chamada "{busca}": {lista}. Use o @ da conta pra escolher.'})
+                    return
+                alvo = iguais[0] if iguais else None
 
         if not alvo:
             emit('erro_bazinga', {'msg': f'Não achei ninguém com "{busca}" no Panteão.'})
@@ -1890,26 +2311,60 @@ def enviar_pedido_amizade(dados):
             emit('erro_bazinga', {'msg': 'Você não pode adicionar a si mesmo.'})
             return
 
-        existente = com_retry(lambda: Friendship.query.filter(
-            or_(and_(Friendship.requester_id == usuario.id, Friendship.addressee_id == alvo.id),
-                and_(Friendship.requester_id == alvo.id, Friendship.addressee_id == usuario.id))
-        ).first())
+        existente = com_retry(lambda: relacao_entre(usuario.id, alvo.id))
+        if existente and pedido_expirou(existente):
+            limpar_pedidos_expirados(usuario.id)
+            existente = None
+
         if existente:
-            if existente.status == 'accepted':
+            if existente.status == 'blocked':
+                if existente.requester_id == usuario.id:
+                    emit('erro_bazinga', {'msg': f'Você bloqueou {alvo.name}. Desbloqueie em Amigos > Bloqueados para adicionar.'})
+                else:
+                    # Não revela que foi bloqueado.
+                    emit('erro_bazinga', {'msg': f'Não foi possível enviar o pedido para {alvo.name}.'})
+            elif existente.status == 'accepted':
                 emit('erro_bazinga', {'msg': f'Você já é amigo de {alvo.name}.'})
+            elif existente.requester_id == alvo.id:
+                # A outra pessoa já tinha pedido: pedir de volta = aceitar.
+                _aceitar_pedido(existente, usuario)
+            elif existente.rapida:
+                # Conversa rápida que EU puxei: "Adicionar amigo" a transforma em pedido de verdade.
+                def virar_pedido():
+                    existente.rapida = False
+                    existente.oculta_req = False
+                    existente.created_at = br_now()
+
+                comitar_com_retry(virar_pedido)
+                emit('pedido_amizade_enviado', {'para': alvo.name, 'para_id': alvo.id})
+                emit('pedido_amizade_recebido', {
+                    'de_id': usuario.id, 'de_nome': usuario.name, 'de_avatar': usuario.avatar,
+                    'pedido_id': existente.id
+                }, to=sala_pessoal(alvo.id))
+                criar_notificacao(alvo.id, 'amizade', f'{usuario.name} quer ser seu amigo',
+                                  'O pedido vale por 24 horas.', de_id=usuario.id, ref=str(usuario.id))
+                emitir_amizades(usuario.id)
+                emitir_amizades(alvo.id)
             else:
-                emit('erro_bazinga', {'msg': f'Já existe um pedido pendente com {alvo.name}.'})
+                emit('erro_bazinga', {'msg': f'Você já enviou um pedido para {alvo.name}. Aguarde a resposta (vale por 24h).'})
             return
 
         def preparar():
-            db.session.add(Friendship(requester_id=usuario.id, addressee_id=alvo.id, status='pending'))
+            novo = Friendship(requester_id=usuario.id, addressee_id=alvo.id, status='pending')
+            db.session.add(novo)
+            return novo
 
-        comitar_com_retry(preparar)
+        pedido = comitar_com_retry(preparar)
 
-        emit('pedido_amizade_enviado', {'para': alvo.name})
+        emit('pedido_amizade_enviado', {'para': alvo.name, 'para_id': alvo.id})
         emit('pedido_amizade_recebido', {
-            'de_id': usuario.id, 'de_nome': usuario.name, 'de_avatar': usuario.avatar
+            'de_id': usuario.id, 'de_nome': usuario.name, 'de_avatar': usuario.avatar,
+            'pedido_id': pedido.id
         }, to=sala_pessoal(alvo.id))
+        criar_notificacao(alvo.id, 'amizade', f'{usuario.name} quer ser seu amigo',
+                          'O pedido vale por 24 horas.', de_id=usuario.id, ref=str(usuario.id))
+        emitir_amizades(usuario.id)
+        emitir_amizades(alvo.id)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO PEDIDO AMIZADE] {e}")
@@ -1918,10 +2373,12 @@ def enviar_pedido_amizade(dados):
 
 @socketio.on('listar_pedidos_pendentes')
 def listar_pedidos_pendentes(dados=None):
+    """Compatível com o cliente antigo; a tela nova usa `listar_amizades`."""
     usuario = usuario_logado()
     if not usuario:
         return
     try:
+        limpar_pedidos_expirados(usuario.id)
         pedidos = com_retry(lambda: Friendship.query.filter_by(
             addressee_id=usuario.id, status='pending').all())
         emit('pedidos_pendentes', {
@@ -1935,36 +2392,83 @@ def listar_pedidos_pendentes(dados=None):
 
 @socketio.on('responder_pedido_amizade')
 def responder_pedido_amizade(dados):
+    """acao: 'aceitar' | 'recusar' | 'bloquear' (ou o antigo `aceitar: true/false`)."""
     usuario = usuario_logado()
     if not usuario:
         return
 
     try:
         pedido = com_retry(lambda: Friendship.query.get(dados.get('pedido_id')))
+        # Só quem RECEBEU responde - quem enviou não pode aceitar o próprio pedido.
         if not pedido or pedido.addressee_id != usuario.id or pedido.status != 'pending':
             return
+        if pedido_expirou(pedido):
+            limpar_pedidos_expirados(usuario.id)
+            emit('erro_bazinga', {'msg': 'Esse pedido de amizade expirou (valia 24h).'})
+            emitir_amizades(usuario.id)
+            return
 
-        aceitar = bool(dados.get('aceitar'))
+        acao = dados.get('acao') or ('aceitar' if dados.get('aceitar') else 'recusar')
         solicitante_id = pedido.requester_id
         solicitante_nome = pedido.requester.name
 
-        if aceitar:
+        if acao == 'aceitar':
+            _aceitar_pedido(pedido, usuario)
+        elif acao == 'bloquear':
             def preparar():
-                pedido.status = 'accepted'
+                pedido.requester_id, pedido.addressee_id = usuario.id, solicitante_id
+                pedido.status = 'blocked'
             comitar_com_retry(preparar)
-            emit('pedido_amizade_respondido', {'aceito': True, 'amigo': pessoa_para_json_amigo(pedido.requester)})
-            emit('pedido_amizade_respondido', {'aceito': True, 'amigo': pessoa_para_json_amigo(usuario)},
-                 to=sala_pessoal(solicitante_id))
+            emit('pedido_amizade_respondido', {'aceito': False, 'de_id': solicitante_id})
+            emitir_amizades(usuario.id)
+            emitir_amizades(solicitante_id)
         else:
             def preparar():
-                db.session.delete(pedido)
+                if pedido.rapida and not pedido.oculta_req:
+                    # Conversa rápida: recusar só tira do SEU lado. Quem puxou continua vendo
+                    # (sem saber que foi recusada) até as 24h acabarem.
+                    pedido.oculta_dest = True
+                else:
+                    db.session.delete(pedido)
             comitar_com_retry(preparar)
-            emit('pedido_amizade_respondido', {'aceito': False})
+            emit('pedido_amizade_respondido', {'aceito': False, 'de_id': solicitante_id})
+            emitir_amizades(usuario.id)
+            emitir_amizades(solicitante_id)
 
-        print(f"[AMIZADE] {usuario.name} {'aceitou' if aceitar else 'recusou'} o pedido de {solicitante_nome}")
+        print(f"[AMIZADE] {usuario.name} -> {acao} o pedido de {solicitante_nome}")
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO RESPONDER PEDIDO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível responder ao pedido: {e}'})
+
+
+@socketio.on('cancelar_pedido_amizade')
+def cancelar_pedido_amizade(dados):
+    """Quem enviou desiste do pedido enquanto ele está pendente."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        pedido = com_retry(lambda: Friendship.query.get(dados.get('pedido_id')))
+        if not pedido or pedido.requester_id != usuario.id or pedido.status != 'pending':
+            return
+        outro_id = pedido.addressee_id
+
+        def preparar():
+            if pedido.rapida and not pedido.oculta_dest:
+                # Fechar uma conversa rápida some só do seu lado; a outra pessoa ainda pode ler
+                # e, se aceitar, o pedido volta pra você decidir.
+                pedido.oculta_req = True
+            else:
+                db.session.delete(pedido)
+
+        comitar_com_retry(preparar)
+        emitir_amizades(usuario.id)
+        emitir_amizades(outro_id)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO CANCELAR PEDIDO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível cancelar o pedido: {e}'})
 
 
 @socketio.on('remover_amigo')
@@ -1989,9 +2493,199 @@ def remover_amigo(dados):
         comitar_com_retry(preparar)
         emit('amigo_removido', {'amigo_id': amigo_id})
         emit('amigo_removido', {'amigo_id': usuario.id}, to=sala_pessoal(amigo_id))
+        emitir_amizades(usuario.id)
+        emitir_amizades(amigo_id)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO REMOVER AMIGO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível desfazer a amizade: {e}'})
+
+
+@socketio.on('silenciar_contato')
+def silenciar_contato(dados):
+    """Silencia/desilencia um contato (sem som, toast, badge nem caixa de entrada)."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        alvo_id = int(dados.get('alvo_id'))
+        ativo = bool(dados.get('ativo'))
+        if alvo_id == usuario.id:
+            return
+
+        def preparar():
+            existente = Silenciado.query.filter_by(person_id=usuario.id, alvo_id=alvo_id).first()
+            if ativo and not existente:
+                db.session.add(Silenciado(person_id=usuario.id, alvo_id=alvo_id))
+            elif not ativo and existente:
+                db.session.delete(existente)
+
+        comitar_com_retry(preparar)
+        emitir_amizades(usuario.id)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO SILENCIAR] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível silenciar: {e}'})
+
+
+@socketio.on('bloquear_usuario')
+def bloquear_usuario(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        alvo_id = int(dados.get('usuario_id'))
+    except (TypeError, ValueError):
+        return
+    if alvo_id == usuario.id:
+        return
+
+    try:
+        alvo = com_retry(lambda: Person.query.get(alvo_id))
+        if not alvo:
+            return
+        rel = com_retry(lambda: relacao_entre(usuario.id, alvo_id))
+        eram_amigos = bool(rel and rel.status == 'accepted')
+
+        def preparar():
+            r = rel
+            if r is None:
+                r = Friendship(requester_id=usuario.id, addressee_id=alvo_id, status='blocked')
+                db.session.add(r)
+            else:
+                r.requester_id, r.addressee_id = usuario.id, alvo_id
+                r.status = 'blocked'
+
+        comitar_com_retry(preparar)
+        if eram_amigos:
+            emit('amigo_removido', {'amigo_id': alvo_id})
+            emit('amigo_removido', {'amigo_id': usuario.id}, to=sala_pessoal(alvo_id))
+        emit('usuario_bloqueado', {'usuario_id': alvo_id, 'nome': alvo.name})
+        emitir_amizades(usuario.id)
+        emitir_amizades(alvo_id)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO BLOQUEAR] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível bloquear: {e}'})
+
+
+@socketio.on('desbloquear_usuario')
+def desbloquear_usuario(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        alvo_id = int(dados.get('usuario_id'))
+        rel = com_retry(lambda: relacao_entre(usuario.id, alvo_id))
+        if not rel or rel.status != 'blocked' or rel.requester_id != usuario.id:
+            return
+
+        def preparar():
+            db.session.delete(rel)
+
+        comitar_com_retry(preparar)
+        emitir_amizades(usuario.id)
+        emitir_amizades(alvo_id)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO DESBLOQUEAR] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível desbloquear: {e}'})
+
+
+# ==========================================
+# CAIXA DE ENTRADA (notificações guardadas) - DM, pedido de amizade e menção
+# ------------------------------------------------------------
+# A de DM é agregada por remetente (uma linha com contador, não 200 linhas).
+# O som/toast quem decide é o cliente (respeita "Não perturbar"); aqui só guarda
+# e avisa ao vivo.
+# ==========================================
+def notificacao_json(n):
+    return {
+        'id': n.id, 'tipo': n.tipo, 'titulo': n.titulo, 'texto': n.texto, 'de_id': n.de_id,
+        'ref': n.ref, 'quantidade': n.quantidade or 1, 'lida': bool(n.lida),
+        'idade_s': max(0, int((br_now() - (n.atualizada_em or n.created_at or br_now())).total_seconds()))
+    }
+
+
+def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None, agrupar=False):
+    """Guarda na caixa de entrada e avisa a sala pessoal. Nunca quebra quem chamou."""
+    try:
+        def preparar():
+            n = None
+            if agrupar:
+                n = Notificacao.query.filter_by(person_id=destino_id, tipo=tipo, de_id=de_id, lida=False).first()
+            if n:
+                n.quantidade = (n.quantidade or 1) + 1
+                n.titulo = titulo[:120]
+                n.texto = (texto or '')[:300] or None
+                n.atualizada_em = br_now()
+            else:
+                n = Notificacao(person_id=destino_id, tipo=tipo, de_id=de_id, titulo=titulo[:120],
+                                texto=(texto or '')[:300] or None, ref=ref, quantidade=1, lida=False)
+                db.session.add(n)
+            return n
+
+        n = comitar_com_retry(preparar)
+        emit('notificacao_nova', notificacao_json(n), to=sala_pessoal(destino_id))
+        return n
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO NOTIFICACAO] {e}")
+        return None
+
+
+def enviar_notificacoes(usuario):
+    itens = Notificacao.query.filter_by(person_id=usuario.id).order_by(Notificacao.atualizada_em.desc()).limit(50).all()
+    nao_lidas = Notificacao.query.filter_by(person_id=usuario.id, lida=False).count()
+    emit('notificacoes', {'itens': [notificacao_json(n) for n in itens], 'nao_lidas': nao_lidas})
+
+
+@socketio.on('listar_notificacoes')
+def listar_notificacoes(dados=None):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        com_retry(lambda: enviar_notificacoes(usuario))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO LISTAR NOTIFICACOES] {e}")
+
+
+@socketio.on('marcar_notificacoes_lidas')
+def marcar_notificacoes_lidas(dados=None):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    ids = (dados or {}).get('ids')
+    try:
+        def preparar():
+            q = Notificacao.query.filter_by(person_id=usuario.id, lida=False)
+            if ids:
+                q = q.filter(Notificacao.id.in_([int(i) for i in ids[:100]]))
+            q.update({'lida': True}, synchronize_session=False)
+
+        comitar_com_retry(preparar)
+        com_retry(lambda: enviar_notificacoes(usuario))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MARCAR NOTIFICACOES] {e}")
+
+
+@socketio.on('limpar_notificacoes')
+def limpar_notificacoes(dados=None):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        def preparar():
+            Notificacao.query.filter_by(person_id=usuario.id).delete(synchronize_session=False)
+
+        comitar_com_retry(preparar)
+        com_retry(lambda: enviar_notificacoes(usuario))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO LIMPAR NOTIFICACOES] {e}")
 
 
 # ==========================================
@@ -2007,6 +2701,13 @@ def on_entrar_dm(data):
         join_room(sala_pessoal(usuario.id))
 
 
+def anexo_dm_valido(url):
+    url = str(url or '')
+    return bool(url) and len(url) <= 500 and (
+        url.startswith('/') or url.startswith('https://res.cloudinary.com/')
+        or bool(re.match(r'^https://media\d*\.giphy\.com/', url)))
+
+
 @socketio.on('enviar_mensagem_direta')
 def on_enviar_mensagem_direta(data):
     usuario = usuario_logado()
@@ -2020,7 +2721,18 @@ def on_enviar_mensagem_direta(data):
         return
 
     texto = (data.get('texto') or '').strip()[:2000]
-    if not texto:
+
+    # Anexo (foto/gif/vídeo/arquivo): sobe por /api/upload e chega só como URL;
+    # GIF do Giphy vem direto do CDN deles (mesma regra das mensagens de canal).
+    anexo_url = data.get('anexo_url') if anexo_dm_valido(data.get('anexo_url')) else None
+    anexo_tipo = data.get('anexo_tipo') if data.get('anexo_tipo') in ('image', 'video', 'file') else None
+    anexo_nome = (data.get('anexo_nome') or '').strip()[:255] or None
+    if not anexo_url:
+        anexo_tipo = anexo_nome = None
+    elif not anexo_tipo:
+        anexo_tipo = 'image'
+
+    if not texto and not anexo_url:
         return
 
     try:
@@ -2028,9 +2740,35 @@ def on_enviar_mensagem_direta(data):
         if not destinatario:
             emit('erro_bazinga', {'msg': 'Esse usuário não existe mais.'})
             return
+        if not com_retry(lambda: pode_trocar_dm(usuario, destinatario)):
+            emit('erro_bazinga', {'msg': f'Você não pode mandar mensagem para {destinatario.name} agora.'})
+            return
+
+        # Primeira mensagem pra alguém que não é amigo (e não tem pedido): nasce uma CONVERSA RÁPIDA,
+        # um pedido pendente de 24h com as mensagens temporárias. Quem recebe vê Aceitar/Recusar/Bloquear.
+        rel = None if target_id == usuario.id else com_retry(lambda: relacao_entre(usuario.id, target_id))
+        if rel and pedido_expirou(rel):
+            limpar_pedidos_expirados(usuario.id)
+            rel = None
+        criar_rapida = target_id != usuario.id and rel is None
+        oculto_pro_destino = False
+        if rel and rel.status == 'pending':
+            oculto_pro_destino = oculta_pra(rel, target_id)
 
         def preparar():
-            nova = DirectMessage(sender_id=usuario.id, receiver_id=target_id, content=texto)
+            if criar_rapida:
+                db.session.add(Friendship(requester_id=usuario.id, addressee_id=target_id,
+                                          status='pending', rapida=True))
+            elif rel and rel.status == 'pending' and oculta_pra(rel, usuario.id):
+                # eu tinha fechado essa conversa e voltei a escrever nela: ela reaparece pra mim
+                if rel.requester_id == usuario.id:
+                    rel.oculta_req = False
+                else:
+                    rel.oculta_dest = False
+            # content '' (e não None) quando é só anexo: a coluna do Neon ainda pode ser NOT NULL.
+            nova = DirectMessage(sender_id=usuario.id, receiver_id=target_id, content=texto or '',
+                                 attachment_url=anexo_url, attachment_type=anexo_tipo,
+                                 attachment_name=anexo_nome, lida=(target_id == usuario.id))
             db.session.add(nova)
             return nova
 
@@ -2042,16 +2780,37 @@ def on_enviar_mensagem_direta(data):
             'usuario_id': usuario.id,
             'destinatario_id': target_id,
             'avatar': usuario.avatar,
-            'texto': nova_msg.content,
+            'texto': nova_msg.content or '',
+            'anexo_url': nova_msg.attachment_url,
+            'anexo_tipo': nova_msg.attachment_type,
+            'anexo_nome': nova_msg.attachment_name,
             'hora': hora_formatada(nova_msg.timestamp),
-            'cor': usuario.role.color if usuario.role else '#5865F2'
+            'cor': usuario.role.color if usuario.role else '#5865F2',
+            # Ecoa pra quem mandou trocar a bolha otimista pela real, sem duplicar.
+            'temp_id': temp_id_seguro(data)
         }
 
         # Vai só para as duas pessoas da conversa (e não para uma sala
         # compartilhada em que qualquer um poderia ter entrado).
-        salas = {sala_pessoal(usuario.id), sala_pessoal(target_id)}
+        # Quem já recusou/fechou essa conversa não recebe mais nada dela (nem aviso).
+        salas = {sala_pessoal(usuario.id)}
+        if not oculto_pro_destino:
+            salas.add(sala_pessoal(target_id))
         for sala in salas:
             emit('receber_mensagem_direta', payload, to=sala)
+
+        if criar_rapida:
+            # o retrato das amizades faz a conversa aparecer pros dois; o aviso é o da própria mensagem
+            emitir_amizades(usuario.id)
+            emitir_amizades(target_id)
+
+        # Caixa de entrada + aviso (som/toast) pra quem recebeu - não pra si mesmo, nem se ele silenciou.
+        if target_id != usuario.id and not oculto_pro_destino:
+            silenciou = com_retry(lambda: Silenciado.query.filter_by(person_id=target_id, alvo_id=usuario.id).first())
+            if not silenciou:
+                resumo = texto[:140] if texto else ('📎 ' + (anexo_nome or 'Anexo'))
+                criar_notificacao(target_id, 'dm', usuario.name, resumo, de_id=usuario.id,
+                                  ref=str(usuario.id), agrupar=True)
 
         resultado_xp = conceder_xp_por_mensagem(usuario)
         if resultado_xp:
@@ -2062,6 +2821,38 @@ def on_enviar_mensagem_direta(data):
         db.session.rollback()
         print(f"[ERRO CRÍTICO NA DM] O banco bloqueou o salvamento: {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível enviar a DM: {e}'})
+
+
+@socketio.on('marcar_dm_lida')
+def marcar_dm_lida(dados):
+    """A pessoa abriu a conversa: zera o contador de não lidas (em todas as abas dela)."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        amigo_id = int(dados.get('amigo_id'))
+
+        def preparar():
+            DirectMessage.query.filter(
+                DirectMessage.receiver_id == usuario.id, DirectMessage.sender_id == amigo_id,
+                DirectMessage.lida == False  # noqa: E712
+            ).update({'lida': True}, synchronize_session=False)
+            Notificacao.query.filter_by(person_id=usuario.id, tipo='dm', de_id=amigo_id, lida=False
+                                        ).update({'lida': True}, synchronize_session=False)
+
+        comitar_com_retry(preparar)
+        emit('dm_lidas', {'amigo_id': amigo_id}, to=sala_pessoal(usuario.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MARCAR DM LIDA] {e}")
+
+
+def contagem_dms_nao_lidas(usuario):
+    linhas = db.session.query(DirectMessage.sender_id, func.count(DirectMessage.id)).filter(
+        DirectMessage.receiver_id == usuario.id, DirectMessage.sender_id != usuario.id,
+        DirectMessage.lida == False  # noqa: E712
+    ).group_by(DirectMessage.sender_id).all()
+    return {str(i): n for i, n in linhas}
 
 
 # ==========================================

@@ -3,7 +3,11 @@ from datetime import datetime
 import pytz
 
 # Inicializa o banco de dados
-db = SQLAlchemy()
+# expire_on_commit=False: por padrão o SQLAlchemy "esquece" todos os objetos a cada commit e relê
+# cada um do banco no primeiro acesso depois (usuario.id, usuario.name...). Com o Neon cada leitura
+# é uma ida de rede - um simples enviar_mensagem fazia ~8 SELECTs só pra reler a mesma pessoa.
+# Cada evento/requisição tem a sua sessão, então não há dado velho circulando entre eles.
+db = SQLAlchemy(session_options={'expire_on_commit': False})
 
 
 # Utilitário: Definindo o fuso horário de Brasília para todas as tabelas
@@ -77,6 +81,9 @@ class Person(db.Model):
     banner_color = db.Column(db.String(50), nullable=True)
     # Faixa em imagem (prevalece sobre a cor) e pronomes - campos do cartão de perfil.
     banner_url = db.Column(db.String(255), nullable=True)
+    # Enquadramento da faixa quando é GIF (que não dá pra recortar sem perder a animação):
+    # 'x,y,zoom,espelhoH,espelhoV' em frações da área - aplicado por CSS no cartão.
+    banner_ajuste = db.Column(db.String(60), nullable=True)
     pronomes = db.Column(db.String(40), nullable=True)
     # Nome da CONTA (@): o que se digita pra adicionar a pessoa. Único, minúsculo.
     # O nome de EXIBIÇÃO (`name`) é o enfeitado, pode repetir e mudar à vontade.
@@ -129,7 +136,9 @@ class Server(db.Model):
     events = db.relationship('Event', backref='server', lazy=True, cascade="all, delete-orphan")
 
     # A lista de membros deste servidor!
-    members = db.relationship('Person', secondary=server_members, lazy='subquery',
+    # lazy='select' (sob demanda). Era 'subquery' = TODA vez que um Server era carregado
+    # (Server.query.get, usuario.servers...) vinham junto todas as linhas de todos os membros.
+    members = db.relationship('Person', secondary=server_members, lazy='select',
                               backref=db.backref('servers', lazy=True))
 
     owner = db.relationship('Person', foreign_keys=[owner_id])
@@ -162,7 +171,7 @@ class Channel(db.Model):
     messages = db.relationship('Message', backref='channel', lazy=True, cascade="all, delete-orphan")
 
     # Só vale quando is_private=True
-    allowed_members = db.relationship('Person', secondary=channel_members, lazy='subquery',
+    allowed_members = db.relationship('Person', secondary=channel_members, lazy='select',
                                       backref=db.backref('canais_privados', lazy=True))
 
 
@@ -270,9 +279,17 @@ class Friendship(db.Model):
 
     requester_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     addressee_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, accepted
+    # pending (vale 24h a partir de created_at), accepted, blocked (quem bloqueou é o requester)
+    status = db.Column(db.String(20), default='pending')
 
     created_at = db.Column(db.DateTime, default=br_now)
+
+    # "Conversa rápida": nasceu de uma mensagem pra alguém que ainda não é amigo (sem pedido
+    # de amizade explícito). As mensagens são temporárias: somem junto com a linha em 24h.
+    rapida = db.Column(db.Boolean, default=False)
+    # Cada ponta pode "fechar" a conversa só pra si (some do seu lado, a outra pessoa continua vendo).
+    oculta_req = db.Column(db.Boolean, default=False)    # quem puxou a conversa fechou
+    oculta_dest = db.Column(db.Boolean, default=False)   # quem recebeu recusou
 
     requester = db.relationship('Person', foreign_keys=[requester_id])
     addressee = db.relationship('Person', foreign_keys=[addressee_id])
@@ -289,8 +306,15 @@ class DirectMessage(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
 
-    content = db.Column(db.Text, nullable=False)
+    # Mensagem só de anexo (foto/gif/arquivo) vem com texto vazio.
+    content = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=br_now)
+
+    # Anexo (mesma regra de URL das mensagens de canal) e leitura (badge de não lidas).
+    attachment_url = db.Column(db.String(500), nullable=True)
+    attachment_type = db.Column(db.String(20), nullable=True)   # 'image' | 'video' | 'file'
+    attachment_name = db.Column(db.String(255), nullable=True)
+    lida = db.Column(db.Boolean, default=False)
 
     sender = db.relationship('Person', foreign_keys=[sender_id])
     receiver = db.relationship('Person', foreign_keys=[receiver_id])
@@ -342,7 +366,11 @@ class GeoNote(db.Model):
     text = db.Column(db.Text, nullable=False)
 
     color = db.Column(db.String(20), default="var(--brand-color)")
+    # Emoji do balão (o ícone do pino) - separado do texto da nota.
+    icone = db.Column(db.String(16), nullable=True)
     duration_hours = db.Column(db.Integer, default=24)
+    # Escondida automaticamente quando recebe denúncias suficientes.
+    oculta = db.Column(db.Boolean, default=False)
 
     # NOVO: Data exata em que a nota deve expirar
     expires_at = db.Column(db.DateTime, nullable=True)
@@ -367,6 +395,7 @@ class MapServer(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
 
     owner_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    oculta = db.Column(db.Boolean, default=False)
 
     # NOVO: Liga o Pino do Mapa ao Servidor Real de Chat
     server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=True)
@@ -397,3 +426,53 @@ class MissaoProgresso(db.Model):
     chave = db.Column(db.String(10), nullable=False)
     progresso = db.Column(db.Integer, default=0, nullable=False)
     concluida = db.Column(db.Boolean, default=False, nullable=False)
+
+
+# ==========================================
+# DENÚNCIAS (notas e servidores plantados no mapa)
+# ------------------------------------------------------------
+# Uma por (denunciante, alvo). Com 3 denúncias de pessoas diferentes o alvo
+# é escondido do mapa até alguém revisar (ver `denunciar` em events.py).
+# ==========================================
+class Denuncia(db.Model):
+    __tablename__ = 'denuncia'
+    __table_args__ = (db.UniqueConstraint('denunciante_id', 'tipo', 'alvo_id', name='uq_denuncia_unica'),)
+    id = db.Column(db.Integer, primary_key=True)
+    denunciante_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    tipo = db.Column(db.String(10), nullable=False)        # 'nota' | 'servidor'
+    alvo_id = db.Column(db.Integer, nullable=False)
+    motivo = db.Column(db.String(30), nullable=False)      # +18, assedio, spam, ilegal, outro
+    detalhe = db.Column(db.String(300), nullable=True)
+    resolvida = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+
+# ==========================================
+# CAIXA DE ENTRADA (notificações que ficam guardadas)
+# ------------------------------------------------------------
+# DM, pedido de amizade e menção. A de DM é agregada por remetente (uma linha
+# com contador) pra não virar 200 linhas numa conversa movimentada.
+# ==========================================
+class Notificacao(db.Model):
+    __tablename__ = 'notificacao'
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    tipo = db.Column(db.String(20), nullable=False)        # dm | amizade | mencao | sistema
+    de_id = db.Column(db.Integer, nullable=True)           # quem originou
+    titulo = db.Column(db.String(120), nullable=False)
+    texto = db.Column(db.String(300), nullable=True)
+    ref = db.Column(db.String(60), nullable=True)          # ex.: id do canal / da pessoa, pra abrir ao clicar
+    quantidade = db.Column(db.Integer, default=1)
+    lida = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=br_now)
+    atualizada_em = db.Column(db.DateTime, default=br_now)
+
+
+class Silenciado(db.Model):
+    """Contato que a pessoa silenciou: as mensagens dele continuam chegando, mas sem som,
+    toast, badge nem caixa de entrada. Mora na conta (acompanha a pessoa em qualquer aparelho)."""
+    __tablename__ = 'silenciado'
+    __table_args__ = (db.UniqueConstraint('person_id', 'alvo_id', name='uq_silenciado'),)
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    alvo_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)

@@ -1,17 +1,21 @@
-from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app
+from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app, Response
 from sqlalchemy.exc import OperationalError, PendingRollbackError, SQLAlchemyError
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import joinedload
 import os
+import re
+import time
 import uuid
 import cloudinary
 import cloudinary.uploader
 import requests
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
-from ..utils import com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username
+from ..utils import (com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
+                     dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
+                     recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO)
 from .. import socketio, APP_NOME, MOEDA_NOME
-from ..events import sala_servidor, servidor_para_json
+from ..events import sala_servidor, servidor_para_json, servidores_para_json
 
 main_bp = Blueprint("main", __name__)
 
@@ -53,6 +57,18 @@ def usuario_da_sessao():
         db.session.rollback()
         print(f"[ERRO BANCO] usuario_da_sessao: {e}")
         return None
+
+
+# O teto global (5 MB, config.py) barrava um GIF de 6-10 MB ANTES de a rota rodar - o aviso falava
+# em "5 MB" mesmo a rota aceitando 10. Essas duas rotas têm teto próprio, só na requisição delas.
+_TETO_POR_ROTA = {'/api/gif/recortar': 12 * 1024 * 1024, '/api/video/animar': 16 * 1024 * 1024}
+
+
+@main_bp.before_request
+def teto_de_upload_por_rota():
+    teto = _TETO_POR_ROTA.get(request.path)
+    if teto:
+        request.max_content_length = teto
 
 
 @main_bp.app_errorhandler(413)
@@ -167,7 +183,7 @@ def chat():
 
     try:
         def carregar():
-            usuario_atual = Person.query.get(session['user_id'])
+            usuario_atual = Person.query.options(joinedload(Person.role)).get(session['user_id'])
             if not usuario_atual:
                 return None
 
@@ -179,7 +195,8 @@ def chat():
 
             messages = []
             if default_channel:
-                messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.timestamp.asc()).limit(50).all()
+                messages = Message.query.filter_by(channel_id=default_channel.id).order_by(Message.id.desc()).limit(50).all()
+                messages.reverse()
                 for m in messages:
                     m.formatada = formatar_data(m.timestamp)
 
@@ -197,7 +214,7 @@ def chat():
             # a barra de servidores ficava vazia por vários segundos - parecia
             # que os servidores tinham sumido. O socket ainda reenvia e
             # reconcilia depois.
-            servidores_iniciais = [servidor_para_json(srv, usuario_atual) for srv in usuario_atual.servers]
+            servidores_iniciais = servidores_para_json(list(usuario_atual.servers), usuario_atual)
 
             return usuario_atual, text_channels, voice_channels, default_channel, messages, amigos, servidores_iniciais
 
@@ -294,9 +311,18 @@ def pegar_mensagens(canal_id):
         # uma query própria - até 50 mensagens x 2 = ~100 idas ao banco só pra
         # abrir um canal. Com NullPool (toda query = conexão nova no Neon),
         # isso sozinho já explicava boa parte do "demora pra trocar de canal".
-        mensagens_db = com_retry(lambda: Message.query.filter_by(channel_id=canal_id)
+        # As 50 MAIS RECENTES (desc + limit) e depois reordena pra exibir. Antes era
+        # asc + limit(50): num canal com mais de 50 mensagens vinham as 50 mais
+        # ANTIGAS - "sai e volta no servidor e não carrega as mensagens".
+        # `antes` = id da mensagem mais antiga que o cliente já tem (carregar anteriores).
+        consulta = Message.query.filter_by(channel_id=canal_id)
+        antes = request.args.get('antes', type=int)
+        if antes:
+            consulta = consulta.filter(Message.id < antes)
+        mensagens_db = com_retry(lambda: consulta
                                  .options(joinedload(Message.author).joinedload(Person.role))
-                                 .order_by(Message.timestamp.asc()).limit(50).all())
+                                 .order_by(Message.id.desc()).limit(50).all())
+        mensagens_db.reverse()
     except (OperationalError, PendingRollbackError) as e:
         db.session.rollback()
         print(f"[ERRO BANCO] /api/mensagens/{canal_id}: {e}")
@@ -344,13 +370,20 @@ def get_dms(target_id):
     meu_id = session['user_id']
 
     try:
-        mensagens_db = DirectMessage.query.filter(
+        consulta = DirectMessage.query.filter(
             or_(
                 and_(DirectMessage.sender_id == meu_id, DirectMessage.receiver_id == target_id),
                 and_(DirectMessage.sender_id == target_id, DirectMessage.receiver_id == meu_id)
             )
-        ).options(joinedload(DirectMessage.sender).joinedload(Person.role)
-        ).order_by(DirectMessage.timestamp.asc()).limit(50).all()
+        )
+        antes = request.args.get('antes', type=int)
+        if antes:
+            consulta = consulta.filter(DirectMessage.id < antes)
+        # Mesmo conserto do canal: as 50 mais RECENTES, não as 50 mais antigas.
+        mensagens_db = com_retry(lambda: consulta
+                                 .options(joinedload(DirectMessage.sender).joinedload(Person.role))
+                                 .order_by(DirectMessage.id.desc()).limit(50).all())
+        mensagens_db.reverse()
     except (OperationalError, PendingRollbackError):
         db.session.rollback()
         mensagens_db = []
@@ -362,7 +395,10 @@ def get_dms(target_id):
             'autor': msg.sender.name,
             'autor_id': msg.sender_id,
             'avatar': msg.sender.avatar,
-            'texto': msg.content,
+            'texto': msg.content or '',
+            'anexo_url': msg.attachment_url,
+            'anexo_tipo': msg.attachment_type,
+            'anexo_nome': msg.attachment_name,
             'hora': formatar_data(msg.timestamp),
             'cor': msg.sender.role.color if msg.sender.role else '#5865F2'
         })
@@ -471,50 +507,22 @@ def get_inventario():
 # ==========================================
 @main_bp.route("/api/mapa/dados")
 def dados_do_mapa():
+    """Só devolve o que está dentro do raio de quem pede (?lat=&lng=). Sem posição
+    não devolve nada: o mapa não é mais um "mundo inteiro" que todo mundo baixa."""
     if 'user_id' not in session:
         return jsonify({'error': 'Acesso negado'}), 401
 
+    pos = coordenada_valida(request.args.get('lat'), request.args.get('lng'))
+    if not pos:
+        return jsonify({'notas': [], 'servers': [], 'raio_notas_m': RAIO_NOTAS_M,
+                        'raio_servidores_m': RAIO_SERVIDORES_M})
     try:
-        agora = br_now()
-
-        def buscar():
-            notas_db = GeoNote.query.filter(
-                or_(GeoNote.expires_at == None, GeoNote.expires_at > agora)
-            ).all()
-            servers_db = MapServer.query.filter(
-                or_(MapServer.expires_at == None, MapServer.expires_at > agora)
-            ).all()
-
-            # autor_id/owner_id vão junto porque o frontend decidia quem é dono
-            # comparando o NOME - dois usuários com o mesmo nome do Google viam
-            # os botões de editar/apagar um do outro.
-            notas = [{
-                'id': n.id, 'lat': n.lat, 'lng': n.lng,
-                'texto': n.text, 'autor': n.author.name if n.author else '???',
-                'autor_id': n.author_id, 'cor': n.color
-            } for n in notas_db]
-
-            # Nome e ícone vêm do Servidor ligado, não da cópia feita na hora
-            # de plantar: senão renomear o servidor não mudava nada no mapa.
-            servers = [{
-                'id': s.id, 'lat': s.lat, 'lng': s.lng,
-                'name': (s.server.name if s.server else s.name),
-                'icon_url': (s.server.icon_url if s.server else None),
-                'owner': s.owner.name if s.owner else '???',
-                'owner_id': s.owner_id,
-                'vagas': s.max_tickets if s.max_tickets else 'ilimitado',
-                'online': len(s.server.members) if s.server else 1,
-                'server_id': s.server_id
-            } for s in servers_db]
-
-            return notas, servers
-
-        notas, servers = com_retry(buscar)
-        return jsonify({'notas': notas, 'servers': servers})
+        return jsonify(com_retry(lambda: dados_do_mapa_perto(*pos)))
     except Exception as e:
         db.session.rollback()
-        print(f"[ERRO MAPA] Falha ao carregar notas/servidores (rode atualizar_banco.py se for erro de coluna): {e}")
-        return jsonify({'notas': [], 'servers': []})
+        print(f"[ERRO MAPA] Falha ao carregar notas/servidores: {e}")
+        return jsonify({'notas': [], 'servers': [], 'raio_notas_m': RAIO_NOTAS_M,
+                        'raio_servidores_m': RAIO_SERVIDORES_M})
 
 
 # ==========================================
@@ -570,6 +578,107 @@ def upload_imagem():
 
     url = resultado.get('secure_url')
     return jsonify({'url': url, 'tipo': 'video' if e_video else 'image', 'tamanho': tamanho})
+
+
+# ==========================================
+# RECORTE DE GIF (mantém a animação)
+# ------------------------------------------------------------
+# O navegador não consegue recortar GIF sem perder a animação (o canvas pega 1 quadro). O cliente
+# manda o GIF (arquivo, ou o link de um GIF do Giphy) + o enquadramento que a pessoa escolheu, e
+# aqui cada quadro é recortado com o Pillow. Devolve um WebP animado - o cliente envia ele pelo
+# mesmo caminho de upload de qualquer imagem.
+# ==========================================
+_ultimo_recorte = {}
+_RE_GIPHY_URL = re.compile(r'^https://media\d*\.giphy\.com/')
+LIMITE_GIF_BYTES = 10 * 1024 * 1024
+
+
+@main_bp.route("/api/gif/recortar", methods=["POST"])
+def recortar_gif():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    # Cada recorte custa CPU: um por vez e com um respiro entre eles.
+    agora = time.time()
+    if agora - _ultimo_recorte.get(session['user_id'], 0) < 1.5:
+        return jsonify({'error': 'Calma - espere um instante e tente de novo.'}), 429
+    _ultimo_recorte[session['user_id']] = agora
+
+    formato = request.form.get('formato', 'quadrado')
+    if formato not in FORMATOS_ANIMADOS:
+        return jsonify({'error': 'Formato inválido'}), 400
+    try:
+        escala = float(request.form.get('escala', 1))
+        ox = float(request.form.get('ox', 0))
+        oy = float(request.form.get('oy', 0))
+    except ValueError:
+        return jsonify({'error': 'Parâmetros inválidos'}), 400
+    espelho_h = request.form.get('fh') in ('1', 'true')
+    espelho_v = request.form.get('fv') in ('1', 'true')
+
+    arquivo = request.files.get('file')
+    if arquivo:
+        dados = arquivo.read(LIMITE_GIF_BYTES + 1)
+    else:
+        url = request.form.get('url', '')
+        # Só o CDN do Giphy: buscar URL qualquer a pedido do usuário seria um buraco (SSRF).
+        if not _RE_GIPHY_URL.match(url):
+            return jsonify({'error': 'Origem não permitida'}), 400
+        try:
+            resp = requests.get(url, timeout=10, stream=True)
+            resp.raise_for_status()
+            dados = resp.raw.read(LIMITE_GIF_BYTES + 1, decode_content=True)
+        except Exception as e:
+            return jsonify({'error': f'Não consegui baixar o GIF: {e}'}), 502
+    if not dados or len(dados) > LIMITE_GIF_BYTES:
+        return jsonify({'error': 'GIF muito pesado (máximo 10 MB)'}), 400
+    if not dados.startswith((b'GIF8', b'RIFF', b'\x89PNG')):
+        return jsonify({'error': 'Esse arquivo não é um GIF/animação de verdade'}), 400
+
+    try:
+        saida = recortar_animacao(dados, formato, escala, ox, oy, espelho_h, espelho_v)
+    except Exception as e:
+        print(f"[ERRO RECORTE GIF] {e}")
+        return jsonify({'error': 'Não consegui processar esse GIF'}), 422
+    return Response(saida, mimetype='image/webp')
+
+
+# Vídeo (mp4/webm/mov) como foto/faixa/fundo: o navegador manda os quadros já extraídos (JPEG) e
+# aqui eles viram um WebP animado - nada de ffmpeg no servidor (ver `animar_quadros`).
+_ultimo_video = {}
+LIMITE_QUADRO_BYTES = 600 * 1024
+
+
+@main_bp.route("/api/video/animar", methods=["POST"])
+def animar_video():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+
+    agora = time.time()
+    if agora - _ultimo_video.get(session['user_id'], 0) < 3:
+        return jsonify({'error': 'Calma - espere um instante e tente de novo.'}), 429
+    _ultimo_video[session['user_id']] = agora
+
+    try:
+        fps = int(request.form.get('fps', 12))
+    except ValueError:
+        return jsonify({'error': 'Parâmetros inválidos'}), 400
+
+    quadros = []
+    for arq in request.files.getlist('quadro')[:MAX_QUADROS_ANIMACAO]:
+        dados = arq.read(LIMITE_QUADRO_BYTES + 1)
+        if len(dados) > LIMITE_QUADRO_BYTES or not dados.startswith(b'\xff\xd8'):
+            return jsonify({'error': 'Quadro inválido'}), 400
+        quadros.append(dados)
+    if len(quadros) < 2:
+        return jsonify({'error': 'Vídeo curto demais'}), 400
+
+    try:
+        saida = animar_quadros(quadros, fps)
+    except Exception as e:
+        print(f"[ERRO VIDEO->ANIMACAO] {e}")
+        return jsonify({'error': 'Não consegui converter esse vídeo'}), 422
+    return Response(saida, mimetype='image/webp')
 
 
 # ==========================================

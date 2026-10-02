@@ -6,9 +6,10 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 ## Stack
 
 - **Backend**: Flask, Flask-SQLAlchemy, Flask-SocketIO (eventlet), Authlib (login Google OAuth)
-- **Banco**: Neon (Postgres serverless) em produção. `config.py` usa `NullPool` —
-  **toda query abre uma conexão nova**. Isso causa falhas intermitentes de
-  "cold start" (Neon "acordando"). Veja `com_retry()` abaixo.
+- **Banco**: Neon (Postgres serverless) em produção. `config.py` usa pool com
+  `pool_pre_ping` (o `NullPool` antigo foi trocado). Cold start do Neon ("acordando")
+  ainda pode falhar qualquer query: veja `com_retry()` abaixo. **Cada query é uma ida
+  de rede** — conte-as (`testes/contar_queries.py`) antes de aceitar um handler novo.
 - **Frontend**: um único arquivo `app/templates/chat.html` (~8100 linhas) com
   CSS e JS inline — sem build step, sem framework. PeerJS para voz/vídeo
   (WebRTC, malha P2P — ver Pendências), Leaflet para o mapa, qrcodejs para o
@@ -49,6 +50,11 @@ nunca adiciona colunas em tabela já existente. Toda coluna nova em
 (`add_column_se_nao_existir(...)`), senão a coluna existe no modelo Python
 mas não no banco real, e a query falha em produção (Postgres) mesmo
 funcionando no teste local com SQLite, que é mais tolerante.
+
+**Desde 01/10/2026 há uma rede de segurança**: `adicionar_colunas_que_faltam()` roda no
+boot e adiciona sozinha a coluna que o modelo tem e o banco não (sem NOT NULL/DEFAULT).
+Isso evita o bug, mas **não** dispensa o `atualizar_banco.py` (dados, índices) — e o
+código precisa tratar `None` nas colunas novas. Ver "Rodada de 01/10/2026".
 
 **O bug**: `geo_note.duration_hours`/`expires_at` e colunas de `map_server`
 existiam no modelo havia tempo mas nunca tinham sido migradas no Neon —
@@ -990,6 +996,283 @@ pela barra de hover.
 
 ---
 
+
+# Rodada de 01/10/2026 — social, mapa por raio e velocidade
+
+Saiu do teste com duas pessoas (filippo + aquele sales). **Mercado e Battle Pass/nível
+ficaram de fora de propósito** (o dono vai refazer economia, loja e bazar depois).
+Scripts de fumaça desta rodada: `testes/` (ver seção "Testes").
+
+## Velocidade: o que pesava e foi cortado
+
+Cada query é uma ida ao Neon. Medido com `testes/contar_queries.py` (banco realista, 5
+servidores x 20 membros): `/chat` 22→9, conexão do socket 46→11 (reconexão; 24 na 1ª do
+dia, que cria as missões), `enviar_mensagem` 20→8, `entrar_canal` 5→3.
+
+- `db = SQLAlchemy(session_options={'expire_on_commit': False})` (`models.py`). Por padrão
+  o SQLAlchemy esquece tudo a cada commit e relê a pessoa a cada acesso. **Cuidado**: depois
+  de um `commit()` os objetos *não* são recarregados sozinhos — se precisar do valor que o
+  banco calculou, use `db.session.refresh(obj)`.
+- `Server.members` e `Channel.allowed_members` eram `lazy='subquery'`: **toda** vez que um
+  `Server` carregava, vinham junto todas as linhas de todos os membros. Agora `lazy='select'`.
+  Para "essa pessoa é membro?" use `eh_membro(usuario, server_id)` (EXISTS), não
+  `usuario in srv.members`.
+- `servidores_para_json(lista, usuario)` monta todos os servidores com 3 queries (canais,
+  quem vê canal privado, contagem de membros). `servidor_para_json` virou atalho dele.
+  `avisar_servidor` calcula os canais uma vez e filtra por membro.
+- `/api/mensagens/<id>` e `/api/dms/<id>` devolviam as **50 mais antigas** (`asc` + `limit`),
+  então canal com mais de 50 mensagens "perdia" as novas ao sair e voltar. Agora são as 50
+  mais recentes e aceitam `?antes=<id>` (o cliente pagina ao rolar pro topo).
+- PeerJS e qrcodejs não bloqueiam mais o `<head>`: `carregarLib(url)` baixa sob demanda e
+  pré-aquece quando o navegador está ocioso. `preconnect` nos CDNs.
+- Cloudinary: `urlOtimizada()` pede `f_auto,q_auto,w_900` pra foto (GIF e links de fora
+  ficam como estão); mensagem que acabou de chegar carrega na hora (sem `lazy`) com
+  esqueleto, e a rolagem acompanha a foto que termina de carregar.
+- **Reconexão** (`connect` no cliente): o socket que cai perde a sala do canal e as mensagens
+  paravam de chegar até F5. Agora reentra no canal/DM, busca o que faltou e mostra a pílula
+  "Reconectando...". O servidor também manda `receber_mensagem` direto pro autor (o cliente
+  ignora a repetição pelo id).
+
+## Migração automática de coluna (rede de segurança da regra 1)
+
+`adicionar_colunas_que_faltam()` (`app/__init__.py`) roda no boot e faz `ADD COLUMN` pra
+toda coluna do modelo que o banco ainda não tem. Só adiciona, **sem NOT NULL/DEFAULT** —
+por isso o código trata `None` como falso/vazio nas colunas novas (`lida`, `oculta`).
+`atualizar_banco.py` continua valendo pra dados e índices. Coluna nova ainda deve ir nos
+dois (modelo + `atualizar_banco.py`).
+
+Colunas/tabelas novas: `person.banner_ajuste`, `direct_message.attachment_url/type/name/lida`,
+`geo_note.icone/oculta`, `map_server.oculta`, tabelas `denuncia` e `notificacao`.
+`direct_message.content` grava `''` (não `None`) quando é só anexo — o Neon pode ter a
+coluna `NOT NULL`.
+
+## Amizade (refeita)
+
+- `Friendship.status`: `pending` (vale 24h a partir de `created_at`), `accepted`, `blocked`
+  (**quem bloqueou é o `requester_id`**). `relacao_entre(a, b)`, `pedido_expirou()`,
+  `limpar_pedidos_expirados()` em `events.py`.
+- Quem **envia** vê a pessoa na lista de DMs como "Aguardando resposta" e só pode
+  **cancelar**; quem **recebe** vê "Aceitar?" e, na DM, os botões Aceitar / Recusar /
+  Bloquear. Pedir de volta pra quem já pediu = aceita. Bloqueado não revela que foi bloqueado.
+- **Uma fonte da verdade**: `emitir_amizades(pessoa_id)` manda o evento `amizades`
+  (`amigos`, `pedidos`, `bloqueados`) pras abas da pessoa — nas duas pontas, a cada mudança, e
+  no `connect`. O cliente (`reconciliarAmizades()`) acerta lista de DMs, selos, contadores e a
+  tela de Amigos a partir dele.
+- Eventos: `listar_amizades`, `enviar_pedido_amizade`, `responder_pedido_amizade`
+  (`acao`: aceitar/recusar/bloquear), `cancelar_pedido_amizade`, `remover_amigo`,
+  `bloquear_usuario`, `desbloquear_usuario`.
+- **Tela de Amigos** (`#amigos-view`, item "Amigos" na sidebar com badge): abas Disponível ·
+  Todos · Pendente · Bloqueados e o botão verde "Adicionar amigo". Substitui os filtros
+  "Disponível/Todos" da sidebar (que só filtravam a lista de DMs).
+- `pode_trocar_dm()`: DM só entre amigos, pedido pendente, quem divide servidor, ou a si
+  mesmo. Antes qualquer pessoa mandava DM pra qualquer id.
+- **Presença**: `presencaPorId` (cliente) é a única fonte; `atualizarStatusAmigo()` e o
+  retrato `amizades` a alimentam, e `presencaMudou()` repinta lista, cabeçalho da DM e tela
+  de Amigos. O ponto do cabeçalho da DM antes era calculado só ao abrir a conversa.
+- **Anotações** (`#dm-me`): ícone de marcador próprio e "Só você vê" (antes usava a foto da
+  pessoa e parecia outro contato). Continua sendo uma DM para si mesma.
+
+## DM
+
+- Compositor novo: enviar (aparece ao digitar), emoji, GIF (mesmo painel do canal, via
+  `gifDestino`), foto/vídeo por "+", colar e arrastar. Bolha otimista com `temp_id`.
+- `DirectMessage.lida` + `dms_nao_lidas` (ao conectar) + `marcar_dm_lida` + `dm_lidas`
+  (sincroniza as outras abas). `lida IS NULL` = mensagem antiga = já lida.
+- Conversa rápida (alguém do mesmo servidor, sem amizade): cartão tracejado "Conversa
+  rápida" com botão Adicionar amigo no cabeçalho.
+- O cabeçalho do Radar voltava com os ícones de ligar da última DM (`switchMainView('home')`
+  não resetava). Agora reseta pra caixa de entrada.
+
+## Caixa de entrada + som
+
+- `Notificacao` (`dm` agregada por remetente com contador, `amizade`, `mencao`).
+  Eventos: `notificacoes`, `notificacao_nova`, `listar/marcar_notificacoes_lidas`,
+  `limpar_notificacoes`. `criar_notificacao()` nunca derruba quem chamou.
+- `notificacao_nova` só atualiza a caixa; **toast e som saem dos eventos específicos**
+  (`receber_mensagem_direta`, `pedido_amizade_recebido`, `mencao_recebida`) pra não tocar duas
+  vezes. Som sintetizado com Web Audio (`tocarSom('msg'|'amizade'|'mencao')`), calado em "Não
+  perturbar" e desligável no sino (guarda em `localStorage`, é conveniência de UI). Número
+  nas abas do navegador "(3) Panteão" e aviso nativo com a aba em segundo plano.
+
+## Mapa por raio (privacidade)
+
+- Constantes em `utils.py`: `RAIO_NOTAS_M = 2000`, `RAIO_SERVIDORES_M = 15000`,
+  `MAX_NOTAS_ATIVAS_POR_PESSOA = 20`, `DENUNCIAS_PARA_OCULTAR = 3`. O servidor manda esses
+  valores ao cliente (mexeu aqui, vale lá).
+- Só chega ao navegador o que está no raio de quem olha: `mapa_pedir_arredores` →
+  `mapa_arredores`; `dados_do_mapa_perto()` filtra por caixa + haversine, ignora expiradas
+  (`expires_at`) e ocultas. `/api/mapa/dados?lat=&lng=` usa a mesma função (sem posição, vazio).
+- `centros_mapa` (sid → posição, em memória) decide quem recebe cada aviso ao vivo
+  (`_emitir_perto`). Nunca é repassado e vale no Modo Fantasma também (só filtra). Criar
+  nota/servidor fora do alcance é recusado no servidor.
+- **Bug das notas que nunca sumiam**: o cliente nunca mandava `duracao` em `criar_geonote`,
+  então `expires_at` ficava `None`. Agora manda (1h / 1 dia / 7 dias) e a nota some do mapa
+  no prazo (`restante_s` no payload; o cliente remove sozinho).
+- Cliente: ondas saindo de você (`.raio-onda`, CSS puro, tamanho recalculado por zoom),
+  círculo do raio das notas e dos servidores, rolagem presa (`setMaxBounds` + `minZoom 12`).
+- Nota: o emoji do modal é o **ícone do balão** (`GeoNote.icone`), não entra no texto. Abre
+  sozinha 5s ao chegar no alcance ou quando você chega a <100 m, tem X vermelho pra
+  minimizar, abre no hover e fecha ao tirar o mouse; clique no balão fixa aberto.
+- **Copiar nota** (`copiar_geonote`) cria uma nota nova sua no seu alcance, com a mesma
+  duração — não copia link nem texto (a seleção do texto fica bloqueada).
+- **Denunciar** nota/servidor (`denunciar` → `Denuncia`, motivos em `MOTIVOS_DENUNCIA`).
+  3 denúncias de pessoas diferentes marcam `oculta=True` e tiram do mapa de todo mundo; quem
+  denuncia deixa de ver na hora. Ainda **não existe tela de revisão** (ver Pendências).
+- Painel do pino de servidor refeito (`.bsv-*`): capa na cor do servidor, foto sobreposta,
+  membros/vagas, Entrar, Editar/Tirar do mapa (dono) ou Denunciar.
+
+## Perfil
+
+- Salvar faixa: o servidor só aceitava URL do site/Cloudinary, então **GIF escolhido nas
+  sugestões (Giphy) era descartado em silêncio** e a faixa "não salvava". Agora usa
+  `url_de_imagem_ok` (site, Cloudinary ou Giphy).
+- **GIF com enquadramento**: *(superado na Rodada 2 - ver "GIF/animação: o servidor recorta")*.
+  Na rodada 1 o GIF era enquadrado por CSS (`Person.banner_ajuste`, `img:<url>|<ajuste>`); esses dados
+  antigos ainda são lidos e desenhados (`camadaGif()`/`temaCamadaHtml()`), mas o editor agora manda o
+  GIF pro servidor recortar. Novo formato de editor `painel` (retrato) pro fundo do cartão.
+- X de fechar e ESC ficam fora da área que rola; barra de rolagem estilizada; "+" ao passar o
+  mouse na foto e na faixa; cartão mais redondo.
+
+## Emoji completo
+
+`emoji-picker-element` (CDN) com os dados **em português e Emoji 17** servidos por
+`/static/emoji/pt.json`, gerado por `gerar_emoji.py` (baixa `emojibase-data@latest/pt` e
+converte `label`→`annotation`; `emoticon` tem que ser texto, não lista). Rode de novo
+quando sair Unicode novo. `abrirEmojiPicker(botão, input|callback)` mantém a assinatura de
+sempre (chat, DM, status, nota, evento, reações com "+"); sem a biblioteca, cai no painel
+pequeno antigo. Shift+clique mantém aberto.
+
+## Mensagens: pequenos acertos
+
+- Agrupamento por **id do autor** (antes por nome: dois "Filippo" ou nome trocado no meio se
+  juntavam sob o mesmo cabeçalho).
+- Os 3 pontinhos da mensagem abriam e fechavam no mesmo clique (dois `click` no `document`;
+  `stopPropagation` não impede o irmão).
+- `receber_mensagem` leva `canal_id`; o cliente ignora o que é de outro canal.
+
+## Testes (`testes/`)
+
+Sem framework; rodar da raiz com o venv. Banco SQLite em memória, `socketio.test_client`.
+
+```bash
+python testes/fumaca_social.py     # amizade, bloqueio, 24h, DM/anexo, mapa por raio, denúncia, perfil
+python testes/fumaca_servidor.py   # servidor, convite, canal privado, paginação, expulsão
+python testes/fumaca_conversa_rapida.py  # conversa rápida, nome repetido, silenciar, denunciar pessoa, notas antigas, recorte de GIF
+python testes/contar_queries.py    # quantas queries cada carga faz (use antes/depois de mexer em performance)
+```
+
+---
+
+
+## Rodada 2 de 01/10/2026 — feedback do teste da rodada 1
+
+### Conversa rápida (mensagem pra desconhecido) — o modelo
+- 1ª mensagem pra quem **não é amigo** (e divide servidor) cria um `Friendship` `pending` com
+  `rapida=True`. Mesma máquina do pedido de amizade (24h, Aceitar/Recusar/Bloquear), só que com
+  mensagens **temporárias**: quando o pedido expira, `limpar_pedidos_expirados()` apaga a linha
+  **e as `DirectMessage` entre os dois**.
+- **Cada ponta fecha só do seu lado**: `Friendship.oculta_req` (quem puxou) / `oculta_dest` (quem
+  recebeu). Fechar/recusar uma conversa rápida só esconde pra você — a outra pessoa continua
+  vendo e lendo (sem saber que foi recusada) até as 24h. Quem recusou **não recebe mais nada**
+  (nem aviso) e quem escreve pra uma conversa que fechou a faz reaparecer pra si.
+- Quem **puxou** a conversa nunca "bloqueia" (o botão era Bloquear, estranho): tem
+  **Adicionar amigo** (vira pedido de verdade) e **Fechar conversa**. Quem **recebeu** tem
+  Adicionar amigo / Recusar / Bloquear.
+- Se quem puxou já tinha **fechado** e o outro clica em Adicionar amigo, o pedido **volta** pra
+  quem fechou (`requester`/`addressee` trocam, `created_at` reinicia, histórico fica) e é ele quem
+  decide aceitar, recusar ou bloquear (`_aceitar_pedido`).
+- Cliente: o cartão da DM e o cabeçalho têm estados `recebido`, `enviado`, `recebido-rapida`,
+  `enviado-rapida`, `rapida` (ainda sem mensagem, sem linha no banco), `amigo`, `notas`
+  (`nomeEstadoDoCartao`/`pintarCabecalhoDM`). O mesmo vale pra conversa iniciada no mapa.
+- **Nome de exibição repetido**: `enviar_pedido_amizade` resolve por `@conta` ou e-mail (únicos).
+  Por nome, se houver mais de uma pessoa, **recusa e lista os `@`** em vez de escolher uma.
+
+### Tela de Amigos v2 (simples)
+Sem abas ao estilo Discord: **Todos | Online** + busca + botão "+ Adicionar". Pedidos e
+conversas rápidas aparecem **em cima** só quando existem; amigos em cartões (online primeiro,
+offline esmaecido, ações no hover); **Bloqueados** num `<details>` discreto no fim.
+O filtro escolhido fica no `localStorage` (conveniência de UI).
+
+### Menu do contato (clique-direito na DM, ⋮ do cabeçalho e dos cartões)
+Ver perfil · Enviar mensagem · Copiar ID · Copiar @usuário · **Silenciar** (`Silenciado`, mora na
+conta; mensagem chega mas sem som/toast/badge/caixa de entrada) · **Convidar para um servidor
+meu** (cria convite de 1 uso/24h e manda o link na DM) · **Denunciar** pessoa (`Denuncia` com
+`tipo='usuario'`: só registra, não esconde) · Desfazer amizade · Bloquear.
+O ⋮ do cabeçalho "não funcionava": o clique subia até o `document`, cujo listener fecha o menu
+no mesmo instante. Ligar quando já está numa call agora pergunta antes de sair
+(`ligarPara()`), em vez de só mostrar um toast.
+**Anotações** moram em `#dm-me` (não `#dm-<meu id>`): `cartaoDaDM(id)` resolve isso. Antes o
+cabeçalho não repintava e mostrava a conversa anterior (com botões de ligar).
+
+### GIF/animação: o servidor recorta (Pillow)
+O canvas do navegador só pega 1 quadro, então **todo GIF** (foto, ícone de servidor, faixa, fundo
+do cartão) passa por `POST /api/gif/recortar`: o editor mostra a animação num `<img>` (arrastar,
+zoom, espelhar; **girar só em foto parada**) e, ao confirmar, manda arquivo (ou link do Giphy —
+só esse CDN, anti-SSRF) + `formato`/`escala`/`ox`/`oy`/`fh`/`fv`. `recortar_animacao()` (utils)
+faz a mesma conta do editor de foto parada e devolve **WebP animado** (25 KB de GIF → ~2 KB), que
+segue pelo upload normal (`File.animado = true` pula a compressão por canvas). Formatos em
+`FORMATOS_ANIMADOS`. Máx. ~90 quadros, 10 MB, 1 recorte a cada 1,5 s por pessoa.
+**Pillow entrou no `requirements.txt`.** `Person.banner_ajuste` e `img:<url>|<ajuste>` (CSS)
+continuam sendo **lidos** (dados antigos), mas o editor não os gera mais.
+**Vídeo como foto/faixa não existe** (cortar vídeo exigiria ffmpeg no servidor).
+
+### Mapa: ajustes
+- Nota **não abre mais no hover** (virava um quadrado quebrado): abre por **clique** ou **sozinha
+  5 s** ao entrar no alcance/chegar perto; o X vermelho fecha. Card em retângulo (232–320 px) com
+  o "expira em..." inteiro.
+- **Copiar nota** agora é "escolha o ponto": entra em `plantingMode = 'copia'`, clique **dentro do
+  círculo azul** (Esc cancela); o servidor revalida o alcance.
+- Nota antiga **sem prazo** (criada antes da duração valer) só vale 24h desde que nasceu
+  (`dados_do_mapa_perto` + `nota_para_json`), e `atualizar_banco.py` apaga as com mais de 1 dia.
+
+### Vídeo (mp4/webm/mov) como foto, ícone, faixa e fundo — sem ffmpeg
+O navegador decodifica o vídeo (`videoParaAnimacao()` em `chat.html`, logo antes de `abrirEditorImagem`):
+tira ~12 quadros/s num `<canvas>` (só os **primeiros 6 s**, lado máx. 480px, 640px em faixa/fundo) e manda os
+JPEGs pra `POST /api/video/animar`; o servidor só junta com o Pillow (`animar_quadros()` em utils.py) e
+devolve um **WebP animado**. Esse arquivo (`File.animado = true`) entra no **mesmo editor de GIF**
+(arrastar/zoom/espelhar) e no mesmo `/api/gif/recortar`. Não existe ffmpeg em lugar nenhum: o Render free
+só gasta CPU montando ~70 quadros pequenos (1 conversão a cada 3 s por pessoa).
+- `abrirEditorImagem()` aceita `video/*` direto, então avatar, ícone de servidor (criar/editar), faixa e fundo
+  funcionam sem mudar quem chama — bastou liberar `video/*` no `accept` dos inputs.
+- Limites: vídeo de até 80 MB (lido no navegador, não sobe), formato que o **navegador** decodifica (mp4 H.264,
+  webm, mov em geral); HEVC/MOV exótico pode falhar com toast claro. Sem áudio, sem escolher trecho (só o começo).
+- **Teto de upload por rota**: o `MAX_CONTENT_LENGTH` global (5 MB) barrava GIF de 6–10 MB **antes** da rota
+  rodar (o aviso dizia "5 MB" mesmo a rota aceitando 10). `teto_de_upload_por_rota()` (routes.py) sobe o teto só
+  em `/api/gif/recortar` (12 MB) e `/api/video/animar` (16 MB); `/api/upload` continua em 5 MB.
+
+### Cartão de perfil
+- Menu ⋯ cortado: o `.pc` tinha `overflow:hidden` (adicionado na rodada 1) e o wrapper
+  `.pc-popout` desenhava uma moldura quadrada atrás. Agora o wrapper é transparente e o menu abre
+  pra cima se faltar espaço.
+- Legibilidade sobre foto/GIF claro: balão do "pensando" em **grafite sólido**, véu escuro
+  gradiente no corpo do cartão com tema (`.pc.com-tema .pc-corpo`), seções escurecidas e
+  `text-shadow`. (Inverter a cor do texto pela luminosidade da imagem ficou de fora: exigiria
+  amostrar a imagem em canvas e CORS nos GIFs.)
+
+### Marquee (texto grande que rola)
+`MQ_SELETOR`/`MQ_RAIZES` (fim do `chat.html`): nome/subtítulo que não cabem ficam 3 s parados no
+início, rolam até o fim, esperam 3 s e voltam (Web Animations API). Um `MutationObserver` +
+`ResizeObserver` reavaliam quando o texto ou a largura mudam; `mqProcessar()` desliga o
+observer enquanto mexe no DOM. Elemento novo que precise disso: ponha a classe/seletor em
+`MQ_SELETOR` (e garanta `white-space: nowrap; overflow: hidden` + pai com `min-width: 0`).
+
+**Bug do marquee que ficava só com "..." (Conversa rápida)**: `mqAvaliar()` media com `scrollWidth`/`clientWidth`
+(inteiros) e ignorava sobra < 4 px. Só que 1–2 px a mais já fazem o `text-overflow` mostrar "…" — o subtítulo
+"Conversa rápida" estourava por 2 px (caixa 83, texto 85), nem rolava nem cabia. Agora mede por
+`getBoundingClientRect()` (fracionário) e rola qualquer sobra (`dist >= 1`).
+
+### Sons novos
+`tocarSom('xp'|'nivel'|'missao'|'call_entrar'|'call_sair'|'toque'|'ligando')`; `iniciarToque()`/
+`pararToque()` fazem o loop do toque de chamada (até atender/recusar/cancelar) e do "chamando".
+Cada tom aceita volume como 4º item (o do XP é bem baixo).
+
+### Outras correções
+- Prévia de anexo (canal e DM) saía em branco: `escUrl()` barra `blob:`; o `src` agora é definido
+  por propriedade (`ligarPreviasDeAnexo`). Clicar na miniatura abre grande (foto ou vídeo).
+- Caixa de entrada também no cabeçalho do servidor.
+
+---
+
 # Convenções
 
 - Nomes de eventos de socket, funções e variáveis em **português**
@@ -1115,6 +1398,12 @@ em tempo real de verdade (regra 6), latência de mensagem percebida, prévia
 de call, qualidade de call automática, correções de mapa/perfil, emoji
 vetorial e busca de GIF (Giphy).
 
+**Rodada de 01/10/2026 (ainda sem commit/deploy quando isto foi escrito)**: amizade refeita
+(tela de Amigos, pedido de 24h, bloqueio), DM com anexo/não lidas, caixa de entrada + som, mapa
+por raio com denúncia/cópia de nota, GIF enquadrável na faixa e no fundo do cartão, emoji
+completo em português, reconexão do socket e uma queda grande no número de queries. Detalhes na
+seção "Rodada de 01/10/2026" e "Rodada 2" (feedback do teste: conversa rápida, Amigos simples, GIF recortado no servidor com **Pillow** - instale com `pip install -r requirements.txt`). **Fora de escopo de propósito: Mercado e Battle Pass/nível.**
+
 **Rodar `python atualizar_banco.py` depois do deploy** (colunas novas de perfil: `pronomes`, `banner_url`, `username`, `status_emoji`, `pensando`, `perfil_tema`, `nome_estilo`, `placa`, `moldura`) — essa rodada criou
 a tabela `friendship`, a coluna `message.is_pinned` e, na mais recente,
 `person.created_at` ("Membro desde") e, agora, `person.ghost_mode`,
@@ -1131,6 +1420,8 @@ produção.
 - **Estilo de nome e placa** aparecem no cartão, nas listas e na barra inferior, mas
   **não** no nome de quem fala nas mensagens do chat.
 - **Menção (@) só em canais**; DM ainda não tem.
+- **Emoji nos nomes de servidor/membro** ainda usa a fonte do sistema em alguns lugares
+  (`emojificar()` só roda em mensagem, status e bio).
 
 - **Call é malha P2P (PeerJS), não SFU**: cada participante manda a
   própria mídia direto pra cada outro — upload de cada um escala com
@@ -1140,10 +1431,7 @@ produção.
   servidor de mídia (LiveKit/mediasoup) é projeto à parte, não um bug pra
   corrigir — precisa de infra nova (servidor, TURN, reescrever a lógica de
   call do zero no frontend).
-- **Recortar GIF perdendo a animação**: o editor de avatar mostra o GIF
-  animado de verdade antes de confirmar, mas não deixa cortar/girar
-  mantendo a animação (canvas só captura um quadro). Precisaria de uma lib
-  de decode+reencode de GIF (tipo `gif.js`) - ver seção Editor de imagem.
+- **Recortar GIF**: resolvido na Rodada 2 (recorte no servidor com Pillow, ver acima).
 - **Twemoji não cobre o app inteiro**: `emojificar()` roda em mensagens,
   status e bio (os pontos de maior tráfego), mas não em todo lugar que
   mostra texto de usuário (ex.: nome de membro na sidebar, nota do mapa).
@@ -1166,8 +1454,13 @@ produção.
 - **Canais globais** (`server_id=NULL`) continuam liberados para qualquer
   logado em `pode_ver_canal()`, por compatibilidade. Não há UI que leve até
   eles. Se forem removidos de vez, dá para apertar essa checagem.
-- **Remover amigo sem UI dedicada**: o evento `remover_amigo` existe e
-  funciona, mas não tem botão/menu que chame ele ainda.
+- **Revisão de denúncias**: `Denuncia` grava e 3 denúncias escondem o alvo, mas não há tela
+  nem rota pra um humano revisar, restaurar ou apagar. Por enquanto só via banco.
+- **Mercado/loja/bazar e Battle Pass** (economia, inventário, itens): refazer — o dono
+  deixou de lado nesta rodada. A compra continua com os problemas de antes (ver "Inventário").
+- **Vídeo como foto/faixa**: resolvido sem ffmpeg (ver "Vídeo (mp4/webm/mov) como foto..."). Limites: só os 6 s iniciais, sem áudio, sem escolher o trecho.
+- **Girar GIF 90°** não existe (só em foto parada) — o dono pediu pra tirar o botão.
+- **Menu de contexto da mensagem** (⋯) não tem "Denunciar mensagem" — só nota/servidor do mapa.
 - **Clipe automático é heurística, não IA**: dispara por volume simultâneo
   de 2+ pessoas, não por análise de conteúdo. Documentado como decisão
   consciente (ver seção "Gravar e clipar a call"), não como bug.

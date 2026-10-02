@@ -161,6 +161,54 @@ def atualizar_banco():
                     db.session.rollback()
                     print(f"\u26a0\ufe0f Nao consegui copiar o balao antigo: {e}")
 
+            # 21. Faixa em GIF com enquadramento, DMs com anexo/leitura, notas com ícone,
+            # denúncias (tabela nova -> db.create_all) e itens ocultos por denúncia.
+            add_column_se_nao_existir("person", "banner_ajuste VARCHAR(60)")
+            add_column_se_nao_existir("direct_message", "attachment_url VARCHAR(500)")
+            add_column_se_nao_existir("direct_message", "attachment_type VARCHAR(20)")
+            add_column_se_nao_existir("direct_message", "attachment_name VARCHAR(255)")
+            add_column_se_nao_existir("direct_message", "lida BOOLEAN")   # sem DEFAULT: o que já existe fica NULL e vira lido abaixo
+            try:
+                # DM só de anexo vem sem texto: a coluna deixa de ser obrigatória (Postgres).
+                db.session.execute(text("ALTER TABLE direct_message ALTER COLUMN content DROP NOT NULL"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()   # SQLite não tem esse comando - lá a coluna já é tolerante
+            try:
+                # Tudo que já existia antes dessa coluna é considerado lido (senão
+                # todo mundo ganha um badge enorme de "não lidas" no primeiro login).
+                db.session.execute(text("UPDATE direct_message SET lida = TRUE WHERE lida IS NULL"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            add_column_se_nao_existir("geo_note", "icone VARCHAR(16)")
+            add_column_se_nao_existir("geo_note", "oculta BOOLEAN DEFAULT FALSE")
+            add_column_se_nao_existir("map_server", "oculta BOOLEAN DEFAULT FALSE")
+            # 22. Conversa rápida (mensagem pra desconhecido) e silenciar contato (tabela nova -> create_all)
+            add_column_se_nao_existir("friendship", "rapida BOOLEAN DEFAULT FALSE")
+            add_column_se_nao_existir("friendship", "oculta_req BOOLEAN DEFAULT FALSE")
+            add_column_se_nao_existir("friendship", "oculta_dest BOOLEAN DEFAULT FALSE")
+            # 23. Notas antigas sem prazo (criadas antes da duração valer) ficavam eternas no mapa: apaga as
+            # com mais de 1 dia. (O servidor também ignora essas notas na hora de mostrar.)
+            try:
+                from datetime import timedelta
+                from app.models import br_now
+                db.session.execute(text("DELETE FROM geo_note WHERE expires_at IS NULL AND timestamp < :corte"),
+                                   {"corte": br_now() - timedelta(days=1)})
+                db.session.commit()
+                print("✅ Notas antigas sem prazo limpas.")
+            except Exception as e:
+                db.session.rollback()
+                print(f"ℹ️ Limpeza de notas antigas: {e}")
+            for tabela in ("denuncia", "notificacao"):
+                try:
+                    db.session.execute(text(f"SELECT 1 FROM {tabela} LIMIT 1"))
+                    db.session.commit()
+                    print(f"✅ Tabela '{tabela}' presente.")
+                except Exception:
+                    db.session.rollback()
+                    print(f"⚠️ Tabela '{tabela}' não encontrada - o db.create_all() do boot cria.")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

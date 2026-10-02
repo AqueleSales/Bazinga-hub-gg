@@ -53,7 +53,41 @@ def create_app():
         try:
             db.create_all()
             print("[BAZINGA INFO] Banco de dados conectado com sucesso!")
+            adicionar_colunas_que_faltam()
         except Exception as e:
             print(f"[BAZINGA AVISO] Banco de dados Neon dormindo no boot. O site vai ligar mesmo assim! Detalhe: {e}")
 
     return app
+
+
+def adicionar_colunas_que_faltam():
+    """Rede de segurança contra o bug nº 1 do projeto: coluna nova no models.py
+    que nunca chegou no banco real (o `create_all` só cria tabela, não coluna).
+
+    No boot compara cada tabela do modelo com a do banco e faz ALTER TABLE ADD COLUMN
+    no que faltar. Só adiciona (nunca apaga/altera), sem NOT NULL nem DEFAULT - então o
+    código trata None como "falso/vazio" nas colunas novas. O `atualizar_banco.py`
+    continua valendo para ajustes de dados e índices.
+    """
+    from sqlalchemy import inspect, text
+    try:
+        insp = inspect(db.engine)
+        existentes = set(insp.get_table_names())
+        for tabela in db.metadata.sorted_tables:
+            if tabela.name not in existentes:
+                continue
+            tem = {c['name'] for c in insp.get_columns(tabela.name)}
+            for col in tabela.columns:
+                if col.name in tem:
+                    continue
+                tipo = col.type.compile(dialect=db.engine.dialect)
+                try:
+                    db.session.execute(text(f'ALTER TABLE "{tabela.name}" ADD COLUMN "{col.name}" {tipo}'))
+                    db.session.commit()
+                    print(f"[MIGRACAO] Coluna criada: {tabela.name}.{col.name} ({tipo})")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"[MIGRACAO] Não consegui criar {tabela.name}.{col.name}: {e}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"[MIGRACAO] Verificação de colunas pulada: {e}")
