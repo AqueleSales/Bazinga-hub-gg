@@ -79,6 +79,15 @@ def _sair_de_call(chave, peer_id):
     _call_por_sid.pop(request.sid, None)
 
 
+# Limites de texto: nome grande quebrava listas/sidebar (e o marquee rolava sem parar). O cliente usa os mesmos
+# números em `maxlength` - mudou aqui, mude lá.
+LIM_NOME_EXIBICAO = 32
+LIM_NOME_SERVIDOR = 40
+LIM_NOME_CANAL = 32
+LIM_NOTA = 140
+LIM_STATUS = 60
+
+
 def temp_id_seguro(dados):
     """Valida o temp_id que o cliente manda pra reconciliar a bolha otimista.
 
@@ -420,6 +429,9 @@ def handle_disconnect():
         usuarios_conectados[usuario.id] -= 1
         if usuarios_conectados[usuario.id] <= 0:
             del usuarios_conectados[usuario.id]
+            if ultimas_posicoes.pop(usuario.id, None):
+                for sala in _salas_da_posicao(usuario):
+                    emit('posicao_amigo_removida', {'usuario_id': usuario.id}, to=sala)
             for srv in usuario.servers:
                 emit('usuario_ficou_offline', {'usuario_id': usuario.id}, to=sala_servidor(srv.id), include_self=False)
             for amigo in amigos_de(usuario):
@@ -536,6 +548,7 @@ def lidar_com_mensagem(dados):
         'usuario': usuario.name,
         'usuario_id': usuario.id,
         'avatar': usuario.avatar,
+        'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura,
         'texto': nova_msg.text or '',
         'anexo_url': nova_msg.attachment_url,
         'anexo_tipo': nova_msg.attachment_type,
@@ -790,6 +803,7 @@ def lidar_entrar_call(dados):
             _entrar_em_call(canal_id_bruto, peer_id, usuario)
             emit('novo_usuario_call', {
                 'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
+                'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo,
                 'canal_id': canal_id_bruto
             }, to=sala_call, include_self=False)
             payload = {'canal_id': canal_id_bruto, 'participantes': participantes_call.get(canal_id_bruto, [])}
@@ -811,6 +825,7 @@ def lidar_entrar_call(dados):
             'peer_id': peer_id,
             'usuario': usuario.name,
             'avatar': usuario.avatar,
+            'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo,
             'canal_id': chave
         }, to=sala_call, include_self=False)
 
@@ -960,6 +975,25 @@ def cancelar_chamada(dados):
     emit('chamada_cancelada', {}, to=sala_pessoal(para_id))
 
 
+@socketio.on('estado_camera')
+def lidar_estado_camera(dados):
+    """Câmera ligou/desligou: avisa a sala da call pra mostrar o vídeo ou o avatar. Antes o outro lado dependia do
+    evento `mute` do WebRTC, que no navegador demora (ou nunca vem) quando a faixa é trocada por null."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    canal_id = dados.get('canal_id')
+    peer_id = dados.get('peer_id')
+    if canal_id is None or not peer_id:
+        return
+    chave = canal_id if (isinstance(canal_id, str) and canal_id.startswith('dm_')) else str(canal_id)
+    # Só quem está de verdade nessa call (com esse peer_id) pode mexer no estado dela.
+    if not any(p.get('peer_id') == peer_id and p.get('usuario_id') == usuario.id for p in participantes_call.get(chave, [])):
+        return
+    emit('estado_camera', {'peer_id': peer_id, 'ligada': bool(dados.get('ligada'))},
+         to=f"voz_{chave}", include_self=False)
+
+
 # Só avisa quem mais está na call - não grava nada no servidor. A gravação em
 # si acontece 100% no navegador de quem clicou (ver iniciarGravacao no chat.html).
 @socketio.on('iniciar_gravacao')
@@ -994,7 +1028,7 @@ def criar_servidor(dados):
         return
 
     try:
-        nome = (dados.get('nome') or f"Servidor de {usuario.name}").strip()[:100]
+        nome = (dados.get('nome') or f"Servidor de {usuario.name}").strip()[:LIM_NOME_SERVIDOR]
         icon_url = dados.get('icon_url')
         # Um blob: local do navegador não sobrevive fora da aba que o criou.
         if icon_url and icon_url.startswith('blob:'):
@@ -1027,7 +1061,7 @@ def criar_canal(dados):
 
     try:
         server_id = int(dados.get('server_id'))
-        nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:100]
+        nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:LIM_NOME_CANAL]
         tipo = 'voice' if dados.get('tipo') == 'voice' else 'text'
         if not nome:
             return
@@ -1142,7 +1176,7 @@ def editar_canal(dados):
 
         def preparar():
             if 'nome' in dados:
-                nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:100]
+                nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:LIM_NOME_CANAL]
                 if nome:
                     canal.name = nome
             if 'topico' in dados:
@@ -1222,7 +1256,7 @@ def editar_servidor(dados):
 
         def preparar():
             if 'nome' in dados:
-                nome = (dados.get('nome') or '').strip()[:100]
+                nome = (dados.get('nome') or '').strip()[:LIM_NOME_SERVIDOR]
                 if nome:
                     srv.name = nome
             if 'descricao' in dados:
@@ -1429,6 +1463,37 @@ def entrar_servidor_pin(dados):
 # Fantasma: a posição só serve pro servidor filtrar, não aparece pra outros).
 # ==========================================
 centros_mapa = {}   # sid -> (lat, lng)
+# Última posição de quem NÃO está no Fantasma (usuario_id -> payload). É o que faltava pra amigo aparecer assim que
+# você abre o mapa: antes a posição só existia no instante em que a pessoa se mexia, e quem chegava depois via mapa vazio.
+ultimas_posicoes = {}
+_cache_contatos = {}   # usuario_id -> (ts, amigos_ids, colegas_ids, servidores_ids)
+
+
+def contatos_do_mapa(usuario):
+    """(amigos, colegas de servidor, servidores) de uma pessoa, com cache curto: a posição chega a cada movimento
+    e não pode custar 3 idas ao banco toda vez."""
+    agora = time.time()
+    c = _cache_contatos.get(usuario.id)
+    if c and agora - c[0] < 60:
+        return c[1], c[2], c[3]
+    linhas = Friendship.query.filter(
+        Friendship.status == 'accepted',
+        or_(Friendship.requester_id == usuario.id, Friendship.addressee_id == usuario.id)).all()
+    amigos = {f.addressee_id if f.requester_id == usuario.id else f.requester_id for f in linhas}
+    srv_ids = [s.id for s in usuario.servers]
+    colegas = set()
+    if srv_ids:
+        colegas = {r[0] for r in db.session.query(server_members.c.person_id)
+                   .filter(server_members.c.server_id.in_(srv_ids)).all()} - {usuario.id}
+    _cache_contatos[usuario.id] = (agora, amigos, colegas, srv_ids)
+    return amigos, colegas, srv_ids
+
+
+def _salas_da_posicao(usuario):
+    """Quem pode ver o pino: salas dos servidores dela E a sala pessoal de cada amigo (antes só servidor: amigo sem
+    servidor em comum nunca aparecia no mapa do outro)."""
+    amigos, _colegas, srv_ids = contatos_do_mapa(usuario)
+    return [sala_servidor(i) for i in srv_ids] + [sala_pessoal(i) for i in amigos]
 
 
 def _emitir_perto(evento, payload, lat, lng, raio_m, tambem_sid=None):
@@ -1438,6 +1503,17 @@ def _emitir_perto(evento, payload, lat, lng, raio_m, tambem_sid=None):
         alvos.add(tambem_sid)
     for sid in alvos:
         emit(evento, payload, to=sid)
+
+
+def _avisar_amigos(evento, payload, usuario):
+    """Nota de amigo vale no alcance grande: o aviso vai pra sala pessoal de cada amigo e o navegador dele filtra por
+    distância. Falha aqui nunca derruba a criação da nota."""
+    try:
+        amigos, _c, _s = contatos_do_mapa(usuario)
+        for fid in amigos:
+            emit(evento, payload, to=sala_pessoal(fid))
+    except Exception as e:
+        print(f"[ERRO AVISAR AMIGOS] {e}")
 
 
 def _parse_ilimitado(valor):
@@ -1471,9 +1547,15 @@ def mapa_pedir_arredores(dados):
         return
     centros_mapa[request.sid] = pos
     try:
-        d = com_retry(lambda: dados_do_mapa_perto(*pos))
+        amigos, colegas, _srv = com_retry(lambda: contatos_do_mapa(usuario))
+        d = com_retry(lambda: dados_do_mapa_perto(pos[0], pos[1], amigos))
         d['centro'] = {'lat': pos[0], 'lng': pos[1]}
         emit('mapa_arredores', d)
+        # E onde cada amigo/colega está agora (sem esperar a pessoa se mexer).
+        for uid in (amigos | colegas):
+            p = ultimas_posicoes.get(uid)
+            if p:
+                emit('posicao_amigo_atualizada', p)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MAPA ARREDORES] {e}")
@@ -1481,7 +1563,7 @@ def mapa_pedir_arredores(dados):
 
 
 def _validar_nota_texto(dados):
-    return (dados.get('texto') or '').strip()[:280]
+    return (dados.get('texto') or '').strip()[:LIM_NOTA]
 
 
 @socketio.on('criar_geonote')
@@ -1528,6 +1610,7 @@ def criar_geonote(dados):
         nota = comitar_com_retry(preparar)
 
         _emitir_perto('nova_geonote', nota_para_json(nota), nota.lat, nota.lng, RAIO_NOTAS_M, tambem_sid=request.sid)
+        _avisar_amigos('nova_geonote', nota_para_json(nota), usuario)
         _emitir_progresso(usuario, {'nota': 1})
     except Exception as e:
         db.session.rollback()
@@ -1556,6 +1639,7 @@ def editar_geonote(dados):
 
         comitar_com_retry(preparar)
         _emitir_perto('geonote_editada', nota_para_json(nota), nota.lat, nota.lng, RAIO_NOTAS_M, tambem_sid=request.sid)
+        _avisar_amigos('geonote_editada', nota_para_json(nota), usuario)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO EDITAR GEONOTE] {e}")
@@ -1810,6 +1894,7 @@ def atualizar_localizacao(dados):
     # navegador se continha, então um cliente adulterado (ou o teletransporte
     # por duplo clique) vazava a posição mesmo com o modo ligado.
     if usuario.ghost_mode:
+        ultimas_posicoes.pop(usuario.id, None)
         return
 
     try:
@@ -1820,9 +1905,9 @@ def atualizar_localizacao(dados):
             'lat': pos[0],
             'lng': pos[1]
         }
-        for srv in usuario.servers:
-            emit('posicao_amigo_atualizada', payload,
-                 to=sala_servidor(srv.id), include_self=False)
+        ultimas_posicoes[usuario.id] = payload
+        for sala in _salas_da_posicao(usuario):
+            emit('posicao_amigo_atualizada', payload, to=sala, include_self=False)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ATUALIZAR LOCALIZACAO] {e}")
@@ -1853,11 +1938,11 @@ def atualizar_perfil(dados):
     try:
         def preparar():
             if 'name' in dados:
-                nome_novo = (dados.get('name') or '').strip()[:100]
+                nome_novo = (dados.get('name') or '').strip()[:LIM_NOME_EXIBICAO]
                 if nome_novo:
                     usuario.name = nome_novo
             if 'custom_status' in dados:
-                usuario.custom_status = (dados.get('custom_status') or '').strip()[:128] or None
+                usuario.custom_status = (dados.get('custom_status') or '').strip()[:LIM_STATUS] or None
             if 'bio' in dados:
                 usuario.bio = (dados.get('bio') or '').strip()[:1000] or None
             if 'banner_color' in dados:
@@ -1882,7 +1967,7 @@ def atualizar_perfil(dados):
             if 'status_emoji' in dados:
                 usuario.status_emoji = (dados.get('status_emoji') or '').strip()[:16] or None
             if 'pensando' in dados:
-                usuario.pensando = (dados.get('pensando') or '').strip()[:128] or None
+                usuario.pensando = (dados.get('pensando') or '').strip()[:LIM_STATUS] or None
             if 'perfil_tema' in dados:
                 tema = (dados.get('perfil_tema') or '').strip()
                 usuario.perfil_tema = tema if tema and tema_perfil_valido(tema) else None
@@ -1972,9 +2057,9 @@ def alternar_fantasma(dados):
         # Ligou: quem já via o pino dela precisa tirar agora (antes o pino
         # ficava parado no mapa dos outros até F5).
         if ativo:
-            for srv in usuario.servers:
-                emit('posicao_amigo_removida', {'usuario_id': usuario.id},
-                     to=sala_servidor(srv.id), include_self=False)
+            ultimas_posicoes.pop(usuario.id, None)
+            for sala in _salas_da_posicao(usuario):
+                emit('posicao_amigo_removida', {'usuario_id': usuario.id}, to=sala, include_self=False)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ALTERNAR FANTASMA] {e}")
@@ -2156,13 +2241,18 @@ def compartilham_servidor(a, b):
     return bool({s.id for s in a.servers} & {s.id for s in b.servers})
 
 
-def pode_trocar_dm(usuario, destinatario):
+_SEM_REL = object()
+
+
+def pode_trocar_dm(usuario, destinatario, rel=_SEM_REL):
     """DM só entre quem se conhece: a si mesmo (Anotações), amigos, pedido de amizade
     pendente (em qualquer sentido) ou quem divide um servidor. Bloqueio corta tudo.
-    Antes qualquer pessoa mandava DM pra qualquer id do banco."""
+    Antes qualquer pessoa mandava DM pra qualquer id do banco.
+    `rel` (opcional) é a Friendship já buscada por quem chama: evita repetir a mesma ida ao banco."""
     if usuario.id == destinatario.id:
         return True
-    rel = relacao_entre(usuario.id, destinatario.id)
+    if rel is _SEM_REL:
+        rel = relacao_entre(usuario.id, destinatario.id)
     if rel:
         if rel.status == 'blocked':
             return False
@@ -2740,13 +2830,15 @@ def on_enviar_mensagem_direta(data):
         if not destinatario:
             emit('erro_bazinga', {'msg': 'Esse usuário não existe mais.'})
             return
-        if not com_retry(lambda: pode_trocar_dm(usuario, destinatario)):
+        # A relação é buscada UMA vez e serve pra checar permissão e decidir a conversa rápida (antes eram 2 idas
+        # iguais ao Neon antes de a mensagem sair - parte do "DM demora pra atualizar").
+        rel = None if target_id == usuario.id else com_retry(lambda: relacao_entre(usuario.id, target_id))
+        if not com_retry(lambda: pode_trocar_dm(usuario, destinatario, rel)):
             emit('erro_bazinga', {'msg': f'Você não pode mandar mensagem para {destinatario.name} agora.'})
             return
 
         # Primeira mensagem pra alguém que não é amigo (e não tem pedido): nasce uma CONVERSA RÁPIDA,
         # um pedido pendente de 24h com as mensagens temporárias. Quem recebe vê Aceitar/Recusar/Bloquear.
-        rel = None if target_id == usuario.id else com_retry(lambda: relacao_entre(usuario.id, target_id))
         if rel and pedido_expirou(rel):
             limpar_pedidos_expirados(usuario.id)
             rel = None
@@ -2780,6 +2872,7 @@ def on_enviar_mensagem_direta(data):
             'usuario_id': usuario.id,
             'destinatario_id': target_id,
             'avatar': usuario.avatar,
+            'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura,
             'texto': nova_msg.content or '',
             'anexo_url': nova_msg.attachment_url,
             'anexo_tipo': nova_msg.attachment_type,
@@ -2877,13 +2970,22 @@ def criar_convite(dados):
         return
 
     try:
-        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
-        if not srv:
-            emit('erro_bazinga', {'msg': 'Só o dono do servidor pode criar convites.'})
+        # Qualquer MEMBRO convida (antes só o dono: "não gera convite, só adm"). Quem não é dono tem teto: o link vale
+        # no máximo 7 dias e 25 pessoas - convite sem fim/sem limite continua sendo coisa de dono.
+        try:
+            srv = Server.query.get(int(dados.get('server_id')))
+        except (TypeError, ValueError):
+            srv = None
+        if not srv or not eh_membro(usuario, srv.id):
+            emit('erro_bazinga', {'msg': 'Você precisa estar no servidor pra convidar alguém.'})
             return
+        sou_dono = pode_gerenciar_servidor(usuario, srv)
 
         duracao = _parse_ilimitado(dados.get('duracao'))     # horas, None = nunca expira
         max_usos = _parse_ilimitado(dados.get('max_usos'))   # None = ilimitado
+        if not sou_dono:
+            duracao = min(duracao or 168, 168)
+            max_usos = min(max_usos or 25, 25)
         expira_em = br_now() + timedelta(hours=duracao) if duracao else None
 
         def preparar():

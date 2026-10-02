@@ -1158,6 +1158,7 @@ Sem framework; rodar da raiz com o venv. Banco SQLite em memória, `socketio.tes
 python testes/fumaca_social.py     # amizade, bloqueio, 24h, DM/anexo, mapa por raio, denúncia, perfil
 python testes/fumaca_servidor.py   # servidor, convite, canal privado, paginação, expulsão
 python testes/fumaca_conversa_rapida.py  # conversa rápida, nome repetido, silenciar, denunciar pessoa, notas antigas, recorte de GIF
+python testes/fumaca_rodada3.py    # convite por membro, posição/notas de amigos, câmera, ornamentos, limites
 python testes/contar_queries.py    # quantas queries cada carga faz (use antes/depois de mexer em performance)
 ```
 
@@ -1270,6 +1271,80 @@ Cada tom aceita volume como 4º item (o do XP é bem baixo).
 - Prévia de anexo (canal e DM) saía em branco: `escUrl()` barra `blob:`; o `src` agora é definido
   por propriedade (`ligarPreviasDeAnexo`). Clicar na miniatura abre grande (foto ou vídeo).
 - Caixa de entrada também no cabeçalho do servidor.
+
+## Rodada 3 de 02/10/2026 — feedback do teste com 2 pessoas (call, mapa, barra do usuário)
+
+Testes: `python testes/fumaca_rodada3.py` (convite por membro, posição/notas de amigos, câmera, ornamentos, limites).
+
+### Call: janela flutuante (mini <-> cheia) — NÃO é mais uma "aba"
+O `#video-view` é movido no JS para `#call-janela` (fixa, no `<body>`), então a call sobrevive a trocar de aba,
+servidor e DM. `callMostrar('mini'|'cheia')`, `callMinimizar()`, `callOcultar()`, `posicionarCall()`.
+- **mini**: arrasta pelo topo, redimensiona (CSS `resize: both`), controles sempre visíveis; **cheia**: cobre a área
+  central (`.chat-area-main` do servidor, ou `.chat-area` numa call de DM). Duplo clique no topo alterna.
+- Entrar num **canal de voz** abre cheia; **chamada de DM** abre mini (você segue no chat). `switchMainView()` e o
+  clique num canal de texto chamam `callMinimizar()`. Clicar em "Voz conectada" na barra lateral volta pra cheia.
+- O chat da call (botão de balão) só existe em call de canal: `isCallChatOpen` encolhe a janela cheia em 350px e o
+  `#text-view` (`.sidebar-mode`, `margin-left:auto`) aparece ao lado. O `text-view` nunca mais é escondido (`hidden`).
+- Mover o `<video>` de pai pausa a mídia: `callMostrar` chama `play()` em todos de novo.
+- `currentVoiceChannelId` agora é `let` declarada (antes só existia depois da 1ª atribuição → ReferenceError).
+- A chamada de DM (tocando/chamando) virou **cartão no canto**, sem escurecer a tela (`#chamada-recebida-modal`/`#chamando-modal`).
+
+### Câmera nunca chegava aos outros (bug)
+A call nascia só com áudio e o PeerJS **não renegocia**: `replaceTrack` não achava sender de vídeo. Hoje toda call
+nasce com uma faixa de vídeo "reserva" (`videoReserva()`, canvas 2x2) trocada por `null` logo depois
+(`prepararVideoDaCall`); ligar a câmera = `replaceTrack` na vaga (`senderDeVideo()`, que acha o sender **mesmo com
+`track === null`** — o `s.track && ...` antigo não achava depois de desligar). Quem mostra vídeo vs avatar é o
+evento `estado_camera` (socket, validado contra `participantes_call`), **não** o `mute` do WebRTC (demora/não vem).
+Erro de câmera agora vira toast. `disconnectCall` zera `myCamStream` (a faixa morta ia pra próxima call).
+
+### Tela compartilhada
+- **Sem prévia da própria tela** (`.tela-propria`): compartilhar a tela onde o app roda gerava túnel infinito.
+  Aparece um aviso com "Parar de compartilhar". `getDisplayMedia` usa `selfBrowserSurface: 'exclude'`.
+- **Zoom na tela dos outros** (`tornarZoomavel`): roda do mouse, arrastar, duplo clique reseta.
+
+### Barra do usuário, microfone e fone
+- Barra limpa (bloco no fim do último `<style>`): sem gradiente de placa (só um filete), menus ancorados à esquerda.
+- **Submenu do mic/fone fechava "rápido demais"**: tinha 4px de vão entre item e submenu (o mouse perdia o hover).
+  Agora encosta, tem ponte invisível (`::before`) e fecha 350ms depois (`visibility` com atraso).
+- **Toggles de ruído/eco/ganho nunca mudavam**: um listener genérico (`.toggle-switch`) e o específico alternavam
+  juntos. Hoje o genérico exclui `#toggle-noise/echo/gain`, e mudar perfil/toggle chama `reaplicarMic()` (vale ao vivo).
+- Teste de microfone do menu (`iniciarTesteMic`/`pararTesteMic`) agora funciona; `enumerarDispositivos` solta o mic
+  depois de listar (antes ficava aberto); saída de áudio escolhida é aplicada de verdade (`aplicarSaida`, `setSinkId`);
+  clique direito em mic/fone abre as opções.
+- **Status: um jeito só** (o cartão de perfil). Clicar no avatar da barra abre o cartão (antes abria um menuzinho por
+  cima dele). A lista de status do cartão reposiciona o cartão ao abrir (`posicionarCartao()`), senão estourava a tela.
+
+### Mensagens e campos
+- `#message-input`/`#dm-message-input` são `<textarea>`: **Enter envia, Shift+Enter quebra linha** (`autoCrescer`).
+- **Limites** (`LIM_*` em `events.py`, mesmos números nos `maxlength` do HTML): nome de exibição 32, servidor 40,
+  canal 32, nota 140, status/"pensando" 60.
+- Estilo do nome (`nome_estilo`) e moldura vão junto de cada mensagem (histórico de canal/DM e ao vivo) e a moldura
+  aparece no card da call (`novo_usuario_call`/metadata do peer). Estilo de nome **não** vai pro label da call (o label tem
+  fundo e o `background-clip:text` do estilo o apagaria).
+- Emoji do cabeçalho da DM saía gigante (`.dm-head-dot.custom` com largura `auto` + `img` a 100%): tamanho fixo.
+
+### Convites
+Qualquer **membro** gera convite (`criar_convite` usa `eh_membro`); quem não é dono tem teto de 7 dias / 25 usos
+(o servidor força, mesmo pedindo ilimitado). O modal tem "Gmail"/"Outro" (compõe o e-mail com o link; quem envia é a
+pessoa — não enviamos e-mail do servidor).
+
+### Mapa
+- **Posição de amigo só ia pras salas de servidor**: amigo sem servidor em comum nunca aparecia. Agora também vai pra
+  `sala_pessoal` de cada amigo (`_salas_da_posicao`, cache de 60 s em `contatos_do_mapa`). `ultimas_posicoes` (em memória,
+  só de quem NÃO está em Fantasma) é entregue em `mapa_pedir_arredores` — antes você só via quem se mexesse depois de abrir o
+  mapa. Fantasma/desconectar emitem `posicao_amigo_removida` pros mesmos destinos.
+- **Nota de amigo** vale no alcance grande (`RAIO_SERVIDORES_M`); de desconhecido, só no pequeno (`dados_do_mapa_perto(...,
+  amigos_ids)`, `_avisar_amigos`). O cliente re-filtra por distância em `nova_geonote`.
+- **GPS**: o timeout de 5 s com alta precisão estourava no PC e caía num fallback **silencioso em São Paulo**; o GPS também
+  sobrescrevia o teletransporte. Agora: timeout 20 s, 2ª tentativa sem alta precisão, toast honesto, círculo de precisão,
+  e o teletransporte (`posicaoManual`) vale até clicar em "Centralizar em mim".
+
+### Outros
+- **Missões em cartões estilo Quests** (`.qs-card`: capa colorida pelo ícone, XP em destaque, barra, estado). Dados e
+  regras iguais; só o renderer (`desenharMissoes`) e o CSS mudaram.
+- **Barras laterais redimensionáveis** (`.redimensionador`, `--w-canais`/`--w-membros`, guarda em `localStorage`, duplo
+  clique reseta). A janela mini da call também redimensiona.
+- DM: `relacao_entre` era consultada 2x por mensagem (permissão + conversa rápida); agora 1x (`pode_trocar_dm(..., rel)`).
 
 ---
 
@@ -1417,8 +1492,7 @@ produção.
   (`FAIXAS_ANIMADAS`) e 6 molduras (`MOLDURAS`). A ideia é ampliar e, depois, ligar
   parte delas ao Battle Pass/loja (hoje todas são livres; "Efeitos de perfil" já
   aparecem como "Em breve"). Passos pra criar cada tipo estão na seção de perfil.
-- **Estilo de nome e placa** aparecem no cartão, nas listas e na barra inferior, mas
-  **não** no nome de quem fala nas mensagens do chat.
+- **Estilo de nome** já aparece nas mensagens (rodada 3); a **placa** ainda não (só cartão, listas e barra).
 - **Menção (@) só em canais**; DM ainda não tem.
 - **Emoji nos nomes de servidor/membro** ainda usa a fonte do sistema em alguns lugares
   (`emojificar()` só roda em mensagem, status e bio).

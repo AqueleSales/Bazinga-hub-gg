@@ -45,6 +45,22 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [x] Vídeo (mp4/webm/mov) como foto, ícone, faixa e fundo: navegador extrai quadros + Pillow monta WebP animado (sem ffmpeg).
 - [x] GIF de 5-10 MB não era barrado antes de chegar na rota (teto de upload por rota).
 
+## Rodada 4 (feedback 02/10) - feito, AINDA SEM TESTE COM 2 PESSOAS REAIS
+- [x] Emoji gigante no cabeçalho da DM; Enter/Shift+Enter (textarea); limites de caracteres (nome, servidor, canal, nota, status).
+- [x] Call virou janela flutuante (mini arrasta/redimensiona, cheia, volta ao navegar); DM chama com cartão no canto.
+- [x] Câmera não chegava aos outros (faixa reserva + `estado_camera`); tela própria sem espelho infinito; zoom na tela alheia.
+- [x] Barra do usuário limpa; submenus do mic/fone não fecham; toggles de ruído/eco/ganho funcionam; teste de mic; um jeito só de mudar status.
+- [x] Convite por qualquer membro + e-mail (Gmail/mailto). Moldura e estilo do nome nas mensagens; moldura na call.
+- [x] Mapa: amigos aparecem (mesmo sem servidor em comum), notas de amigos no alcance grande, GPS sem fallback silencioso.
+- [x] Missões em cartões estilo Quests; barras laterais redimensionáveis.
+
+## Falta da rodada 4 / dúvidas
+- [ ] **Testar com 2 pessoas**: câmera (liga/desliga/entrada tardia), compartilhar tela + zoom, call mini ao trocar de servidor/DM.
+- [ ] "Mudar a fonte do status na conversa" (lista de DMs): o pedido não ficou claro; os kaomojis do "pensando" caem em outra fonte do sistema.
+- [ ] Redimensionar o chat da call e a área de mensagens (hoje: barras laterais, janela mini e o painel de chat fixo em 350px).
+- [ ] Placa (barrinha) ainda não aparece nas mensagens; estilo do nome não vai pro label do card da call.
+- [ ] Remover o HTML morto `#status-picker-menu` (agora nunca abre).
+
 ## Falta
 - [ ] Vídeo como foto/faixa: escolher o trecho (hoje só os 6 s iniciais) e, se quiser, áudio não se aplica.
 - [ ] Tela de revisão de denúncias (hoje só pelo banco).

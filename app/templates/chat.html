@@ -123,7 +123,7 @@
 
         .server-separator { height: 2px; width: 32px; background-color: rgba(255,255,255,0.1); margin: 4px 0 8px 0; border-radius: 1px;}
 
-        .channels-sidebar { width: 240px; background-color: var(--bg-secondary); display: flex; flex-direction: column; flex-shrink: 0; border-top-left-radius: 8px; transition: background-color 0.3s;}
+        .channels-sidebar { width: var(--w-canais, 240px); position: relative; background-color: var(--bg-secondary); display: flex; flex-direction: column; flex-shrink: 0; border-top-left-radius: 8px; transition: background-color 0.3s;}
         .channels-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.2); font-weight: 700; cursor: pointer; flex-shrink: 0; color: var(--text-header);}
         .channels-header:hover { background-color: rgba(255,255,255,0.05); }
         .channels-list { flex-grow: 1; padding: 12px 8px; }
@@ -338,7 +338,7 @@
 
         .chat-view { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; transition: width 0.2s;}
         .chat-view.hidden { display: none !important; }
-        .chat-view.sidebar-mode { flex-grow: 0; width: 350px; min-width: 350px; border-left: 1px solid rgba(0,0,0,0.2); }
+        .chat-view.sidebar-mode { flex-grow: 0; width: 350px; min-width: 350px; border-left: 1px solid rgba(0,0,0,0.2); margin-left: auto; }
 
         .chat-messages { flex-grow: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; scrollbar-width: thin; scrollbar-color: #1a1b1e transparent;}
         .chat-messages::-webkit-scrollbar { width: 8px; }
@@ -387,10 +387,10 @@
         .chat-input-container { background-color: var(--bg-secondary); border-radius: 8px; padding: 0 16px; display: flex; align-items: center; min-height: 44px; gap: 8px;}
         .chat-input-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
         .chat-input-btn:hover { color: var(--text-normal); background-color: rgba(255,255,255,0.05); }
-        .chat-input { flex-grow: 1; background: transparent; border: none; color: var(--text-normal); font-size: 16px; outline: none; padding: 12px 0; }
+        .chat-input { flex-grow: 1; background: transparent; border: none; color: var(--text-normal); font-size: 16px; outline: none; padding: 11px 0; resize: none; font-family: inherit; line-height: 22px; max-height: 176px; overflow-y: auto; scrollbar-width: thin; }
         .chat-input-actions { display: flex; align-items: center; gap: 4px; }
 
-        .members-sidebar { width: 240px; background-color: var(--bg-secondary); display: flex; flex-direction: column; padding: 16px 8px; flex-shrink: 0; overflow: hidden; transition: background-color 0.3s, width 0.18s ease, padding 0.18s ease; }
+        .members-sidebar { width: var(--w-membros, 240px); position: relative; background-color: var(--bg-secondary); display: flex; flex-direction: column; padding: 16px 8px; flex-shrink: 0; overflow: hidden; transition: background-color 0.3s, width 0.18s ease, padding 0.18s ease; }
         .members-sidebar.recolhida { width: 0; padding-left: 0; padding-right: 0; }
 
         /* ==========================================================================
@@ -577,6 +577,40 @@
            cheia) - "agoniante" segundo quem testou. Igual ao Discord: falar
            destaca o card, não move ele. */
         .video-card.is-speaking { box-shadow: 0 0 0 3px var(--green-color) !important; }
+
+        /* ---- Janela da call: flutuante (mini, arrasta e redimensiona) ou cheia (cobre a área central) ----
+           O #video-view mora aqui dentro (movido no JS), então a call sobrevive a trocar de aba/servidor/DM. */
+        .call-janela { position: fixed; z-index: 9000; display: none; flex-direction: column; background: #000; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 50px rgba(0,0,0,.55); overflow: hidden; }
+        .call-janela.ativa { display: flex; }
+        .call-janela .video-view { display: flex; flex: 1 1 auto; min-height: 0; }
+        .call-janela.mini { width: 400px; height: 260px; min-width: 260px; min-height: 170px; max-width: 96vw; max-height: 92vh; border-radius: 14px; resize: both; }
+        .call-janela.cheia { border-radius: 0; border: none; resize: none; box-shadow: none; }
+        .cj-topo { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; background: rgba(20,21,24,.96); color: var(--text-header); font-size: 12px; font-weight: 700; cursor: grab; user-select: none; flex: 0 0 auto; }
+        .call-janela.cheia .cj-topo { cursor: default; }
+        .cj-topo i.cj-sinal { color: var(--green-color); }
+        .cj-topo .cj-titulo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cj-topo button { background: transparent; border: none; color: var(--text-muted); width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .cj-topo button:hover { background: rgba(255,255,255,.1); color: #fff; }
+        .call-janela.mini .video-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; padding: 8px 8px 54px; align-content: start; }
+        .call-janela.mini .video-card { max-height: none; border-radius: 6px; }
+        .call-janela.mini .video-card.focused { height: 100%; min-height: 110px; }
+        .call-janela.mini .video-grid.focused-mode .video-card:not(.focused) { height: 56px; }
+        .call-janela.mini .video-avatar { width: 40px; height: 40px; font-size: 16px; }
+        .call-janela.mini .video-label { bottom: 4px; left: 4px; font-size: 11px; padding: 2px 6px; }
+        .call-janela.mini .call-controls-bar { opacity: 1; transform: translateX(-50%); pointer-events: auto; bottom: 8px; padding: 4px 6px; gap: 6px; }
+        .call-janela.mini .call-btn { width: 34px; height: 34px; font-size: 14px; }
+        .call-janela.mini #btn-main-chat, .call-janela.mini .media-btn-wrap, .call-janela.mini .call-controls-bar > div[style*="width: 1px"] { display: none; }
+        .call-janela.cheia .video-grid { padding-bottom: 100px; }
+        .video-card.tela-propria video { opacity: 0; }
+        .video-card .tela-propria-aviso { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-header); font-weight: 700; font-size: 15px; background: repeating-linear-gradient(135deg, #15161a, #15161a 14px, #191b20 14px, #191b20 28px); text-align: center; padding: 12px; }
+        .video-card .tela-propria-aviso i { font-size: 28px; color: var(--green-color); }
+        .video-card .tela-propria-aviso small { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+        .video-card .tela-propria-aviso button { background: var(--red-color); color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-weight: 700; cursor: pointer; }
+        .video-card.zoomavel { cursor: zoom-in; }
+        .video-card.zoomavel.com-zoom { cursor: grab; }
+        .video-card.zoomavel video { transition: none; will-change: transform; }
+        .video-card .zoom-dica { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.65); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .2s; }
+        .video-card.zoomavel:hover .zoom-dica { opacity: 1; }
 
         .call-switch-overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(0,0,0,0.78); color: #fff; font-size: 16px; font-weight: 600; z-index: 50; }
         .call-switch-overlay.active { display: flex; }
@@ -1870,7 +1904,10 @@
         .dm-head-ico { cursor: pointer; width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
         .dm-head-ico:hover { background: rgba(255,255,255,.1); color: var(--text-header); }
         .dm-head-dot { margin-left: 8px; position: relative !important; display: inline-flex; width: 10px !important; height: 10px !important; border-radius: 50%; flex-shrink: 0; right: auto !important; bottom: auto !important; border: none !important; }
-        .dm-head-dot.custom { width: auto !important; height: auto !important; background: none !important; font-size: 13px; }
+        /* O emoji (Twemoji = <img>) usava width:100% de um pai "auto" e virava a imagem em tamanho natural (~280px). Tamanho fixo. */
+        .dm-head-dot.custom { width: 18px !important; height: 18px !important; background: none !important; font-size: 14px; }
+        .dm-head-dot.custom img.emoji { width: 18px !important; height: 18px !important; max-width: 18px; margin: 0; }
+        .status-indicator.custom img.emoji { max-width: 100%; max-height: 100%; }
 
         /* ---------- menu de contexto do contato ---------- */
         .dm-contato-menu { position: fixed; z-index: 10800; min-width: 210px; background: var(--bg-quaternary); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.55); animation: modalPop .14s both; }
@@ -2198,7 +2235,86 @@
         .convidar-ico { width: 36px; height: 36px; border-radius: 10px; overflow: hidden; background: var(--brand-color); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; flex-shrink: 0; }
         .convidar-ico img { width: 100%; height: 100%; object-fit: cover; }
         .convidar-item span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    </style>
+    
+        /* ==========================================================================
+           BARRA DO USUÁRIO LIMPA + MENUS DE MIC/FONE QUE NÃO FECHAM NA TRAVESSIA
+           ========================================================================== */
+        .user-controls { padding: 8px 10px 10px !important; }
+        .user-profile-bar, .user-profile-bar[class*="placa-"] {
+            background: color-mix(in srgb, var(--bg-secondary) 85%, transparent) !important; background-image: none !important; animation: none !important;
+            border: 1px solid var(--glass-borda); border-radius: 12px; padding: 6px 6px 6px 8px !important; gap: 4px;
+        }
+        .user-profile-bar[class*="placa-"] { box-shadow: inset 3px 0 0 var(--brand-color); }
+        .user-profile-section { padding: 2px 6px !important; border-radius: 8px !important; gap: 10px !important; }
+        .user-profile-section .user-avatar-wrapper { width: 34px; height: 34px; }
+        .user-info .username { font-size: 13.5px !important; letter-spacing: 0 !important; }
+        .user-info .status-text { font-size: 11.5px; }
+        .hardware-controls { gap: 0; margin-left: 2px; }
+        .hw-group { border-radius: 8px; }
+        .hw-btn { width: 30px; border-radius: 8px 0 0 8px; }
+        .hw-arrow-btn { padding: 8px 3px; border-radius: 0 8px 8px 0; }
+        .hardware-menu { min-width: 280px; padding: 6px; border-radius: 12px; left: -6px; right: auto; }
+        /* O submenu abria no hover com 4px de vão: o mouse atravessava o vão, perdia o hover e ele fechava
+           "rápido demais". Agora encosta no item, tem uma ponte invisível e só fecha 350ms depois de sair. */
+        .submenu { left: calc(100% - 2px) !important; display: block !important; visibility: hidden; opacity: 0; pointer-events: none;
+                   transition: opacity .12s ease .35s, visibility 0s linear .47s; }
+        .submenu::before { content: ''; position: absolute; left: -14px; top: 0; bottom: 0; width: 14px; }
+        .menu-item.has-submenu:hover > .submenu, .submenu:hover { visibility: visible; opacity: 1; pointer-events: auto; transition-delay: 0s; }
+        .mic-test-container { padding: 10px 12px 6px; }
+        .mic-bar-bg { height: 8px; }
+        .mic-bar-fill { transition: width .06s linear; background: linear-gradient(90deg, var(--green-color), #f1c40f 75%, #ed4245); }
+
+        .invite-email-linha { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+        .invite-email-linha .bz-input { flex: 1; min-width: 0; }
+        .invite-email-linha .btn { background: var(--bg-tertiary); color: var(--text-normal); padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+        .invite-email-linha .btn:hover { background: var(--brand-color); color: #fff; }
+
+        /* ---- moldura/estilo do nome nas mensagens e nos cards da call ---- */
+        .message .chat-avatar[class*="moldura-"], .video-avatar[class*="moldura-"] { overflow: visible; position: relative; }
+        .message .chat-avatar[class*="moldura-"]::before { inset: -4px; -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
+        .message .chat-avatar[class*="moldura-"] img, .video-avatar[class*="moldura-"] img { border-radius: 50%; }
+        .video-avatar[class*="moldura-"]::before { inset: -6px; }
+        .message-author[class*="ne-"] { max-width: 100%; }
+
+        /* ---- chamada de DM: cartões que não bloqueiam a tela (você segue usando o app enquanto toca) ---- */
+        #chamada-recebida-modal, #chamando-modal { background: transparent !important; pointer-events: none; align-items: flex-start; justify-content: flex-end; padding: 68px 20px 0 0; }
+        #chamada-recebida-modal .bazinga-modal, #chamando-modal .bazinga-modal { pointer-events: auto; width: 290px !important; box-shadow: 0 16px 44px rgba(0,0,0,.55); border: 1px solid var(--glass-borda); animation: chamadaEntra .28s cubic-bezier(.16,.84,.44,1); }
+        #chamada-recebida-modal .modal-content, #chamando-modal .modal-content { padding: 20px 18px 8px !important; }
+        #chamada-recebida-modal .modal-footer, #chamando-modal .modal-footer { padding: 8px 12px 16px; }
+        @keyframes chamadaEntra { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+
+        /* ---- missões no estilo "Quests" ---- */
+        .bp-missoes { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+        .qs-card { display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: color-mix(in srgb, var(--bg-secondary) 88%, transparent); border: 1px solid var(--glass-borda);
+                   box-shadow: 0 6px 20px rgba(0,0,0,.22); transition: transform .2s, box-shadow .2s; animation: vistaEntra .35s cubic-bezier(.16,.84,.44,1) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+        .qs-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0,0,0,.35); }
+        .qs-capa { position: relative; height: 104px; background: linear-gradient(135deg, var(--c1), var(--c2)); overflow: hidden; }
+        .qs-capa::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 85% -20%, rgba(255,255,255,.35), transparent 55%); }
+        .qs-icone { position: absolute; right: -6px; bottom: -14px; font-size: 92px; color: rgba(255,255,255,.22); transform: rotate(-12deg); }
+        .qs-tag { position: absolute; left: 12px; top: 12px; z-index: 1; font-size: 10px; font-weight: 900; letter-spacing: .1em; color: #fff; background: rgba(0,0,0,.35); padding: 4px 9px; border-radius: 999px; }
+        .qs-xp { position: absolute; left: 12px; bottom: 12px; z-index: 1; font-size: 15px; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+        .qs-xp i { color: #ffe27a; margin-right: 4px; }
+        .qs-selo { position: absolute; right: 12px; top: 12px; z-index: 2; width: 28px; height: 28px; border-radius: 50%; background: #23a559; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+        .qs-corpo { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; flex: 1; }
+        .qs-corpo b { color: var(--text-header); font-size: 15px; }
+        .qs-desc { color: var(--text-muted); font-size: 12.5px; line-height: 1.4; min-height: 34px; }
+        .qs-prog { height: 8px; border-radius: 4px; background: rgba(0,0,0,.35); overflow: hidden; margin-top: 6px; }
+        .qs-prog i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--c1), var(--c2)); transition: width .8s cubic-bezier(.22,1,.36,1); }
+        .qs-rodape { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
+        .qs-num { font-variant-numeric: tabular-nums; color: var(--text-normal); }
+        .qs-estado.ok { color: var(--green-color); }
+        .qs-card.feita .qs-capa { filter: saturate(.75); }
+        .qs-card.feita .qs-prog i { background: var(--green-color); }
+
+        /* ---- barras laterais redimensionáveis (arraste a borda; duplo clique volta ao padrão) ---- */
+        .redimensionador { position: absolute; top: 0; bottom: 0; width: 9px; cursor: col-resize; z-index: 30; background: transparent; touch-action: none; }
+        .redimensionador::after { content: ''; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; transition: background .15s; border-radius: 2px; }
+        .redimensionador:hover::after, .redimensionador.arrastando::after { background: var(--brand-color); }
+        .redimensionador.dir { right: -4px; }
+        .redimensionador.esq { left: -4px; }
+        body.redimensionando { cursor: col-resize; user-select: none; }
+        body.redimensionando iframe, body.redimensionando #bazinga-map { pointer-events: none; }
+</style>
 </head>
 <body>
     <div class="discord-app">
@@ -2449,7 +2565,7 @@
                         <div class="chat-input-container" id="dm-composer">
                             <button class="chat-input-btn" id="dm-btn-anexar" title="Enviar foto, GIF ou vídeo"><i class="fa-solid fa-circle-plus"></i></button>
                             <input type="file" id="dm-input-anexo" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none;">
-                            <input type="text" class="chat-input" id="dm-message-input" placeholder="Conversar em Mensagem Direta" autocomplete="off">
+                            <textarea class="chat-input" id="dm-message-input" rows="1" maxlength="2000" placeholder="Conversar em Mensagem Direta" autocomplete="off"></textarea>
                             <div class="chat-input-actions">
                                 <button class="chat-input-btn" id="dm-btn-gif" title="Buscar GIF" style="font-size: 11px; font-weight: 800; letter-spacing: .3px;">GIF</button>
                                 <button class="chat-input-btn" id="dm-btn-emoji" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
@@ -2559,7 +2675,7 @@
                             <div class="chat-input-container">
                                 <button class="chat-input-btn" id="btn-anexar" title="Enviar foto, GIF ou vídeo"><i class="fa-solid fa-circle-plus"></i></button>
                                 <input type="file" id="input-anexo" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none;">
-                                <input type="text" class="chat-input" id="message-input" placeholder="Conversar em #geral" autocomplete="off">
+                                <textarea class="chat-input" id="message-input" rows="1" maxlength="2000" placeholder="Conversar em #geral" autocomplete="off"></textarea>
                                 <div class="chat-input-actions">
                                     <button class="chat-input-btn" id="btn-anexar-gif" title="Buscar GIF" style="font-size: 11px; font-weight: 800; letter-spacing: .3px;">GIF</button>
                                     <button class="chat-input-btn" id="btn-emoji-mensagem" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
@@ -2772,7 +2888,7 @@
                 </div>
                 <div class="control-group" style="width: 100%; text-align: left; border: none; padding: 0; margin-top: 24px;">
                     <span class="control-label" style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block;">Nome do servidor <span style="color: var(--red-color);">*</span></span>
-                    <input type="text" class="discord-input" id="new-server-name-input" value="Servidor de {{ usuario_atual.name }}">
+                    <input type="text" class="discord-input" id="new-server-name-input" maxlength="40" value="Servidor de {{ usuario_atual.name }}">
                     <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Ao criar um servidor, você concorda em manter o clima do {{ app_nome }}.</span>
                 </div>
             </div>
@@ -2793,7 +2909,7 @@
             </div>
             <div class="modal-content" style="gap: 16px; padding-top: 8px;">
                 <div style="display: flex; gap: 8px;">
-                    <textarea class="discord-input discord-textarea" id="note-text-input" placeholder="O que você encontrou aqui?"></textarea>
+                    <textarea class="discord-input discord-textarea" id="note-text-input" maxlength="140" placeholder="O que você encontrou aqui? (até 140 caracteres)"></textarea>
                     <button class="btn nota-icone-btn" title="Ícone do balão no mapa (não vai pro texto)" id="note-emoji-btn" data-abre-emoji><span id="note-icone-atual">💬</span><small>ícone</small></button>
                 </div>
 
@@ -2966,7 +3082,7 @@
                     <label class="bz-label">Nome do canal</label>
                     <div class="bz-input-wrap">
                         <span class="bz-input-prefix" id="channel-name-prefix">#</span>
-                        <input type="text" id="channel-name-input" class="bz-input" placeholder="novo-canal" maxlength="100">
+                        <input type="text" id="channel-name-input" class="bz-input" placeholder="novo-canal" maxlength="32">
                     </div>
                 </div>
 
@@ -3039,7 +3155,7 @@
 
                 <div>
                     <label class="bz-label">Nome do servidor</label>
-                    <input type="text" id="cfg-server-name" class="bz-input" maxlength="100" style="padding-left: 12px;">
+                    <input type="text" id="cfg-server-name" class="bz-input" maxlength="40" style="padding-left: 12px;">
                 </div>
 
                 <div>
@@ -3114,7 +3230,7 @@
 
                 <div class="sf-campo">
                     <label class="bz-label">Nome do servidor</label>
-                    <input type="text" id="sf-nome" class="bz-input" maxlength="100" style="padding-left:12px;">
+                    <input type="text" id="sf-nome" class="bz-input" maxlength="40" style="padding-left:12px;">
                 </div>
 
                 <div class="sf-campo">
@@ -3183,7 +3299,7 @@
         <div class="bazinga-modal" style="width: 480px;">
             <div class="modal-header" style="position: relative;">
                 <h2>Convidar pra <span id="invite-server-name">o servidor</span></h2>
-                <p>Manda o link, mostra o QR ou cola um código que te deram.</p>
+                <p>Gere um link, mande por e-mail, mostre o QR ou cole um código que te deram.</p>
                 <i class="fa-solid fa-xmark modal-close-x" onclick="fecharModalConvite()"></i>
             </div>
             <div class="modal-content" style="gap: 18px;">
@@ -3217,6 +3333,11 @@
                         <div class="bz-input-wrap" style="margin-bottom:12px;">
                             <input type="text" id="invite-link" class="bz-input" readonly style="padding-left:12px;">
                             <button class="btn btn-primary" style="padding:8px 14px; font-size:13px; border-radius:0 4px 4px 0;" onclick="copiarConvite()">Copiar</button>
+                        </div>
+                        <div class="invite-email-linha">
+                            <input type="email" id="invite-email" class="bz-input" placeholder="E-mail de quem você quer convidar (opcional)" maxlength="120" style="padding-left:12px;">
+                            <button class="btn" type="button" onclick="enviarConvitePorEmail('gmail')" title="Abre o Gmail com a mensagem pronta"><i class="fa-solid fa-envelope"></i> Gmail</button>
+                            <button class="btn" type="button" onclick="enviarConvitePorEmail('mailto')" title="Abre o seu programa de e-mail"><i class="fa-regular fa-paper-plane"></i> Outro</button>
                         </div>
                         <div style="display:flex; gap:16px; align-items:center; background:var(--bg-tertiary); padding:14px; border-radius:8px;">
                             <div id="invite-qr" style="width:132px; height:132px; background:#fff; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;"></div>
@@ -3627,7 +3748,7 @@
                                 <div class="pf-bloco-tit">Identidade</div>
                                 <div class="pf-grupo">
                                     <label class="control-label" for="pf-nome">Nome de exibição</label>
-                                    <input type="text" class="discord-input" id="pf-nome" maxlength="100" autocomplete="off">
+                                    <input type="text" class="discord-input" id="pf-nome" maxlength="32" autocomplete="off">
                                     <span class="pf-dica">É o que aparece pra todo mundo - pode ter estilo e efeito.</span>
                                 </div>
                                 <div class="pf-grupo">
@@ -3698,14 +3819,14 @@
                                     <label class="control-label" for="pf-status">Status personalizado</label>
                                     <div class="custom-status-row">
                                         <button class="emoji-picker-btn" type="button" id="pf-status-emoji" title="Escolher emoji"><i class="fa-solid fa-face-smile"></i></button>
-                                        <input type="text" class="discord-input" id="pf-status" maxlength="128" placeholder="Ex.: Jogando Valorant, Estudando..." autocomplete="off">
+                                        <input type="text" class="discord-input" id="pf-status" maxlength="60" placeholder="Ex.: Jogando Valorant, Estudando..." autocomplete="off">
                                         <button type="button" class="pf-mini" id="pf-status-limpar" title="Limpar">Limpar</button>
                                     </div>
                                     <span class="pf-dica">É o texto do seu status (no lugar de "Disponível"). Com a presença "Personalizado", o emoji também vira a sua bolinha.</span>
                                 </div>
                                 <div class="pf-grupo">
                                     <label class="control-label" for="pf-pensando">Pensando agora</label>
-                                    <input type="text" class="discord-input" id="pf-pensando" maxlength="128" placeholder="O que passa pela sua cabeça?" autocomplete="off">
+                                    <input type="text" class="discord-input" id="pf-pensando" maxlength="60" placeholder="O que passa pela sua cabeça?" autocomplete="off">
                                     <span class="pf-dica">Vira o balão ao lado da sua foto e o textinho embaixo do seu nome nas listas.</span>
                                 </div>
                             </div>
@@ -4069,6 +4190,7 @@
 
         function switchMainView(viewName) {
             vistaAtual = viewName;
+            try { if (inCall) callMinimizar(); } catch (e) {}   // navegou: a call vira janela mini (try: pode rodar antes de inCall existir)
             // Hide all main containers
             const homeContent = document.getElementById('home-content-wrapper');
             const serverContent = document.getElementById('server-content-wrapper');
@@ -4254,16 +4376,30 @@
                 const el = document.getElementById('bp-cont-' + per);
                 if (el) el.textContent = `${bpMissoes[per].filter(m => m.concluida).length}/${bpMissoes[per].length}`;
             });
+            // Cartões de "missão" no estilo das Quests do Discord: capa colorida com ícone grande, recompensa em destaque,
+            // barra de progresso e estado (em andamento / concluída). A cor vem do ícone, então a mesma missão tem sempre a mesma cara.
+            const PALETA = [['#5865f2', '#eb459e'], ['#11998e', '#38ef7d'], ['#f2994a', '#f2c94c'], ['#7f00ff', '#e100ff'], ['#0575e6', '#00f260'], ['#ee0979', '#ff6a00']];
+            const corDe = (txt) => { let h = 0; for (const c of String(txt || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETA[h % PALETA.length]; };
+            const rotuloPer = bpAbaMissoes === 'diarias' ? 'DIÁRIA' : 'SEMANAL';
             lista.innerHTML = bpMissoes[bpAbaMissoes].map((m, i) => {
-                const pct = Math.round((m.progresso / m.meta) * 100);
-                return `<div class="bp-missao ${m.concluida ? 'feita' : ''}" style="--i:${i}">
-                    <div class="bp-missao-topo">
-                        <div class="bp-missao-ico"><i class="fa-solid fa-${m.concluida ? 'check' : esc(m.icone)}"></i></div>
-                        <div class="bp-missao-txt"><b>${esc(m.titulo)}</b><span>${esc(m.descricao)}</span></div>
-                        <div class="bp-missao-xp">+${Number(m.xp)} XP</div>
+                const pct = Math.min(100, Math.round((m.progresso / m.meta) * 100));
+                const [c1, c2] = corDe(m.icone || m.titulo);
+                return `<div class="qs-card ${m.concluida ? 'feita' : ''}" style="--i:${i};--c1:${c1};--c2:${c2}">
+                    <div class="qs-capa">
+                        <i class="fa-solid fa-${esc(m.icone)} qs-icone"></i>
+                        <span class="qs-tag">${rotuloPer}</span>
+                        <span class="qs-xp"><i class="fa-solid fa-bolt"></i> +${Number(m.xp)} XP</span>
+                        ${m.concluida ? '<span class="qs-selo"><i class="fa-solid fa-check"></i></span>' : ''}
                     </div>
-                    <div class="bp-missao-barra"><i style="width:${pct}%"></i></div>
-                    <div class="bp-missao-num"><span>${m.concluida ? 'Concluída' : 'Progresso'}</span><span>${Number(m.progresso)} / ${Number(m.meta)}</span></div>
+                    <div class="qs-corpo">
+                        <b>${esc(m.titulo)}</b>
+                        <span class="qs-desc">${esc(m.descricao)}</span>
+                        <div class="qs-prog"><i style="width:${pct}%"></i></div>
+                        <div class="qs-rodape">
+                            <span class="qs-num">${Number(m.progresso)} / ${Number(m.meta)}</span>
+                            <span class="qs-estado ${m.concluida ? 'ok' : ''}">${m.concluida ? '<i class="fa-solid fa-circle-check"></i> Recompensa recebida' : (pct > 0 ? 'Em andamento' : 'Não iniciada')}</span>
+                        </div>
+                    </div>
                 </div>`;
             }).join('');
             atualizarContagemReset();
@@ -5505,9 +5641,12 @@
             const srv = servidorAtivo();
             document.getElementById('invite-server-name').textContent = srv ? srv.name : 'o servidor';
 
-            // Quem não é dono não gera convite, mas ainda pode colar um código.
+            // Qualquer membro gera convite (quem não é dono tem teto de 7 dias / 25 pessoas - o servidor aplica).
             const souDono = souDonoDoServidor(srv);
-            document.getElementById('invite-owner-area').style.display = souDono ? 'block' : 'none';
+            document.getElementById('invite-owner-area').style.display = 'block';
+            document.querySelectorAll('#invite-duracao option[value="ilimitado"], #invite-usos option[value="ilimitado"]')
+                .forEach(o => { o.disabled = !souDono; o.hidden = !souDono; });
+            if (!souDono) { document.getElementById('invite-usos').value = '25'; document.getElementById('invite-duracao').value = '24'; }
             document.getElementById('invite-result').style.display = 'none';
             document.getElementById('invite-code-input').value = '';
             conviteAtual = null;
@@ -5558,6 +5697,19 @@
             navigator.clipboard.writeText(campo.value)
                 .then(() => showToast("Link copiado!", "success"))
                 .catch(() => { campo.select(); showToast("Copia aí com Ctrl+C", "info"); });
+        }
+
+        // Convite por e-mail: monta a mensagem e abre o Gmail (ou o programa de e-mail) - quem envia é a própria pessoa.
+        function enviarConvitePorEmail(modo) {
+            const link = document.getElementById('invite-link').value;
+            if (!link) { showToast('Gere o link primeiro.', 'warning'); return; }
+            const srv = servidorAtivo();
+            const para = document.getElementById('invite-email').value.trim();
+            const assunto = `Convite pra ${srv ? srv.name : 'o servidor'} no {{ app_nome }}`;
+            const corpo = `Oi! ${currentUserName} te convidou pra ${srv ? srv.name : 'um servidor'} no {{ app_nome }}.\n\nEntre por aqui: ${link}`;
+            const q = `su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+            if (modo === 'gmail') window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(para)}&${q}`, '_blank', 'noopener');
+            else window.location.href = `mailto:${encodeURIComponent(para)}?${q.replace('su=', 'subject=')}`;
         }
 
         function entrarPorCodigo() {
@@ -6655,6 +6807,12 @@
                 btn.style.width = '30px'; btn.style.height = '30px'; btn.style.padding = '0'; btn.style.borderRadius = '4px'; btn.style.margin = '10px'; btn.style.cursor = 'pointer'; btn.style.backgroundColor = 'var(--bg-secondary)'; btn.style.border = '1px solid rgba(0,0,0,0.5)'; btn.style.color = 'var(--text-normal)';
                 btn.title = "Centralizar em mim";
                 btn.onclick = function() {
+                    // Voltar ao GPS real (cancela o teletransporte manual) e centralizar.
+                    if (posicaoManual && navigator.geolocation) {
+                        posicaoManual = false;
+                        navigator.geolocation.getCurrentPosition(aoReceberGps, () => {}, { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 });
+                        showToast('Voltei a usar a sua localização real.', 'info');
+                    }
                     if(myMapMarker) map.setView(myMapMarker.getLatLng(), 16);
                 };
                 return btn;
@@ -6732,7 +6890,9 @@
 
             // TELETRANSPORTE (Correção do GPS do PC): Dois cliques para mover seu avatar manualmente
             bazingaMap.on('dblclick', function(e) {
-                openConfirmModal("Correção de GPS (Teletransporte)", "Você deseja hackear os satélites e mover seu avatar exatamente para este ponto?", () => {
+                openConfirmModal("Correção de GPS (Teletransporte)", "Mover seu avatar exatamente para este ponto? Vale até você clicar em \"Centralizar em mim\".", () => {
+                    posicaoManual = true;
+                    mostrarPrecisao(e.latlng.lat, e.latlng.lng, 0);
                     ultimoCentroPedido = null;
                     atualizarMinhaPosicao(e.latlng.lat, e.latlng.lng);
                     if(typeof socket !== 'undefined' && socket.connected) {
@@ -6746,26 +6906,34 @@
             bazingaMap.doubleClickZoom.disable();
 
             // RASTREIO CONTÍNUO (A Mágica de andar pela rua)
+            // Por que a localização "não era 100% certa": (1) 5s de timeout com alta precisão estourava no PC e caía num
+            // fallback silencioso em SÃO PAULO; (2) o GPS sobrescrevia o teletransporte logo no próximo fix; (3) nenhum
+            // aviso de precisão. Agora: timeout longo, 2ª tentativa sem alta precisão, círculo de precisão, e o
+            // teletransporte manual vale até você clicar em "Centralizar em mim".
+            const aoReceberGps = (position) => {
+                if (posicaoManual) return;
+                const { latitude: lat, longitude: lng, accuracy } = position.coords;
+                atualizarMinhaPosicao(lat, lng);
+                mostrarPrecisao(lat, lng, accuracy);
+                // Avisa o servidor (Flask) que eu me movi para espalhar pros amigos! (Apenas se ghost mode = off)
+                if (!ghostMode && typeof socket !== 'undefined' && socket.connected) {
+                    socket.emit('atualizar_localizacao', { lat: lat, lng: lng });
+                }
+            };
+            const semGps = (err) => {
+                if (myMapMarker) return;   // já tenho uma posição: não inventa outra
+                showToast(err && err.code === 1
+                    ? 'Localização bloqueada no navegador. Libere no cadeado do endereço ou dê dois cliques no mapa onde você está.'
+                    : 'Não consegui achar sua localização. Dê dois cliques no mapa, no ponto onde você está.', 'warning');
+                atualizarMinhaPosicao(-23.550520, -46.633308);   // só pra o mapa existir; o teletransporte corrige
+            };
             if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    position => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        atualizarMinhaPosicao(lat, lng);
-
-                        // Avisa o servidor (Flask) que eu me movi para espalhar pros amigos! (Apenas se ghost mode = off)
-                        if(!ghostMode && typeof socket !== 'undefined' && socket.connected) {
-                            socket.emit('atualizar_localizacao', { lat: lat, lng: lng });
-                        }
-                    },
-                    error => {
-                        console.warn("Geolocalização negada/falhou. Usando centro de São Paulo como fallback.");
-                        atualizarMinhaPosicao(-23.550520, -46.633308);
-                    },
-                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-                );
+                navigator.geolocation.watchPosition(aoReceberGps, (err) => {
+                    // Alta precisão falhou (comum em PC sem GPS): tenta o jeito simples (Wi-Fi/IP) antes de desistir.
+                    navigator.geolocation.getCurrentPosition(aoReceberGps, semGps, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+                }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
             } else {
-                atualizarMinhaPosicao(-23.550520, -46.633308); // Fallback direto
+                semGps(null);
             }
 
             // Remover overlay de carregamento com transição suave
@@ -6776,6 +6944,15 @@
             }
 
             carregarDadosDoMapa();
+        }
+
+        let posicaoManual = false, circuloPrecisao = null;
+        // Círculo de "estou em algum lugar aqui dentro" quando o aparelho só sabe a região (Wi-Fi/IP).
+        function mostrarPrecisao(lat, lng, acc) {
+            if (!bazingaMap) return;
+            if (!acc || acc < 40) { if (circuloPrecisao) { bazingaMap.removeLayer(circuloPrecisao); circuloPrecisao = null; } return; }
+            if (!circuloPrecisao) circuloPrecisao = L.circle([lat, lng], { radius: acc, color: '#43b581', weight: 1, opacity: .5, fillColor: '#43b581', fillOpacity: .08, interactive: false }).addTo(bazingaMap);
+            else circuloPrecisao.setLatLng([lat, lng]).setRadius(acc);
         }
 
         function atualizarMinhaPosicao(lat, lng) {
@@ -7199,6 +7376,13 @@
 
             socket.on('nova_geonote', function(dados) {
                 if (!bazingaMap || geoNotesAtivas.some(n => n.id === dados.id)) return;
+                // Nota de amigo chega mesmo longe (alcance grande); a de desconhecido só dentro do alcance das notas.
+                if (myMapMarker && Number(dados.autor_id) !== Number(currentUserId)) {
+                    const p = myMapMarker.getLatLng();
+                    const dist = calcularDistanciaMetros(p.lat, p.lng, dados.lat, dados.lng);
+                    const ehAmigo = (amizades.amigos || []).some(a => Number(a.id) === Number(dados.autor_id));
+                    if (dist > (ehAmigo ? raioServidoresM : raioNotasM)) return;
+                }
                 renderizarGeoNote(dados.id, dados.lat, dados.lng, dados.texto, dados.autor, dados.cor, dados.autor_id, dados);
                 if (Number(dados.autor_id) === Number(currentUserId)) {
                     showToast("Nota cravada no mapa!", "success");
@@ -7369,6 +7553,10 @@
             let avatarHtml = avatarSeguro
                 ? `<img src="${avatarSeguro}">`
                 : `<span>${esc((autor || '?')[0].toUpperCase())}</span>`;
+            // Estilo do nome e moldura de quem fala (antes só valiam no cartão/listas). Ids vêm validados do servidor,
+            // mas passam por esc() mesmo assim - viram `class=""`.
+            const estiloNome = classeNome(extras.nome_estilo);
+            const classeMold = classeMoldura(extras.moldura);
 
             const marcaEditada = extras.editada
                 ? `<span class="msg-editada">(editada)</span>` : '';
@@ -7396,10 +7584,10 @@
             } else {
                 div.innerHTML = `
                     ${acoesHtml}
-                    <div class="chat-avatar" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${avatarHtml}</div>
+                    <div class="chat-avatar ${esc(classeMold)}" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${avatarHtml}</div>
                     <div class="message-content">
                         <div class="message-header">
-                            <span class="message-author" style="color: ${corSegura};">${esc(autor)}</span>
+                            <span class="message-author ${esc(estiloNome)}" style="${estiloNome ? '' : `color: ${corSegura};`}">${esc(autor)}</span>
                             <span class="message-timestamp">${esc(hora)}</span>
                         </div>
                         ${textoHtml}
@@ -7437,11 +7625,10 @@
                 document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> ${esc(channelName)}`;
                 document.getElementById('message-input').placeholder = `Conversar em #${channelName}`;
 
-                if(!inCall) {
-                    document.getElementById('text-view').classList.remove('hidden');
-                    document.getElementById('text-view').classList.remove('sidebar-mode');
-                    document.getElementById('video-view').classList.remove('active');
-                }
+                // Clicou num canal de texto: o chat aparece inteiro e a call (se houver) vira a janela mini
+                document.getElementById('text-view').classList.remove('hidden');
+                document.getElementById('text-view').classList.remove('sidebar-mode');
+                if (inCall) callMinimizar();
                 carregarMensagensIniciais();
             });
         }
@@ -7503,6 +7690,13 @@
             return tempId;
         }
 
+        // Campo de texto que cresce com as quebras de linha (Shift+Enter quebra, Enter envia)
+        function autoCrescer(el) { if (!el) return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 176) + 'px'; }
+        ['message-input', 'dm-message-input'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', () => autoCrescer(el));
+        });
+
         function enviarMensagemDoCanal() {
             const input = document.getElementById('message-input');
             // @Nome escolhido no autocomplete (ou @usuario digitado) vira <@id> no texto enviado
@@ -7540,6 +7734,7 @@
             anexosPendentes = [];
             desenharAnexosPendentes();
             input.value = '';
+            autoCrescer(input);
         }
 
         document.getElementById('message-input').addEventListener('keypress', function(event) {
@@ -8459,7 +8654,11 @@
             const idAlvo = cartaoAberto && cartaoAberto.id;
 
             if (acao.startsWith('status:')) { definirMeuStatus(acao.slice(7)); return; }
-            if (acao === 'status-toggle') { item.classList.toggle('aberto'); document.getElementById('pc-status-opcoes').classList.toggle('aberto'); return; }
+            if (acao === 'status-toggle') {
+                item.classList.toggle('aberto'); document.getElementById('pc-status-opcoes').classList.toggle('aberto');
+                posicionarCartao();   // a lista cresce: sem reposicionar o cartão estourava a tela (ficava cortado embaixo)
+                return;
+            }
             if (acao === 'menu') {
                 const menu = document.getElementById('pc-menu');
                 menu.classList.remove('abre-cima');
@@ -8581,15 +8780,11 @@
             }
         });
 
+        // Existiam DOIS jeitos de mudar o status (este menuzinho e o do cartão) e o clique no avatar abria os dois por cima
+        // um do outro. Ficou só o do cartão de perfil: avatar e nome abrem o mesmo cartão.
         btnStatus.addEventListener('click', (e) => {
             e.stopPropagation();
-            const abrindo = !statusMenu.classList.contains('active');
-            if (abrindo) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                statusMenu.style.left = `${rect.left}px`;
-                statusMenu.style.bottom = `${window.innerHeight - rect.top + 8}px`;
-            }
-            statusMenu.classList.toggle('active');
+            abrirCartao(currentUserId, document.getElementById('btn-open-popout'), true);
         });
 
         document.querySelectorAll('.status-option[data-status]').forEach(opt => {
@@ -9702,8 +9897,13 @@
 
         async function enumerarDispositivos() {
             try {
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-                const dispositivos = await navigator.mediaDevices.enumerateDevices();
+                // Só pede o microfone se os nomes ainda vêm vazios (sem permissão) - e SOLTA na hora. Antes o microfone
+                // ficava aberto pra sempre cada vez que o menu abria.
+                let dispositivos = await navigator.mediaDevices.enumerateDevices();
+                if (dispositivos.some(d => d.kind === 'audioinput' && !d.label)) {
+                    try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach(t => t.stop()); } catch (e) {}
+                    dispositivos = await navigator.mediaDevices.enumerateDevices();
+                }
 
                 const micList = document.getElementById('mic-list');
                 const speakerList = document.getElementById('speaker-list');
@@ -9736,7 +9936,7 @@
                             const opt = document.createElement('div');
                             opt.className = `device-option ${isSelected ? 'selected' : ''}`;
                             opt.innerHTML = `<div class="device-option-label"><i class="${device.deviceId==='default' ? 'fa-solid fa-laptop' : 'fa-solid fa-volume-high'}"></i> ${device.label || 'Alto-falante Padrão'}</div> ${isSelected ? '<i class="fa-solid fa-circle-check"></i>' : ''}`;
-                            opt.onclick = (e) => { e.stopPropagation(); currentSpeakerId = device.deviceId; document.getElementById('current-speaker-name').innerText = device.label || 'Padrão do Windows'; enumerarDispositivos(); };
+                            opt.onclick = (e) => { e.stopPropagation(); currentSpeakerId = device.deviceId; document.getElementById('current-speaker-name').innerText = device.label || 'Padrão do Windows'; aplicarSaida(); enumerarDispositivos(); };
                             speakerList.appendChild(opt);
                         }
                         if(modalSpeaker) {
@@ -9752,16 +9952,30 @@
             currentMicId = device.deviceId;
             document.getElementById('current-mic-name').innerText = device.label || 'Padrão do Windows';
             enumerarDispositivos();
-            if (inCall && myMicStream) {
-                try {
-                    const novoStream = await navigator.mediaDevices.getUserMedia({ audio: constraintsDoMic(currentMicId) });
-                    const novaTrack = novoStream.getAudioTracks()[0];
-                    myMicStream.removeTrack(myMicStream.getAudioTracks()[0]);
-                    myMicStream.addTrack(novaTrack);
-                    novaTrack.enabled = !micMuted;
-                    atualizarMidiaparaAmigos(novaTrack);
-                } catch(err) {}
-            }
+            reaplicarMic();
+        }
+
+        // Pega o microfone de novo com as constraints atuais (dispositivo + isolamento/eco/ganho) e troca na call ao vivo.
+        async function reaplicarMic() {
+            if (!(inCall && myMicStream)) return;
+            try {
+                const novoStream = await navigator.mediaDevices.getUserMedia({ audio: constraintsDoMic(currentMicId) });
+                const novaTrack = novoStream.getAudioTracks()[0];
+                const velha = myMicStream.getAudioTracks()[0];
+                if (velha) { myMicStream.removeTrack(velha); velha.stop(); }
+                myMicStream.addTrack(novaTrack);
+                novaTrack.enabled = !micMuted;
+                atualizarMidiaparaAmigos(novaTrack);
+            } catch (err) { showToast('Não consegui trocar o microfone.', 'error'); }
+        }
+
+        // Saída de áudio escolhida: aplica nos vídeos/áudios da call (setSinkId). Antes só trocava o texto do menu.
+        function aplicarSaida(raiz) {
+            const id = currentSpeakerId === 'default' ? '' : currentSpeakerId;
+            (raiz || document).querySelectorAll('#video-grid video, #video-grid audio').forEach(el => {
+                if (el.id === 'my-video') return;
+                if (typeof el.setSinkId === 'function') el.setSinkId(id).catch(() => {});
+            });
         }
 
         const segmentedMeter = document.getElementById('modal-mic-meter-segmented');
@@ -9776,8 +9990,41 @@
         let isTestingModal = false;
         let testAudioCtx, testAnalyser, testMicSource, testScriptNode, testAudioElement;
 
-        async function iniciarTesteMic() { /* Reservado */ }
-        function pararTesteMic() { }
+        let testeMic = null;
+        async function iniciarTesteMic() {
+            pararTesteMic();
+            const barra = document.getElementById('mic-meter');
+            if (!barra) return;
+            try {
+                // Na call usa o microfone que já está aberto; fora dela abre só enquanto o menu está aberto.
+                const emCall = (typeof inCall !== 'undefined' && inCall && myMicStream);
+                const stream = emCall ? myMicStream : await navigator.mediaDevices.getUserMedia({ audio: constraintsDoMic(currentMicId) });
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const an = ctx.createAnalyser(); an.fftSize = 512; an.smoothingTimeConstant = 0.6;
+                ctx.createMediaStreamSource(stream).connect(an);
+                const dados = new Uint8Array(an.frequencyBinCount);
+                testeMic = { ctx, stream: emCall ? null : stream, raf: 0 };
+                const laco = () => {
+                    if (!testeMic) return;
+                    an.getByteFrequencyData(dados);
+                    let soma = 0; for (let i = 0; i < dados.length; i++) soma += dados[i];
+                    barra.style.width = Math.min(100, (soma / dados.length) * 2.4) + '%';
+                    testeMic.raf = requestAnimationFrame(laco);
+                };
+                laco();
+            } catch (e) { barra.style.width = '0%'; }
+        }
+        function pararTesteMic() {
+            if (!testeMic) return;
+            cancelAnimationFrame(testeMic.raf);
+            try { testeMic.ctx.close(); } catch (e) {}
+            if (testeMic.stream) testeMic.stream.getTracks().forEach(t => t.stop());
+            testeMic = null;
+            const barra = document.getElementById('mic-meter'); if (barra) barra.style.width = '0%';
+        }
+        // Clique direito no microfone/fone também abre as opções
+        document.getElementById('mic-group').addEventListener('contextmenu', (e) => { e.preventDefault(); toggleMenu('menu-mic', 'btn-mic-settings'); });
+        document.getElementById('deafen-group').addEventListener('contextmenu', (e) => { e.preventDefault(); toggleMenu('menu-headphone', 'btn-deafen-settings'); });
 
         document.getElementById('btn-modal-mic-test').addEventListener('click', async (e) => {
             isTestingModal = !isTestingModal;
@@ -9818,7 +10065,7 @@
             isTestingModal = false;
         }
 
-        document.querySelectorAll('.toggle-switch').forEach(toggle => { toggle.addEventListener('click', () => { toggle.classList.toggle('active'); }); });
+        document.querySelectorAll('.toggle-switch:not(#toggle-noise):not(#toggle-echo):not(#toggle-gain)').forEach(toggle => { toggle.addEventListener('click', () => { toggle.classList.toggle('active'); }); });
         // ==========================================
         // PERFIL DE ENTRADA DE ÁUDIO (Isolamento/Estúdio/Personalizado)
         // ------------------------------------------------------------
@@ -9864,6 +10111,7 @@
             const nomeEl = document.getElementById('current-profile-name');
             if (nomeEl) nomeEl.textContent = NOMES_PERFIL_ENTRADA[perfil];
             renderPerfilEntradaMenu();
+            reaplicarMic();    // vale na hora, com você falando (antes só na próxima vez que o microfone abrisse)
         }
 
         document.querySelectorAll('.radio-card[data-profile]').forEach(card => {
@@ -9877,6 +10125,7 @@
             el.addEventListener('click', () => {
                 el.classList.toggle('active');
                 aoMudar(el.classList.contains('active'));
+                reaplicarMic();
             });
         }
         alternarToggle('toggle-noise', (ativo) => { noiseSuppressionOn = ativo; });
@@ -9886,7 +10135,7 @@
         // -----------------------------------------------------------
         // 7. CALLS MULTIPLAYER (WebRTC e Screen Share)
         // -----------------------------------------------------------
-        let inCall = false; let isCallChatOpen = false;
+        let inCall = false; let isCallChatOpen = false; let currentVoiceChannelId = null;   // antes nunca declarada (leitura antes da 1ª call dava ReferenceError)
         let myMicStream = null; let myCamStream = null;
         let activeScreenStreams = []; let mePeer = null; let myPeerId = null;
         const peers = {};
@@ -9895,6 +10144,85 @@
         const textView = document.getElementById('text-view');
         const videoView = document.getElementById('video-view');
         const videoGrid = document.getElementById('video-grid');
+
+        // ---------- Janela da call (mini flutuante <-> cheia) ----------
+        // O #video-view sai do wrapper do servidor (que some quando você troca de aba) e vai pra uma janela fixa:
+        // dá pra navegar à vontade com a call rodando. Mini = arrasta e redimensiona; cheia = cobre a área central.
+        const callJanela = document.createElement('div');
+        callJanela.id = 'call-janela'; callJanela.className = 'call-janela mini';
+        callJanela.innerHTML = `<div class="cj-topo" id="cj-topo"><i class="fa-solid fa-signal cj-sinal"></i><span class="cj-titulo" id="cj-titulo">Voz conectada</span>
+            <button id="cj-expandir" title="Expandir"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+            <button id="cj-recolher" title="Minimizar"><i class="fa-solid fa-down-left-and-up-right-to-center"></i></button></div>`;
+        document.body.appendChild(callJanela);
+        callJanela.appendChild(videoView);
+        videoView.classList.add('active');
+        let callModo = 'mini', callPos = null;
+
+        function callEhDM() { return String(currentVoiceChannelId || '').startsWith('dm_'); }
+        function posicionarCall() {
+            if (!callJanela.classList.contains('ativa')) return;
+            if (callModo === 'cheia') {
+                const alvo = (document.querySelector('#server-content-wrapper .chat-area-main') && document.getElementById('server-content-wrapper').style.display !== 'none' && !callEhDM())
+                    ? document.querySelector('#server-content-wrapper .chat-area-main') : document.querySelector('.chat-area');
+                const r = alvo.getBoundingClientRect();
+                const chat = (isCallChatOpen && !callEhDM()) ? 350 : 0;
+                Object.assign(callJanela.style, { left: r.left + 'px', top: r.top + 'px', width: Math.max(300, r.width - chat) + 'px', height: r.height + 'px' });
+            } else {
+                const w = callJanela.offsetWidth || 400, h = callJanela.offsetHeight || 260;
+                if (!callPos) callPos = { x: Math.max(8, window.innerWidth - w - 16), y: 64 };
+                callPos.x = Math.min(Math.max(0, callPos.x), Math.max(0, window.innerWidth - 120));
+                callPos.y = Math.min(Math.max(0, callPos.y), Math.max(0, window.innerHeight - 60));
+                callJanela.style.left = callPos.x + 'px'; callJanela.style.top = callPos.y + 'px';
+            }
+        }
+        function callMostrar(modo) {
+            callModo = modo;
+            if (modo === 'mini') { callJanela.style.width = callJanela.dataset.w || ''; callJanela.style.height = callJanela.dataset.h || ''; }
+            callJanela.classList.add('ativa');
+            callJanela.classList.toggle('mini', modo === 'mini');
+            callJanela.classList.toggle('cheia', modo === 'cheia');
+            document.getElementById('cj-expandir').style.display = modo === 'mini' ? '' : 'none';
+            document.getElementById('cj-recolher').style.display = modo === 'cheia' ? '' : 'none';
+            document.getElementById('btn-main-chat').style.display = callEhDM() ? 'none' : '';
+            if (modo === 'cheia') { callJanela.style.width = callJanela.style.height = ''; }
+            if (modo !== 'cheia') { isCallChatOpen = false; document.getElementById('btn-main-chat').classList.remove('active'); textView.classList.remove('sidebar-mode'); }
+            document.getElementById('cj-titulo').textContent = document.getElementById('connected-voice-name').textContent || 'Voz conectada';
+            posicionarCall();
+            videoGrid.querySelectorAll('video').forEach(v => { try { v.play().catch(() => {}); } catch (e) {} });
+        }
+        function callMinimizar() { if (callJanela.classList.contains('ativa') && callModo === 'cheia') callMostrar('mini'); }
+        function callOcultar() {
+            callJanela.classList.remove('ativa');
+            isCallChatOpen = false; textView.classList.remove('sidebar-mode');
+        }
+        document.getElementById('cj-expandir').addEventListener('click', () => callMostrar('cheia'));
+        document.getElementById('cj-recolher').addEventListener('click', () => callMostrar('mini'));
+        document.getElementById('cj-topo').addEventListener('dblclick', () => callMostrar(callModo === 'mini' ? 'cheia' : 'mini'));
+        // Clicar no "Voz conectada" da barra lateral volta pra call
+        document.querySelector('#voice-panel .voice-status').addEventListener('click', () => { if (inCall) callMostrar('cheia'); });
+        document.querySelector('#voice-panel .voice-status').style.cursor = 'pointer';
+        // Arrastar a janela mini pelo topo
+        (function () {
+            let arr = null;
+            document.getElementById('cj-topo').addEventListener('mousedown', (e) => {
+                if (callModo !== 'mini' || e.target.closest('button')) return;
+                arr = { dx: e.clientX - callJanela.offsetLeft, dy: e.clientY - callJanela.offsetTop };
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!arr) return;
+                callPos = { x: e.clientX - arr.dx, y: e.clientY - arr.dy };
+                posicionarCall();
+            });
+            window.addEventListener('mouseup', () => {
+                if (arr) { arr = null; callJanela.dataset.w = callJanela.style.width; callJanela.dataset.h = callJanela.style.height; }
+            });
+            // lembra o tamanho que a pessoa escolheu ao redimensionar
+            if (window.ResizeObserver) new ResizeObserver(() => {
+                if (callModo === 'mini' && callJanela.classList.contains('ativa') && callJanela.style.width) { callJanela.dataset.w = callJanela.style.width; callJanela.dataset.h = callJanela.style.height; }
+            }).observe(callJanela);
+            window.addEventListener('resize', posicionarCall);
+        })();
 
         videoGrid.addEventListener('click', (e) => {
             const card = e.target.closest('.video-card');
@@ -9908,13 +10236,41 @@
             else { document.querySelectorAll('.video-card').forEach(c => c.classList.remove('focused')); card.classList.add('focused'); videoGrid.classList.add('focused-mode'); }
         });
 
+        // A câmera NUNCA chegava aos outros: a call nascia só com áudio (sem "vaga" de vídeo) e o replaceTrack não
+        // achava sender nenhum - o PeerJS não renegocia depois de aberta. Agora toda call nasce com uma faixa de vídeo
+        // "reserva" (placeholder preto) que é trocada por null logo em seguida; ligar a câmera = replaceTrack na vaga.
+        let _videoReserva = null;
+        function videoReserva() {
+            if (!_videoReserva || _videoReserva.readyState === 'ended') {
+                const c = document.createElement('canvas'); c.width = c.height = 2;
+                c.getContext('2d').fillRect(0, 0, 2, 2);
+                _videoReserva = c.captureStream(1).getVideoTracks()[0];
+            }
+            return _videoReserva;
+        }
+        // O sender de vídeo da call, mesmo quando está sem faixa (track === null depois de desligar a câmera).
+        function senderDeVideo(call) {
+            const pc = call && call.peerConnection;
+            if (!pc) return null;
+            const t = pc.getTransceivers().find(tr => (tr.sender.track && tr.sender.track.kind === 'video') || (tr.receiver.track && tr.receiver.track.kind === 'video'));
+            return t ? t.sender : null;
+        }
+        // Libera a vaga de vídeo logo que a call abre: sem câmera ligada, manda "nada" (o outro lado mostra o avatar).
+        function prepararVideoDaCall(call, tentativa = 0) {
+            const sender = senderDeVideo(call);
+            if (!sender) { if (tentativa < 10) setTimeout(() => prepararVideoDaCall(call, tentativa + 1), 150); return; }
+            if (myCamStream) sender.replaceTrack(myCamStream.getVideoTracks()[0]).catch(() => {});
+            else if (sender.track === _videoReserva) sender.replaceTrack(null).catch(() => {});
+        }
+
         function atualizarMidiaparaAmigos(novaTrack) {
             if(!novaTrack) return;
             Object.values(peers).forEach(call => {
                 if(call.peerConnection) {
-                    const senders = call.peerConnection.getSenders();
-                    const sender = senders.find(s => s.track && s.track.kind === novaTrack.kind);
-                    if(sender) sender.replaceTrack(novaTrack);
+                    const sender = novaTrack.kind === 'video'
+                        ? senderDeVideo(call)
+                        : call.peerConnection.getSenders().find(s => s.track && s.track.kind === novaTrack.kind);
+                    if(sender) sender.replaceTrack(novaTrack).catch(() => {});
                 }
                 monitorarEAjustarBitrate(call, 'video');
             });
@@ -9926,10 +10282,8 @@
         // <video> congelado de quem assiste de volta pro avatar.
         function pararVideoParaAmigos() {
             Object.values(peers).forEach(call => {
-                if(call.peerConnection) {
-                    const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if(sender) sender.replaceTrack(null);
-                }
+                const sender = senderDeVideo(call);
+                if(sender) sender.replaceTrack(null).catch(() => {});
             });
         }
 
@@ -10008,7 +10362,7 @@
         // já estava conectado quando a câmera ligou, via atualizarMidiaparaAmigos).
         function streamParaChamada() {
             const tracks = [...myMicStream.getAudioTracks()];
-            if(myCamStream) tracks.push(...myCamStream.getVideoTracks());
+            tracks.push(myCamStream ? myCamStream.getVideoTracks()[0] : videoReserva());   // sempre com a vaga de vídeo
             return new MediaStream(tracks);
         }
 
@@ -10054,12 +10408,11 @@
         // Extraído do antigo listener de clique do canal de voz pra poder ser
         // chamado também depois de uma chamada de DM ser aceita.
         async function conectarNaCall(voiceId, voiceName) {
+            const ehDM = String(voiceId).startsWith('dm_');   // DM: janela mini (você segue no chat); canal de voz: tela cheia
             if (inCall) {
                 // Já está nesta mesma call: só volta pra tela da call.
                 if (String(currentVoiceChannelId) === String(voiceId)) {
-                    textView.classList.add('hidden');
-                    textView.classList.remove('sidebar-mode');
-                    videoView.classList.add('active');
+                    callMostrar('cheia');
                     return;
                 }
 
@@ -10072,8 +10425,7 @@
                 overlay.classList.add('active');
 
                 disconnectCall();
-                videoView.classList.add('active');
-                textView.classList.add('hidden'); textView.classList.remove('sidebar-mode');
+                callMostrar(ehDM ? 'mini' : 'cheia');
 
                 // Espera o peer fechar de verdade antes de abrir outro,
                 // senão o servidor de sinalização recusa a nova conexão.
@@ -10100,6 +10452,8 @@
                 // Ficava hardcoded em "Membro" - seu nome nunca aparecia
                 // no seu próprio card.
                 document.getElementById('my-video-label').textContent = currentUserName;
+                const meuAv = document.getElementById('my-avatar-placeholder');
+                meuAv.className = 'video-avatar ' + classeMoldura(perfilMeu.moldura);
 
                 voicePanel.classList.add('active');
                 document.getElementById('connected-voice-name').innerText =
@@ -10122,9 +10476,7 @@
                     voiceUsersBox.appendChild(myPresence);
                 }
 
-                textView.classList.add('hidden'); textView.classList.remove('sidebar-mode');
-                videoView.classList.add('active');
-                document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-volume-high" style="color: var(--text-muted);"></i> ${esc(voiceName)}`;
+                callMostrar(ehDM ? 'mini' : 'cheia');
                 document.getElementById('call-switch-overlay').classList.remove('active');
 
                 // Sem TURN, o PeerJS só tenta conexão direta (STUN) - atrás de
@@ -10199,6 +10551,7 @@
                         });
                     } else {
                         call.answer(streamParaChamada());
+                        prepararVideoDaCall(call);
                         monitorarEAjustarBitrate(call, 'video');
                         // Se a ligação WebRTC morrer sozinha (ICE falhou, por
                         // exemplo) sem o servidor avisar nada, tira a pessoa da
@@ -10210,7 +10563,7 @@
                             const callerAvatar = (call.metadata && call.metadata.avatar) ? call.metadata.avatar : null;
 
                             if(!document.getElementById(`vc-${call.peer}`)) {
-                                adicionarVideoCard(call.peer, remoteStream, callerName, callerAvatar);
+                                adicionarVideoCard(call.peer, remoteStream, callerName, callerAvatar, call.metadata);
                                 monitorarVolume(remoteStream, `vc-${call.peer}`);
                             }
 
@@ -10264,12 +10617,14 @@
             }
 
             if(!inCall || !mePeer) return;
+            if (myCamStream) setTimeout(anunciarMinhaCamera, 600);   // o novato ainda não sabe que minha câmera está ligada
             // Send metadata back to the new user
-            const call = mePeer.call(dados.peer_id, streamParaChamada(), { metadata: { type: 'voice', userName: currentUserName, avatar: currentUserAvatar } });
+            const call = mePeer.call(dados.peer_id, streamParaChamada(), { metadata: { type: 'voice', userName: currentUserName, avatar: currentUserAvatar, moldura: perfilMeu.moldura || '' } });
+            prepararVideoDaCall(call);
             call.on('close', () => removerVideoDoPeer(call.peer));
             call.on('stream', remoteStream => {
                 if(!document.getElementById(`vc-${dados.peer_id}`)) {
-                    adicionarVideoCard(dados.peer_id, remoteStream, dados.usuario, dados.avatar);
+                    adicionarVideoCard(dados.peer_id, remoteStream, dados.usuario, dados.avatar, dados);
                     monitorarVolume(remoteStream, `vc-${dados.peer_id}`);
                 }
             });
@@ -10325,11 +10680,12 @@
             // cada uma com seu próprio card (`vc-<peer>-screen-<streamId>`),
             // por isso o prefixo em vez de um id fixo só.
             document.querySelectorAll(`[id^="vc-${peerId}-screen"]`).forEach(el => el.remove());
+            delete camLigada[peerId];
             const call = peers[peerId];
             if(call) { delete peers[peerId]; call.close(); }
         }
 
-        function adicionarVideoCard(peerId, stream, nome, avatarUrl) {
+        function adicionarVideoCard(peerId, stream, nome, avatarUrl, orn) {
             const card = document.createElement('div');
             card.className = 'video-card'; card.id = `vc-${peerId}`;
             const isAudioOnly = stream.getVideoTracks().length === 0;
@@ -10342,6 +10698,8 @@
                               <div class="video-label">${esc(nome)}</div>`;
             videoGrid.appendChild(card);
             card.querySelector('video').srcObject = stream;
+            aplicarSaida(card);
+            if (orn && orn.moldura) card.querySelector('.video-avatar').classList.add(...classeMoldura(orn.moldura).split(' ').filter(Boolean));
 
             // Ligar/desligar câmera no meio da call não reabre a conexão -
             // só troca o sender por null (ver pararVideoParaAmigos) - então
@@ -10350,18 +10708,59 @@
             // nativo do WebRTC pra isso, não precisa de nenhum aviso extra
             // indo e voltando pelo servidor.
             const videoTrack = stream.getVideoTracks()[0];
-            if (videoTrack) {
-                const videoEl = card.querySelector('video');
-                const avatarEl = card.querySelector('.video-avatar');
-                const atualizarVisibilidade = () => {
-                    const semVideo = videoTrack.muted || videoTrack.readyState === 'ended';
-                    videoEl.style.display = semVideo ? 'none' : 'block';
-                    avatarEl.style.display = semVideo ? 'flex' : 'none';
-                };
-                videoTrack.onmute = atualizarVisibilidade;
-                videoTrack.onunmute = atualizarVisibilidade;
-                videoTrack.onended = atualizarVisibilidade;
+            const ehTela = /-screen-/.test(String(peerId));
+            if (videoTrack && !ehTela) {
+                // Câmera: quem manda dizer se está ligada é o `estado_camera` (socket) - o `mute` do WebRTC demora/nunca vem
+                // quando a faixa vira null. A faixa remota também nasce "muted", então por padrão mostra o avatar.
+                videoTrack.onended = () => aplicarEstadoCamera(peerId);
+                aplicarEstadoCamera(peerId);
             }
+            if (ehTela) tornarZoomavel(card);
+        }
+
+        // peerId -> câmera ligada? (preenchido pelo evento estado_camera; padrão = desligada = avatar)
+        const camLigada = {};
+        function aplicarEstadoCamera(peerId) {
+            const card = document.getElementById(`vc-${peerId}`); if (!card) return;
+            const vid = card.querySelector('video'), av = card.querySelector('.video-avatar');
+            const ligada = !!camLigada[peerId];
+            if (vid) vid.style.display = ligada ? 'block' : 'none';
+            if (av) av.style.display = ligada ? 'none' : 'flex';
+        }
+        socket.on('estado_camera', (d) => { if (!d || !d.peer_id) return; camLigada[d.peer_id] = !!d.ligada; aplicarEstadoCamera(d.peer_id); });
+        function anunciarMinhaCamera() {
+            if (inCall && myPeerId && currentVoiceChannelId) socket.emit('estado_camera', { canal_id: currentVoiceChannelId, peer_id: myPeerId, ligada: !!myCamStream });
+        }
+
+        // Zoom na tela compartilhada de OUTRA pessoa: roda do mouse dá zoom (no ponto do cursor), arrastar move,
+        // duplo clique volta ao normal.
+        function tornarZoomavel(card) {
+            const v = card.querySelector('video'); if (!v) return;
+            card.classList.add('zoomavel');
+            const dica = document.createElement('div'); dica.className = 'zoom-dica'; dica.textContent = 'Roda do mouse = zoom · arraste = mover · 2 cliques = reset';
+            card.appendChild(dica);
+            let z = 1, tx = 0, ty = 0, arr = null, moveu = false;
+            const aplicar = () => {
+                const r = card.getBoundingClientRect();
+                const mx = (r.width * (z - 1)) / 2, my = (r.height * (z - 1)) / 2;
+                tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty));
+                v.style.transform = z === 1 ? '' : `translate(${tx}px, ${ty}px) scale(${z})`;
+                card.classList.toggle('com-zoom', z > 1);
+            };
+            card.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const r = card.getBoundingClientRect();
+                const cx = e.clientX - r.left - r.width / 2, cy = e.clientY - r.top - r.height / 2;
+                const novo = Math.min(6, Math.max(1, z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+                tx = cx - (cx - tx) * (novo / z); ty = cy - (cy - ty) * (novo / z);
+                z = novo; if (z === 1) { tx = ty = 0; }
+                aplicar();
+            }, { passive: false });
+            card.addEventListener('mousedown', (e) => { if (z > 1) { arr = { x: e.clientX - tx, y: e.clientY - ty }; moveu = false; e.preventDefault(); } });
+            window.addEventListener('mousemove', (e) => { if (!arr) return; moveu = true; tx = e.clientX - arr.x; ty = e.clientY - arr.y; aplicar(); });
+            window.addEventListener('mouseup', () => { arr = null; });
+            card.addEventListener('click', (e) => { if (moveu) { e.stopPropagation(); moveu = false; } }, true);
+            card.addEventListener('dblclick', () => { z = 1; tx = ty = 0; aplicar(); });
         }
 
         // Câmera e Tela
@@ -10373,6 +10772,7 @@
             if(myCamStream) {
                 myCamStream.getTracks().forEach(t => t.stop()); myCamStream = null;
                 pararVideoParaAmigos();
+                anunciarMinhaCamera();
                 document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');
                 videoCardVideo.style.display = 'none'; videoCardAvatar.style.display = 'flex';
             } else {
@@ -10387,7 +10787,15 @@
                     videoCardVideo.srcObject = myCamStream; videoCardVideo.style.display = 'block'; videoCardAvatar.style.display = 'none';
                     document.getElementById('btn-main-camera').classList.add('active'); document.getElementById('btn-side-camera').classList.add('active-stream');
                     atualizarMidiaparaAmigos(myCamStream.getVideoTracks()[0]);
-                } catch(e) {}
+                    anunciarMinhaCamera();
+                } catch(e) {
+                    // Antes engolia o erro: a câmera "não abria" e ninguém sabia por quê.
+                    const msg = e && e.name === 'NotAllowedError' ? 'Permita o acesso à câmera no navegador (cadeado ao lado do endereço).'
+                        : e && e.name === 'NotFoundError' ? 'Não achei nenhuma câmera neste computador.'
+                        : e && e.name === 'NotReadableError' ? 'A câmera está em uso por outro programa.'
+                        : 'Não consegui abrir a câmera' + (e && e.message ? `: ${e.message}` : '.');
+                    showToast(msg, 'error');
+                }
             }
         });
         document.getElementById('btn-side-camera').addEventListener('click', () => document.getElementById('btn-main-camera').click());
@@ -10420,7 +10828,9 @@
             // dos motivos do compartilhamento pesar mais que devia.
             const constraints = {
                 video: { height: { ideal: TELA_RES_PADRAO, max: TELA_RES_PADRAO }, frameRate: { ideal: TELA_FPS_PADRAO, max: TELA_FPS_PADRAO } },
-                audio: true
+                audio: true,
+                selfBrowserSurface: 'exclude',      // não oferece esta própria aba (a que gera o espelho infinito)
+                surfaceSwitching: 'include'
             };
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
@@ -10436,16 +10846,15 @@
 
                 const screenCard = document.createElement('div');
                 screenCard.className = 'video-card'; screenCard.id = `screen-card-${streamId}`;
-                screenCard.innerHTML = `<video autoplay muted style="width:100%; height:100%; object-fit:contain; background:#000;"></video><div class="video-label">Tela de ${currentUserName}</div>`;
+                // SEM prévia ao vivo da própria tela: se você compartilha a tela (ou a janela) onde o app está, a prévia
+                // filmava a prévia filmando a prévia... (túnel infinito). Os outros veem normal; aqui só um aviso.
+                screenCard.classList.add('tela-propria');
+                screenCard.innerHTML = `<video autoplay muted playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
+                    <div class="tela-propria-aviso"><i class="fa-solid fa-tower-broadcast"></i><div>Você está transmitindo a tela</div><small>A prévia fica oculta pra não criar um espelho infinito.</small><button type="button" data-parar="${streamId}">Parar de compartilhar</button></div>
+                    <div class="video-label">Tela de ${esc(currentUserName)}</div>`;
                 document.getElementById('video-grid').appendChild(screenCard);
                 screenCard.querySelector('video').srcObject = newStream;
-
-                // Foca a própria tela na hora (igual ao Discord) - sem isso
-                // ela nascia do mesmo tamanho que o card da câmera de
-                // qualquer um, escondida no meio da grade.
-                document.querySelectorAll('.video-card').forEach(c => c.classList.remove('focused'));
-                screenCard.classList.add('focused');
-                videoGrid.classList.add('focused-mode');
+                screenCard.querySelector('[data-parar]').addEventListener('click', (ev) => { ev.stopPropagation(); pararCompartilhamento(streamId); });
 
                 document.getElementById('btn-main-screen').classList.add('active-green'); document.getElementById('btn-side-screen').classList.add('active-stream');
 
@@ -10479,8 +10888,9 @@
         document.getElementById('btn-main-chat').addEventListener('click', () => {
             isCallChatOpen = !isCallChatOpen;
             document.getElementById('btn-main-chat').classList.toggle('active', isCallChatOpen);
-            if(isCallChatOpen) { textView.classList.remove('hidden'); textView.classList.add('sidebar-mode'); }
-            else { textView.classList.add('hidden'); textView.classList.remove('sidebar-mode'); }
+            textView.classList.remove('hidden');
+            textView.classList.toggle('sidebar-mode', isCallChatOpen);
+            posicionarCall();
         });
 
         // ==========================================
@@ -10889,7 +11299,8 @@
             if(!inCall) return;
             inCall = false;
             tocarSom('call_sair');
-            document.getElementById('voice-panel').classList.remove('active'); document.getElementById('video-view').classList.remove('active');
+            document.getElementById('voice-panel').classList.remove('active');
+            callOcultar();
             document.getElementById('text-view').classList.remove('hidden'); document.getElementById('text-view').classList.remove('sidebar-mode');
             document.getElementById('video-grid').classList.remove('focused-mode');
             document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');
@@ -10902,6 +11313,7 @@
 
             if(myMicStream) myMicStream.getTracks().forEach(t => t.stop());
             if(myCamStream) myCamStream.getTracks().forEach(t => t.stop());
+            myCamStream = null;
             pararTodosCompartilhamentos();
 
             // Gravação/clipe não sobrevivem à call: fecha tudo e limpa o
@@ -11858,7 +12270,7 @@
             else prontos.forEach((a, i) => dmEnviarPronto(i === 0 ? texto : '', { anexo_url: a.url, anexo_tipo: a.tipo, anexo_nome: a.nome }));
             prontos.forEach(a => { if (a.previa.startsWith('blob:')) URL.revokeObjectURL(a.previa); });
             dmAnexos = []; dmDesenharAnexos();
-            dmInput.value = ''; dmAtualizarBotaoEnviar();
+            dmInput.value = ''; dmAtualizarBotaoEnviar(); autoCrescer(dmInput);
         }
         function enviarGifNaDM(url, nome) { dmEnviarPronto('', { anexo_url: url, anexo_tipo: 'image', anexo_nome: nome }); }
 
@@ -12190,6 +12602,46 @@
         }
         document.addEventListener('click', mqAgendar, true);
         mqAgendar();
+
+        // ---------- barras laterais redimensionáveis ----------
+        (function () {
+            const MIN = 190, MAX = 440;
+            function ligar(selector, variavel, lado, chave) {
+                const el = document.querySelector(selector);
+                if (!el) return;
+                try { const v = parseInt(localStorage.getItem(chave)); if (v >= MIN && v <= MAX) document.documentElement.style.setProperty(variavel, v + 'px'); } catch (e) {}
+                const h = document.createElement('div');
+                h.className = 'redimensionador ' + (lado === 'direita' ? 'dir' : 'esq');
+                h.title = 'Arraste pra mudar a largura (2 cliques = padrão)';
+                el.appendChild(h);
+                let ini = null;
+                h.addEventListener('mousedown', (e) => {
+                    ini = { x: e.clientX, w: el.getBoundingClientRect().width };
+                    h.classList.add('arrastando'); document.body.classList.add('redimensionando'); e.preventDefault(); e.stopPropagation();
+                });
+                window.addEventListener('mousemove', (e) => {
+                    if (!ini) return;
+                    const dx = e.clientX - ini.x;
+                    const w = Math.min(MAX, Math.max(MIN, Math.round(lado === 'direita' ? ini.w + dx : ini.w - dx)));
+                    document.documentElement.style.setProperty(variavel, w + 'px');
+                });
+                window.addEventListener('mouseup', () => {
+                    if (!ini) return;
+                    ini = null; h.classList.remove('arrastando'); document.body.classList.remove('redimensionando');
+                    try { localStorage.setItem(chave, parseInt(getComputedStyle(document.documentElement).getPropertyValue(variavel))); } catch (e) {}
+                    if (typeof bazingaMap !== 'undefined' && bazingaMap) bazingaMap.invalidateSize();
+                    if (typeof posicionarCall === 'function') posicionarCall();
+                });
+                h.addEventListener('dblclick', () => {
+                    document.documentElement.style.removeProperty(variavel);
+                    try { localStorage.removeItem(chave); } catch (e) {}
+                    if (typeof posicionarCall === 'function') posicionarCall();
+                });
+            }
+            ligar('#dms-sidebar', '--w-canais', 'direita', 'w_canais');
+            ligar('#bazinga-sidebar', '--w-canais', 'direita', 'w_canais');
+            ligar('#server-members-sidebar', '--w-membros', 'esquerda', 'w_membros');
+        })();
 
 
         // inicial (NÃO reconcilia amizades aqui: o retrato ainda não chegou e apagaria os cartões do HTML)

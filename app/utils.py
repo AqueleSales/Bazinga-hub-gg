@@ -608,11 +608,13 @@ def garantir_username(usuario):
     comitar_com_retry(preparar)
 
 
-def dados_do_mapa_perto(lat, lng):
+def dados_do_mapa_perto(lat, lng, amigos_ids=None):
     """Notas e servidores plantados dentro do raio de quem está olhando.
 
     Só o que está perto sai do servidor (privacidade); o resto nem chega ao
     navegador. Itens expirados ou escondidos por denúncia ficam de fora.
+    Nota de AMIGO aparece no alcance grande (o mesmo dos servidores): senão duas pessoas a 5 km uma da outra
+    nunca viam as notas uma da outra, mesmo sendo amigas.
     """
     from math import cos, radians
     from sqlalchemy import or_, and_
@@ -626,17 +628,22 @@ def dados_do_mapa_perto(lat, lng):
         dlng = r / (111000.0 * max(0.2, cos(radians(lat))))
         return lat - dlat, lat + dlat, lng - dlng, lng + dlng
 
+    amigos_ids = list(amigos_ids or [])
     a, b, c, d = caixa(RAIO_NOTAS_M)
+    A, B, C, D = caixa(RAIO_SERVIDORES_M)
+    perto = and_(GeoNote.lat.between(a, b), GeoNote.lng.between(c, d))
+    if amigos_ids:
+        perto = or_(perto, and_(GeoNote.author_id.in_(amigos_ids), GeoNote.lat.between(A, B), GeoNote.lng.between(C, D)))
     # Nota ANTIGA sem prazo (criada antes de a duração passar a valer) só vale por 24h desde que
     # nasceu - senão ficava eterna no mapa.
     notas_db = GeoNote.query.filter(
-        GeoNote.lat.between(a, b), GeoNote.lng.between(c, d),
+        perto,
         or_(GeoNote.expires_at > agora,
             and_(GeoNote.expires_at == None, GeoNote.timestamp > agora - timedelta(hours=24))),   # noqa: E711
         or_(GeoNote.oculta == None, GeoNote.oculta == False),            # noqa: E711,E712
     ).options(joinedload(GeoNote.author)).all()
     notas = [nota_para_json(n, agora) for n in notas_db
-             if distancia_m(lat, lng, n.lat, n.lng) <= RAIO_NOTAS_M]
+             if distancia_m(lat, lng, n.lat, n.lng) <= (RAIO_SERVIDORES_M if n.author_id in amigos_ids else RAIO_NOTAS_M)]
 
     a, b, c, d = caixa(RAIO_SERVIDORES_M)
     servers_db = MapServer.query.filter(
