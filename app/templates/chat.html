@@ -2241,11 +2241,10 @@
            ========================================================================== */
         .user-controls { padding: 8px 10px 10px !important; }
         .user-profile-bar, .user-profile-bar[class*="placa-"] {
-            background: color-mix(in srgb, var(--bg-secondary) 85%, transparent) !important; background-image: none !important; animation: none !important;
+            background-color: color-mix(in srgb, var(--bg-secondary) 85%, transparent) !important; animation: none !important;   /* a placa escolhida continua aparecendo (gradiente suave) */
             border: 1px solid var(--glass-borda); border-radius: 12px; padding: 6px 6px 6px 8px !important; gap: 4px;
         }
-        .user-profile-bar[class*="placa-"] { box-shadow: inset 3px 0 0 var(--brand-color); }
-        .user-profile-section { padding: 2px 6px !important; border-radius: 8px !important; gap: 10px !important; }
+                .user-profile-section { padding: 2px 6px !important; border-radius: 8px !important; gap: 10px !important; }
         .user-profile-section .user-avatar-wrapper { width: 34px; height: 34px; }
         .user-info .username { font-size: 13.5px !important; letter-spacing: 0 !important; }
         .user-info .status-text { font-size: 11.5px; }
@@ -2270,7 +2269,8 @@
         .invite-email-linha .btn:hover { background: var(--brand-color); color: #fff; }
 
         /* ---- moldura/estilo do nome nas mensagens e nos cards da call ---- */
-        .message .chat-avatar[class*="moldura-"], .video-avatar[class*="moldura-"] { overflow: visible; position: relative; }
+        .message .chat-avatar[class*="moldura-"], .video-avatar[class*="moldura-"] { overflow: visible; }
+        .message .chat-avatar[class*="moldura-"] { position: absolute; }   /* já é absoluto (serve de âncora do anel); NÃO mudar pra relative: o avatar passa por cima do texto */
         .message .chat-avatar[class*="moldura-"]::before { inset: -4px; -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
         .message .chat-avatar[class*="moldura-"] img, .video-avatar[class*="moldura-"] img { border-radius: 50%; }
         .video-avatar[class*="moldura-"]::before { inset: -6px; }
