@@ -454,3 +454,8 @@
 
 /* aura de Gogeta maior no cartão (a foto de lá é grande): o furo acompanha o novo tamanho */
 .pc-avatar .ef-av-gogeta { inset: -40%; -webkit-mask: radial-gradient(closest-side, transparent 54%, #000 59%); mask: radial-gradient(closest-side, transparent 54%, #000 59%); }
+
+/* aura do Gogeta na foto pequena das mensagens: sem o brilho difuso (drop-shadow) e sem blend, com a borda do furo nítida
+   (raio da foto = 67,6% da caixa da aura). Era o "fade" estranho em volta da imagem. */
+.message .ef-av-gogeta { filter: none; opacity: 1; -webkit-mask: radial-gradient(closest-side, transparent 67%, #000 68.5%); mask: radial-gradient(closest-side, transparent 67%, #000 68.5%); }
+.message .ef-av-gogeta b:nth-child(2) { mix-blend-mode: normal; opacity: .7; }
