@@ -141,7 +141,7 @@ _item('efeito_perfil', 'gogeta', 'Faíscas de Ki', 'Faíscas douradas flutuando 
 _item('efeito_fala', 'gogeta', 'Ki ao Falar', 'Quando você fala na call, o ki explode em volta da sua foto.', 'gogeta')
 _item('efeito_radar', 'gogeta', 'Ondas de Ki', 'As ondas do seu radar viram ondas de energia dourada.', 'gogeta')
 _item('efeito_chat', 'gogeta', 'Ki no Teclado', 'A barra de mensagem brilha enquanto você digita e solta faíscas ao enviar.', 'gogeta')
-_item('som_call', 'gogeta', 'Power Up', 'Um som de energia subindo toca quando você entra numa call.', 'gogeta')
+_item('som_call', 'gogeta', 'Teleporte', 'Um som de teletransporte toca quando você entra numa call.', 'gogeta')
 _item('pin_nota', 'gogeta', 'Esfera de Estrelas', 'Suas notas no mapa viram uma esfera laranja de estrelas.', 'gogeta')
 
 # ---- Laboratório: itens do tema Sasuke ----
@@ -154,7 +154,7 @@ _item('efeito_perfil', 'sasuke', 'Raios e Amaterasu', 'Raios caindo pelo cartão
 _item('efeito_fala', 'sasuke', 'Chidori ao Falar', 'Quando você fala na call, relâmpagos estalam em volta da sua foto.', 'sasuke')
 _item('efeito_radar', 'sasuke', 'Ondas Roxas', 'As ondas do seu radar viram ondas roxas com um estalo de raio.', 'sasuke')
 _item('efeito_chat', 'sasuke', 'Raio no Teclado', 'A barra de mensagem crepita enquanto você digita e solta um raio ao enviar.', 'sasuke')
-_item('som_call', 'sasuke', 'Chidori', 'Um estalo de raio toca quando você entra numa call.', 'sasuke')
+_item('som_call', 'sasuke', 'Sharingan', 'O som do Sharingan despertando toca quando você entra numa call.', 'sasuke')
 _item('pin_nota', 'sasuke', 'Kunai Roxa', 'Suas notas no mapa viram uma kunai roxa.', 'sasuke')
 
 # ---- Laboratório: itens do tema Fusão (só nós dois) ----

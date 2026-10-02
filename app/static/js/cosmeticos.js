@@ -512,8 +512,21 @@ const Cosm = (() => {
     const classeNomeServidor = (id) => classeDe('ne', 'servidor', id);          // nome no cabeçalho (reaproveita os estilos de nome)
 
     // --- som de entrada na call (sintetizado; ctx = AudioContext ou OfflineAudioContext) ---
+    // Sons de entrada que vêm de arquivo (static/audio). Se o arquivo falhar, cai no som sintetizado abaixo.
+    const ARQ_SOM = { gogeta: ['/static/audio/teleporte.mp3', .8], sasuke: ['/static/audio/sharingan.mp3', .8] };
+    const _cacheSom = {};
+    function tocarArquivoSom(id) {
+        try {
+            const [url, vol] = ARQ_SOM[id];
+            const base = _cacheSom[id] || (_cacheSom[id] = Object.assign(new Audio(url), { preload: 'auto' }));
+            const a = base.cloneNode(); a.volume = vol;
+            a.play().catch(() => {});
+            return true;
+        } catch (e) { return false; }
+    }
     function somEntrada(id, ctx, destino) {
         if (!IDS_EFEITO.som.includes(id) || !ctx) return 0;
+        if (ARQ_SOM[id] && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext) && tocarArquivoSom(id)) return 2;
         const t0 = ctx.currentTime;
         const mestre = ctx.createGain();
         mestre.gain.value = 0.2;

@@ -551,3 +551,8 @@ body.mt-aberta { overflow: hidden; }
     .mt-pedra { opacity: 1; }
 }
 .mt-nome { padding: 5px 14px 6px; border-radius: 12px; background: rgba(22, 16, 34, .62); backdrop-filter: blur(3px); }
+
+
+/* O anel da moldura (::before/::after absolutos) precisa de um pai posicionado. O .video-avatar nao era (so quando tinha
+   efeito .com-ef), entao o anel do Sharingan se ancorava no CARD INTEIRO da call e virava uma elipse do tamanho dele. */
+.video-avatar { position: relative; }

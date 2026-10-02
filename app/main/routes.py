@@ -245,7 +245,7 @@ def chat():
     # Mensagem de "entrou pelo convite" deixada pela rota /convite/<code>
     aviso_convite = session.pop('aviso_convite', None)
 
-    return render_template(
+    resposta = current_app.make_response(render_template(
         "chat.html",
         aviso_convite=aviso_convite,
         usuario_atual=usuario_atual,
@@ -259,7 +259,9 @@ def chat():
         patente_inicial=patente_do_nivel(nivel_da_pessoa(usuario_atual.xp)),
         badges_iniciais=badges_do_conjunto(set(inventario_inicial['posses'])),
         membro_desde_texto=membro_desde_texto(usuario_atual.created_at)
-    )
+    ))
+    resposta.headers['Cache-Control'] = 'no-store'   # a página tem a versão do app embutida (ver APP_VERSAO)
+    return resposta
 
 
 GIPHY_API_KEY = os.getenv('GIPHY_API_KEY')

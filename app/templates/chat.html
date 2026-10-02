@@ -580,7 +580,7 @@
 
         /* ---- Janela da call: flutuante (mini, arrasta e redimensiona) ou cheia (cobre a área central) ----
            O #video-view mora aqui dentro (movido no JS), então a call sobrevive a trocar de aba/servidor/DM. */
-        .call-janela { position: fixed; z-index: 9000; display: none; flex-direction: column; background: #000; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 50px rgba(0,0,0,.55); overflow: hidden; }
+        .call-janela { position: fixed; z-index: 1500; display: none; flex-direction: column; background: #000; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 50px rgba(0,0,0,.55); overflow: hidden; }
         .call-janela.ativa { display: flex; }
         .call-janela .video-view { display: flex; flex: 1 1 auto; min-height: 0; }
         .call-janela.mini { width: 400px; height: 260px; min-width: 260px; min-height: 170px; max-width: 96vw; max-height: 92vh; border-radius: 14px; resize: both; }
@@ -2328,6 +2328,25 @@
         .settings-content.rolando *, .settings-content.rolando *::before, .settings-content.rolando *::after { animation-play-state: paused !important; transition: none !important; }
         .pf-previa, .pf-barra { transform: translateZ(0); backface-visibility: hidden; }
         .settings-content { overscroll-behavior: contain; }
+
+        /* ---- versão nova no ar ---- */
+        #aviso-versao { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 11000; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); padding: 10px 12px 10px 16px; border-radius: 14px; background: var(--bg-quaternary); border: 1px solid rgba(114,137,218,.6); box-shadow: 0 14px 40px rgba(0,0,0,.55); color: var(--text-header); font-size: 13.5px; font-weight: 700; animation: modalPop .25s both; }
+        #aviso-versao i { color: var(--brand-color); }
+        #aviso-versao button { background: var(--brand-color); color: #fff; border: 0; border-radius: 9px; padding: 7px 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+
+        /* ---- PESO das configurações/modais: o fundo desfocado (blur no overlay + blur no cartão) era recalculado a cada
+           quadro porque atrás dele tem placas, molduras e nomes animando. Com o painel aberto o fundo é só escurecido
+           (sem blur) e a animação do que está atrás pausa - o app continua vivo quando fecha. ---- */
+        .modal-overlay, .settings-overlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background-color: rgba(10,11,14,.78) !important; }
+        .settings-modal { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background-color: color-mix(in srgb, var(--bg-primary) 97%, #000) !important; }
+        body.painel-aberto .servers-sidebar *, body.painel-aberto .channels-sidebar *, body.painel-aberto .members-sidebar *,
+        body.painel-aberto .chat-area *, body.painel-aberto .left-sidebar-wrapper *, body.painel-aberto .user-controls *,
+        body.painel-aberto .servers-sidebar *::before, body.painel-aberto .channels-sidebar *::before, body.painel-aberto .members-sidebar *::before,
+        body.painel-aberto .chat-area *::before, body.painel-aberto .left-sidebar-wrapper *::before, body.painel-aberto .user-controls *::before,
+        body.painel-aberto .call-janela *, body.painel-aberto .call-janela *::before { animation-play-state: paused !important; }
+        /* prévias do catálogo/inventário: só animam sob o mouse (dezenas de anéis conic + filtros animando juntos travavam a rolagem) */
+        .settings-content .pf-tile:not(:hover) *, .settings-content .pf-tile:not(:hover) *::before, .settings-content .pf-tile:not(:hover) *::after,
+        #pf-catalogo .modal-content *:not(:hover), #inv-raiz .inv-item:not(:hover):not(.eq) *, #inv-raiz .inv-item:not(:hover):not(.eq) *::before, #inv-raiz .inv-item:not(:hover):not(.eq) *::after { animation-play-state: paused; }
 </style>
 <!-- Cosméticos (patentes, insígnias, popover orb, inventário, laboratório): depois do <style> acima, pra ganhar por ordem -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
@@ -2676,7 +2695,6 @@
                                 <button class="call-btn" id="btn-main-clip" title="Gravar / Clipar"><i class="fa-solid fa-clapperboard"></i></button>
                             </div>
 
-                            <button class="call-btn" id="btn-main-chat" title="Abrir Chat da Call"><i class="fa-solid fa-message"></i></button>
                             <div style="width: 1px; height: 32px; background-color: #3f4147; margin: 0 4px;"></div>
                             <button class="call-btn danger" id="btn-main-disconnect" title="Desconectar"><i class="fa-solid fa-phone-slash"></i></button>
                         </div>
@@ -4046,6 +4064,11 @@
         // mapa (comparar pelo nome falhava com nomes repetidos).
         const rawUserId = "{{ usuario_atual.id }}";
         const currentUserId = parseInt(rawUserId.replace(/[^0-9]/g, '')) || 0;
+
+        // Versão do que esta aba carregou (o servidor reenvia a dele no connect; se mudar, a aba é velha) e servidores
+        // ICE da call (TURN próprio via variável de ambiente, se configurado).
+        const VERSAO_PAGINA = {{ app_versao|tojson }};
+        const ICE_SERVERS = {{ ice_servers|tojson }};
 
         const rawUserAvatar = "{{ usuario_atual.avatar or '' }}";
         let currentUserAvatar = rawUserAvatar.includes("{" + "{") ? "" : rawUserAvatar;
@@ -6394,7 +6417,15 @@
             preencherAvatarChamada('chamando-avatar', nomeAmigo, avatarAmigo);
             document.getElementById('chamando-modal').style.display = 'flex';
             socket.emit('chamar_amigo', { amigo_id: amigoId, tipo });
+            // ninguém atendeu em 45s: desiste sozinho (antes ficava "chamando..." pra sempre)
+            const meuToque = ++toqueSeq;
+            setTimeout(() => {
+                if (toqueSeq !== meuToque || chamadaPendenteParaId !== amigoId) return;
+                document.getElementById('btn-cancelar-chamada').click();
+                showToast('Ninguém atendeu a chamada.', 'info');
+            }, 45000);
         }
+        let toqueSeq = 0;
 
         document.getElementById('btn-cancelar-chamada').addEventListener('click', () => {
             if (chamadaPendenteParaId) socket.emit('cancelar_chamada', { para_id: chamadaPendenteParaId });
@@ -6409,6 +6440,13 @@
                 return;
             }
             chamadaRecebidaDe = d;
+            // a pessoa que ligou fechou a aba/sumiu e ninguém avisou: o toque se encerra sozinho em 50s
+            setTimeout(() => {
+                if (chamadaRecebidaDe !== d) return;
+                document.getElementById('chamada-recebida-modal').style.display = 'none';
+                chamadaRecebidaDe = null;
+                if (typeof pararToque === 'function') pararToque();
+            }, 50000);
             document.getElementById('chamada-recebida-nome').textContent = d.de_nome;
             document.getElementById('chamada-recebida-tipo').textContent = d.tipo === 'video' ? 'Chamada de vídeo' : 'Chamada de voz';
             preencherAvatarChamada('chamada-recebida-avatar', d.de_nome, d.de_avatar);
@@ -6433,13 +6471,19 @@
             document.getElementById('chamada-recebida-modal').style.display = 'none';
             const nomeOutro = chamadaPendenteParaNome || (chamadaRecebidaDe ? chamadaRecebidaDe.de_nome : 'amigo');
             chamadaPendenteParaId = null; chamadaPendenteParaNome = ''; chamadaRecebidaDe = null;
-            conectarNaCall(d.sala, `Chamada com ${nomeOutro}`);
+            conectarNaCall(d.sala, `Chamada com ${nomeOutro}`, { video: d.tipo === 'video' });
+        });
+
+        // Atendida/recusada em outra aba minha: fecha o toque aqui também
+        socket.on('chamada_resolvida', () => {
+            document.getElementById('chamada-recebida-modal').style.display = 'none';
+            chamadaRecebidaDe = null;
         });
 
         socket.on('chamada_recusada', (d) => {
             document.getElementById('chamando-modal').style.display = 'none';
             chamadaPendenteParaId = null; chamadaPendenteParaNome = '';
-            showToast(`${d.por_nome} recusou a chamada.`, 'info');
+            showToast(d && d.offline ? 'Essa pessoa está offline agora.' : `${d.por_nome} recusou a chamada.`, 'info');
         });
 
         socket.on('chamada_cancelada', () => {
@@ -6511,12 +6555,23 @@
 
         // Alguém ligou o fantasma: some do meu mapa na hora.
         socket.on('posicao_amigo_removida', (dados) => {
+            delete pinoVistoEm[dados.usuario_id];
             const marcador = mapMarkers[dados.usuario_id];
             if (marcador && bazingaMap) {
                 bazingaMap.removeLayer(marcador);
                 delete mapMarkers[dados.usuario_id];
             }
         });
+
+        // Pino de amigo que parou de mandar sinal (fechou o app sem avisar, caiu a rede) sai sozinho: o servidor
+        // reenvia a posição de quem está online a cada ~45s, então 4 min sem notícia = não está mais ali.
+        const pinoVistoEm = {};
+        setInterval(() => {
+            const limite = Date.now() - 4 * 60 * 1000;
+            Object.keys(mapMarkers).forEach(id => {
+                if ((pinoVistoEm[id] || 0) < limite && bazingaMap) { bazingaMap.removeLayer(mapMarkers[id]); delete mapMarkers[id]; delete pinoVistoEm[id]; }
+            });
+        }, 60000);
 
         // Calculadora de Distância em Metros (Haversine)
         function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
@@ -6837,7 +6892,8 @@
                 btn.onclick = function() {
                     // Voltar ao GPS real (cancela o teletransporte manual) e centralizar.
                     if (posicaoManual && navigator.geolocation) {
-                        posicaoManual = false;
+                        posicaoManual = false; ultimoFixGps = null;
+                        try { localStorage.removeItem('pnt_pos_manual'); } catch (e) {}
                         navigator.geolocation.getCurrentPosition(aoReceberGps, () => {}, { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 });
                         showToast('Voltei a usar a sua localização real.', 'info');
                     }
@@ -6919,7 +6975,8 @@
             // TELETRANSPORTE (Correção do GPS do PC): Dois cliques para mover seu avatar manualmente
             bazingaMap.on('dblclick', function(e) {
                 openConfirmModal("Correção de GPS (Teletransporte)", "Mover seu avatar exatamente para este ponto? Vale até você clicar em \"Centralizar em mim\".", () => {
-                    posicaoManual = true;
+                    posicaoManual = true; posicaoConfiavel = true;
+                    try { localStorage.setItem('pnt_pos_manual', JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng, t: Date.now() })); } catch (err) {}
                     mostrarPrecisao(e.latlng.lat, e.latlng.lng, 0);
                     ultimoCentroPedido = null;
                     atualizarMinhaPosicao(e.latlng.lat, e.latlng.lng);
@@ -6940,7 +6997,22 @@
             // teletransporte manual vale até você clicar em "Centralizar em mim".
             const aoReceberGps = (position) => {
                 if (posicaoManual) return;
-                const { latitude: lat, longitude: lng, accuracy } = position.coords;
+                const { latitude: lat, longitude: lng } = position.coords;
+                const accuracy = position.coords.accuracy || 0;
+                const agora = Date.now();
+                // Fix PIOR que o que já tenho e que me joga longe = o Wi-Fi/IP do PC chutando outra região (era o "mapa
+                // louco": Samambaia -> Taguatinga -> Samambaia). Só aceita se não for bem pior, ou se o anterior já envelheceu.
+                if (ultimoFixGps) {
+                    const f = ultimoFixGps;
+                    const dist = calcularDistanciaMetros(f.lat, f.lng, lat, lng);
+                    if (accuracy > f.acc * 1.5 && dist > Math.max(f.acc, 200) && agora - f.t < 10 * 60 * 1000) return;
+                }
+                ultimoFixGps = { lat, lng, acc: accuracy, t: agora };
+                posicaoConfiavel = true;
+                if (accuracy > 1500 && !avisouAproximado) {
+                    avisouAproximado = true;
+                    showToast(`Sua localização está aproximada (±${(accuracy / 1000).toFixed(1)} km): PC sem GPS chuta pelo Wi-Fi. Dê dois cliques no mapa onde você está de verdade — o ponto fica salvo.`, 'warning');
+                }
                 atualizarMinhaPosicao(lat, lng);
                 mostrarPrecisao(lat, lng, accuracy);
                 // Avisa o servidor (Flask) que eu me movi para espalhar pros amigos! (Apenas se ghost mode = off)
@@ -6955,6 +7027,15 @@
                     : 'Não consegui achar sua localização. Dê dois cliques no mapa, no ponto onde você está.', 'warning');
                 atualizarMinhaPosicao(-23.550520, -46.633308);   // só pra o mapa existir; o teletransporte corrige
             };
+            try {
+                const salvo = JSON.parse(localStorage.getItem('pnt_pos_manual') || 'null');
+                if (salvo && Date.now() - salvo.t < 6 * 3600 * 1000 && Math.abs(salvo.lat) <= 90 && Math.abs(salvo.lng) <= 180) {
+                    posicaoManual = true; posicaoConfiavel = true;
+                    atualizarMinhaPosicao(salvo.lat, salvo.lng);
+                    anunciarMinhaPosicao();
+                    setTimeout(() => showToast('Usando o ponto que você marcou no mapa. Clique em "Centralizar em mim" pra voltar ao GPS.', 'info'), 1500);
+                } else if (salvo) { localStorage.removeItem('pnt_pos_manual'); }
+            } catch (e) {}
             if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(aoReceberGps, (err) => {
                     // Alta precisão falhou (comum em PC sem GPS): tenta o jeito simples (Wi-Fi/IP) antes de desistir.
@@ -6974,14 +7055,27 @@
             carregarDadosDoMapa();
         }
 
-        let posicaoManual = false, circuloPrecisao = null;
+        let posicaoManual = false, circuloPrecisao = null, timerPrecisao = null;
+        let ultimoFixGps = null, avisouAproximado = false, posicaoConfiavel = false;
         // Círculo de "estou em algum lugar aqui dentro" quando o aparelho só sabe a região (Wi-Fi/IP).
+        // Some sozinho em 10s: ficava parado no mapa pra sempre e parecia um "mini radar verde" sem explicação.
         function mostrarPrecisao(lat, lng, acc) {
             if (!bazingaMap) return;
-            if (!acc || acc < 40) { if (circuloPrecisao) { bazingaMap.removeLayer(circuloPrecisao); circuloPrecisao = null; } return; }
+            clearTimeout(timerPrecisao);
+            const tirar = () => { if (circuloPrecisao) { bazingaMap.removeLayer(circuloPrecisao); circuloPrecisao = null; } };
+            if (!acc || acc < 40) { tirar(); return; }
             if (!circuloPrecisao) circuloPrecisao = L.circle([lat, lng], { radius: acc, color: '#43b581', weight: 1, opacity: .5, fillColor: '#43b581', fillOpacity: .08, interactive: false }).addTo(bazingaMap);
             else circuloPrecisao.setLatLng([lat, lng]).setRadius(acc);
+            timerPrecisao = setTimeout(tirar, 10000);
         }
+
+        // Reanuncia a minha posição (só se ela é de verdade: nunca o ponto "falso" de São Paulo do fallback).
+        function anunciarMinhaPosicao() {
+            if (!myMapMarker || !posicaoConfiavel || ghostMode || !socket.connected) return;
+            const p = myMapMarker.getLatLng();
+            socket.emit('atualizar_localizacao', { lat: p.lat, lng: p.lng });
+        }
+        setInterval(anunciarMinhaPosicao, 45000);   // o servidor só mostra quem manda sinal nos últimos ~3 min
 
         function atualizarMinhaPosicao(lat, lng) {
             if (!myMapMarker) {
@@ -7359,6 +7453,7 @@
                 // mim mesmo (senão minha localização "pisca" como se fosse de
                 // outra pessoa).
                 if (Number(dados.usuario_id) === Number(currentUserId)) return;
+                pinoVistoEm[dados.usuario_id] = Date.now();
                 // Mapa ainda não terminou de inicializar (abre ~200ms depois
                 // do carregamento) - o próximo ping de posição corrige sozinho
                 // em poucos segundos; sem essa guarda o marcador nem chegava a
@@ -7838,7 +7933,7 @@
                 b.className = 'reaction-op';
                 b.textContent = emoji;
                 b.addEventListener('click', () => {
-                    if (msgAlvoId) socket.emit('reagir_mensagem', { msg_id: Number(msgAlvoId), emoji: emoji });
+                    if (msgAlvoId) reagirOtimista(msgAlvoId, emoji);
                     document.getElementById('reaction-picker').style.display = 'none';
                 });
                 destino.appendChild(b);
@@ -7856,7 +7951,7 @@
                 // mede o "+" ANTES de esconder a paleta (escondido, o retângulo vira 0,0 e o seletor abria no canto da tela)
                 const r = mais.getBoundingClientRect();
                 document.getElementById('reaction-picker').style.display = 'none';
-                abrirEmojiPicker({ getBoundingClientRect: () => r }, (emoji) => { if (id) socket.emit('reagir_mensagem', { msg_id: Number(id), emoji }); });
+                abrirEmojiPicker({ getBoundingClientRect: () => r }, (emoji) => { if (id) reagirOtimista(id, emoji); });
             });
             rapidas.appendChild(mais);
         }
@@ -7967,10 +8062,7 @@
             if (chipReacao) {
                 // Clicar no chip liga/desliga a sua própria reação
                 const msg = chipReacao.closest('.message');
-                socket.emit('reagir_mensagem', {
-                    msg_id: Number(msg.getAttribute('data-msg-id')),
-                    emoji: chipReacao.getAttribute('data-emoji')
-                });
+                reagirOtimista(msg.getAttribute('data-msg-id'), chipReacao.getAttribute('data-emoji'));
                 return;
             }
 
@@ -7987,6 +8079,25 @@
                 iniciarEdicao(msg);
             }
         });
+
+        // Reação otimista: a tela muda no clique (ida e volta ao servidor + banco levava segundos no Neon). O servidor
+        // confirma com 'reacoes_atualizadas' e esse evento sobrescreve - então se algo falhar, a tela se corrige sozinha.
+        function reagirOtimista(msgId, emoji) {
+            socket.emit('reagir_mensagem', { msg_id: Number(msgId), emoji: emoji });
+            const msg = document.querySelector(`.message[data-msg-id="${Number(msgId)}"]`);
+            const caixa = msg && msg.querySelector('.msg-reacoes');
+            if (!caixa) return;
+            const atuais = [...caixa.querySelectorAll('.msg-reacao')].map(el => ({
+                emoji: el.getAttribute('data-emoji'),
+                total: Number((el.querySelector('.msg-reacao-total') || {}).textContent) || 0,
+                minha: el.classList.contains('minha')
+            }));
+            const alvo = atuais.find(r => r.emoji === emoji);
+            if (alvo) { alvo.minha ? (alvo.total -= 1) : (alvo.total += 1); alvo.minha = !alvo.minha; }
+            else atuais.push({ emoji, total: 1, minha: true });
+            const lista = atuais.filter(r => r.total > 0).map(r => ({ emoji: r.emoji, total: r.total, quem: r.minha ? [currentUserId] : [] }));
+            caixa.outerHTML = htmlDasReacoes(msgId, lista);
+        }
 
         // ---------- REAÇÕES VINDAS DO SERVIDOR ----------
         socket.on('reacoes_atualizadas', function(dados) {
@@ -10350,7 +10461,7 @@
                 const alvo = (document.querySelector('#server-content-wrapper .chat-area-main') && document.getElementById('server-content-wrapper').style.display !== 'none' && !callEhDM())
                     ? document.querySelector('#server-content-wrapper .chat-area-main') : document.querySelector('.chat-area');
                 const r = alvo.getBoundingClientRect();
-                const chat = (isCallChatOpen && !callEhDM()) ? 350 : 0;
+                const chat = 0;
                 Object.assign(callJanela.style, { left: r.left + 'px', top: r.top + 'px', width: Math.max(300, r.width - chat) + 'px', height: r.height + 'px' });
             } else {
                 const w = callJanela.offsetWidth || 400, h = callJanela.offsetHeight || 260;
@@ -10368,9 +10479,8 @@
             callJanela.classList.toggle('cheia', modo === 'cheia');
             document.getElementById('cj-expandir').style.display = modo === 'mini' ? '' : 'none';
             document.getElementById('cj-recolher').style.display = modo === 'cheia' ? '' : 'none';
-            document.getElementById('btn-main-chat').style.display = callEhDM() ? 'none' : '';
             if (modo === 'cheia') { callJanela.style.width = callJanela.style.height = ''; }
-            if (modo !== 'cheia') { isCallChatOpen = false; document.getElementById('btn-main-chat').classList.remove('active'); textView.classList.remove('sidebar-mode'); }
+            if (modo !== 'cheia') { isCallChatOpen = false; textView.classList.remove('sidebar-mode'); }
             document.getElementById('cj-titulo').textContent = document.getElementById('connected-voice-name').textContent || 'Voz conectada';
             posicionarCall();
             videoGrid.querySelectorAll('video').forEach(v => { try { v.play().catch(() => {}); } catch (e) {} });
@@ -10592,7 +10702,15 @@
         // ver sala_dm() no backend e iniciarChamadaDM()/entrarNaCallDM() abaixo).
         // Extraído do antigo listener de clique do canal de voz pra poder ser
         // chamado também depois de uma chamada de DM ser aceita.
-        async function conectarNaCall(voiceId, voiceName) {
+        // Duas chamadas quase juntas (clique duplo, 'chamada_aceita' repetido) criavam DOIS peers e a pessoa entrava
+        // duas vezes na mesma call. Só uma conexão por vez; a segunda é ignorada.
+        let conectandoCall = false;
+        async function conectarNaCall(voiceId, voiceName, opcoes) {
+            if (conectandoCall) return;
+            conectandoCall = true;
+            try { await _conectarNaCall(voiceId, voiceName, opcoes || {}); } finally { conectandoCall = false; }
+        }
+        async function _conectarNaCall(voiceId, voiceName, opcoes) {
             const ehDM = String(voiceId).startsWith('dm_');   // DM: janela mini (você segue no chat); canal de voz: tela cheia
             if (inCall) {
                 // Já está nesta mesma call: só volta pra tela da call.
@@ -10669,20 +10787,22 @@
                 // o que parece "sumiu da call" pros outros. O TURN é o
                 // caminho de reserva (relay) quando a conexão direta não rola.
                 if (typeof Peer === 'undefined') await carregarLib(URL_PEERJS);   // baixa na hora se ainda não veio
+                myPeerId = null;   // o id da call anterior não vale pra esta
+                participantesDaCall = [];
                 mePeer = new Peer(undefined, {
                     host: '0.peerjs.com', port: 443, secure: true,
-                    config: {
-                        iceServers: [
-                            { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:global.stun.twilio.com:3478' },
-                            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-                        ]
-                    }
+                    config: { iceServers: ICE_SERVERS }   // vem do servidor (TURN próprio por variável de ambiente, se houver)
                 });
+                let jaAbriu = false;
                 mePeer.on('open', id => {
-                    tocarSomDeEntrada((perfilMeu.equipados || {}).som_call);
+                    // 'open' dispara DE NOVO quando a sinalização reconecta (mesmo id): aí só reentra na sala, sem
+                    // repetir o som de entrada nem ligar a câmera outra vez.
+                    if (!jaAbriu) {
+                        jaAbriu = true;
+                        tocarSomDeEntrada((perfilMeu.equipados || {}).som_call);
+                        // Chamada de VÍDEO já abre com a câmera ligada; a de voz fica só no áudio.
+                        if (opcoes.video) setTimeout(() => { if (inCall && !myCamStream) document.getElementById('btn-main-camera').click(); }, 600);
+                    }
                     myPeerId = id; socket.emit('entrar_call', { canal_id: voiceId, peer_id: id, usuario: currentUserName });
                 });
 
@@ -10840,7 +10960,19 @@
             }
 
             if(!inCall || !mePeer) return;
+            if (dados.peer_id === myPeerId) return;
             if (myCamStream) setTimeout(anunciarMinhaCamera, 600);   // o novato ainda não sabe que minha câmera está ligada
+            // Já tenho uma ligação viva com essa pessoa? Reentrada (o socket dela piscou) não precisa ligar de novo;
+            // pedido explícito ('refazer', quando ela não me vê) ou ligação morta: derruba a velha e liga do zero.
+            const existente = peers[dados.peer_id];
+            if (existente) {
+                const estado = existente.peerConnection ? existente.peerConnection.connectionState : 'closed';
+                const viva = ['new', 'connecting', 'connected', 'disconnected'].includes(estado) && document.getElementById(`vc-${dados.peer_id}`);
+                if (dados.reentrada && viva && !dados.refazer) return;
+                delete peers[dados.peer_id];
+                try { existente.close(); } catch (e) {}
+                const cardVelho = document.getElementById(`vc-${dados.peer_id}`); if (cardVelho) cardVelho.remove();
+            }
             // Send metadata back to the new user
             const call = mePeer.call(dados.peer_id, streamParaChamada(), { metadata: { type: 'voice', userName: currentUserName, avatar: currentUserAvatar, moldura: perfilMeu.moldura || '' } });
             prepararVideoDaCall(call);
@@ -10868,9 +11000,48 @@
         // mesmo estou nessa call, a lista já é mantida ao vivo por
         // novo_usuario_call/usuario_saiu_call - não mexe aqui pra não
         // duplicar/piscar.
+        // O servidor é a fonte da verdade de quem está na call. Cliente que perdeu um 'usuario_saiu_call' (socket
+        // piscando) ficava com card congelado de gente que já saiu - o "duplicado/fantasma" - e quem nunca conectou
+        // com alguém ficava sem ouvir/ver sem saber por quê. Aqui os dois casos se corrigem sozinhos.
+        let participantesDaCall = [];
+        const tentativasLigacao = {};
+        function peerDoCard(id) { return String(id).slice(3).split('-screen-')[0]; }
+        function reconciliarCall(lista) {
+            participantesDaCall = lista || [];
+            const vivos = new Set(participantesDaCall.map(p => p.peer_id));
+            document.querySelectorAll('#video-grid .video-card[id^="vc-"]').forEach(c => {
+                const peer = peerDoCard(c.id);
+                if (peer !== myPeerId && !vivos.has(peer)) removerVideoDoPeer(peer);
+            });
+            document.querySelectorAll('[id^="vu-"]').forEach(el => {
+                if (el.id !== 'vu-me' && !vivos.has(el.id.slice(3))) el.remove();
+            });
+        }
+        setInterval(() => {
+            if (!inCall || !mePeer || !myPeerId || !participantesDaCall.length || !socket.connected) return;
+            participantesDaCall.forEach(p => {
+                if (p.peer_id === myPeerId) return;
+                const call = peers[p.peer_id];
+                const estado = call && call.peerConnection ? call.peerConnection.connectionState : null;
+                if (call && ['new', 'connecting', 'connected'].includes(estado) && document.getElementById(`vc-${p.peer_id}`)) { tentativasLigacao[p.peer_id] = 0; return; }
+                const n = (tentativasLigacao[p.peer_id] = (tentativasLigacao[p.peer_id] || 0) + 1);
+                if (n >= 2 && n <= 7) socket.emit('pedir_ligacao', { canal_id: currentVoiceChannelId, peer_id: p.peer_id });
+            });
+        }, 6000);
+        // câmera ligada: reanuncia de tempos em tempos (quem perdeu o aviso, ou entrou agora, volta a ver o vídeo)
+        setInterval(() => { if (inCall && myCamStream) anunciarMinhaCamera(); }, 10000);
+
+        // Entrei numa call em outra aba/aparelho (ou o servidor me tirou desta): sai daqui sem brigar.
+        socket.on('call_substituida', (d) => {
+            if (!inCall || !d || String(d.peer_id) !== String(myPeerId)) return;
+            myPeerId = null;   // o servidor já tirou essa entrada: não manda sair_call de um id que não existe mais
+            disconnectCall();
+            showToast('Você entrou numa call em outro lugar, então saiu desta.', 'info');
+        });
+
         socket.on('participantes_call_mudou', (dados) => {
             (dados.participantes || []).forEach(p => registrarVisual(p.peer_id, p));
-            if (inCall && String(currentVoiceChannelId) === String(dados.canal_id)) return;
+            if (inCall && String(currentVoiceChannelId) === String(dados.canal_id)) { reconciliarCall(dados.participantes); return; }
 
             const box = document.getElementById(`voice-users-${dados.canal_id}`);
             if (!box) return;
@@ -11111,14 +11282,6 @@
             if(activeScreenStreams.length === 0) { document.getElementById('btn-main-screen').classList.remove('active-green'); document.getElementById('btn-side-screen').classList.remove('active-stream'); }
         }
         function pararTodosCompartilhamentos() { const idsParaParar = activeScreenStreams.map(s => s.id); idsParaParar.forEach(id => pararCompartilhamento(id)); }
-
-        document.getElementById('btn-main-chat').addEventListener('click', () => {
-            isCallChatOpen = !isCallChatOpen;
-            document.getElementById('btn-main-chat').classList.toggle('active', isCallChatOpen);
-            textView.classList.remove('hidden');
-            textView.classList.toggle('sidebar-mode', isCallChatOpen);
-            posicionarCall();
-        });
 
         // ==========================================
         // GRAVAR A CALL + CLIPAR (manual e automático)
@@ -11556,6 +11719,7 @@
                 socket.emit('sair_call', { canal_id: currentVoiceChannelId, peer_id: myPeerId });
                 mePeer.destroy(); mePeer = null;
             }
+            myPeerId = null; participantesDaCall = [];
             currentVoiceChannelId = null;
             document.querySelectorAll('.video-card:not(#my-video-card)').forEach(c => c.remove());
             // Sem isso, peer ids de calls antigas ficavam acumulados aqui pra
@@ -11703,9 +11867,40 @@
             clearTimeout(_timerPill);
             _timerPill = setTimeout(() => pillConexao.classList.add('visivel'), 1500);   // queda curtinha não pisca aviso
         });
+        // Conexão que o servidor não terminou de montar (banco acordando) fica sem as salas: nada de toque de chamada,
+        // DM ao vivo nem presença. O 'versao_app' é a 1ª coisa que o servidor manda ao concluir o connect; sem ele em 5s,
+        // pede pra entrar nas salas na mão.
+        let _versaoRecebida = false, _timerSalas = null;
+        socket.on('versao_app', (d) => {
+            _versaoRecebida = true; clearTimeout(_timerSalas);
+            if (d && d.versao && d.versao !== VERSAO_PAGINA) mostrarAvisoNovaVersao();
+        });
+        function mostrarAvisoNovaVersao() {
+            if (document.getElementById('aviso-versao')) return;
+            const b = document.createElement('div');
+            b.id = 'aviso-versao';
+            b.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i><span>Saiu uma versão nova do {{ app_nome }}. Atualize pra tudo funcionar certo.</span><button type="button">Atualizar agora</button>';
+            b.querySelector('button').addEventListener('click', () => location.reload());
+            document.body.appendChild(b);
+            // Se ninguém está numa call nem escrevendo nada, atualiza sozinho depois de uns segundos.
+            setTimeout(function tentar() {
+                const escrevendo = [...document.querySelectorAll('textarea, input[type=text]')].some(t => (t.value || '').trim());
+                if (typeof inCall !== 'undefined' && inCall) return setTimeout(tentar, 15000);
+                if (escrevendo) return setTimeout(tentar, 15000);
+                location.reload();
+            }, 20000);
+        }
+
         socket.on('connect', () => {
             clearTimeout(_timerPill);
             pillConexao.classList.remove('visivel');
+            _versaoRecebida = false; clearTimeout(_timerSalas);
+            _timerSalas = setTimeout(() => { if (!_versaoRecebida) socket.emit('garantir_salas'); }, 5000);
+            // Voltei da queda dentro de uma call: reentra na sala com o MESMO peer (a mídia WebRTC nunca caiu).
+            // Sem isso o servidor me tirava da call no disconnect e eu virava "fantasma": os outros não me viam.
+            if (typeof inCall !== 'undefined' && inCall && mePeer && myPeerId && currentVoiceChannelId) {
+                socket.emit('entrar_call', { canal_id: currentVoiceChannelId, peer_id: myPeerId, usuario: currentUserName });
+            }
             if (!_jaConectouUmaVez) { _jaConectouUmaVez = true; return; }
             // reconectou: volta pra sala do canal e pega o que perdeu enquanto estava fora
             try { socket.emit('entrar_canal', { canal_id: currentChannelId }); } catch (e) {}
@@ -11713,6 +11908,7 @@
             sincronizarCanalAtual();
             if (vistaAtual === 'dm' && currentDmUserId) recarregarDMAtual(true);
             if (typeof pedirArredoresDoMapa === 'function') pedirArredoresDoMapa(true);
+            if (typeof anunciarMinhaPosicao === 'function') anunciarMinhaPosicao();   // o servidor esquece a posição no disconnect
         });
 
         async function sincronizarCanalAtual() {
@@ -12759,7 +12955,7 @@
             // o listener antigo já guardou a chamada em chamadaRecebidaDe (ou recusou na hora se estava ocupado)
             if (chamadaRecebidaDe && Number(chamadaRecebidaDe.de_id) === Number(d.de_id)) iniciarToque('toque');
         });
-        ['chamada_aceita', 'chamada_recusada', 'chamada_cancelada'].forEach(ev => socket.on(ev, pararToque));
+        ['chamada_aceita', 'chamada_recusada', 'chamada_cancelada', 'chamada_resolvida'].forEach(ev => socket.on(ev, pararToque));
         ['btn-aceitar-chamada', 'btn-recusar-chamada', 'btn-cancelar-chamada'].forEach(id => document.getElementById(id)?.addEventListener('click', pararToque));
         const _iniciarChamadaOriginal = iniciarChamadaDM;
         window.iniciarChamadaDM = function (...args) {
@@ -12772,7 +12968,7 @@
             if (d.subiu_nivel) tocarSom('nivel');
         });
         socket.on('missao_concluida', () => tocarSom('missao'));
-        socket.on('novo_usuario_call', (d) => tocarSomDeEntrada(((d && d.equipados) || {}).som_call));   // alguém entrou na call em que eu estou
+        socket.on('novo_usuario_call', (d) => { if (d && d.reentrada) return; tocarSomDeEntrada(((d && d.equipados) || {}).som_call); });   // alguém entrou na call em que eu estou
         socket.on('usuario_saiu_call', () => tocarSom('call_sair'));
 
         // ---------- MARQUEE: texto grande rola devagar (3s parado no começo, vai até o fim, 3s, volta) ----------
@@ -12863,6 +13059,23 @@
             ajustar(); setTimeout(ajustar, 600);
         })();
 
+
+        // Marca o body quando algum popup grande está aberto (a CSS pausa a animação do fundo - ver body.painel-aberto)
+        (function () {
+            const seletor = '.modal-overlay, .settings-overlay';
+            const verifica = () => {
+                const aberto = [...document.querySelectorAll(seletor)].some(el => {
+                    if (el.id === 'chamada-recebida-modal' || el.id === 'chamando-modal') return false;   // cartões de toque não pausam nada
+                    const cs = getComputedStyle(el);
+                    return cs.display !== 'none' && cs.visibility !== 'hidden' && (el.classList.contains('settings-overlay') ? el.classList.contains('active') || cs.opacity > 0 : true);
+                });
+                document.body.classList.toggle('painel-aberto', aberto);
+            };
+            let agendado = false;
+            const agenda = () => { if (agendado) return; agendado = true; setTimeout(() => { agendado = false; verifica(); }, 40); };   // timeout (não rAF): aba em segundo plano não dispara rAF
+            new MutationObserver(agenda).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+            verifica();
+        })();
 
         // pausa as animações das configurações enquanto rola (ver .settings-content.rolando)
         (function () {

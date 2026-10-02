@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from datetime import timedelta
 import re
 import time
-from . import socketio
+from . import socketio, APP_VERSAO
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product,
                      Denuncia, Notificacao, Silenciado, server_members, channel_members)
@@ -64,23 +64,101 @@ participantes_call = {}
 # passar por sair_call (fechar o navegador manda sair_call via beforeunload,
 # mas queda de rede não).
 _call_por_sid = {}
+# (chave, peer_id) -> {'sid', 'usuario_id', 'server_id'}: de quem é cada entrada de `participantes_call`. É o que
+# deixa (a) uma pessoa estar em UMA call só (entrar numa nova tira ela da velha - o "fantasma em 3 calls"), (b) só o
+# dono mexer na própria entrada e (c) limpar sem ir ao banco quando o socket cai.
+_meta_call = {}
+# (chave, peer_id) -> token. Socket que caiu NÃO sai da call na hora: fica uma graça pra reconectar (a mídia WebRTC
+# segue viva, só a sinalização piscou). Se voltar com o mesmo peer_id, o token é invalidado e nada some.
+_graca_call = {}
+GRACA_CALL_SEGUNDOS = 12
 
 
-def _entrar_em_call(chave, peer_id, usuario):
-    lista = participantes_call.setdefault(chave, [])
-    lista[:] = [p for p in lista if p['peer_id'] != peer_id]
-    lista.append({'peer_id': peer_id, 'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
-                  'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario)})
-    _call_por_sid[request.sid] = (chave, peer_id)
+def _destinos_da_call(chave, server_id):
+    """Quem acompanha a prévia dessa call: os dois da DM, ou o servidor inteiro."""
+    if isinstance(chave, str) and chave.startswith('dm_'):
+        try:
+            _, a, b = chave.split('_')
+            return [sala_pessoal(int(a)), sala_pessoal(int(b))]
+        except ValueError:
+            return []
+    return [sala_servidor(server_id)] if server_id else []
 
 
-def _sair_de_call(chave, peer_id):
+def _avisar_participantes(chave, server_id):
+    payload = {'canal_id': chave, 'participantes': participantes_call.get(chave, [])}
+    for sala in _destinos_da_call(chave, server_id):
+        socketio.emit('participantes_call_mudou', payload, to=sala)
+
+
+def _tirar_da_call(chave, peer_id, avisar=True):
+    """Remove UMA entrada (e só ela) da call e avisa quem está dentro e quem só olha a prévia. Serve ao sair_call,
+    ao fim da graça do disconnect e ao 'entrou em outra call'. Não depende de contexto de request."""
+    meta = _meta_call.pop((chave, peer_id), None)
+    _graca_call.pop((chave, peer_id), None)
     lista = participantes_call.get(chave)
     if lista is not None:
         lista[:] = [p for p in lista if p['peer_id'] != peer_id]
         if not lista:
             participantes_call.pop(chave, None)
-    _call_por_sid.pop(request.sid, None)
+    if meta and _call_por_sid.get(meta['sid']) == (chave, peer_id):
+        _call_por_sid.pop(meta['sid'], None)
+    if avisar:
+        socketio.emit('usuario_saiu_call', {'peer_id': peer_id}, to=f"voz_{chave}")
+        _avisar_participantes(chave, meta['server_id'] if meta else None)
+    return meta
+
+
+def _sair_apos_graca(chave, peer_id, token):
+    socketio.sleep(GRACA_CALL_SEGUNDOS)
+    if _graca_call.get((chave, peer_id)) is token:   # ninguém voltou com esse peer: saiu de verdade
+        _tirar_da_call(chave, peer_id)
+
+
+def _entrar_em_call(chave, peer_id, usuario, server_id=None):
+    """Registra a entrada. Devolve True se é uma REENTRADA (mesmo peer voltando depois de uma queda do socket)."""
+    chave_atual = (chave, peer_id)
+    reentrada = chave_atual in _meta_call
+    _graca_call.pop(chave_atual, None)
+
+    # Uma pessoa só pode estar numa call: qualquer outra entrada dela (outra call, outra aba, peer velho de um F5)
+    # sai agora. Antes cada socket só lembrava UMA call, e a anterior ficava pra sempre na lista de todo mundo.
+    for (ch, pid), meta in list(_meta_call.items()):
+        if meta['usuario_id'] != usuario.id or (ch, pid) == chave_atual:
+            continue
+        sid_velho = meta['sid']
+        try:
+            socketio.server.leave_room(sid_velho, f"voz_{ch}", namespace='/')
+        except Exception:
+            pass
+        _tirar_da_call(ch, pid)
+        if sid_velho != request.sid:
+            socketio.emit('call_substituida', {'canal_id': ch, 'peer_id': pid}, to=sid_velho)
+
+    # Se este socket tinha outra call registrada (troca direta de canal), ela sai também.
+    anterior = _call_por_sid.get(request.sid)
+    if anterior and anterior != chave_atual:
+        try:
+            leave_room(f"voz_{anterior[0]}")
+        except Exception:
+            pass
+        _tirar_da_call(*anterior)
+
+    lista = participantes_call.setdefault(chave, [])
+    lista[:] = [p for p in lista if p['peer_id'] != peer_id]
+    lista.append({'peer_id': peer_id, 'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
+                  'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario)})
+    _meta_call[chave_atual] = {'sid': request.sid, 'usuario_id': usuario.id, 'server_id': server_id}
+    _call_por_sid[request.sid] = chave_atual
+    return reentrada
+
+
+def _sair_de_call(chave, peer_id):
+    """Saída pedida pelo próprio cliente (sair_call). Só vale pra entrada que é dele."""
+    meta = _meta_call.get((chave, peer_id))
+    if meta and meta['sid'] != request.sid and meta['usuario_id'] != session.get('user_id'):
+        return None
+    return _tirar_da_call(chave, peer_id)
 
 
 # Limites de texto: nome grande quebrava listas/sidebar (e o marquee rolava sem parar). O cliente usa os mesmos
@@ -320,11 +398,40 @@ def batimento_atividade(dados=None):
 # CONEXÃO: Carrega os servidores do usuário e entra na sala pessoal
 # (para DMs em tempo real) e nas salas dos servidores dele.
 # ==========================================
-@socketio.on('connect')
-def handle_connect():
+@socketio.on('garantir_salas')
+def garantir_salas(dados=None):
+    """Rede de segurança do connect: se o banco estava acordando quando o socket conectou, `handle_connect` desistiu
+    antes de entrar nas salas (sem sala pessoal não chega toque de chamada, DM ao vivo, pedido de amizade...). O cliente
+    chama isto quando não recebeu o 'versao_app' (a 1ª coisa que o connect completo manda)."""
     usuario = usuario_logado()
     if not usuario:
         return
+    try:
+        join_room(sala_pessoal(usuario.id))
+        for srv in list(usuario.servers):
+            join_room(sala_servidor(srv.id))
+        if usuario.id not in usuarios_conectados:
+            usuarios_conectados[usuario.id] = 1
+        emit('versao_app', {'versao': APP_VERSAO})
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO GARANTIR SALAS] {e}")
+
+
+@socketio.on('connect')
+def handle_connect():
+    usuario = usuario_logado()
+    if not usuario and session.get('user_id'):
+        # banco ainda acordando (Neon): tenta de novo antes de desistir, senão o socket fica sem salas
+        for _ in range(3):
+            socketio.sleep(1.2)
+            usuario = usuario_logado()
+            if usuario:
+                break
+    if not usuario:
+        return
+
+    emit('versao_app', {'versao': APP_VERSAO})
 
     try:
         join_room(sala_pessoal(usuario.id))
@@ -408,26 +515,17 @@ def handle_disconnect():
     # call pro resto da sessão de todo mundo.
     centros_mapa.pop(request.sid, None)
     call_info = _call_por_sid.pop(request.sid, None)
-    if call_info:
-        chave, peer_id = call_info
-        sala_call = f"voz_{chave}"
-        leave_room(sala_call)
-        _sair_de_call(chave, peer_id)
-        emit('usuario_saiu_call', {'peer_id': peer_id}, to=sala_call, include_self=False)
-        try:
-            if isinstance(chave, str) and chave.startswith('dm_'):
-                _, id_a, id_b = chave.split('_')
-                payload = {'canal_id': chave, 'participantes': participantes_call.get(chave, [])}
-                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_a)))
-                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_b)))
-            else:
-                canal = com_retry(lambda: Channel.query.get(int(chave)))
-                if canal and canal.server_id:
-                    emit('participantes_call_mudou',
-                         {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
-                         to=sala_servidor(canal.server_id))
-        except Exception as e:
-            print(f"[ERRO LIMPAR CALL NO DISCONNECT] {e}")
+    if call_info and _meta_call.get(call_info, {}).get('sid') == request.sid:
+        # Não tira da call na hora: o socket costuma só piscar (Render, troca de rede) e a mídia WebRTC segue viva.
+        # Se o cliente voltar com o mesmo peer_id dentro da graça, nada some; senão sai de verdade.
+        token = object()
+        _graca_call[call_info] = token
+        socketio.start_background_task(_sair_apos_graca, call_info[0], call_info[1], token)
+    # Ligação tocando que eu fiz e ninguém atendeu: avisa quem estava recebendo que eu sumi.
+    for de_para, info in list(_chamadas_pendentes.items()):
+        if info['sid'] == request.sid:
+            _chamadas_pendentes.pop(de_para, None)
+            emit('chamada_cancelada', {}, to=sala_pessoal(de_para[1]))
 
     usuario = usuario_logado()
     if not usuario or usuario.id not in usuarios_conectados:
@@ -670,13 +768,14 @@ def reagir_mensagem(dados):
                 adicionou.append(1)
 
         comitar_com_retry(preparar)
-        if adicionou:   # tirar a reação não conta (senão ligar/desligar viraria XP)
-            _emitir_progresso(usuario, {'reacao': 1})
 
+        # Primeiro mostra a reação pra todo mundo; o XP/missão (várias queries) vem depois e nunca atrasa a tela.
         emit('reacoes_atualizadas', {
             'msg_id': msg.id,
             'reacoes': reacoes_para_json(msg.id)
         }, to=str(msg.channel_id))
+        if adicionou:   # tirar a reação não conta (senão ligar/desligar viraria XP)
+            _emitir_progresso(usuario, {'reacao': 1})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO REAGIR] {e}")
@@ -786,7 +885,7 @@ def lidar_entrar_call(dados):
         return
 
     peer_id = dados.get('peer_id')
-    if not peer_id:
+    if not peer_id or not isinstance(peer_id, str) or len(peer_id) > 80:
         return
 
     canal_id_bruto = dados.get('canal_id')
@@ -794,6 +893,7 @@ def lidar_entrar_call(dados):
     try:
         # Chamada 1-a-1 por DM: a "sala" é "dm_<menorId>_<maiorId>", não um
         # Channel de verdade - checa amizade em vez de canal_permitido.
+        server_id = None
         if isinstance(canal_id_bruto, str) and canal_id_bruto.startswith('dm_'):
             try:
                 _, id_a, id_b = canal_id_bruto.split('_')
@@ -805,48 +905,63 @@ def lidar_entrar_call(dados):
             outro_id = id_b if usuario.id == id_a else id_a
             if not sao_amigos(usuario.id, outro_id):
                 return
+            chave = canal_id_bruto
+        else:
+            canal = canal_permitido(usuario, canal_id_bruto)
+            if not canal:
+                emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal de voz.'})
+                return
+            chave = str(canal.id)
+            server_id = canal.server_id
 
-            sala_call = f"voz_{canal_id_bruto}"
-            join_room(sala_call)
-            _entrar_em_call(canal_id_bruto, peer_id, usuario)
-            emit('novo_usuario_call', {
-                'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
-                'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario),
-                'canal_id': canal_id_bruto
-            }, to=sala_call, include_self=False)
-            payload = {'canal_id': canal_id_bruto, 'participantes': participantes_call.get(canal_id_bruto, [])}
-            emit('participantes_call_mudou', payload, to=sala_pessoal(usuario.id))
-            emit('participantes_call_mudou', payload, to=sala_pessoal(outro_id))
-            return
-
-        canal = canal_permitido(usuario, canal_id_bruto)
-        if not canal:
-            emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal de voz.'})
-            return
-
-        chave = str(canal.id)
         sala_call = f"voz_{chave}"
         join_room(sala_call)
-        _entrar_em_call(chave, peer_id, usuario)
+        reentrada = _entrar_em_call(chave, peer_id, usuario, server_id)
 
+        # Quem já está na call liga pra quem chegou (só quem JÁ estava dentro disca). Na reentrada (o socket piscou) o
+        # aviso vai de novo: o cliente só refaz a ligação se a antiga morreu de verdade.
         emit('novo_usuario_call', {
-            'peer_id': peer_id,
-            'usuario': usuario.name,
-            'avatar': usuario.avatar,
+            'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
             'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario),
-            'canal_id': chave
+            'canal_id': chave, 'reentrada': reentrada
         }, to=sala_call, include_self=False)
 
-        # Pra quem está com o servidor aberto mas ainda não entrou na call -
-        # é isso que dá a prévia de "fulano já está na call" antes de entrar.
-        if canal.server_id:
-            emit('participantes_call_mudou',
-                 {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
-                 to=sala_servidor(canal.server_id))
+        # Prévia pra quem está com o servidor/DM aberto mas ainda não entrou, e a lista oficial pra quem chegou
+        # (o cliente usa pra limpar card de gente que já saiu e pra pedir a ligação de quem não conectou).
+        _avisar_participantes(chave, server_id)
+        emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, [])})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ENTRAR CALL] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível entrar na call: {e}'})
+
+
+@socketio.on('pedir_ligacao')
+def lidar_pedir_ligacao(dados):
+    """Quem entrou e não conseguiu conectar com alguém que está na lista pede pra ESSA pessoa ligar de novo. Só a
+    pessoa que já estava dentro disca (o PeerJS não renegocia), então o pedido passa pelo servidor."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    canal_id = (dados or {}).get('canal_id')
+    alvo_peer = (dados or {}).get('peer_id')
+    if canal_id is None or not alvo_peer:
+        return
+    chave = canal_id if (isinstance(canal_id, str) and canal_id.startswith('dm_')) else str(canal_id)
+    meu = _call_por_sid.get(request.sid)
+    if not meu or meu[0] != chave:
+        return
+    alvo = _meta_call.get((chave, alvo_peer))
+    if not alvo:
+        return
+    eu = next((p for p in participantes_call.get(chave, []) if p['peer_id'] == meu[1]), None)
+    if not eu:
+        return
+    socketio.emit('novo_usuario_call', {
+        'peer_id': eu['peer_id'], 'usuario': eu['nome'], 'avatar': eu['avatar'], 'moldura': eu.get('moldura'),
+        'nome_estilo': eu.get('nome_estilo'), 'equipados': eu.get('equipados') or {}, 'canal_id': chave,
+        'reentrada': True
+    }, to=alvo['sid'])
 
 
 @socketio.on('listar_participantes_call')
@@ -894,23 +1009,13 @@ def lidar_sair_call(dados):
     chave = str(canal_id) if not (isinstance(canal_id, str) and canal_id.startswith('dm_')) else canal_id
     sala_call = f"voz_{chave}"
     leave_room(sala_call)
-    _sair_de_call(chave, peer_id)
-    emit('usuario_saiu_call', {'peer_id': peer_id}, to=sala_call, include_self=False)
-
-    try:
-        if isinstance(chave, str) and chave.startswith('dm_'):
-            _, id_a, id_b = chave.split('_')
-            payload = {'canal_id': chave, 'participantes': participantes_call.get(chave, [])}
-            emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_a)))
-            emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_b)))
-        else:
-            canal = com_retry(lambda: Channel.query.get(canal_id))
-            if canal and canal.server_id:
-                emit('participantes_call_mudou',
-                     {'canal_id': chave, 'participantes': participantes_call.get(chave, [])},
-                     to=sala_servidor(canal.server_id))
-    except Exception as e:
-        print(f"[ERRO SAIR CALL] {e}")
+    if peer_id:
+        _sair_de_call(chave, peer_id)
+    else:
+        # sem peer_id (saiu antes do PeerJS abrir): tira o que este socket tinha nessa call
+        atual = _call_por_sid.get(request.sid)
+        if atual and atual[0] == chave:
+            _tirar_da_call(*atual)
 
 
 # ==========================================
@@ -919,7 +1024,22 @@ def lidar_sair_call(dados):
 # Só o "toque": avisa o amigo e espera ele aceitar/recusar. A call em si (depois
 # de aceita) reaproveita entrar_call/sair_call de cima, com canal_id no formato
 # "dm_<menorId>_<maiorId>" (ver sala_dm()).
+#
+# `_chamadas_pendentes[(quem_ligou, quem_recebe)] = {'sid', 'ts', 'tipo'}` guarda de QUAL aba saiu a ligação: o
+# `chamada_aceita` volta só pra essa aba (antes ia pra todas as abas de quem ligou, e cada uma entrava na call -
+# era a "pessoa duplicada" na chamada). As outras abas de quem recebia também fecham o toque quando uma atende.
 # ==========================================
+_chamadas_pendentes = {}
+CHAMADA_VALE_SEGUNDOS = 60
+
+
+def _limpar_chamadas_velhas():
+    agora = time.time()
+    for k, v in list(_chamadas_pendentes.items()):
+        if agora - v['ts'] > CHAMADA_VALE_SEGUNDOS:
+            _chamadas_pendentes.pop(k, None)
+
+
 @socketio.on('chamar_amigo')
 def chamar_amigo(dados):
     usuario = usuario_logado()
@@ -937,6 +1057,13 @@ def chamar_amigo(dados):
         emit('erro_bazinga', {'msg': 'Vocês precisam ser amigos pra poder se ligar.'})
         return
 
+    # Antes quem ligava ficava "chamando..." pra sempre se a outra pessoa estivesse offline.
+    if not esta_online(amigo_id):
+        emit('chamada_recusada', {'por_nome': 'A pessoa', 'offline': True})
+        return
+
+    _limpar_chamadas_velhas()
+    _chamadas_pendentes[(usuario.id, amigo_id)] = {'sid': request.sid, 'ts': time.time(), 'tipo': tipo}
     emit('chamada_recebida', {
         'de_id': usuario.id, 'de_nome': usuario.name, 'de_avatar': usuario.avatar, 'tipo': tipo
     }, to=sala_pessoal(amigo_id))
@@ -953,10 +1080,18 @@ def aceitar_chamada(dados):
     except (TypeError, ValueError):
         return
 
+    info = _chamadas_pendentes.pop((de_id, usuario.id), None)
+    if not info:
+        # já foi atendida em outra aba, cancelada ou expirou: não entra em call nenhuma
+        emit('chamada_resolvida', {})
+        return
+
     sala = sala_dm(usuario.id, de_id)
-    # Avisa os dois lados (quem aceitou também precisa do nome da sala pra entrar).
-    emit('chamada_aceita', {'com_id': de_id, 'sala': sala}, include_self=True)
-    emit('chamada_aceita', {'com_id': usuario.id, 'sala': sala}, to=sala_pessoal(de_id))
+    tipo = info.get('tipo', 'voz')
+    # Quem atendeu (esta aba) e quem ligou (a aba de onde saiu a ligação). As outras abas só fecham o toque.
+    emit('chamada_aceita', {'com_id': de_id, 'sala': sala, 'tipo': tipo})
+    emit('chamada_aceita', {'com_id': usuario.id, 'sala': sala, 'tipo': tipo}, to=info['sid'])
+    emit('chamada_resolvida', {}, to=sala_pessoal(usuario.id), include_self=False)
 
 
 @socketio.on('recusar_chamada')
@@ -968,7 +1103,9 @@ def recusar_chamada(dados):
         de_id = int(dados.get('de_id'))
     except (TypeError, ValueError):
         return
-    emit('chamada_recusada', {'por_nome': usuario.name}, to=sala_pessoal(de_id))
+    info = _chamadas_pendentes.pop((de_id, usuario.id), None)
+    emit('chamada_recusada', {'por_nome': usuario.name}, to=(info['sid'] if info else sala_pessoal(de_id)))
+    emit('chamada_resolvida', {}, to=sala_pessoal(usuario.id), include_self=False)
 
 
 @socketio.on('cancelar_chamada')
@@ -980,6 +1117,7 @@ def cancelar_chamada(dados):
         para_id = int(dados.get('para_id'))
     except (TypeError, ValueError):
         return
+    _chamadas_pendentes.pop((usuario.id, para_id), None)
     emit('chamada_cancelada', {}, to=sala_pessoal(para_id))
 
 
@@ -1519,6 +1657,7 @@ centros_mapa = {}   # sid -> (lat, lng)
 # Última posição de quem NÃO está no Fantasma (usuario_id -> payload). É o que faltava pra amigo aparecer assim que
 # você abre o mapa: antes a posição só existia no instante em que a pessoa se mexia, e quem chegava depois via mapa vazio.
 ultimas_posicoes = {}
+POSICAO_VALE_SEGUNDOS = 180
 _cache_contatos = {}   # usuario_id -> (ts, amigos_ids, colegas_ids, servidores_ids)
 
 
@@ -1605,10 +1744,12 @@ def mapa_pedir_arredores(dados):
         d['centro'] = {'lat': pos[0], 'lng': pos[1]}
         emit('mapa_arredores', d)
         # E onde cada amigo/colega está agora (sem esperar a pessoa se mexer).
+        agora = time.time()
         for uid in (amigos | colegas):
             p = ultimas_posicoes.get(uid)
-            if p:
-                emit('posicao_amigo_atualizada', p)
+            # quem parou de mandar sinal (o cliente reenvia a cada ~45s) não é "ao vivo": não mostra pino fantasma
+            if p and agora - p.get('_t', agora) <= POSICAO_VALE_SEGUNDOS:
+                emit('posicao_amigo_atualizada', {k: v for k, v in p.items() if not k.startswith('_')})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MAPA ARREDORES] {e}")
@@ -1958,7 +2099,7 @@ def atualizar_localizacao(dados):
             'lat': pos[0],
             'lng': pos[1]
         }
-        ultimas_posicoes[usuario.id] = payload
+        ultimas_posicoes[usuario.id] = dict(payload, _t=time.time())
         for sala in _salas_da_posicao(usuario):
             emit('posicao_amigo_atualizada', payload, to=sala, include_self=False)
     except Exception as e:
@@ -2535,6 +2676,7 @@ def emitir_amizades(pessoa_id):
     """Manda o retrato atual das amizades pra TODAS as abas de uma pessoa (regra 6:
     a outra ponta do pedido precisa ver a mudança agora, não só quem agiu)."""
     try:
+        _cache_contatos.pop(pessoa_id, None)
         pessoa = com_retry(lambda: Person.query.get(pessoa_id))
         if pessoa:
             emit('amizades', com_retry(lambda: montar_amizades(pessoa)), to=sala_pessoal(pessoa_id))

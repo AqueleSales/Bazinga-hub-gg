@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 # Adiciona a raiz do projeto ao sys.path para garantir que o Python ache o config.py
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -16,6 +17,11 @@ socketio = SocketIO()
 APP_NOME = "Panteão"
 MOEDA_NOME = "Dracmas"
 MOEDA_SIGLA = "DRC"
+
+# Versão do que está no ar. Vai no HTML (o que a aba carregou) e é reenviada pelo socket a cada conexão: se as duas
+# divergirem, a aba é velha (ficou aberta durante um deploy) e o cliente pede pra recarregar. Sem isso, uma aba
+# antiga falava um "dialeto" velho com o servidor novo (call, mapa, mensagens) e parecia bug sem causa.
+APP_VERSAO = (os.environ.get('RENDER_GIT_COMMIT') or '')[:10] or str(int(time.time()))
 
 
 def create_app():
@@ -52,10 +58,24 @@ def create_app():
         except OSError:
             return 0
 
+    def _servidores_ice():
+        """STUN + TURN da call. TURN próprio (TURN_URLS separado por vírgula, TURN_USERNAME, TURN_CREDENTIAL) vai na
+        frente: o relay público grátis (openrelay) é instável, e sem relay quem está atrás de NAT mais fechado (rede de
+        faculdade, 4G) nunca conecta - parece que "sumiu da call"."""
+        lista = [{'urls': 'stun:stun.l.google.com:19302'}, {'urls': 'stun:global.stun.twilio.com:3478'}]
+        proprios = [u.strip() for u in (os.environ.get('TURN_URLS') or '').split(',') if u.strip()]
+        if proprios:
+            lista.append({'urls': proprios, 'username': os.environ.get('TURN_USERNAME', ''),
+                          'credential': os.environ.get('TURN_CREDENTIAL', '')})
+        for u in ('turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'):
+            lista.append({'urls': u, 'username': 'openrelayproject', 'credential': 'openrelayproject'})
+        return lista
+
     @app.context_processor
     def _injetar_marca():
         return {'app_nome': APP_NOME, 'moeda_nome': MOEDA_NOME, 'moeda_sigla': MOEDA_SIGLA,
-                'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js')}
+                'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js'),
+                'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice()}
 
     with app.app_context():
         try:

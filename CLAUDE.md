@@ -1166,6 +1166,7 @@ python testes/fumaca_servidor.py   # servidor, convite, canal privado, paginaç�
 python testes/fumaca_conversa_rapida.py  # conversa rápida, nome repetido, silenciar, denunciar pessoa, notas antigas, recorte de GIF
 python testes/fumaca_rodada3.py    # convite por membro, posição/notas de amigos, câmera, ornamentos, limites
 python testes/contar_queries.py    # quantas queries cada carga faz (use antes/depois de mexer em performance)
+python testes/fumaca_call.py       # uma call por pessoa, graça no disconnect, reentrada, ligação por DM (aba certa), versão do app
 ```
 
 ---
@@ -1465,6 +1466,71 @@ Teste: `python testes/fumaca_cosmeticos.py` (curva 1–1000+, patentes, catálog
 
 **O que ficou de fora** (ver `PLANO_COSMETICOS.md`): gadget do mapa (música tipo Spotify — o pedido ficou ambíguo), patente ao lado do nome
 em mensagens/listas, loja/economia (Mercado e Battle Pass temático seguem para refazer).
+
+## Rodada 6 de 02/10/2026 — estabilidade de call, mapa, versão do app e peso das configurações
+
+Saiu do teste com o amigo (Gabriel): ele "caía da call", aparecia em 3-4 calls ao mesmo tempo, a ligação por DM não tocava
+pra ele, a pessoa aparecia duplicada na chamada e o mapa/radar ficava estranho. Teste novo: `python testes/fumaca_call.py`.
+
+### Call: o servidor é a fonte da verdade de "quem está na call"
+- **Causa do "cai da call"**: o `disconnect` do socket tirava a pessoa da call, e o cliente **nunca reentrava** quando o socket
+  reconectava (Render/Neon/troca de rede piscam o socket o tempo todo; a mídia WebRTC nem caía). A pessoa virava fantasma: os outros
+  não a viam, `estado_camera` era recusado (não estava mais na lista) e quem entrava depois nunca ligava pra ela.
+  Agora: (a) o `disconnect` só agenda a saída (`GRACA_CALL_SEGUNDOS = 12`, `_graca_call`), (b) o cliente reemite `entrar_call` com o
+  **mesmo `peer_id`** no `connect` e isso cancela a saída, (c) a reentrada manda `novo_usuario_call` com `reentrada: true` e o cliente
+  só refaz a ligação se a antiga morreu (`connectionState`).
+- **Uma pessoa, uma call**: `_meta_call[(chave, peer_id)] = {sid, usuario_id, server_id}` e `_call_por_sid`. Entrar numa call tira a
+  pessoa de qualquer outra (outro canal, outra aba, peer velho de F5) e avisa a aba velha com `call_substituida` (o cliente sai sozinho).
+  Era o "fantasma em 3 calls": cada socket só lembrava UMA call, a anterior ficava na lista de todo mundo pra sempre.
+  `sair_call` só vale pra entrada que é da própria pessoa; `_tirar_da_call()` é o único jeito de remover (não depende de request, então
+  roda no fim da graça).
+- **Autocura no cliente**: `participantes_call_mudou` da MINHA call agora limpa card de gente que não está mais na lista
+  (`reconciliarCall`) e, a cada 6s, quem está na lista sem ligação viva vira `pedir_ligacao` (o servidor repassa pra essa pessoa discar
+  de novo, `refazer`). O PeerJS não renegocia e só quem JÁ estava dentro disca, então o pedido passa pelo servidor.
+- **Ligação por DM**: `_chamadas_pendentes[(quem_liga, quem_recebe)]` guarda de qual ABA saiu a ligação; `chamada_aceita` volta só pra essa
+  aba (antes ia pra todas as abas de quem ligou e cada uma entrava na call = a pessoa duplicada) e as outras abas de quem recebia fecham o
+  toque (`chamada_resolvida`). Aceitar chamada que já acabou não entra em call. Pessoa offline recusa na hora (`offline: true`), toque some
+  sozinho em 45-50s, quem liga e cai cancela o toque de quem recebe. `conectarNaCall` tem trava (`conectandoCall`) contra dois peers.
+- **Vídeo × voz**: `chamar_amigo` já mandava `tipo`; agora `chamada_aceita` o devolve e `conectarNaCall(sala, nome, {video: true})` liga
+  a câmera quando o peer abre. A de voz segue só áudio.
+- **Sem "chat da call"**: o botão de balão foi removido. Abrir canal de texto/DM/outra aba já minimiza a call numa janelinha
+  (`callMinimizar`). A `.call-janela` caiu de `z-index: 9000` pra **1500**: fica na frente do app mas ATRÁS de cartão de perfil (2001),
+  menus, modais, pickers e configurações. Era a call cobrindo tudo (o cartão de perfil aparecia cortado por ela).
+- **ICE**: `ICE_SERVERS` vem do servidor (`_servidores_ice()` em `app/__init__.py`). Para TURN próprio defina no Render `TURN_URLS`
+  (vírgula), `TURN_USERNAME` e `TURN_CREDENTIAL` — vai na frente do relay público (openrelay, instável). Sem relay, rede de faculdade/4G
+  não conecta e parece "sumiu da call".
+- **Sharingan esticado no card da call**: o anel da moldura é `::before` absoluto e o `.video-avatar` não era posicionado (só com
+  `.com-ef`), então o anel se ancorava no card INTEIRO. `.video-avatar { position: relative }` no fim do `cosmeticos.css`.
+
+### Sons de entrada de arquivo
+`ARQ_SOM` em `cosmeticos.js` mapeia o id do item pro arquivo em `app/static/audio/` (gogeta → `teleporte.mp3`, sasuke → `sharingan.mp3`; os itens
+agora se chamam "Teleporte" e "Sharingan", os ids `gogeta`/`sasuke` não mudaram). `somEntrada()` toca o arquivo e só cai no som sintetizado
+(Power Up/Chidori, ainda no código) se o arquivo falhar. Os dois mp3 vieram de efeitos de DBZ/Naruto: ok pro beta fechado, **trocar por áudio
+próprio antes da loja pública**. Som novo = arquivo em `static/audio/` + linha em `ARQ_SOM` (o id já precisa estar em `IDS_EFEITO.som`).
+
+### Versão do app (aba velha falando com servidor novo)
+`APP_VERSAO` (`app/__init__.py`: `RENDER_GIT_COMMIT` ou hora do boot) vai no HTML (`VERSAO_PAGINA`) e o servidor manda `versao_app` a cada
+`connect`. Se divergir, `mostrarAvisoNovaVersao()` mostra a faixa "Atualizar agora" e recarrega sozinho quando não há call nem texto sendo
+escrito. `/chat` sai com `Cache-Control: no-store`. É o mesmo mecanismo que serviria de "versão mínima" se o app virar empacotado (se o app
+só carregar o site, a versão é sempre a do servidor). `versao_app` também é o sinal de que o `connect` terminou: sem ele em 5s o cliente
+pede `garantir_salas` (o `connect` agora tenta de novo se o banco estava acordando, mas isso cobre o resto).
+
+### Mapa
+- **Posição sumia**: PC parado quase nunca dispara o `watchPosition`, e o servidor esquece a posição no `disconnect`: depois de qualquer
+  piscada do socket a pessoa sumia do mapa dos outros até o GPS "andar" (nunca, no desktop). Agora o cliente reanuncia a posição a cada 45s
+  e ao reconectar (`anunciarMinhaPosicao`), e o servidor só repete pra quem chega a posição de quem mandou sinal nos últimos 180s
+  (`POSICAO_VALE_SEGUNDOS`); o cliente tira pino de amigo sem sinal há 4 min. `_cache_contatos` é invalidado quando a amizade muda.
+- **"Mapa louco" (Samambaia → Taguatinga)**: o PC sem GPS chuta a região pelo Wi-Fi/IP. `aoReceberGps` descarta fix PIOR que o atual que
+  joga a posição longe (`ultimoFixGps`), avisa quando a precisão é ruim (> 1,5 km) e o **teletransporte (duplo clique) fica salvo no
+  aparelho por 6h** (`localStorage pnt_pos_manual`, só conveniência de UI); "Centralizar em mim" esquece. O "mini radar verde" era o círculo
+  de precisão (`mostrarPrecisao`) — agora some sozinho em 10s.
+
+### Peso (reações e configurações)
+- `reagir_mensagem` emitia `reacoes_atualizadas` DEPOIS de pagar XP/missão (~8 queries no Neon): a reação demorava. Agora emite antes e o
+  cliente já muda o chip no clique (`reagirOtimista`, o evento do servidor sobrescreve e corrige).
+- Configurações/modais travavam por **blur aninhado** (overlay `blur(6px)` + cartão `blur(22px)`) sobre um fundo cheio de animação
+  (placas, molduras, nomes). Agora overlay e cartão são sólidos, `body.painel-aberto` pausa a animação do fundo e as prévias do
+  catálogo/inventário só animam sob o mouse (ou equipadas).
 
 ---
 

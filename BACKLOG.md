@@ -69,6 +69,19 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [ ] Gadget do mapa (música tipo Spotify): confirmar com o dono o que ele imagina.
 - [ ] Loja/economia/Battle Pass temático (Dracmas, raridade) em cima da `Posse`.
 
+## Rodada 6 (02/10) - estabilidade de call, mapa, versão do app - feito, AINDA SEM TESTE COM 2 PESSOAS REAIS (só servidor + navegador solo)
+- [x] Call: reentrada com o mesmo peer depois de queda do socket (graça de 12 s), uma call por pessoa, aba velha sai sozinha, limpeza de card fantasma, `pedir_ligacao`.
+- [x] Ligação por DM: aceitar volta só pra aba que ligou; toque fecha nas outras abas; offline avisa; toque expira; chamada de vídeo abre com câmera.
+- [x] Sem chat da call; janela da call atrás de cartão/menus/modais (z-index 1500); Sharingan no card da call corrigido.
+- [x] Versão do app (`APP_VERSAO`, faixa "Atualizar agora"), `/chat` sem cache, `garantir_salas`.
+- [x] Mapa: reanuncia posição a cada 45 s e ao reconectar, filtro de fix ruim do GPS, ponto corrigido fica salvo 6 h, círculo de precisão some em 10 s.
+- [x] Reação instantânea (otimista + servidor responde antes do XP); configurações sem blur aninhado e com fundo pausado.
+- [x] Sons de entrada de arquivo: Gogeta = Teleporte (`static/audio/teleporte.mp3`), Sasuke = Sharingan (`sharingan.mp3`); o sintetizado fica de reserva.
+- [ ] **Testar com 2 pessoas**: queda de rede no meio da call (desligar o Wi-Fi 5 s), entrar em duas calls seguidas, ligar por DM com 2 abas, chamada de vídeo.
+- [ ] Se continuar sem conectar por rede: TURN próprio no Render (`TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL`).
+- [ ] Sons de DBZ/Naruto são material de terceiro: trocar por áudio próprio antes de abrir o laboratório pra loja pública.
+- [ ] Rodada 6 NÃO mexeu em models: não precisa de `atualizar_banco.py`.
+
 ## Falta da rodada 4 / dúvidas
 - [ ] **Testar com 2 pessoas**: câmera (liga/desliga/entrada tardia), compartilhar tela + zoom, call mini ao trocar de servidor/DM.
 - [ ] "Mudar a fonte do status na conversa" (lista de DMs): o pedido não ficou claro; os kaomojis do "pensando" caem em outra fonte do sistema.
