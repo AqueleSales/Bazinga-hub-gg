@@ -437,27 +437,10 @@ const Cosm = (() => {
     const EFEITOS_AVATAR = ['gogeta', 'sasuke'];
     const EFEITOS_PERFIL = ['gogeta', 'sasuke'];
 
-    // Contorno de uma chama (mesmo desenho da insígnia), como string de path numa caixa 40x60.
-    function chamaD(cx, base, larg, alt) {
-        const X = (u) => (cx + (u - .5) * 2 * larg).toFixed(1), Y = (v) => (base - alt + v * alt).toFixed(1);
-        let d = `M${X(CHAMA[0][0])} ${Y(CHAMA[0][1])}`;
-        CHAMA.slice(1).forEach(([a, b, c, e, f, g]) => { d += ` C${X(a)} ${Y(b)} ${X(c)} ${Y(e)} ${X(f)} ${Y(g)}`; });
-        return d + ' Z';
-    }
-
     function htmlEfeitoAvatar(id) {
         if (!EFEITOS_AVATAR.includes(id)) return '';
         if (id === 'sasuke') return '<i class="ef-av ef-av-sasuke" aria-hidden="true"></i>';   // olho brilhante: só CSS (anel que acende em vermelho)
         return `<i class="ef-av ef-av-${id}" aria-hidden="true"><b></b><b></b></i>`;
-    }
-
-    // Chama negra de Amaterasu: uma fileira de línguas de fogo (preta, contorno branco-violeta, com um clarão branco atrás)
-    // que vem de baixo, cresce e volta (o CSS anima a faixa inteira).
-    function htmlAmaterasu() {
-        const alt = [34, 50, 40, 58, 44, 52, 38, 56, 42, 48];
-        const trazeiras = alt.map((a, i) => `<path d="${chamaD(5 + i * 10, 60, 9, a + 6)}"/>`).join('');
-        const linguas = alt.map((a, i) => `<path class="ef-lingua" style="animation-delay:-${(i * 0.37).toFixed(2)}s" d="${chamaD(5 + i * 10, 60, 8, a)}"/>`).join('');
-        return `<div class="ef-amaterasu"><svg viewBox="0 0 100 60" preserveAspectRatio="none"><g class="ef-ama-luz">${trazeiras}</g><g class="ef-ama-negra">${linguas}</g></svg></div>`;
     }
 
     // Efeito por cima do cartão. Os de partículas fixas são determinísticos (o cartão redesenha a cada mudança e não pode
@@ -475,7 +458,7 @@ const Cosm = (() => {
                 const c = caminhos[i % caminhos.length];
                 return `<svg class="ef-raio" data-aleatorio="efRaioPisca" style="left:${x}%;height:${h}%;width:${w}px;--t:${t}s;--d:${d}s" viewBox="0 0 24 100" preserveAspectRatio="none"><path pathLength="100" d="${c}" fill="none" stroke="#8b5cf6" stroke-width="6" opacity=".45" stroke-linejoin="round" stroke-linecap="round"/><path pathLength="100" d="${c}" fill="none" stroke="#f5f3ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
             }).join('');
-            return `<div class="ef-pf ef-pf-sasuke" aria-hidden="true"><i class="ef-pf-clarao"></i>${htmlAmaterasu()}${bolts}</div>`;
+            return `<div class="ef-pf ef-pf-sasuke" aria-hidden="true"><i class="ef-pf-clarao"></i><canvas class="ef-cv" data-ef="amaterasu"></canvas>${bolts}</div>`;
         }
         const n = 22;
         let ps = '';
@@ -483,7 +466,8 @@ const Cosm = (() => {
             const x = (i * 37 + 11) % 100, atraso = ((i * 53) % 40) / 10, dur = 3.2 + ((i * 29) % 30) / 10, tam = 2 + (i * 7) % 4;
             ps += `<i style="--x:${x}%;--d:-${atraso}s;--t:${dur}s;--s:${tam}px"></i>`;
         }
-        return `<div class="ef-pf ef-pf-${id}" aria-hidden="true">${ps}</div>`;
+        // + a Punição de Alma (partículas giram, viram a bolha colorida e estouram) num canvas por cima da poeira
+        return `<div class="ef-pf ef-pf-${id}" aria-hidden="true">${ps}<canvas class="ef-cv" data-ef="punicao"></canvas></div>`;
     }
 
     // Raios do Sasuke: ao fim de cada ciclo (invisíveis), cada um sorteia onde vai cair da próxima vez.
@@ -943,8 +927,279 @@ const Cosm = (() => {
         _mtFechar = fechar;
     }
 
+    // ---------------------------------------------------------------------
+    // MOTOR DE EFEITOS EM CANVAS (Amaterasu do Sasuke e "Punição de Alma" do Gogeta).
+    // CSS não dá conta de fogo/vórtice de verdade: aqui um laço só (30 fps) desenha todo <canvas class="ef-cv" data-ef="...">
+    // que estiver visível. O laço dorme quando não há canvas (ou a aba está escondida) e acorda sozinho quando um aparece.
+    // ---------------------------------------------------------------------
+    const ss = (a, b, x) => { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const TAU = Math.PI * 2;
+
+    // brilho de 4 pontas (o "cintilar" dos gifs)
+    function estrela(ctx, x, y, r, alfa, rot) {
+        if (alfa <= 0.01 || r <= 0.3) return;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(rot || 0); ctx.globalAlpha = Math.min(1, alfa);
+        ctx.shadowColor = 'rgba(255,255,255,.95)'; ctx.shadowBlur = r * 1.4; ctx.fillStyle = '#fff';
+        const c = r * .13;
+        ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(c, -c); ctx.lineTo(r, 0); ctx.lineTo(c, c); ctx.lineTo(0, r); ctx.lineTo(-c, c); ctx.lineTo(-r, 0); ctx.lineTo(-c, -c); ctx.closePath(); ctx.fill();
+        ctx.restore();
+    }
+
+    // ---- Amaterasu: chama negra discreta, língua a língua, que sobe de leve na base do cartão e some ----
+    // Cada língua é uma gota esticada (ponta fina em cima), preta, com um halo lilás só na borda (como no anime), que
+    // nasce na base, cresce, balança e recolhe. O "nível" do ciclo controla quantas nascem e até onde sobem.
+    const AMATERASU = {
+        ciclo: 14,
+        novo() { return { linguas: [], fagulhas: [], resto: 0, restoF: 0 }; },
+        desenhar(ctx, e, t, dt, w, h, esc) {
+            const f = ((t + 2.5) % this.ciclo) / this.ciclo;
+            const nivel = ss(.10, .34, f) * (1 - ss(.56, .86, f));
+            if (nivel > 0.01) {
+                e.resto += dt * nivel * 44;
+                const altMax = Math.min(h * .15, 100 * esc) * (.4 + .6 * nivel);          // discreto: no máximo ~15% do cartão
+                while (e.resto >= 1) {
+                    e.resto -= 1;
+                    const alt = rnd(.35, 1) * altMax;
+                    e.linguas.push({ x: rnd(-.02, 1.02) * w, alt, larg: Math.max(11 * esc, alt * rnd(.42, .7)),
+                                     vida: rnd(1.1, 2.2), idade: 0, fase: rnd(0, TAU), inclina: rnd(-.7, .7), freq: rnd(3, 6.5) });
+                }
+                e.restoF += dt * nivel * 9;
+                while (e.restoF >= 1) {
+                    e.restoF -= 1;
+                    e.fagulhas.push({ x: rnd(0, 1) * w, y: h - rnd(4, h * .12), vy: rnd(24, 60) * esc, vx: rnd(-10, 10) * esc, r: rnd(1.1, 2.6) * esc, vida: rnd(1, 1.9), idade: 0 });
+                }
+            }
+            ctx.clearRect(0, 0, w, h);
+            if (!e.linguas.length && !e.fagulhas.length) return;
+
+            // base escura que "ancora" o fogo na borda de baixo
+            if (nivel > 0.02) {
+                const gb = ctx.createLinearGradient(0, h, 0, h - h * .06 * nivel - 4);
+                gb.addColorStop(0, 'rgba(3,1,6,' + (.92 * Math.min(1, nivel * 1.6)) + ')'); gb.addColorStop(1, 'rgba(3,1,6,0)');
+                ctx.fillStyle = gb; ctx.fillRect(0, h - h * .06 * nivel - 4, w, h * .06 * nivel + 4);
+            }
+
+            // língua de fogo: corpo largo embaixo, lado de dentro côncavo e a ponta curvada pro lado (nada de espeto reto)
+            const gota = (x, base, larg, alt, bal) => {
+                const topo = x + bal;
+                ctx.beginPath();
+                ctx.moveTo(x - larg * .55, base);
+                ctx.bezierCurveTo(x - larg * .62, base - alt * .3, x - larg * .1 + bal * .25, base - alt * .5, x + bal * .55, base - alt * .78);
+                ctx.quadraticCurveTo(x + bal * .95, base - alt * .93, topo, base - alt);
+                ctx.bezierCurveTo(x + bal * .9 + larg * .12, base - alt * .72, x + larg * .72, base - alt * .48, x + larg * .55, base);
+                ctx.closePath();
+            };
+            // 1ª passada: halo lilás (traço largo e suave); 2ª: corpo preto por cima, o que deixa só a borda clara
+            for (let passada = 0; passada < 2; passada++) {
+                for (const l of e.linguas) {
+                    const p = l.idade / l.vida;
+                    const crescer = Math.pow(Math.sin(Math.PI * Math.min(1, p)), .8);
+                    const tremer = 1 + .16 * Math.sin(t * l.freq * 1.7 + l.fase);            // a chama "respira"
+                    const alt = l.alt * crescer * tremer, bal = (Math.sin(t * l.freq + l.fase) * .6 + l.inclina) * l.larg * crescer;
+                    if (alt < 1.5) continue;
+                    gota(l.x, h + 3, l.larg * (1 - p * .25), alt, bal);
+                    if (passada === 0) { ctx.lineWidth = 4 * esc; ctx.strokeStyle = 'rgba(196,181,253,.2)'; ctx.stroke(); }
+                    else { ctx.shadowColor = 'rgba(210,196,255,.95)'; ctx.shadowBlur = 6 * esc; ctx.fillStyle = 'rgba(3,1,6,.95)'; ctx.fill(); ctx.shadowBlur = 0; }
+                }
+            }
+            // fagulhas pretas subindo (as lascas soltas do desenho)
+            ctx.fillStyle = 'rgba(3,1,6,.9)'; ctx.shadowColor = 'rgba(205,190,255,.8)'; ctx.shadowBlur = 5 * esc;
+            for (const g of e.fagulhas) {
+                const p = g.idade / g.vida; ctx.globalAlpha = 1 - ss(.55, 1, p);
+                ctx.beginPath(); ctx.ellipse(g.x, g.y, g.r * .7, g.r * 1.5, 0, 0, TAU); ctx.fill();
+            }
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+            for (const l of e.linguas) l.idade += dt;
+            for (const g of e.fagulhas) { g.idade += dt; g.y -= g.vy * dt; g.x += g.vx * dt + Math.sin(g.idade * 4 + g.x) * .25; }
+            e.linguas = e.linguas.filter(l => l.idade < l.vida);
+            e.fagulhas = e.fagulhas.filter(g => g.idade < g.vida && g.y > -10);
+        }
+    };
+
+    // ---- Punição de Alma (Soul Punisher): partículas brancas giram pra dentro, viram a bolha colorida e ela estoura ----
+    function bolhaArcoIris(ctx, x, y, R, giro, alfa) {
+        ctx.save(); ctx.globalAlpha = alfa;
+        const halo = ctx.createRadialGradient(x, y, R * .7, x, y, R * 1.9);
+        halo.addColorStop(0, 'rgba(255,90,190,.5)'); halo.addColorStop(.5, 'rgba(255,140,60,.16)'); halo.addColorStop(1, 'rgba(255,90,190,0)');
+        ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, R * 1.9, 0, TAU); ctx.fill();
+        ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.clip();
+        const base = ctx.createRadialGradient(x - R * .08, y - R * .04, R * .04, x, y, R);
+        base.addColorStop(0, '#2f6bff'); base.addColorStop(.3, '#4cc2ff'); base.addColorStop(.55, '#b84dff'); base.addColorStop(.76, '#ff4fa3');
+        base.addColorStop(.92, '#ff7a33'); base.addColorStop(1, '#ffd447');
+        ctx.fillStyle = base; ctx.fillRect(x - R, y - R, R * 2, R * 2);
+        // braços do redemoinho
+        ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        const cores = ['rgba(255,255,255,.26)', 'rgba(110,225,255,.5)', 'rgba(255,100,200,.55)'];
+        for (let k = 0; k < 3; k++) {
+            ctx.strokeStyle = cores[k]; ctx.lineWidth = R * (.2 - k * .03);
+            ctx.beginPath();
+            for (let i = 0; i <= 28; i++) {
+                const u = i / 28, r = R * (.92 - u * .78), a = giro * (1.2 + k * .35) + k * 2.1 + u * 4.6;
+                const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+        }
+        // meia-lua verde-amarela no fundo do redemoinho
+        ctx.strokeStyle = 'rgba(225,255,110,.92)'; ctx.lineWidth = R * .17;
+        ctx.beginPath(); ctx.arc(x + R * .14, y + R * .3, R * .27, giro * .5 + 2.3, giro * .5 + 5.2); ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.restore();
+        // brilho de bolha de sabão: reflexo no canto e aro fino
+        const br = ctx.createRadialGradient(x - R * .42, y - R * .46, 0, x - R * .42, y - R * .46, R * .5);
+        br.addColorStop(0, 'rgba(255,255,255,.8)'); br.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = br; ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(1, R * .05);
+        ctx.beginPath(); ctx.arc(x, y, R - ctx.lineWidth / 2, 0, TAU); ctx.stroke();
+        ctx.restore();
+    }
+
+    const PUNICAO = {
+        ciclo: 17,
+        novo() { return { fios: [], cacos: [], resto: 0, estourou: false, brilhos: Array.from({ length: 9 }, () => ({ a: rnd(0, TAU), d: rnd(1.25, 2.3), p: rnd(0, TAU), v: rnd(2, 4), r: rnd(.14, .3) })) }; },
+        desenhar(ctx, e, t, dt, w, h, esc) {
+            ctx.clearRect(0, 0, w, h);
+            const s = (t + 4) % this.ciclo;
+            const cx = w * .72, cy = h * .2, R = Math.max(11, Math.min(46, w * .125));
+            const juntar = ss(5.6, 9.8, s) * (1 - ss(12.8, 12.9, s));       // 0..1: tamanho da esfera
+            if (s < 5) { e.estourou = false; e.fios.length = 0; }
+
+            // 1) partículas brancas entrando em espiral
+            if (s >= 5 && s < 9.6) {
+                e.resto += dt * 30;
+                while (e.resto >= 1) {
+                    e.resto -= 1;
+                    const a = rnd(0, TAU), d = rnd(.28, .6) * Math.max(w, h) * .62;
+                    e.fios.push({ a, d, d0: d, idade: 0, vida: rnd(1.5, 2.3) });
+                }
+            }
+            ctx.lineCap = 'round';
+            for (const p of e.fios) {
+                p.idade += dt;
+                const u = Math.min(1, p.idade / p.vida);
+                const r = p.d0 * Math.pow(1 - u, 1.6);
+                p.a += (2.2 + 9 * u * u) * dt;                                     // gira cada vez mais rápido
+                const x = cx + Math.cos(p.a) * r, y = cy + Math.sin(p.a) * r * .85;
+                // rastro curvo: guarda os últimos pontos e desenha com a cauda sumindo (é o que faz o redemoinho aparecer)
+                (p.hist || (p.hist = [])).push([x, y]);
+                if (p.hist.length > 14) p.hist.shift();
+                ctx.shadowColor = 'rgba(255,255,255,.9)'; ctx.shadowBlur = 4 * esc;
+                for (let k = 1; k < p.hist.length; k++) {
+                    const q = k / p.hist.length;
+                    ctx.strokeStyle = 'rgba(255,255,255,' + (.85 * q * (1 - u * .35)) + ')'; ctx.lineWidth = Math.max(.7, 1.7 * esc * q * (1 - u * .5));
+                    ctx.beginPath(); ctx.moveTo(p.hist[k - 1][0], p.hist[k - 1][1]); ctx.lineTo(p.hist[k][0], p.hist[k][1]); ctx.stroke();
+                }
+                if (p.hist.length > 1) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, Math.max(.9, 1.5 * esc), 0, TAU); ctx.fill(); }
+                if (r < 4) p.morto = true;
+                if (u >= 1) p.morto = true;
+            }
+            ctx.shadowBlur = 0;
+            e.fios = e.fios.filter(p => !p.morto);
+
+            // 2) núcleo que cresce e vira a esfera colorida (com leve ondular de bolha)
+            if (juntar > 0.01 && !e.estourou) {
+                const ond = 1 + Math.sin(t * 3.1) * .035 + Math.sin(t * 5.3) * .02;
+                const raio = R * juntar * ond;
+                const nucleo = 1 - ss(.15, .7, juntar);                              // luz branca de energia no começo
+                if (nucleo > 0.01) {
+                    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * (.6 + juntar));
+                    g.addColorStop(0, 'rgba(255,255,255,' + nucleo + ')'); g.addColorStop(.5, 'rgba(255,230,140,' + nucleo * .5 + ')'); g.addColorStop(1, 'rgba(255,200,80,0)');
+                    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * (.6 + juntar), 0, TAU); ctx.fill();
+                }
+                if (raio > 2) bolhaArcoIris(ctx, cx, cy, raio, t * 1.6, Math.min(1, juntar * 1.6));
+                // cintilar em volta, só com a esfera formada
+                if (juntar > .55) for (const b of e.brilhos) {
+                    const k = .5 + .5 * Math.sin(t * b.v + b.p);
+                    estrela(ctx, cx + Math.cos(b.a + t * .15) * R * b.d, cy + Math.sin(b.a + t * .15) * R * b.d, R * b.r * (.6 + k) * 1.6, k * ss(.55, .9, juntar), Math.PI / 4 * 0);
+                }
+            }
+
+            // 3) estouro: aro de película de bolha, flash e cacos coloridos
+            if (s >= 12.8 && !e.estourou) {
+                e.estourou = true; e.estouroEm = t;
+                const cores = ['#ff5aa5', '#ffd447', '#4cc2ff', '#b84dff', '#ff7a33', '#ffffff', '#6dffb0'];
+                for (let i = 0; i < 34; i++) {
+                    const a = rnd(0, TAU), v = rnd(70, 230) * esc;
+                    e.cacos.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: rnd(1.2, 3.4) * esc, cor: cores[i % cores.length], vida: rnd(.6, 1.15), idade: 0, tipo: i % 4 === 0 ? 'estrela' : 'ponto' });
+                }
+            }
+            if (e.estourou && e.estouroEm != null) {
+                const u = (t - e.estouroEm);
+                if (u < .7) {
+                    const k = u / .7;
+                    ctx.save(); ctx.globalAlpha = (1 - k) * .9;
+                    const gr = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+                    gr.addColorStop(0, '#ff5aa5'); gr.addColorStop(.33, '#ffd447'); gr.addColorStop(.66, '#4cc2ff'); gr.addColorStop(1, '#b84dff');
+                    ctx.strokeStyle = gr; ctx.lineWidth = Math.max(.8, R * .14 * (1 - k)); ctx.shadowColor = 'rgba(255,255,255,.8)'; ctx.shadowBlur = 8 * esc;
+                    ctx.beginPath(); ctx.arc(cx, cy, R * (1 + k * 1.1), 0, TAU); ctx.stroke(); ctx.restore();
+                }
+                if (u < .28) {
+                    const fl = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 2);
+                    fl.addColorStop(0, 'rgba(255,255,255,' + (.95 * (1 - u / .28)) + ')'); fl.addColorStop(1, 'rgba(255,255,255,0)');
+                    ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(cx, cy, R * 2, 0, TAU); ctx.fill();
+                    estrela(ctx, cx, cy, R * 1.6 * (1 - u / .28 * .5), 1 - u / .28, 0);
+                }
+                for (const c of e.cacos) {
+                    c.idade += dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vx *= .965; c.vy = c.vy * .965 + 40 * dt;
+                    const a = 1 - c.idade / c.vida; if (a <= 0) continue;
+                    if (c.tipo === 'estrela') estrela(ctx, c.x, c.y, c.r * 3, a, c.idade * 3);
+                    else { ctx.globalAlpha = a; ctx.fillStyle = c.cor; ctx.shadowColor = c.cor; ctx.shadowBlur = 6 * esc; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.shadowBlur = 0; }
+                }
+                e.cacos = e.cacos.filter(c => c.idade < c.vida);
+            }
+        }
+    };
+
+    const MOTORES = { amaterasu: AMATERASU, punicao: PUNICAO };
+    const _estadoCv = new WeakMap();
+    const _reduzMov = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let _cvRodando = false, _cvUltimo = 0;
+
+    // Desenha um quadro de todos os canvases visíveis. Devolve false quando não há nenhum (o laço dorme).
+    function passoCanvas(agora) {
+        const lista = document.querySelectorAll('canvas.ef-cv');
+        if (!lista.length) return false;
+        lista.forEach((cv) => {
+            const motor = MOTORES[cv.dataset.ef];
+            if (!motor || !cv.isConnected) return;
+            const r = cv.getBoundingClientRect();
+            if (r.width < 24 || r.height < 24) return;                    // escondido
+            const dpr = Math.min(2, window.devicePixelRatio || 1);
+            const W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+            if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+            let st = _estadoCv.get(cv);
+            if (!st) { st = { e: motor.novo(), t: 0, ult: agora }; _estadoCv.set(cv, st); }
+            const dt = Math.min(.1, Math.max(0, (agora - st.ult) / 1000)); st.ult = agora; st.t += dt;
+            const ctx = cv.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            motor.desenhar(ctx, st.e, st.t, dt, r.width, r.height, Math.max(.5, r.width / 348));
+        });
+        return true;
+    }
+    function lacoCanvas(ts) {
+        if (document.hidden) { _cvRodando = false; return; }
+        if (ts - _cvUltimo >= 30) {
+            _cvUltimo = ts;
+            if (!passoCanvas(ts)) { _cvRodando = false; return; }
+        }
+        requestAnimationFrame(lacoCanvas);
+    }
+    function acordarCanvas() {
+        if (_cvRodando || _reduzMov() || document.hidden) return;
+        _cvRodando = true; requestAnimationFrame(lacoCanvas);
+    }
+    function ligarCanvas() {
+        new MutationObserver(() => { if (!_cvRodando && document.querySelector('canvas.ef-cv')) acordarCanvas(); })
+            .observe(document.body, { childList: true, subtree: true });
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) acordarCanvas(); });
+        acordarCanvas();
+    }
+
     function iniciar() {
         injetarDefs();
+        ligarCanvas();
         ligarOrb();
         document.addEventListener('animationiteration', sortearPosicao);
     }
@@ -957,5 +1212,5 @@ const Cosm = (() => {
 
     return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
         renderInventario, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
-        mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS };
+        mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, _passo: passoCanvas };
 })();

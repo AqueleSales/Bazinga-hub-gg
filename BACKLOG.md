@@ -77,6 +77,7 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [x] Mapa: reanuncia posição a cada 45 s e ao reconectar, filtro de fix ruim do GPS, ponto corrigido fica salvo 6 h, círculo de precisão some em 10 s.
 - [x] Reação instantânea (otimista + servidor responde antes do XP); configurações sem blur aninhado e com fundo pausado.
 - [x] Sons de entrada de arquivo: Gogeta = Teleporte (`static/audio/teleporte.mp3`), Sasuke = Sharingan (`sharingan.mp3`); o sintetizado fica de reserva.
+- [x] Amaterasu refeita (canvas, discreta, estilo anime) e Punição de Alma do Gogeta (espiral → bolha arco-íris → estoura). Falta o dono aprovar o visual no uso real.
 - [ ] **Testar com 2 pessoas**: queda de rede no meio da call (desligar o Wi-Fi 5 s), entrar em duas calls seguidas, ligar por DM com 2 abas, chamada de vídeo.
 - [ ] Se continuar sem conectar por rede: TURN próprio no Render (`TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL`).
 - [ ] Sons de DBZ/Naruto são material de terceiro: trocar por áudio próprio antes de abrir o laboratório pra loja pública.

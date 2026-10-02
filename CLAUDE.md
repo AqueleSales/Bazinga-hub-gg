@@ -1415,7 +1415,7 @@ ciclo separa→junta→funde roda sozinho, `.orb-grande`). Desenho em `DESENHO_B
 | Nome (`background-clip:text`) | Super Saiyajin | Mangekyō (tremor vermelho) | Fusão |
 | Faixa (`.banner-anim-*` + `::before` de faíscas/raios) | Aura Saiyajin | Tempestade Roxa | Fusão |
 | Efeito de avatar (`.ef-av`) | aura de chamas | **Olho Brilhante** (o anel do Sharingan acende em vermelho e volta ao normal, ciclo de 7 s) | — |
-| Efeito de perfil (`.ef-pf` por cima do cartão) | faíscas de ki (poeira cósmica) | raios caindo + chama negra de Amaterasu que sobe de baixo, cresce e volta | — |
+| Efeito de perfil (`.ef-pf` por cima do cartão) | poeira cósmica (CSS) + **Punição de Alma** (canvas) | raios caindo + chama negra de Amaterasu que sobe de baixo, cresce e volta | — |
 | Efeito de fala (`.video-card.fala-X.is-speaking`) | ki explode | Chidori | — |
 | Efeito do radar (classe na `.raio-onda`) | ondas douradas | ondas roxas | — |
 | Efeito do chat (digitando = brilho; Enter = faíscas/raio) | Ki no Teclado | Raio no Teclado | — |
@@ -1440,7 +1440,7 @@ filtra o valor em todo payload (`_json_de_servidor`, `servidor_mapa_para_json`).
 **Como o Sasuke v2 funciona** (feedback do 1º teste; asas de Susanoo, fogo em partículas e Punição de Alma foram testados e **descartados**): os **raios**
 desenham o traço de cima pra baixo (`stroke-dashoffset` 100→0 em ~0,1 s, `pathLength=100`); ao fim de cada ciclo (invisíveis) o evento `animationiteration`
 chama `sortearPosicao()` (`iniciar()` liga um listener só), que sorteia o `left` da próxima queda (elementos com `data-aleatorio="<nome da animação>"`). A **Amaterasu**
-é UMA faixa (`.ef-amaterasu`, 10 línguas de fogo geradas com `chamaD()`) que sobe de baixo, cresce até ~48% do cartão e volta (`efAmaterasu`, 12 s) — não são partículas. Os **tomoe**
+foi **refeita em canvas na Rodada 6** (ver "Efeitos em canvas"): a faixa de SVG parecia grama/espetos e o dono pediu algo discreto, tipo anime. Os **tomoe**
 do Sharingan são 6 `radial-gradient` no `::after` da moldura (o `inset` dele acompanha o do `::before` em cada contexto). O **Olho Brilhante** é só `box-shadow` animado no `.ef-av`.
 O pacote de cada tema pega o **1º item de cada tipo** (`_pacote`), então extras opcionais futuros não entram sozinhos.
 
@@ -1501,6 +1501,18 @@ pra ele, a pessoa aparecia duplicada na chamada e o mapa/radar ficava estranho. 
   não conecta e parece "sumiu da call".
 - **Sharingan esticado no card da call**: o anel da moldura é `::before` absoluto e o `.video-avatar` não era posicionado (só com
   `.com-ef`), então o anel se ancorava no card INTEIRO. `.video-avatar { position: relative }` no fim do `cosmeticos.css`.
+
+### Efeitos em canvas (Amaterasu do Sasuke, Punição de Alma do Gogeta)
+CSS não faz fogo orgânico nem vórtice, então esses dois efeitos de perfil são `<canvas class="ef-cv" data-ef="amaterasu|punicao">` dentro do `.ef-pf`.
+Um **motor único** em `cosmeticos.js` (`MOTORES`, `passoCanvas`, `ligarCanvas`; 30 fps) desenha todo canvas visível e **dorme** quando não há nenhum, a aba está
+escondida ou `prefers-reduced-motion`; um `MutationObserver` o acorda quando um canvas aparece (cartão, prévia do perfil, inventário). Efeito novo em canvas = objeto
+`{ novo(), desenhar(ctx, estado, t, dt, w, h, esc) }` em `MOTORES` + `<canvas data-ef>` no `htmlEfeitoPerfil`. `Cosm._passo(ts)` desenha um quadro na mão (usado pra testar
+no navegador com a aba em segundo plano, onde `requestAnimationFrame` não dispara).
+- **Amaterasu**: línguas de fogo pretas (gota com ponta curvada, balançam e "respiram") com halo lilás só na borda, mais fagulhas pretas. Um "nível" por ciclo de 14 s
+  controla quantas nascem e até onde sobem (no máximo ~15% do cartão, nunca espeto reto): sobe de leve e some.
+- **Punição de Alma** (ciclo de 17 s, a poeira dourada em CSS continua por baixo): partículas brancas entram em **espiral** (rastro curvo, giram mais rápido perto do centro)
+  → núcleo de luz branca cresce e vira a **bolha arco-íris** (borda laranja, rosa, miolo ciano/azul com braços do redemoinho e meia-lua verde, reflexo de bolha de sabão,
+  cintilar em volta) → **estoura** (flash, aro iridescente que expande, cacos coloridos). O item se chama "Poeira Cósmica e Punição de Alma".
 
 ### Sons de entrada de arquivo
 `ARQ_SOM` em `cosmeticos.js` mapeia o id do item pro arquivo em `app/static/audio/` (gogeta → `teleporte.mp3`, sasuke → `sharingan.mp3`; os itens

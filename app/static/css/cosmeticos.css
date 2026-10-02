@@ -438,18 +438,12 @@
 .ef-pf-sasuke .ef-raio path { stroke-dasharray: 100; stroke-dashoffset: 100; animation: efRaioTraco var(--t) linear var(--d) infinite; }
 @keyframes efRaioPisca { 0%, 86%, 100% { opacity: 0; } 86.4% { opacity: 1; } 89.5% { opacity: .2; } 91% { opacity: 1; } 94% { opacity: .55; } 96.5% { opacity: 0; } }
 @keyframes efRaioTraco { 0%, 86% { stroke-dashoffset: 100; } 88.6%, 100% { stroke-dashoffset: 0; } }
-/* a chama vem de baixo, cresce até quase metade do cartão, fica um pouco e volta; o resto do ciclo fica escondida */
-.ef-amaterasu { position: absolute; left: -2%; right: -2%; bottom: -3%; height: 48%; transform-origin: 50% 100%; transform: scaleY(0); opacity: 0; animation: efAmaterasu 12s ease-in-out -2s infinite; }
-.ef-amaterasu svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.ef-ama-luz path { fill: rgba(255, 255, 255, .22); filter: blur(1.5px); }
-.ef-ama-negra { filter: drop-shadow(0 0 5px rgba(167, 139, 250, .85)); }
-.ef-lingua { fill: rgba(5, 2, 10, .86); stroke: rgba(233, 213, 255, .9); stroke-width: .7; vector-effect: non-scaling-stroke; transform-origin: 50% 100%; transform-box: fill-box; animation: efLingua .9s ease-in-out infinite alternate; }
-@keyframes efAmaterasu { 0%, 14% { transform: scaleY(0); opacity: 0; } 22% { opacity: 1; } 46%, 58% { transform: scaleY(1); opacity: 1; } 78% { transform: scaleY(.1); opacity: .6; } 84%, 100% { transform: scaleY(0); opacity: 0; } }
-@keyframes efLingua { from { transform: scaleY(.86) skewX(-4deg); } to { transform: scaleY(1.1) skewX(4deg); } }
+/* Amaterasu e Punição de Alma são desenhadas em canvas (ver o motor em cosmeticos.js) */
+.ef-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
-    .ef-amaterasu, .ef-lingua, .ef-raio, .ef-raio path, .ef-av-sasuke, .moldura-sasuke::after { animation: none !important; }
-    .ef-amaterasu { opacity: 0; }
+    .ef-raio, .ef-raio path, .ef-av-sasuke, .moldura-sasuke::after { animation: none !important; }
+    .ef-cv { display: none; }
 }
 
 /* aura de Gogeta maior no cartão (a foto de lá é grande): o furo acompanha o novo tamanho */
