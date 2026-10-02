@@ -61,6 +61,9 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [ ] Placa (barrinha) ainda não aparece nas mensagens; estilo do nome não vai pro label do card da call.
 - [ ] Remover o HTML morto `#status-picker-menu` (agora nunca abre).
 
+## Próxima frente (planejada)
+- [ ] Patentes/badges/cosméticos Gogeta e Sasuke: ver `PLANO_COSMETICOS.md`.
+
 ## Falta
 - [ ] Vídeo como foto/faixa: escolher o trecho (hoje só os 6 s iniciais) e, se quiser, áudio não se aplica.
 - [ ] Tela de revisão de denúncias (hoje só pelo banco).

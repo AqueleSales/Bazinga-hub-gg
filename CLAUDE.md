@@ -1346,6 +1346,11 @@ pessoa — não enviamos e-mail do servidor).
   clique reseta). A janela mini da call também redimensiona.
 - DM: `relacao_entre` era consultada 2x por mensagem (permissão + conversa rápida); agora 1x (`pode_trocar_dm(..., rel)`).
 
+## Próxima frente: patentes, badges e cosméticos (Gogeta/Sasuke)
+Plano completo em **`PLANO_COSMETICOS.md`** (níveis 1–1000+ com patentes em ícone animado e hover "orb", badges exclusivos
+Criador/Beta Tester/Coder/"Só nós", laboratório de cosméticos só para o dono e o amigo, fundação de catálogo/inventário).
+Nada implementado ainda — leia aquele arquivo antes de começar.
+
 ---
 
 # Convenções
