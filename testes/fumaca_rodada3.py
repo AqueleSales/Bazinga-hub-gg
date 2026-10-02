@@ -46,7 +46,7 @@ with app.app_context():
     # ---- convite por MEMBRO (não só dono) ----
     dono.emit('criar_servidor_discord', {'nome': 'S' * 80})
     srv = ev(dono, 'servidor_discord_criado')[-1]['args'][0]
-    ok(len(srv['name']) == 40, 'Nome de servidor é cortado em 40 caracteres')
+    ok(len(srv['name']) == 80, 'Nome de servidor aceita até 100 (80 passou inteiro)')
     dono.emit('criar_convite', {'server_id': srv['id']})
     cod = ev(dono, 'convite_criado')[-1]['args'][0]['code']
     membro.emit('entrar_por_convite', {'code': cod}); ev(membro)
@@ -116,7 +116,7 @@ with app.app_context():
     # ---- limites de texto ----
     dono.emit('atualizar_perfil', {'name': 'N' * 90, 'pensando': 'p' * 200}); ev(dono)
     pdono = Person.query.get(ids['Dono'])
-    ok(len(pdono.name) == 32 and len(pdono.pensando) == 60, 'Nome de exibição (32) e "pensando" (60) têm limite no servidor')
+    ok(len(pdono.name) == 24 and len(pdono.pensando) == 50, 'Nome de exibição (24) e "pensando" (50) têm limite no servidor')
 
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)

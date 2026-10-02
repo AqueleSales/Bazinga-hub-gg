@@ -81,11 +81,14 @@ def _sair_de_call(chave, peer_id):
 
 # Limites de texto: nome grande quebrava listas/sidebar (e o marquee rolava sem parar). O cliente usa os mesmos
 # números em `maxlength` - mudou aqui, mude lá.
-LIM_NOME_EXIBICAO = 32
-LIM_NOME_SERVIDOR = 40
+LIM_NOME_EXIBICAO = 24
+LIM_USERNAME = 20
+LIM_NOME_SERVIDOR = 100
 LIM_NOME_CANAL = 32
 LIM_NOTA = 140
-LIM_STATUS = 60
+LIM_STATUS = 25        # status personalizado
+LIM_PENSANDO = 50      # "pensando agora"
+LIM_PRONOMES = 15
 
 
 def temp_id_seguro(dados):
@@ -1952,7 +1955,7 @@ def atualizar_perfil(dados):
                 valida = bool(re.match(r'^#[0-9a-fA-F]{6}$', cor)) or (cor.startswith('anim:') and cor[5:] in FAIXAS_ANIMADAS)
                 usuario.banner_color = cor if valida else None
             if 'pronomes' in dados:
-                usuario.pronomes = (dados.get('pronomes') or '').strip()[:40] or None
+                usuario.pronomes = (dados.get('pronomes') or '').strip()[:LIM_PRONOMES] or None
             if 'banner_url' in dados:
                 # Caminho do site, Cloudinary ou Giphy (mesma regra do avatar e do tema -
                 # antes só aceitava os dois primeiros, então o GIF escolhido nas
@@ -1967,7 +1970,7 @@ def atualizar_perfil(dados):
             if 'status_emoji' in dados:
                 usuario.status_emoji = (dados.get('status_emoji') or '').strip()[:16] or None
             if 'pensando' in dados:
-                usuario.pensando = (dados.get('pensando') or '').strip()[:LIM_STATUS] or None
+                usuario.pensando = (dados.get('pensando') or '').strip()[:LIM_PENSANDO] or None
             if 'perfil_tema' in dados:
                 tema = (dados.get('perfil_tema') or '').strip()
                 usuario.perfil_tema = tema if tema and tema_perfil_valido(tema) else None

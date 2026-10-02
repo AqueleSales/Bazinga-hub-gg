@@ -508,7 +508,7 @@ FAIXAS_ANIMADAS = ('aurora', 'oceano', 'fogo', 'sakura', 'neon', 'galaxia', 'our
 
 _RE_TEMA_COR = re.compile(r'^(grad:#[0-9a-fA-F]{6},#[0-9a-fA-F]{6}|solid:#[0-9a-fA-F]{6})$')
 _RE_GIPHY = re.compile(r'^https://media\d*\.giphy\.com/')
-_RE_USERNAME = re.compile(r'^[a-z0-9_.]{3,32}$')
+_RE_USERNAME = re.compile(r'^[a-z0-9_.]{3,20}$')
 
 
 def url_de_imagem_ok(url):
@@ -586,9 +586,9 @@ def _slug(texto):
 def gerar_username(nome, email=None):
     """'Aquele Sales' -> 'aquele.sales' (com sufixo numérico se já existir)."""
     base = _slug(nome) or _slug((email or '').split('@')[0]) or 'usuario'
-    base = base[:26]
+    base = base[:16]          # sobra espaço pro sufixo numérico dentro do limite de 20
     if len(base) < 3:
-        base = (base + '.usuario')[:26]
+        base = (base + '.usuario')[:16]
     candidato, n = base, 1
     while Person.query.filter_by(username=candidato).first():
         n += 1

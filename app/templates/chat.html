@@ -2314,6 +2314,13 @@
         .redimensionador.esq { left: -4px; }
         body.redimensionando { cursor: col-resize; user-select: none; }
         body.redimensionando iframe, body.redimensionando #bazinga-map { pointer-events: none; }
+
+        /* ---- barra do usuário: a PLACA escolhida aparece com o efeito, sem cara de botão ---- */
+        .user-profile-bar, .user-profile-bar[class*="placa-"] { border: none !important; box-shadow: none !important; border-radius: 10px; }
+        .user-profile-bar[class*="placa-"] { background-size: 220% 100% !important; animation: placaFluxo 9s ease-in-out infinite !important; }
+        .user-info { flex: 1; min-width: 0; }
+        .user-info .username { text-overflow: clip; white-space: nowrap; overflow: hidden; }
+        .chat-messages, #dm-messages-container { overscroll-behavior: contain; }
 </style>
 </head>
 <body>
@@ -2888,7 +2895,7 @@
                 </div>
                 <div class="control-group" style="width: 100%; text-align: left; border: none; padding: 0; margin-top: 24px;">
                     <span class="control-label" style="font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block;">Nome do servidor <span style="color: var(--red-color);">*</span></span>
-                    <input type="text" class="discord-input" id="new-server-name-input" maxlength="40" value="Servidor de {{ usuario_atual.name }}">
+                    <input type="text" class="discord-input" id="new-server-name-input" maxlength="100" value="Servidor de {{ usuario_atual.name }}">
                     <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Ao criar um servidor, você concorda em manter o clima do {{ app_nome }}.</span>
                 </div>
             </div>
@@ -3155,7 +3162,7 @@
 
                 <div>
                     <label class="bz-label">Nome do servidor</label>
-                    <input type="text" id="cfg-server-name" class="bz-input" maxlength="40" style="padding-left: 12px;">
+                    <input type="text" id="cfg-server-name" class="bz-input" maxlength="100" style="padding-left: 12px;">
                 </div>
 
                 <div>
@@ -3230,7 +3237,7 @@
 
                 <div class="sf-campo">
                     <label class="bz-label">Nome do servidor</label>
-                    <input type="text" id="sf-nome" class="bz-input" maxlength="40" style="padding-left:12px;">
+                    <input type="text" id="sf-nome" class="bz-input" maxlength="100" style="padding-left:12px;">
                 </div>
 
                 <div class="sf-campo">
@@ -3748,17 +3755,17 @@
                                 <div class="pf-bloco-tit">Identidade</div>
                                 <div class="pf-grupo">
                                     <label class="control-label" for="pf-nome">Nome de exibição</label>
-                                    <input type="text" class="discord-input" id="pf-nome" maxlength="32" autocomplete="off">
+                                    <input type="text" class="discord-input" id="pf-nome" maxlength="24" autocomplete="off">
                                     <span class="pf-dica">É o que aparece pra todo mundo - pode ter estilo e efeito.</span>
                                 </div>
                                 <div class="pf-grupo">
                                     <label class="control-label" for="pf-username">Nome da conta</label>
-                                    <div class="pf-arroba"><span>@</span><input type="text" class="discord-input" id="pf-username" maxlength="32" autocomplete="off" spellcheck="false"></div>
+                                    <div class="pf-arroba"><span>@</span><input type="text" class="discord-input" id="pf-username" maxlength="20" autocomplete="off" spellcheck="false"></div>
                                     <span class="pf-dica">É o que as pessoas digitam pra te adicionar. Letras minúsculas, números, ponto e _.</span>
                                 </div>
                                 <div class="pf-grupo">
                                     <label class="control-label" for="pf-pronomes">Pronomes</label>
-                                    <input type="text" class="discord-input" id="pf-pronomes" maxlength="40" placeholder="ele/dele, ela/dela, elu/delu..." autocomplete="off">
+                                    <input type="text" class="discord-input" id="pf-pronomes" maxlength="15" placeholder="ele/dele, ela/dela, elu/delu..." autocomplete="off">
                                 </div>
                             </div>
 
@@ -3819,14 +3826,14 @@
                                     <label class="control-label" for="pf-status">Status personalizado</label>
                                     <div class="custom-status-row">
                                         <button class="emoji-picker-btn" type="button" id="pf-status-emoji" title="Escolher emoji"><i class="fa-solid fa-face-smile"></i></button>
-                                        <input type="text" class="discord-input" id="pf-status" maxlength="60" placeholder="Ex.: Jogando Valorant, Estudando..." autocomplete="off">
+                                        <input type="text" class="discord-input" id="pf-status" maxlength="25" placeholder="Ex.: Jogando Valorant, Estudando..." autocomplete="off">
                                         <button type="button" class="pf-mini" id="pf-status-limpar" title="Limpar">Limpar</button>
                                     </div>
                                     <span class="pf-dica">É o texto do seu status (no lugar de "Disponível"). Com a presença "Personalizado", o emoji também vira a sua bolinha.</span>
                                 </div>
                                 <div class="pf-grupo">
                                     <label class="control-label" for="pf-pensando">Pensando agora</label>
-                                    <input type="text" class="discord-input" id="pf-pensando" maxlength="60" placeholder="O que passa pela sua cabeça?" autocomplete="off">
+                                    <input type="text" class="discord-input" id="pf-pensando" maxlength="50" placeholder="O que passa pela sua cabeça?" autocomplete="off">
                                     <span class="pf-dica">Vira o balão ao lado da sua foto e o textinho embaixo do seu nome nas listas.</span>
                                 </div>
                             </div>
@@ -7602,8 +7609,11 @@
             if (extras.animar) div.classList.add('nova');
 
             emojificar(div);
+            // Só vai pro fim se a pessoa JÁ estava perto do fim (ou foi ela que mandou). Antes toda mensagem/foto puxava a
+            // tela pra baixo mesmo com você lendo o histórico lá em cima - era o "elementos avançam sozinhos" quando a rede estava lenta.
+            const pertoDoFim = (container.scrollHeight - container.scrollTop - container.clientHeight) < 160;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            if (pertoDoFim || extras.pendente) container.scrollTop = container.scrollHeight;
             return div;
         }
 
@@ -12395,7 +12405,7 @@
         function ligarHistorico(container, urlDe, aoRenderizar) {
             let carregando = false;
             container.addEventListener('scroll', async () => {
-                container.dataset.noFim = (container.scrollHeight - container.scrollTop - container.clientHeight < 120) ? '1' : '0';
+                container.dataset.noFim = (container.scrollHeight - container.scrollTop - container.clientHeight < 160) ? '1' : '0';
                 if (container.scrollTop > 100 || container.dataset.temMais !== '1' || carregando) return;
                 const primeiro = [...container.querySelectorAll('.message[data-msg-id]')].map(e => Number(e.dataset.msgId)).filter(n => n > 0);
                 if (!primeiro.length) return;
@@ -12540,7 +12550,7 @@
         socket.on('usuario_saiu_call', () => tocarSom('call_sair'));
 
         // ---------- MARQUEE: texto grande rola devagar (3s parado no começo, vai até o fim, 3s, volta) ----------
-        const MQ_SELETOR = '.dm-nome, .dm-sub, .dm-head-nome, .av2-nome, .av2-sub, .pc-nome > span, .pc-usuario, .convidar-item span:last-child, .user-info .username, .user-info .status-text, #server-members-sidebar .channel-item > div:last-child > span';
+        const MQ_SELETOR = '.dm-nome, .dm-sub, .dm-head-nome, .av2-nome, .av2-sub, .pc-nome > span, .pc-usuario, .convidar-item span:last-child, #server-members-sidebar .channel-item > div:last-child > span';
         const MQ_RAIZES = '#dms-sidebar, #amigos-view, #server-members-sidebar, .user-profile-bar, #radar-header-title, #user-popout, #convidar-lista, #dm-contato-menu';
 
         function mqDesfazer(el, inner) {
@@ -12602,6 +12612,23 @@
         }
         document.addEventListener('click', mqAgendar, true);
         mqAgendar();
+
+        // ---------- nome na barra do usuário: encolhe a fonte pra caber (sem "Aquele Sa..." nem rolagem alternando) ----------
+        (function () {
+            const el = document.getElementById('bottom-username-text');
+            if (!el) return;
+            let ocupado = false;
+            function ajustar() {
+                if (ocupado) return; ocupado = true;
+                let fs = 13.5; el.style.fontSize = fs + 'px';
+                while (el.scrollWidth > el.clientWidth + 1 && fs > 10) { fs -= 0.5; el.style.fontSize = fs + 'px'; }
+                ocupado = false;
+            }
+            new MutationObserver(ajustar).observe(el, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+            if (window.ResizeObserver) new ResizeObserver(ajustar).observe(el.parentElement);
+            window.addEventListener('resize', ajustar);
+            ajustar(); setTimeout(ajustar, 600);
+        })();
 
         // ---------- barras laterais redimensionáveis ----------
         (function () {
