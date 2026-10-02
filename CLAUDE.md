@@ -1423,6 +1423,13 @@ ciclo separa→junta→funde roda sozinho, `.orb-grande`). Desenho em `DESENHO_B
 | **Efeito de servidor** (ícone na barra + nome no cabeçalho + pino no mapa) | Chamas do Servidor | Tempestade do Servidor | Fusão do Servidor |
 | Pacote (equipa o tema inteiro) | ✓ | ✓ | ✓ (só os 4 visuais) |
 
+**Montanha das Patentes** (botão "!" ao lado da patente no cartão, no Battle Pass e na aba Patentes do inventário; `Cosm.abrirMontanha`): tela cheia que começa no
+pé da montanha e rola pra cima; as patentes ficam "cravadas" em placas de pedra com o nível que pedem, **caem com estrondo** quando entram na tela
+(`IntersectionObserver`; a montanha treme com `--f` que cresce até ~6 px nas altas, e `Cosm.somImpacto` sintetiza o estrondo), nuvens e aves passam, e a luz/sol
+aparecem conforme se sobe (`--luz` = progresso da rolagem). Uma bandeira marca onde a pessoa está e a trilha dourada vai até ela. Topo fixo com o X e o ESC (o ESC
+fecha só a montanha: listener em captura + `stopImmediatePropagation`). Tabela de patentes vem do servidor (`inventario.patentes`), então mudar faixa em `cosmeticos.PATENTES` muda a montanha.
+Perfil/mensagem: molduras e auras na foto pequena das mensagens ficam **sem `filter` difuso** (era o "fade" em volta da imagem).
+
 **Efeito de servidor** é diferente dos outros: não é um slot da pessoa, é do **servidor** (`Server.efeito`, coluna nova). O inventário tem o botão
 "Aplicar a um servidor" (lista só os servidores onde a pessoa é dono). Evento `aplicar_efeito_servidor {server_id, valor}`: o servidor confere que a pessoa
 administra o servidor (`servidor_gerenciavel`) **e** possui o item, grava, reenvia o servidor a todos os membros (`avisar_servidor`) e atualiza o pino do mapa

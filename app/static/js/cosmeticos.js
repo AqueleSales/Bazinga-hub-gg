@@ -716,7 +716,7 @@ const Cosm = (() => {
 
         let corpo;
         if (aba === 'patentes') {
-            corpo = `<p class="inv-dica">Seu nível é a experiência total acumulada, de 1 a 1000+. A patente muda a cada faixa e o ícone ganha mais animação quanto maior ela for. Passe o mouse num ícone pra ver o nome.</p>${htmlPatentesInv(estado)}`;
+            corpo = `<p class="inv-dica">Seu nível é a experiência total acumulada, de 1 a 1000+. A patente muda a cada faixa e o ícone ganha mais animação quanto maior ela for. Passe o mouse num ícone pra ver o nome.</p><button type="button" class="inv-btn" data-acao="montanha" style="margin:0 0 14px"><i class="fa-solid fa-mountain-sun"></i> Ver a montanha das patentes</button>${htmlPatentesInv(estado)}`;
         } else {
             const ex = exclusivos.filter(dentro), li = livres.filter(dentro);
             const sec = (titulo, lista, dica) => lista.length
@@ -737,6 +737,7 @@ const Cosm = (() => {
                 const c = el._invCtx;
                 const aba2 = e.target.closest('.inv-aba');
                 if (aba2) { c.aoAba && c.aoAba(aba2.dataset.aba); return; }
+                if (e.target.closest('[data-acao="montanha"]')) { c.aoMontanha && c.aoMontanha(); return; }
                 const srvBtn = e.target.closest('[data-acao="servidor"]');
                 if (srvBtn) { c.aoServidor && c.aoServidor(srvBtn.closest('.inv-item').dataset.item.split(':')[1]); return; }
                 const ouvir = e.target.closest('[data-acao="ouvir"]');
@@ -747,6 +748,186 @@ const Cosm = (() => {
                 c.aoEquipar && c.aoEquipar(it.dataset.item);
             });
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // MONTANHA DAS PATENTES: tela cheia, rola pra cima. As patentes estão "cravadas" na montanha no nível que pedem; cada uma
+    // CAI e faz um estrondo (mais forte, mas contido, quanto mais alta). Nuvens e aves passam; lá em cima nasce o sol.
+    // ---------------------------------------------------------------------
+    const MT_BASE = 560, MT_PASSO = 400, MT_TOPO = 900;      // px: chão até a 1ª patente, entre patentes, folga no topo
+
+    /** Estrondo sintetizado (grave + ruído). forca 0-1. */
+    function somImpacto(ctx, forca) {
+        if (!ctx) return;
+        const f = Math.min(Math.max(forca, 0.1), 1), t0 = ctx.currentTime;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(95, t0); o.frequency.exponentialRampToValueAtTime(34, t0 + .38);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(.16 + .34 * f, t0 + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + .5);
+        o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0 + .55);
+        const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .3), ctx.sampleRate), d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+        const r = ctx.createBufferSource(); r.buffer = buf;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260 + 500 * f;
+        const gr = ctx.createGain(); gr.gain.value = .12 + .3 * f;
+        r.connect(lp); lp.connect(gr); gr.connect(ctx.destination); r.start(t0);
+    }
+
+    let _mtFechar = null;
+
+    /** op: { patentes (tabela do servidor), nivel, patente (atual), impacto(forca) } */
+    function abrirMontanha(op) {
+        if (_mtFechar) _mtFechar();
+        const pats = op.patentes || [];
+        if (!pats.length) return;
+        const N = pats.length, H = MT_BASE + (N - 1) * MT_PASSO + MT_TOPO;
+        const reduz = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const nivel = Math.max(parseInt(op.nivel, 10) || 1, 1);
+
+        // x (em %) de cada estação: zigue-zague que vai fechando conforme a montanha estreita
+        const xDe = (i) => 50 + (i % 2 ? 1 : -1) * (21 - (i / Math.max(N - 1, 1)) * 9);
+        const yDe = (i) => MT_BASE + i * MT_PASSO;                          // distância do chão
+
+        // onde a pessoa está (entre a estação da patente dela e a próxima)
+        let pi = 0;
+        pats.forEach((p, i) => { if (nivel >= p.de) pi = i; });
+        const p0 = pats[pi];
+        const frac = p0.ate == null ? Math.min((nivel - p0.de) / 300, 1) : Math.min((nivel - p0.de) / (p0.ate - p0.de + 1), 1);
+        const yEu = yDe(pi) + (pi < N - 1 ? frac * MT_PASSO : frac * 260);
+
+        // ---- silhueta arredondada da montanha (sem pontas) ----
+        const yTopo = H - (yDe(N - 1) + 300), alt = H - yTopo;
+        // paredão largo que vai afinando devagar e fecha numa cúpula arredondada no topo (nada de ponta)
+        const meia = (t) => {
+            const base = 400 - 70 * Math.min(t / .82, 1) + 22 * Math.sin(t * 41) + 12 * Math.sin(t * 13);
+            if (t <= .82) return base;
+            const u = (t - .82) / .18;
+            return Math.max(base * Math.sqrt(Math.max(1 - u * u, 0)), 0);
+        };
+        const esq = [], dir = [];
+        for (let k = 0; k <= 48; k++) {
+            const t = k / 48, y = H - t * alt, m = meia(t);
+            esq.push([500 - m + 10 * Math.sin(t * 9), y]); dir.push([500 + m + 10 * Math.cos(t * 7), y]);
+        }
+        let d = `M${esq[0][0].toFixed(1)} ${H}`;
+        esq.forEach(([x, y]) => { d += ` L${x.toFixed(1)} ${y.toFixed(1)}`; });
+        for (let k = dir.length - 1; k >= 0; k--) d += ` L${dir[k][0].toFixed(1)} ${dir[k][1].toFixed(1)}`;
+        d += ` L${dir[0][0].toFixed(1)} ${H} Z`;
+        const colina = (cx, larg, h, cor) => `<path d="M${cx - larg} ${H} C${cx - larg * .6} ${H - h} ${cx + larg * .6} ${H - h} ${cx + larg} ${H} Z" fill="${cor}"/>`;
+        const montanhaLonge = (cx, larg, h, cor) => `<path d="M${cx - larg} ${H} C${cx - larg * .55} ${H - h * 1.05} ${cx - larg * .2} ${H - h} ${cx} ${H - h} C${cx + larg * .2} ${H - h} ${cx + larg * .55} ${H - h * 1.05} ${cx + larg} ${H} Z" fill="${cor}"/>`;
+
+        // trilha: pontos das estações; a parte já percorrida é dourada e termina na pessoa
+        const pt = (i) => [xDe(i) * 10, H - yDe(i) - 70];
+        const todos = pats.map((_, i) => pt(i));
+        const eu = [(pi % 2 ? 1 : -1) * 0 + 500, H - yEu];
+        const feitos = [[500, H - 90], ...todos.slice(0, pi + 1), eu];
+        const linha = (pts) => 'M' + pts.map(([x, y]) => `${x.toFixed(0)} ${y.toFixed(0)}`).join(' L');
+
+        const estrelas = [...Array(46)].map((_, i) => `<i class="mt-estrela" style="left:${(i * 53 + 7) % 100}%;bottom:${(i * 97) % 1900 + 20}px;--t:${2 + (i % 5)}s;--d:-${i % 7}s"></i>`).join('');
+        const nuvens = [...Array(9)].map((_, i) => {
+            const b = 300 + i * ((H - 800) / 9) + ((i * 131) % 160), w = 190 + (i * 47) % 150, t = 70 + (i * 23) % 70;
+            return `<div class="mt-nuvem ${i % 3 === 0 ? 'frente' : ''}" style="bottom:${b.toFixed(0)}px;width:${w}px;height:${(w * .36).toFixed(0)}px;--t:${t}s;--d:-${(i * 17) % t}s"></div>`;
+        }).join('');
+        const aves = [...Array(7)].map((_, i) => {
+            const b = 500 + i * ((H - 900) / 7) + ((i * 89) % 200), t = 16 + (i * 5) % 14;
+            return `<svg class="mt-ave" viewBox="0 0 28 12" style="bottom:${b.toFixed(0)}px;--t:${t}s;--d:-${(i * 7) % t}s;--e:${i % 2 ? 1 : -1}"><path d="M1 8 Q7 0 14 7 Q21 0 27 8" fill="none" stroke="#1d1a2b" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+        }).join('');
+
+        const est = pats.map((p, i) => {
+            const alcancada = nivel >= p.de;
+            const subs = [0, 1, 2].map(k => {
+                const pat = { id: p.id, sub: k + 1, anim: p.anim, nome_completo: `${p.nome} ${ROMANOS[k]}`, proximo: null };
+                return `<div class="mt-col ${nivel >= p.limites[k] ? '' : 'longe'}" style="--d:${k * 140}ms">
+                    <div class="mt-queda">${htmlPatente(pat, 62, { nivel: p.limites[k] })}</div>
+                    <div class="mt-placa"><b>${ROMANOS[k]}</b> Nv. ${p.limites[k]}</div></div>`;
+            }).join('');
+            return `<div class="mt-est ${alcancada ? '' : 'longe-est'}" data-i="${i}" style="left:${xDe(i).toFixed(1)}%;bottom:${yDe(i)}px;--f:${(1.2 + (i / Math.max(N - 1, 1)) * 5).toFixed(1)}">
+                <div class="mt-nome" style="--cor:${esc(p.cor || '#fff')}">${esc(p.nome)}<small>${p.ate == null ? `Nível ${p.de}+` : `Níveis ${p.de} a ${p.ate}`}</small></div>
+                <div class="mt-icos">${subs}</div><div class="mt-pedra"></div></div>`;
+        }).join('');
+
+        const ov = document.createElement('div');
+        ov.id = 'montanha'; ov.className = 'mt'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Montanha das patentes');
+        ov.innerHTML = `
+            <div class="mt-topo">
+                <div class="mt-tit"><b>Montanha das Patentes</b><small>Você está no nível ${nivel} · ${esc((op.patente && op.patente.nome_completo) || p0.nome)}</small></div>
+                <button type="button" class="mt-pos"><i class="fa-solid fa-location-crosshairs"></i> Minha posição</button>
+                <div class="mt-fechar"><button type="button" class="mt-x" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button><span>ESC</span></div>
+            </div>
+            <div class="mt-cena"><div class="mt-mundo" style="height:${H}px">
+                <div class="mt-ceu"></div>
+                <div class="mt-estrelas">${estrelas}</div>
+                <div class="mt-sol" style="top:${Math.max(yTopo - 520, 40)}px"><div class="mt-sol-raios"></div><div class="mt-sol-disco"></div></div>
+                <svg class="mt-svg mt-par" style="--k:.2" viewBox="0 0 1000 ${H}" preserveAspectRatio="none">${montanhaLonge(110, 260, 380, '#2a2f55')}${montanhaLonge(900, 300, 440, '#2b2c58')}</svg>
+                <svg class="mt-svg mt-par" style="--k:.1" viewBox="0 0 1000 ${H}" preserveAspectRatio="none">${montanhaLonge(40, 230, 250, '#3a3260')}${montanhaLonge(960, 260, 300, '#3c3363')}</svg>
+                <svg class="mt-svg" viewBox="0 0 1000 ${H}" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="mt-g-pedra" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2f2626"/><stop offset=".3" stop-color="#574c55"/><stop offset=".65" stop-color="#9a93a8"/><stop offset="1" stop-color="#e3dff0"/></linearGradient>
+                        <linearGradient id="mt-g-neve" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+                        <clipPath id="mt-clip"><path d="${d}"/></clipPath>
+                    </defs>
+                    <path d="${d}" fill="url(#mt-g-pedra)"/>
+                    <g clip-path="url(#mt-clip)"><rect x="0" y="${yTopo}" width="1000" height="${(alt * .22).toFixed(0)}" fill="url(#mt-g-neve)" opacity=".95"/>
+                        <path d="M0 ${H} H1000 V${H - 220} Q700 ${H - 330} 500 ${H - 250} T0 ${H - 300} Z" fill="#000" opacity=".28"/></g>
+                    <g clip-path="url(#mt-clip)" fill="none" stroke="#fff" stroke-opacity=".07" stroke-width="3">${[...Array(Math.floor(alt / 150))].map((_, k) => `<path d="M0 ${(H - 60 - k * 150).toFixed(0)} Q${300 + (k * 97) % 400} ${(H - 100 - k * 150).toFixed(0)} 1000 ${(H - 40 - k * 150).toFixed(0)}"/>`).join('')}</g>
+                    <path d="${linha(todos.concat([[500, yTopo + 60]]))}" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="3" stroke-dasharray="3 14" stroke-linecap="round"/>
+                    <path d="${linha(feitos)}" fill="none" stroke="#ffd76a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" class="mt-feito"/>
+                    ${colina(150, 330, 190, '#1d1722')}${colina(560, 460, 150, '#171219')}${colina(930, 300, 210, '#1b151f')}
+                </svg>
+                <div class="mt-nuvens">${nuvens}</div>
+                ${est}
+                <div class="mt-eu" style="bottom:${yEu.toFixed(0)}px"><div class="mt-eu-anel"></div><i class="fa-solid fa-flag"></i><span>Você · Nv. ${nivel}</span></div>
+                <div class="mt-aves">${aves}</div>
+            </div></div>
+            <div class="mt-luz"></div>`;
+        document.body.appendChild(ov);
+        document.body.classList.add('mt-aberta');
+
+        const cena = ov.querySelector('.mt-cena'), mundo = ov.querySelector('.mt-mundo');
+        let mexeu = false, tremeTimer = null;
+        const max = () => cena.scrollHeight - cena.clientHeight;
+        cena.scrollTop = max();                                   // começa no pé da montanha
+        const irPara = (suave) => cena.scrollTo({ top: Math.max(0, Math.min(max(), H - yEu - cena.clientHeight / 2)), behavior: suave ? 'smooth' : 'auto' });
+
+        const aoRolar = () => {
+            const m = max() || 1, p = 1 - cena.scrollTop / m;
+            ov.style.setProperty('--luz', Math.min(Math.max((p - .5) / .5, 0), 1).toFixed(3));
+            mundo.style.setProperty('--sy', cena.scrollTop.toFixed(0));
+        };
+        cena.addEventListener('scroll', aoRolar, { passive: true });
+        ['wheel', 'touchstart', 'pointerdown'].forEach(ev => cena.addEventListener(ev, () => { mexeu = true; }, { passive: true }));
+        aoRolar();
+
+        // cada patente cai quando entra na tela; a montanha treme e o estrondo cresce com a altura (sem exagero)
+        const obs = new IntersectionObserver((itens) => {
+            itens.forEach(it => {
+                if (!it.isIntersecting) return;
+                const el = it.target; obs.unobserve(el);
+                el.classList.add('on');
+                if (reduz) return;
+                const i = Number(el.dataset.i), f = Number(el.style.getPropertyValue('--f')) || 1;
+                setTimeout(() => {
+                    mundo.style.setProperty('--f', f);
+                    mundo.classList.remove('treme'); void mundo.offsetWidth; mundo.classList.add('treme');
+                    clearTimeout(tremeTimer); tremeTimer = setTimeout(() => mundo.classList.remove('treme'), 520);
+                    if (op.impacto) op.impacto(.25 + .6 * (i / Math.max(N - 1, 1)));
+                }, 520);
+            });
+        }, { root: cena, threshold: .35 });
+        ov.querySelectorAll('.mt-est').forEach(e => obs.observe(e));
+        if (reduz) ov.querySelectorAll('.mt-est').forEach(e => e.classList.add('on'));
+
+        const t1 = setTimeout(() => { if (!mexeu) irPara(true); }, 1100);
+        const fechar = () => {
+            clearTimeout(t1); clearTimeout(tremeTimer); obs.disconnect();
+            document.removeEventListener('keydown', aoTecla, true);
+            document.body.classList.remove('mt-aberta');
+            ov.remove(); _mtFechar = null;
+        };
+        const aoTecla = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); fechar(); } };
+        document.addEventListener('keydown', aoTecla, true);
+        ov.querySelector('.mt-x').addEventListener('click', fechar);
+        ov.querySelector('.mt-pos').addEventListener('click', () => irPara(true));
+        _mtFechar = fechar;
     }
 
     function iniciar() {
@@ -762,6 +943,6 @@ const Cosm = (() => {
     }
 
     return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
-        renderInventario, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
+        renderInventario, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
         mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS };
 })();

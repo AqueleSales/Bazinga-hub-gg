@@ -2780,7 +2780,7 @@
                             <div class="bp-nivel-badge" id="bp-nivel-numero">1</div>
                         </div>
                         <div class="bp-info">
-                            <div class="bp-rank bp-rank-patente"><span id="bp-patente-ico" class="bp-patente-ico"></span> <span id="bp-rank-texto">{{ patente_inicial.nome_completo }}</span></div>
+                            <div class="bp-rank bp-rank-patente"><span id="bp-patente-ico" class="bp-patente-ico"></span> <span id="bp-rank-texto">{{ patente_inicial.nome_completo }}</span> <button type="button" class="pc-info" id="bp-montanha" title="Ver a montanha das patentes">!</button></div>
                             <div class="bp-titulo">Nível <span id="bp-nivel-texto">1</span></div>
                             <div class="bp-barra-wrapper">
                                 <div class="bp-barra-fundo"><div class="bp-barra-preenchida" id="bp-barra-preenchida" style="width: 0%;"></div></div>
@@ -8527,6 +8527,7 @@
                 <span class="pc-chip nivel" title="Nível: experiência total acumulada">Nv. ${Number(pf.nivel || 1)}</span>
                 <span class="pc-patente">${Cosm.htmlPatente(pat, 34, { nivel: pf.nivel })}</span>
                 ${(pf.badges && pf.badges.length) ? `<span class="pc-sep-ins"></span><span class="pc-insignias">${Cosm.htmlBadges(pf.badges, 24)}</span>` : ''}
+                <button type="button" class="pc-info" data-acao="montanha" title="Como funcionam as patentes e as insígnias">!</button>
             </div>`;
 
             const linhaUsuario = (pf.username || pf.pronomes)
@@ -8718,6 +8719,7 @@
             if (acao === 'editar') { fecharCartao(); abrirConfigPerfil(); return; }
             if (acao === 'editar-status') { fecharCartao(); abrirConfigPerfil('pf-pensando'); return; }
             if (acao === 'conta') { fecharCartao(); abrirConfigPerfil('pf-conta-ancora'); return; }
+            if (acao === 'montanha') { fecharCartao(); abrirMontanhaPatentes(); return; }
             if (acao === 'sair') { window.location.href = "{{ url_for('auth.logout') }}"; return; }
             if (!d) return;
 
@@ -9310,6 +9312,7 @@
                 },
                 servidoresComEfeito: (valor) => meUserServers.filter(s => s.efeito === valor).map(s => s.name),
                 aoServidor: (valor) => abrirEscolhaDeServidor(valor),
+                aoMontanha: () => abrirMontanhaPatentes(),
                 aoOuvir: (idSom) => {
                     const ctx = garantirAudio();
                     if (!ctx) { showToast('O navegador bloqueou o áudio - clique na página e tente de novo.', 'warning'); return; }
@@ -9370,6 +9373,19 @@
             showToast(d.efeito ? 'Efeito aplicado ao servidor!' : 'Efeito removido do servidor.', 'success');
             desenharInventario();
         });
+
+        // Montanha das patentes: tela cheia (patentes cravadas no nível que pedem; caem com estrondo ao aparecer)
+        function abrirMontanhaPatentes() {
+            Cosm.abrirMontanha({
+                patentes: inventario.patentes, nivel: perfilMeu.nivel, patente: perfilMeu.patente,
+                impacto: (forca) => {
+                    if (!somLigado() || perfilMeu.status === 'dnd') return;
+                    const ctx = garantirAudio();
+                    if (ctx && ctx.state === 'running') Cosm.somImpacto(ctx, forca);
+                }
+            });
+        }
+        document.getElementById('bp-montanha')?.addEventListener('click', (e) => { e.stopPropagation(); abrirMontanhaPatentes(); });
 
         function abrirInventario(aba) {
             if (aba) invAba = aba;

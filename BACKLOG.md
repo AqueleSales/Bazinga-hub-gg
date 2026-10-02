@@ -64,6 +64,8 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [ ] Rodar `python atualizar_banco.py` no deploy (colunas `person.equipados` e `server.efeito` + concede o laboratório).
 - [ ] Patente/insígnia ao lado do nome em mensagens e lista de membros (precisa do nível do autor no payload).
 - [x] Efeito de servidor (ícone na barra, cabeçalho e pino no mapa), aplicado pelo dono.
+- [x] Montanha das Patentes (botão "!" ao lado da patente).
+- [ ] Títulos comemorativos de temporada (o usuário escolhe no perfil) e Battle Pass 1–100 próprio (separado do nível da conta).
 - [ ] Gadget do mapa (música tipo Spotify): confirmar com o dono o que ele imagina.
 - [ ] Loja/economia/Battle Pass temático (Dracmas, raridade) em cima da `Posse`.
 

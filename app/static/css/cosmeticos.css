@@ -459,3 +459,95 @@
    (raio da foto = 67,6% da caixa da aura). Era o "fade" estranho em volta da imagem. */
 .message .ef-av-gogeta { filter: none; opacity: 1; -webkit-mask: radial-gradient(closest-side, transparent 67%, #000 68.5%); mask: radial-gradient(closest-side, transparent 67%, #000 68.5%); }
 .message .ef-av-gogeta b:nth-child(2) { mix-blend-mode: normal; opacity: .7; }
+
+/* ==========================================================================
+   MONTANHA DAS PATENTES (botão "!" ao lado da patente) + fim do "fade" nas fotos das mensagens
+   ========================================================================== */
+.pc-info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 2px; padding: 0; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .06); color: var(--text-muted); font-size: 12px; font-weight: 900; line-height: 1; cursor: pointer; transition: background-color .2s, color .2s, transform .15s, border-color .2s; }
+.pc-info:hover { background: var(--brand-color); border-color: transparent; color: #fff; transform: scale(1.12); }
+
+/* molduras/auras na foto pequena das mensagens: sem brilho difuso (era o "fade" em volta da imagem) */
+.message .chat-avatar[class*="moldura-gogeta"]::before, .message .chat-avatar[class*="moldura-fusao"]::before { filter: none; }
+.message .chat-avatar.moldura-sasuke::before, .message .chat-avatar.moldura-sasuke:has(.ef-av-sasuke)::before { filter: none; animation: none; }
+
+.mt { position: fixed; inset: 0; z-index: 10800; background: #07091a; animation: mtEntra .35s ease both; --luz: 0; overflow: hidden; }
+@keyframes mtEntra { from { opacity: 0; } to { opacity: 1; } }
+body.mt-aberta { overflow: hidden; }
+.mt-cena { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .25) transparent; }
+.mt-mundo { position: relative; width: 100%; --f: 3; }
+.mt-mundo.treme { animation: mtTreme .5s linear; }
+@keyframes mtTreme { 0%, 100% { transform: translate(0, 0); } 12% { transform: translate(calc(var(--f) * -1px), calc(var(--f) * .6px)); } 28% { transform: translate(calc(var(--f) * 1px), calc(var(--f) * -.7px)); }
+    44% { transform: translate(calc(var(--f) * -.7px), calc(var(--f) * .5px)); } 62% { transform: translate(calc(var(--f) * .5px), calc(var(--f) * -.3px)); } 80% { transform: translate(calc(var(--f) * -.2px), 0); } }
+.mt-ceu { position: absolute; inset: 0; background: linear-gradient(to top, #07091a 0, #141a3f 12%, #2a2358 28%, #6b3b6e 42%, #c4577a 55%, #f08a5d 68%, #ffc46b 80%, #ffe9a8 92%, #fff6d8 100%); }
+.mt-estrelas { position: absolute; left: 0; right: 0; bottom: 0; height: 2000px; pointer-events: none; }
+.mt-estrela { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; opacity: .2; animation: mtPisca var(--t) ease-in-out var(--d) infinite; }
+@keyframes mtPisca { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
+.mt-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.mt-par { transform: translateY(calc(var(--sy, 0) * var(--k) * 1px)); }
+
+.mt-sol { position: absolute; left: 50%; width: 0; height: 0; pointer-events: none; }
+.mt-sol-disco { position: absolute; left: -90px; top: -90px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, #fffef0 0, #fff3b0 35%, #ffd76a 62%, rgba(255, 190, 80, 0) 72%); box-shadow: 0 0 120px 60px rgba(255, 220, 130, .6); }
+.mt-sol-raios { position: absolute; left: -700px; top: -700px; width: 1400px; height: 1400px; border-radius: 50%; animation: mtGira 90s linear infinite;
+    background: repeating-conic-gradient(from 0deg, rgba(255, 244, 190, .22) 0 4deg, transparent 4deg 15deg); -webkit-mask: radial-gradient(circle, #000 5%, transparent 68%); mask: radial-gradient(circle, #000 5%, transparent 68%); }
+@keyframes mtGira { to { transform: rotate(360deg); } }
+.mt-luz { position: absolute; inset: 0; pointer-events: none; opacity: var(--luz); mix-blend-mode: screen; z-index: 4;
+    background: radial-gradient(ellipse 80% 40% at 50% -5%, rgba(255, 238, 170, .55), transparent 70%), repeating-linear-gradient(100deg, transparent 0 70px, rgba(255, 244, 190, .15) 100px, transparent 150px);
+    animation: mtFeixe 14s linear infinite; background-size: 100% 100%, 400px 100%; }
+@keyframes mtFeixe { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 400px 0; } }
+
+.mt-nuvens, .mt-aves { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.mt-nuvem { position: absolute; left: -35%; opacity: .75; filter: blur(1px); animation: mtNuvem var(--t) linear var(--d) infinite;
+    background: radial-gradient(circle at 22% 68%, #fff 0 20%, transparent 21%), radial-gradient(circle at 42% 45%, #fff 0 26%, transparent 27%), radial-gradient(circle at 64% 55%, #fff 0 24%, transparent 25%), radial-gradient(circle at 82% 70%, #fff 0 18%, transparent 19%), radial-gradient(ellipse at 50% 88%, #fff 0 46%, transparent 47%); }
+.mt-nuvem.frente { opacity: .55; z-index: 3; }
+@keyframes mtNuvem { from { transform: translateX(0); } to { transform: translateX(190vw); } }
+.mt-ave { position: absolute; left: -60px; width: 28px; height: 12px; animation: mtVoa var(--t) linear var(--d) infinite; }
+.mt-ave path { animation: mtBate .5s ease-in-out infinite alternate; transform-origin: 50% 80%; transform-box: fill-box; }
+@keyframes mtVoa { from { transform: translateX(0) translateY(0); } 50% { transform: translateX(60vw) translateY(calc(var(--e) * -26px)); } to { transform: translateX(120vw) translateY(0); } }
+@keyframes mtBate { from { transform: scaleY(1); } to { transform: scaleY(.35); } }
+
+/* estações: patentes cravadas na pedra */
+.mt-est { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; }
+.mt-nome { text-align: center; font-size: 19px; font-weight: 900; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, .7), 0 0 14px var(--cor); }
+.mt-nome small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: rgba(255, 255, 255, .8); text-shadow: 0 1px 4px rgba(0, 0, 0, .7); }
+.mt-icos { display: flex; gap: 14px; align-items: flex-end; }
+.mt-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mt-queda { opacity: 0; transform: translateY(-560px); }
+.mt-est.on .mt-queda { animation: mtQueda .95s cubic-bezier(.5, 0, .9, .5) var(--d, 0ms) both; }
+@keyframes mtQueda { 0% { opacity: 0; transform: translateY(-560px) rotate(-10deg) scale(1.25); } 12% { opacity: 1; } 56% { opacity: 1; transform: translateY(0) rotate(0) scale(1.05, .95); }
+    66% { transform: translateY(-16px) scale(.98, 1.04); } 80% { transform: translateY(0) scale(1.05, .93); } 100% { opacity: 1; transform: none; } }
+.mt-placa { padding: 4px 11px; border-radius: 7px; font-size: 12px; font-weight: 900; color: #2a2220; letter-spacing: .02em; white-space: nowrap;
+    background: linear-gradient(180deg, #cbc3b6, #8f877c); box-shadow: inset 0 2px 3px rgba(255, 255, 255, .45), inset 0 -3px 4px rgba(0, 0, 0, .35), 0 3px 8px rgba(0, 0, 0, .5); text-shadow: 0 1px 0 rgba(255, 255, 255, .45); }
+.mt-placa b { color: #6b4b1f; margin-right: 3px; }
+.mt-pedra { width: 112%; height: 20px; margin-top: -2px; border-radius: 50%; background: radial-gradient(ellipse at 50% 30%, #6b6470, #2d2630 75%); box-shadow: 0 8px 18px rgba(0, 0, 0, .55); opacity: 0; transition: opacity .4s .5s; }
+.mt-est.on .mt-pedra { opacity: 1; }
+.mt-est.on .mt-icos::after { content: ''; position: absolute; left: 50%; bottom: 20px; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; border: 3px solid rgba(255, 240, 210, .7); opacity: 0; animation: mtPoeira .7s ease-out .5s both; pointer-events: none; }
+.mt-icos { position: relative; }
+@keyframes mtPoeira { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(5.5, 1.6); } }
+.mt-col.longe .mt-queda { filter: grayscale(.75) brightness(.7); }
+.mt-col.longe .mt-placa { filter: brightness(.8); }
+
+.mt-eu { position: absolute; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #ffd76a; font-size: 22px; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .7)); pointer-events: none; }
+.mt-eu span { padding: 4px 12px; border-radius: 999px; background: #ffd76a; color: #2a1d00; font-size: 12px; font-weight: 900; white-space: nowrap; }
+.mt-eu-anel { position: absolute; bottom: -8px; width: 26px; height: 26px; border-radius: 50%; border: 3px solid #ffd76a; animation: mtAnel 1.8s ease-out infinite; }
+@keyframes mtAnel { 0% { transform: scale(.4); opacity: 1; } 100% { transform: scale(2.6); opacity: 0; } }
+.mt-feito { filter: drop-shadow(0 0 6px rgba(255, 215, 106, .8)); }
+
+/* topo fixo: título, "minha posição" e o X com ESC (não rolam junto) */
+.mt-topo { position: absolute; left: 0; right: 0; top: 0; z-index: 6; display: flex; align-items: center; gap: 14px; padding: 14px 24px 26px; background: linear-gradient(180deg, rgba(5, 6, 18, .85), rgba(5, 6, 18, 0)); pointer-events: none; }
+.mt-topo > * { pointer-events: auto; }
+.mt-tit { display: flex; flex-direction: column; margin-right: auto; color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, .6); }
+.mt-tit b { font-size: 20px; font-weight: 900; }
+.mt-tit small { font-size: 12px; font-weight: 700; opacity: .85; }
+.mt-pos { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .25); background: rgba(20, 22, 40, .6); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; backdrop-filter: blur(6px); transition: background-color .2s, transform .15s; }
+.mt-pos:hover { background: rgba(255, 215, 106, .25); transform: translateY(-1px); }
+.mt-fechar { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mt-x { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .55); background: rgba(20, 22, 40, .6); color: #fff; font-size: 16px; cursor: pointer; transition: background-color .2s, transform .15s; }
+.mt-x:hover { background: rgba(255, 255, 255, .2); transform: scale(1.08); }
+.mt-fechar span { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: rgba(255, 255, 255, .75); }
+
+@media (prefers-reduced-motion: reduce) {
+    .mt-mundo.treme, .mt-nuvem, .mt-ave, .mt-ave path, .mt-sol-raios, .mt-luz, .mt-estrela, .mt-eu-anel { animation: none !important; }
+    .mt-queda { opacity: 1; transform: none; }
+    .mt-pedra { opacity: 1; }
+}
+.mt-nome { padding: 5px 14px 6px; border-radius: 12px; background: rgba(22, 16, 34, .62); backdrop-filter: blur(3px); }
