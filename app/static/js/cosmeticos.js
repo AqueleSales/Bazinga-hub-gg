@@ -953,7 +953,7 @@ const Cosm = (() => {
         ciclo: 14,
         novo() { return { linguas: [], fagulhas: [], resto: 0, restoF: 0 }; },
         desenhar(ctx, e, t, dt, w, h, esc) {
-            const f = ((t + 2.5) % this.ciclo) / this.ciclo;
+            const f = ((t + 3.4) % this.ciclo) / this.ciclo;
             const nivel = ss(.10, .34, f) * (1 - ss(.56, .86, f));
             if (nivel > 0.01) {
                 e.resto += dt * nivel * 44;
@@ -1062,7 +1062,7 @@ const Cosm = (() => {
         desenhar(ctx, e, t, dt, w, h, esc) {
             ctx.clearRect(0, 0, w, h);
             const s = (t + 4) % this.ciclo;
-            const cx = w * .72, cy = h * .2, R = Math.max(11, Math.min(46, w * .125));
+            const cx = w * .5, cy = h * .5, R = Math.max(11, Math.min(46, w * .125));
             const juntar = ss(5.6, 9.8, s) * (1 - ss(12.8, 12.9, s));       // 0..1: tamanho da esfera
             if (s < 5) { e.estourou = false; e.fios.length = 0; }
 
@@ -1071,7 +1071,7 @@ const Cosm = (() => {
                 e.resto += dt * 30;
                 while (e.resto >= 1) {
                     e.resto -= 1;
-                    const a = rnd(0, TAU), d = rnd(.28, .6) * Math.max(w, h) * .62;
+                    const a = rnd(0, TAU), d = rnd(.3, .62) * Math.min(w * 1.15, h * .9);
                     e.fios.push({ a, d, d0: d, idade: 0, vida: rnd(1.5, 2.3) });
                 }
             }
@@ -1174,7 +1174,8 @@ const Cosm = (() => {
             const dt = Math.min(.1, Math.max(0, (agora - st.ult) / 1000)); st.ult = agora; st.t += dt;
             const ctx = cv.getContext('2d');
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            motor.desenhar(ctx, st.e, st.t, dt, r.width, r.height, Math.max(.5, r.width / 348));
+            try { motor.desenhar(ctx, st.e, st.t, dt, r.width, r.height, Math.max(.5, r.width / 348)); }
+            catch (err) { console.warn('[efeito ' + cv.dataset.ef + ']', err); _estadoCv.delete(cv); }   // recomeça do zero no próximo quadro
         });
         return true;
     }

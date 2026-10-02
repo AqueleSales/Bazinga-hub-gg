@@ -1510,7 +1510,7 @@ escondida ou `prefers-reduced-motion`; um `MutationObserver` o acorda quando um 
 no navegador com a aba em segundo plano, onde `requestAnimationFrame` não dispara).
 - **Amaterasu**: línguas de fogo pretas (gota com ponta curvada, balançam e "respiram") com halo lilás só na borda, mais fagulhas pretas. Um "nível" por ciclo de 14 s
   controla quantas nascem e até onde sobem (no máximo ~15% do cartão, nunca espeto reto): sobe de leve e some.
-- **Punição de Alma** (ciclo de 17 s, a poeira dourada em CSS continua por baixo): partículas brancas entram em **espiral** (rastro curvo, giram mais rápido perto do centro)
+- **Punição de Alma** (ciclo de 17 s, a poeira dourada em CSS continua por baixo): partículas brancas entram em **espiral** em volta do CENTRO do cartão (rastro curvo, giram mais rápido perto do centro)
   → núcleo de luz branca cresce e vira a **bolha arco-íris** (borda laranja, rosa, miolo ciano/azul com braços do redemoinho e meia-lua verde, reflexo de bolha de sabão,
   cintilar em volta) → **estoura** (flash, aro iridescente que expande, cacos coloridos). O item se chama "Poeira Cósmica e Punição de Alma".
 
