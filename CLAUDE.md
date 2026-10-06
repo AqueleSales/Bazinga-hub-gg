@@ -1584,6 +1584,16 @@ pede `garantir_salas` (o `connect` agora tenta de novo se o banco estava acordan
   publicada (06/10/2026). O repo de releases é público: **nada de chave dentro do instalador** além do que já é público (a `googleApiKey` do
   `config.json` só entra se for restrita à Geolocation API). Mudança só no site (Flask/chat.html) **não** exige novo instalador. Não testado de
   ponta a ponta ainda (precisa de uma 2ª versão publicada pra ver o app se atualizar).
+- **Duas camadas de atualização, dois avisos** (não confundir): (1) mudança no **SITE** (deploy no Render) chega sozinha: o servidor manda
+  `versao_app` a cada `connect`, e se diferente da `VERSAO_PAGINA` aparece a faixa "Saiu uma versão nova... Atualizar agora" (recarrega sozinha em
+  ~20 s se não há call nem texto sendo escrito); o app desktop só carrega o site, então não baixa nada. (2) mudança no **PRÓPRIO APP**
+  (instalador, `desktop/`): `electron-updater` baixa em segundo plano e o estado vai pra dentro do app (`mudarEstadoAtualizacao` em `main.js` →
+  IPC `atualizacao:estado` → `pintarAtualizacao()` em `chat.html`): **pílula no canto inferior esquerdo** ("Baixando a atualização X · 42%" com barra;
+  depois "Atualização X pronta [Reiniciar e atualizar]"), status e "Procurar atualizações" em Configurações > Geral, rodapé da tela de login e dica
+  da bandeja. A janelinha do Windows só aparece se a janela estiver escondida na bandeja. Fases: `nenhuma|procurando|atualizado|baixando|pronta|erro|dev`.
+  Erro de rede ao procurar é silencioso (só vira aviso se estava baixando). A pílula só existe com `window.panteao` (app desktop). **Pegadinha**:
+  `Set-Content -Encoding utf8` do PowerShell 5.1 grava BOM e, com `Get-Content -Raw`, estraga acento (`Panteão` virou `PanteÃ£o` no build): editar
+  `package.json` por Python/Edit, nunca por Get/Set-Content.
 - **Falta**: assinatura de código (SmartScreen); badge de não lidas; geolocalização no Electron (usa o Windows; se falhar, vale o
   teletransporte do mapa); testar com o Render dormindo e com duas contas (regra 6).
 

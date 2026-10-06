@@ -344,7 +344,7 @@ function criarTray() {
   atualizarMenuTray = () => tray.setContextMenu(montarMenuTray());
   const montarMenuTray = () => Menu.buildFromTemplate([
     { label: 'Abrir Panteão', click: mostrarJanela },
-    ...(atualizacaoBaixada ? [{ label: 'Reiniciar pra atualizar', click: () => { saindo = true; autoUpdater.quitAndInstall(); } }] : []),
+    ...(atualizacaoBaixada ? [{ label: 'Reiniciar pra atualizar', click: instalarAtualizacao }] : []),
     ...(autoUpdater ? [{ label: 'Procurar atualizações', click: procurarAtualizacao }] : []),
     {
       label: 'Iniciar com o Windows', type: 'checkbox',
@@ -373,20 +373,61 @@ function iniciarAtualizador() {
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;      // o app vive na bandeja: quem fecha de verdade já instala
-  autoUpdater.on('error', (err) => console.warn('[updater]', err && err.message));
+  autoUpdater.on('checking-for-update', () => mudarEstadoAtualizacao({ fase: 'procurando' }));
+  autoUpdater.on('update-available', (info) => mudarEstadoAtualizacao({ fase: 'baixando', versao: info.version, percentual: 0 }));
+  autoUpdater.on('update-not-available', () => mudarEstadoAtualizacao({ fase: 'atualizado', versao: null }));
+  autoUpdater.on('download-progress', (p) => mudarEstadoAtualizacao({ fase: 'baixando', percentual: Math.round(p.percent || 0) }));
+  autoUpdater.on('error', (err) => {
+    console.warn('[updater]', err && err.message);
+    // erro de rede ao procurar não vira aviso na cara da pessoa; só conta se estava baixando
+    if (estadoAtualizacao.fase === 'baixando') mudarEstadoAtualizacao({ fase: 'erro' });
+    else mudarEstadoAtualizacao({ fase: 'atualizado' });
+  });
   autoUpdater.on('update-downloaded', (info) => {
     atualizacaoBaixada = true;
-    atualizarMenuTray();
-    dialog.showMessageBox(janela && !janela.isDestroyed() ? janela : undefined, {
-      type: 'info', buttons: ['Reiniciar agora', 'Depois'], defaultId: 0, cancelId: 1,
-      title: 'Atualização pronta',
-      message: `O Panteão ${info.version} foi baixado.`,
-      detail: 'Reinicie pra usar a versão nova. Se escolher "Depois", ela é instalada quando você sair do app.',
-    }).then((r) => { if (r.response === 0) { saindo = true; autoUpdater.quitAndInstall(); } });
+    mudarEstadoAtualizacao({ fase: 'pronta', versao: info.version, percentual: 100 });
+    // O indicador dentro do app (a pílula) cuida de quem está olhando. Janela escondida na bandeja não tem
+    // quem veja a pílula: aí vale a janelinha do sistema.
+    if (!janela || janela.isDestroyed() || !janela.isVisible() || janela.isMinimized()) {
+      dialog.showMessageBox({
+        type: 'info', buttons: ['Reiniciar agora', 'Depois'], defaultId: 0, cancelId: 1,
+        title: 'Atualização pronta',
+        message: `O Panteão ${info.version} foi baixado.`,
+        detail: 'Reinicie pra usar a versão nova. Se escolher "Depois", ela é instalada quando você sair do app.',
+      }).then((r) => { if (r.response === 0) instalarAtualizacao(); });
+    }
   });
   procurarAtualizacao();
   setInterval(procurarAtualizacao, 4 * 60 * 60 * 1000);   // o app fica aberto dias na bandeja
 }
+
+// Estado da atualização da casca, mostrado dentro do app (pílula) e na aba Geral. Fases:
+// 'nenhuma' (ainda não procurou) | 'procurando' | 'atualizado' | 'baixando' | 'pronta' | 'erro' | 'dev' (npm start)
+let estadoAtualizacao = { fase: 'nenhuma', versao: null, percentual: 0 };
+
+function mudarEstadoAtualizacao(parcial) {
+  estadoAtualizacao = { ...estadoAtualizacao, ...parcial };
+  if (estadoAtualizacao.fase !== 'baixando' && estadoAtualizacao.fase !== 'pronta') estadoAtualizacao.percentual = 0;
+  if (tray) tray.setToolTip(estadoAtualizacao.fase === 'pronta' ? `Panteão: atualização ${estadoAtualizacao.versao} pronta`
+    : estadoAtualizacao.fase === 'baixando' ? `Panteão: baixando atualização ${estadoAtualizacao.percentual}%` : 'Panteão');
+  atualizarMenuTray();
+  if (janela && !janela.isDestroyed()) janela.webContents.send('atualizacao:estado', estadoAtualizacao);
+}
+
+function instalarAtualizacao() {
+  if (!autoUpdater || !atualizacaoBaixada) return;
+  saindo = true;
+  autoUpdater.quitAndInstall();
+}
+
+ipcMain.handle('atualizacao:get', (e) => (vemDoApp(e) ? (app.isPackaged ? estadoAtualizacao : { fase: 'dev' }) : null));
+ipcMain.handle('atualizacao:instalar', (e) => { if (vemDoApp(e)) instalarAtualizacao(); });
+ipcMain.handle('atualizacao:procurar', (e) => {
+  if (!vemDoApp(e)) return null;
+  if (!app.isPackaged) return { fase: 'dev' };
+  if (estadoAtualizacao.fase !== 'baixando' && estadoAtualizacao.fase !== 'pronta') procurarAtualizacao();
+  return estadoAtualizacao;
+});
 
 function procurarAtualizacao() {
   if (!autoUpdater) return;

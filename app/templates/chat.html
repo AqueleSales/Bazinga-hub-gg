@@ -2449,7 +2449,20 @@
         .explorar-faixa button { border: 0; background: var(--brand-color); color: #fff; font-weight: 800; border-radius: 99px; padding: 6px 14px; cursor: pointer; font-size: 12.5px; }
         .explorar-pino { display: grid !important; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #fff; font-size: 16px;
             background: linear-gradient(140deg, #5865f2, #9b59b6); box-shadow: 0 0 0 4px rgba(88,101,242,.35), 0 6px 18px rgba(0,0,0,.5); animation: convFlutua 3s ease-in-out infinite; }
+
+        /* pílula de atualização do app desktop (instalador): baixando / pronta pra reiniciar */
+        #pilula-att { position: fixed; bottom: 78px; left: 12px; max-width: calc(100vw - 24px); z-index: 10400; display: none; align-items: center; gap: 12px;
+            padding: 8px 10px 8px 16px; border-radius: 99px; background: rgba(20,21,26,.94); color: #fff; font-size: 13px;
+            border: 1px solid rgba(255,255,255,.16); box-shadow: 0 10px 30px rgba(0,0,0,.5); overflow: hidden; animation: convEntra .4s ease backwards; }
+        #pilula-att.visivel { display: flex; }
+        #pilula-att .att-barra { position: absolute; left: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, #5865f2, #23a559); transition: width .3s; }
+        #pilula-att .att-icone { color: #23a559; }
+        #pilula-att.baixando .att-icone { animation: attDesce 1.2s ease-in-out infinite; }
+        #pilula-att button { border: 0; border-radius: 99px; padding: 6px 14px; font-weight: 800; font-size: 12.5px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #2dc770, #1b8a49); }
+        #pilula-att button.att-x { background: transparent; color: var(--text-muted); padding: 4px 8px; }
+        @keyframes attDesce { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(2px); } }
         @media (prefers-reduced-motion: reduce) {
+            #pilula-att.baixando .att-icone { animation: none !important; }
             .conv-card, .conv-icone, .conv-ponto, .conv-btn::after, .mais-barco, .explorar-pino, .explorar-faixa, .conv-esqueleto .conv-linha::after { animation: none !important; }
         }
     </style>
@@ -4133,6 +4146,7 @@
                             <div class="toggle-switch tg-app" id="tg-bandeja"></div>
                         </div>
                         <p style="color: var(--text-muted); font-size: 13px;" id="geral-versao"></p>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-top: 6px;"><span id="att-estado"></span> <button class="btn" id="btn-procurar-att" style="margin-left: 8px; padding: 4px 12px; font-size: 12.5px;">Procurar atualizações</button></p>
                     </div>
                 </div>
 
@@ -10775,6 +10789,48 @@
             document.getElementById('btn-loc-win-abrir').addEventListener('click', () => window.panteao.abrirPrivacidadeLocalizacao());
             document.getElementById('btn-reiniciar-app').addEventListener('click', () => window.panteao.reiniciar());
             window.panteao.prefsGet().then((p) => { prefsApp = p; atualizarAbaGeral(); }).catch(() => {});
+        }
+
+        // ---------- ATUALIZAÇÃO DO APP DESKTOP (instalador) ----------
+        // Mudança no SITE chega sozinha (aviso "Saiu uma versão nova", mais acima). Esta pílula é pra mudança no PRÓPRIO APP:
+        // o app baixa a versão nova em segundo plano e aqui aparece o progresso e o botão "Reiniciar e atualizar".
+        let pilulaAtt = null, attDispensada = false;
+        function pintarAtualizacao(est) {
+            est = est || {};
+            const geral = document.getElementById('att-estado');
+            if (geral) {
+                geral.textContent = est.fase === 'baixando' ? `Baixando a ${est.versao || 'nova versão'}... ${est.percentual || 0}%`
+                    : est.fase === 'pronta' ? `Versão ${est.versao} pronta: reinicie pra instalar.`
+                    : est.fase === 'procurando' ? 'Procurando atualizações...'
+                    : est.fase === 'atualizado' ? 'Você está na versão mais recente.'
+                    : est.fase === 'erro' ? 'Não consegui baixar agora. Tento de novo daqui a pouco.'
+                    : est.fase === 'dev' ? 'Modo de desenvolvimento (sem atualização automática).' : '';
+            }
+            const ativa = est.fase === 'baixando' || est.fase === 'pronta';
+            if (!ativa) { if (pilulaAtt) pilulaAtt.classList.remove('visivel'); return; }
+            if (est.fase === 'pronta') attDispensada = false;
+            if (!pilulaAtt) {
+                pilulaAtt = document.createElement('div');
+                pilulaAtt.id = 'pilula-att';
+                document.body.appendChild(pilulaAtt);
+                pilulaAtt.addEventListener('click', (e) => {
+                    if (e.target.closest('.att-instalar')) window.panteao.atualizacaoInstalar();
+                    else if (e.target.closest('.att-x')) { attDispensada = true; pilulaAtt.classList.remove('visivel'); }
+                });
+            }
+            if (attDispensada && est.fase === 'baixando') return;
+            const pronta = est.fase === 'pronta';
+            pilulaAtt.className = 'visivel ' + (pronta ? 'pronta' : 'baixando');
+            pilulaAtt.innerHTML = pronta
+                ? `<i class="fa-solid fa-circle-check att-icone"></i><span>Atualização <b>${esc(est.versao || '')}</b> pronta</span><button type="button" class="att-instalar">Reiniciar e atualizar</button><button type="button" class="att-x" title="Depois">&times;</button>`
+                : `<i class="fa-solid fa-download att-icone"></i><span>Baixando a atualização ${esc(est.versao || '')} · ${Number(est.percentual) || 0}%</span><button type="button" class="att-x" title="Esconder">&times;</button><div class="att-barra" style="width:${Number(est.percentual) || 0}%"></div>`;
+        }
+        if (noAppDesktop && window.panteao.atualizacaoEstado) {
+            window.panteao.aoMudarAtualizacao(pintarAtualizacao);
+            window.panteao.atualizacaoEstado().then(pintarAtualizacao).catch(() => {});
+            document.getElementById('btn-procurar-att').addEventListener('click', () => {
+                window.panteao.atualizacaoProcurar().then(pintarAtualizacao).catch(() => {});
+            });
         }
         document.querySelector('.set-tab[data-target="set-geral"]').addEventListener('click', atualizarAbaGeral);
         // adiado de propósito: usa somLigado()/SOM_CHAVE e variáveis do mapa declaradas mais abaixo no script

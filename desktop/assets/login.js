@@ -45,4 +45,16 @@ $('btn-entrar').addEventListener('click', async () => {
   setTimeout(() => { if (esperandoLogin) { $('btn-entrar').hidden = false; $('nota').hidden = false; $('barra').hidden = true; $('msg').textContent = 'Não terminou o login? Clique de novo para tentar.'; } }, 120000);
 });
 
+// atualização do próprio app: o rodapé mostra o andamento e vira botão quando está pronta
+if (window.panteao.aoMudarAtualizacao) {
+  const rodape = $('rodape');
+  const pintar = (est) => {
+    est = est || {};
+    if (est.fase === 'pronta') { rodape.textContent = `Atualização ${est.versao} pronta: clique pra reiniciar`; rodape.style.cursor = 'pointer'; rodape.style.color = '#23a559'; rodape.onclick = () => window.panteao.atualizacaoInstalar(); }
+    else if (est.fase === 'baixando') { rodape.textContent = `Baixando a atualização ${est.versao || ''} · ${est.percentual || 0}%`; rodape.style.cursor = ''; rodape.onclick = null; }
+  };
+  window.panteao.aoMudarAtualizacao(pintar);
+  window.panteao.atualizacaoEstado().then(pintar).catch(() => {});
+}
+
 conectar().catch(() => { $('msg').textContent = 'Não consegui iniciar. Feche e abra o app de novo.'; });

@@ -16,4 +16,13 @@ contextBridge.exposeInMainWorld('panteao', {
   prefsSet: (chave, valor) => ipcRenderer.invoke('prefs:set', chave, valor),
   abrirPrivacidadeLocalizacao: () => ipcRenderer.invoke('sistema:abrir-privacidade-localizacao'),
   reiniciar: () => ipcRenderer.invoke('sistema:reiniciar'),
+  // atualização do próprio app (instalador): estado, instalar, procurar e ouvir mudanças
+  atualizacaoEstado: () => ipcRenderer.invoke('atualizacao:get'),
+  atualizacaoInstalar: () => ipcRenderer.invoke('atualizacao:instalar'),
+  atualizacaoProcurar: () => ipcRenderer.invoke('atualizacao:procurar'),
+  aoMudarAtualizacao: (cb) => {
+    const f = (_e, estado) => cb(estado);
+    ipcRenderer.on('atualizacao:estado', f);
+    return () => ipcRenderer.removeListener('atualizacao:estado', f);
+  },
 });
