@@ -76,10 +76,11 @@ with app.app_context():
     ana.emit('enviar_mensagem_direta', {'target_id': ids['Beto'], 'texto': '', 'anexo_url': 'https://evil.com/x.png', 'anexo_tipo': 'image'})
     ok(not any(m['name'] == 'receber_mensagem_direta' for m in eventos(beto)), 'DM so com anexo externo invalido eh ignorada')
     eventos(ana)
+    # anexo (mesmo válido) entre quem NÃO é amigo é barrado: spam/golpe entra por aí (o caso "entre amigos" está em fumaca_localizacao.py)
     ana.emit('enviar_mensagem_direta', {'target_id': ids['Beto'], 'texto': '', 'anexo_url': 'https://res.cloudinary.com/x/a.png', 'anexo_tipo': 'image'})
     rb = eventos(beto)
-    ok(any(m['name'] == 'receber_mensagem_direta' and m['args'][0]['anexo_url'] for m in rb), 'DM so com anexo cloudinary passa')
-    eventos(ana)
+    ok(not any(m['name'] == 'receber_mensagem_direta' for m in rb), 'DM com anexo entre nao-amigos NAO chega')
+    ok(any(m['name'] == 'erro_bazinga' and 'amigos' in m['args'][0]['msg'] for m in eventos(ana)), 'e quem mandou recebe o motivo')
 
     # nao lidas
     beto.emit('marcar_dm_lida', {'amigo_id': ids['Ana']})

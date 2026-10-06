@@ -129,6 +129,7 @@ with app.app_context():
     caio.emit('atualizar_localizacao', {'lat': -23.55, 'lng': -46.63}); ev(caio)   # São Paulo, ~870 km
     caio.emit('entrar_servidor_pin', {'server_id': praca.id})
     ok(any('longe demais' in m for m in erros(caio)), 'pino plantado mas a 870 km: NÃO entra')
+    events.ultimo_fix.clear(); events.suspeitos_ate.clear()   # (no teste o Caio "viajou" instantâneo; na vida real o tempo passa)
     caio.emit('atualizar_localizacao', {'lat': -15.8005, 'lng': -47.9005}); ev(caio)   # ~70 m do pino
     caio.emit('entrar_servidor_pin', {'server_id': praca.id})
     ok(not erros(caio) and ids['Caio'] in [m.id for m in db.session.get(Server, praca.id).members], 'perto do pino: entra e vira membro')
@@ -140,6 +141,89 @@ with app.app_context():
     edu.emit('atualizar_localizacao', {'lat': -15.8, 'lng': -47.9}); ev(edu)
     edu.emit('entrar_servidor_pin', {'server_id': praca.id})
     ok(any('não está plantado' in m for m in erros(edu)), 'pino escondido por denúncia: ninguém novo entra')
+
+    # ---- confiança da posição: IP só olha; salto impossível trava; explorar só lê ----
+    events.ultimo_fix.clear(); events.suspeitos_ate.clear()
+    ip_cli, fip = cliente('Duda'); ev(ip_cli)
+    ip_cli.emit('atualizar_localizacao', {'lat': -15.8, 'lng': -47.9, 'fonte': 'ip'}); ev(ip_cli)
+    ok(ids['Duda'] not in events.ultimas_posicoes, 'posição só por IP NÃO vira pino pros amigos')
+    ip_cli.emit('criar_geonote', {'lat': -15.8, 'lng': -47.9, 'texto': 'ip'})
+    ok(any('endereço de internet' in m for m in erros(ip_cli)), 'posição só por IP: NÃO cria nota')
+    dona_ip, _fdi = cliente('Ana'); ev(dona_ip)   # a DONA do servidor, mas com posição só por IP
+    dona_ip.emit('atualizar_localizacao', {'lat': -15.8, 'lng': -47.9, 'fonte': 'ip'}); ev(dona_ip)
+    dona_ip.emit('plantar_servidor', {'lat': -15.8, 'lng': -47.9, 'server_id': srv.id})
+    ok(any('endereço de internet' in m for m in erros(dona_ip)), 'posição só por IP: NÃO planta (nem a dona do servidor)')
+    ip_cli.emit('mapa_pedir_arredores', {'lat': -15.8, 'lng': -47.9})
+    ok(bool(ev(ip_cli, 'mapa_arredores')), 'mas com posição por IP ela VÊ o mapa ao redor')
+
+    # aparelho real chega depois: vira confiável e pode agir
+    ip_cli.emit('atualizar_localizacao', {'lat': -15.8, 'lng': -47.9, 'fonte': 'aparelho'}); ev(ip_cli)
+    ip_cli.emit('criar_geonote', {'lat': -15.8, 'lng': -47.9, 'texto': 'agora sim'})
+    ok(not erros(ip_cli), 'posição do aparelho: volta a poder agir')
+
+    # salto impossível: DF -> São Paulo (~870 km) em ~1 s
+    hack, fh = cliente('Beto'); ev(hack)
+    hack.emit('atualizar_localizacao', {'lat': -15.8, 'lng': -47.9}); ev(hack)
+    hack.emit('atualizar_localizacao', {'lat': -23.55, 'lng': -46.63}); ev(hack)
+    hack.emit('criar_geonote', {'lat': -23.55, 'lng': -46.63, 'texto': 'teleporte'})
+    ok(any('rápido demais' in m for m in erros(hack)), 'salto de 870 km em 1 s: posição vira suspeita e NÃO age')
+    events.suspeitos_ate[ids['Beto']] = time.time() - 1    # passou a suspeita
+    hack.emit('atualizar_localizacao', {'lat': -23.5501, 'lng': -46.6301}); ev(hack)
+    hack.emit('criar_geonote', {'lat': -23.5501, 'lng': -46.6301, 'texto': 'ja posso'})
+    ok(not erros(hack), 'depois do tempo de suspeita, volta ao normal')
+    # andar de verdade (poucos km em 10 min) nunca é suspeito
+    events.ultimo_fix[ids['Beto']] = (-23.5501, -46.6301, time.time() - 600)
+    hack.emit('atualizar_localizacao', {'lat': -23.58, 'lng': -46.66}); ev(hack)
+    ok(events.suspeitos_ate.get(ids['Beto'], 0) < time.time(), 'andar alguns km em 10 min não é suspeito')
+
+    # explorar: só lê
+    exp, fe = cliente('Caio'); ev(exp)
+    exp.emit('atualizar_localizacao', {'lat': -15.8, 'lng': -47.9}); ev(exp)
+    chaves_antes = dict(events.centros_mapa)
+    exp.emit('mapa_explorar', {'lat': 35.68, 'lng': 139.69})      # Tóquio
+    r_exp = ev(exp, 'mapa_arredores')
+    ok(r_exp and r_exp[-1]['args'][0].get('explorando') is True, 'explorar devolve o mapa em volta do ponto, marcado como exploração')
+    ok(not ev(exp, 'posicao_amigo_atualizada'), 'e SEM radar de pessoas (stalking à distância)')
+    ok(dict(events.centros_mapa) == chaves_antes, 'explorar não muda onde o servidor acha que você está')
+    exp.emit('plantar_servidor', {'lat': 35.68, 'lng': 139.69, 'server_id': praca.id})
+    ok(bool(erros(exp)), 'e de lá não dá pra plantar')
+    exp.emit('mapa_explorar', {'lat': 35.68, 'lng': 139.69})
+    ok(not ev(exp, 'mapa_arredores'), 'explorar tem limite de ritmo (pedido colado é ignorado)')
+    time.sleep(0.9)
+    exp.emit('mapa_explorar', {'lat': 999, 'lng': 0})
+    ok(not ev(exp, 'mapa_arredores'), 'explorar com coordenada fora do mundo é ignorado')
+
+    # ---- DM: link e anexo só entre amigos ----
+    from app.models import DirectMessage
+    ana.emit('enviar_mensagem_direta', {'target_id': ids['Beto'], 'texto': 'olha https://exemplo.com/promo'}); ev(ana)
+    ok(any(m['name'] == 'receber_mensagem_direta' for m in ev(beto)), 'entre AMIGOS o link passa')
+    ana.emit('enviar_mensagem_direta', {'target_id': ids['Beto'], 'texto': 'foto', 'anexo_url': 'https://res.cloudinary.com/x/a.png', 'anexo_tipo': 'image'}); ev(ana)
+    ok(any(m['name'] == 'receber_mensagem_direta' for m in ev(beto)), 'entre AMIGOS o anexo passa')
+    ana.emit('enviar_mensagem_direta', {'target_id': ids['Ana'], 'texto': 'meu link: www.exemplo.com'}); ev(ana)
+    ok(DirectMessage.query.filter_by(sender_id=ids['Ana'], receiver_id=ids['Ana']).count() >= 1, 'em Anotações (a si mesmo) o link passa')
+    for txt in ('clica aqui https://golpe.com', 'www.golpe.com/x', 'discord.gg/abc', 'entra em golpe.xyz', 'bit.ly/abc123', 'meu site: golpe.com.br'):
+        caio.emit('enviar_mensagem_direta', {'target_id': ids['Ana'], 'texto': txt})
+        ok(any('só entre amigos' in m for m in erros(caio)), f'não-amigo: link barrado ({txt})')
+    caio.emit('enviar_mensagem_direta', {'target_id': ids['Ana'], 'texto': 'oi, vi seu servidor 😀 tudo bem?'})
+    ok(not erros(caio), 'não-amigo: texto normal (inclusive com emoji e pontuação) passa')
+    caio.emit('enviar_mensagem_direta', {'target_id': ids['Ana'], 'texto': 'ótimo.valeu, até mais.tarde'})
+    ok(not erros(caio), 'não-amigo: "ótimo.valeu" (ponto sem domínio) não é link')
+    caio.emit('enviar_mensagem_direta', {'target_id': ids['Ana'], 'texto': '', 'anexo_url': 'https://res.cloudinary.com/x/a.png', 'anexo_tipo': 'image'})
+    ok(any('só entre amigos' in m for m in erros(caio)), 'não-amigo: anexo barrado')
+
+    # ---- prévia do convite ----
+    from app.models import Invite
+    ana.emit('criar_convite', {'server_id': praca.id, 'duracao': '24', 'max_usos': '1'})
+    cod = ev(ana, 'convite_criado')[-1]['args'][0]['code']
+    j = fduda.get(f'/api/convite/{cod}/previa').get_json()
+    ok(j['valido'] and j['servidor']['nome'] == 'Praca' and j['servidor']['membros'] >= 1 and j['ja_membro'] is False, 'prévia: nome, membros e "ainda não sou membro"')
+    ok(set(j['servidor'].keys()) == {'nome', 'icone', 'membros', 'descricao'}, 'prévia não vaza canais nem lista de membros')
+    ok(fana.get(f'/api/convite/{cod}/previa').get_json()['ja_membro'] is True, 'prévia: quem já é membro sabe disso')
+    ok(fana.get(f'/api/convite/{cod}/previa').get_json()['server_id'] == praca.id and j['server_id'] is None, 'prévia: o id do servidor só vai pra quem já é membro (botão Abrir)')
+    ok(fduda.get('/api/convite/naoexiste1/previa').get_json() == {'valido': False}, 'prévia: código que não existe = inválido')
+    inv = Invite.query.filter_by(code=cod).first(); inv.uses = inv.max_uses; db.session.commit()
+    ok(fduda.get(f'/api/convite/{cod}/previa').get_json() == {'valido': False}, 'prévia: convite esgotado = inválido (igual ao inexistente)')
+    ok(app.test_client().get(f'/api/convite/{cod}/previa').status_code == 401, 'prévia: sem login = 401')
 
     # ---- IP ----
     chamadas = []

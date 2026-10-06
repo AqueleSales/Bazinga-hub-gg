@@ -2354,7 +2354,105 @@
         /* prévias do catálogo/inventário: só animam sob o mouse (dezenas de anéis conic + filtros animando juntos travavam a rolagem) */
         .settings-content .pf-tile:not(:hover) *, .settings-content .pf-tile:not(:hover) *::before, .settings-content .pf-tile:not(:hover) *::after,
         #pf-catalogo .modal-content *:not(:hover), #inv-raiz .inv-item:not(:hover):not(.eq) *, #inv-raiz .inv-item:not(:hover):not(.eq) *::before, #inv-raiz .inv-item:not(:hover):not(.eq) *::after { animation-play-state: paused; }
-</style>
+
+        /* ==========================================================================
+           CONVITES + EXPLORAR  (cartão animado do convite, modal, barra de entrar, menu do "+", faixa de explorar)
+           ========================================================================== */
+        .conv-card { margin-top: 8px; max-width: 430px; border-radius: 16px; padding: 2px; position: relative;
+            background: linear-gradient(120deg, #5865f2, #eb459e, #23a559, #f0b232, #5865f2); background-size: 300% 300%;
+            animation: convBorda 7s linear infinite, convEntra .5s cubic-bezier(.16,.84,.44,1) backwards; }
+        .conv-card-int { background: var(--bg-secondary); border-radius: 14px; padding: 14px 16px; position: relative; overflow: hidden; }
+        .conv-card-int::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: radial-gradient(120% 90% at 0% 0%, rgba(88,101,242,.24), transparent 60%); }
+        .conv-rotulo { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted);
+            margin-bottom: 10px; display: flex; align-items: center; gap: 6px; position: relative; }
+        .conv-linha { display: flex; align-items: center; gap: 14px; position: relative; }
+        .conv-icone { width: 54px; height: 54px; border-radius: 17px; flex-shrink: 0; display: grid; place-items: center; overflow: hidden;
+            background: linear-gradient(140deg, #5865f2, #9b59b6); color: #fff; font-weight: 800; font-size: 19px;
+            box-shadow: 0 6px 20px rgba(88,101,242,.45); animation: convFlutua 3.6s ease-in-out infinite; }
+        .conv-icone img { width: 100%; height: 100%; object-fit: cover; }
+        .conv-info { flex: 1; min-width: 0; }
+        .conv-nome { font-weight: 800; font-size: 16px; color: var(--text-header); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .conv-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+        .conv-ponto { width: 8px; height: 8px; border-radius: 50%; background: #23a559; animation: convPulso 1.9s ease-out infinite; }
+        .conv-btn { border: 0; border-radius: 11px; padding: 10px 20px; font-weight: 800; font-size: 14px; color: #fff; cursor: pointer;
+            background: linear-gradient(135deg, #2dc770, #1b8a49); position: relative; overflow: hidden; flex-shrink: 0;
+            transition: transform .15s, box-shadow .15s; box-shadow: 0 4px 14px rgba(35,165,89,.4); }
+        .conv-btn::after { content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; pointer-events: none;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,.5), transparent); transform: skewX(-20deg);
+            animation: convBrilho 3.2s ease-in-out infinite; }
+        .conv-btn:hover:not(:disabled) { transform: translateY(-1px) scale(1.04); box-shadow: 0 6px 18px rgba(35,165,89,.55); }
+        .conv-btn:disabled { cursor: default; filter: saturate(.5); }
+        .conv-btn:disabled::after { display: none; }
+        .conv-btn.ja { background: rgba(255,255,255,.14); box-shadow: none; }
+        .conv-btn.ja::after { display: none; }
+        .conv-card.invalido { background: rgba(255,255,255,.12); animation: convEntra .5s cubic-bezier(.16,.84,.44,1) backwards; }
+        .conv-card.invalido .conv-icone { animation: none; background: #4e5058; box-shadow: none; }
+        .conv-esqueleto .conv-linha::after { content: ''; flex: 1; height: 38px; border-radius: 10px;
+            background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.12), rgba(255,255,255,.04)); background-size: 200% 100%;
+            animation: convEsq 1.2s linear infinite; }
+        @keyframes convBorda { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+        @keyframes convEntra { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+        @keyframes convFlutua { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-4px) rotate(1.5deg); } }
+        @keyframes convPulso { 0% { box-shadow: 0 0 0 0 rgba(35,165,89,.65); } 100% { box-shadow: 0 0 0 9px rgba(35,165,89,0); } }
+        @keyframes convBrilho { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+        @keyframes convEsq { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* barra "colar link/código e Entrar" ao lado de Plantar Servidor */
+        .conv-barra { display: flex; align-items: center; margin-left: auto; flex: 1; min-width: 180px; max-width: 360px;
+            background: var(--bg-tertiary); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; overflow: hidden;
+            transition: border-color .2s, box-shadow .2s; }
+        .conv-barra:focus-within { border-color: var(--brand-color); box-shadow: 0 0 0 3px rgba(88,101,242,.28); }
+        .conv-barra > i { padding: 0 4px 0 11px; color: var(--text-muted); font-size: 13px; }
+        .conv-barra input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--text-normal); padding: 8px 8px; font-size: 13px; }
+        .conv-barra button { border: 0; background: var(--green-color); color: #fff; font-weight: 800; padding: 9px 15px; cursor: pointer; font-size: 13px; transition: filter .15s; }
+        .conv-barra button:hover { filter: brightness(1.12); }
+
+        /* modal de convidar */
+        .cv-lista { max-height: 232px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-top: 10px; padding-right: 2px; }
+        .cv-amigo { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 10px; transition: background .15s; }
+        .cv-amigo:hover { background: rgba(255,255,255,.05); }
+        .cv-av { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-color); overflow: hidden; display: grid; place-items: center; color: #fff; font-weight: 800; flex-shrink: 0; }
+        .cv-av img { width: 100%; height: 100%; object-fit: cover; }
+        .cv-nome { flex: 1; min-width: 0; font-weight: 600; color: var(--text-header); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cv-ja { font-size: 12px; color: var(--text-muted); }
+        .cv-enviar { border: 1px solid var(--green-color); background: transparent; color: var(--green-color); border-radius: 8px; padding: 6px 15px; font-weight: 700; font-size: 13px; cursor: pointer; transition: .15s; }
+        .cv-enviar:hover:not(:disabled) { background: var(--green-color); color: #fff; }
+        .cv-enviar:disabled { opacity: .65; cursor: default; }
+        .cv-enviar.enviado { border-color: transparent; color: var(--text-muted); }
+        .cv-sep { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: .08em; margin: 18px 0 14px; }
+        .cv-sep::before, .cv-sep::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.1); }
+        .cv-opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .cv-opcoes select { width: 100%; }
+        .cv-mais { margin-top: 4px; }
+        .cv-mais summary { cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 6px 0; user-select: none; }
+        .cv-mais[open] summary { color: var(--text-normal); }
+
+        /* menu do "+" (criar / entrar / explorar) */
+        .mais-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: var(--bg-tertiary);
+            border: 1px solid transparent; cursor: pointer; transition: transform .16s, border-color .16s, background .16s; position: relative; overflow: hidden; }
+        .mais-card:hover:not(.em-breve) { transform: translateX(3px); border-color: var(--brand-color); background: rgba(88,101,242,.1); }
+        .mais-ico { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; color: #fff; font-size: 18px; flex-shrink: 0; }
+        .mais-card b { color: var(--text-header); font-size: 15px; display: block; }
+        .mais-card small { color: var(--text-muted); font-size: 12.5px; line-height: 1.35; display: block; margin-top: 2px; }
+        .mais-card > .fa-chevron-right { margin-left: auto; color: var(--text-muted); }
+        .mais-card.em-breve { cursor: default; opacity: .85; }
+        .mais-selo { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; background: #f0b232; color: #1e1f22; padding: 2px 7px; border-radius: 99px; margin-left: 8px; vertical-align: middle; }
+        .mais-barco { position: absolute; right: 14px; bottom: 6px; font-size: 20px; animation: maisBarco 5s ease-in-out infinite; }
+        @keyframes maisBarco { 0%, 100% { transform: translate(0, 0) rotate(-4deg); } 50% { transform: translate(-16px, -3px) rotate(4deg); } }
+        #mais-entrar-form { display: none; margin: -2px 0 2px; }
+
+        /* explorar: faixa no topo do mapa e o "olho" no ponto olhado */
+        .explorar-faixa { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1100; display: flex; align-items: center; gap: 10px;
+            background: rgba(20,21,26,.88); color: #fff; border: 1px solid rgba(255,255,255,.14); border-radius: 99px; padding: 7px 8px 7px 16px;
+            font-size: 13px; backdrop-filter: blur(6px); box-shadow: 0 8px 26px rgba(0,0,0,.45); animation: convEntra .35s ease backwards; white-space: nowrap; }
+        .explorar-faixa button { border: 0; background: var(--brand-color); color: #fff; font-weight: 800; border-radius: 99px; padding: 6px 14px; cursor: pointer; font-size: 12.5px; }
+        .explorar-pino { display: grid !important; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #fff; font-size: 16px;
+            background: linear-gradient(140deg, #5865f2, #9b59b6); box-shadow: 0 0 0 4px rgba(88,101,242,.35), 0 6px 18px rgba(0,0,0,.5); animation: convFlutua 3s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+            .conv-card, .conv-icone, .conv-ponto, .conv-btn::after, .mais-barco, .explorar-pino, .explorar-faixa, .conv-esqueleto .conv-linha::after { animation: none !important; }
+        }
+    </style>
 <!-- Cosméticos (patentes, insígnias, popover orb, inventário, laboratório): depois do <style> acima, pra ganhar por ordem -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
 </head>
@@ -2582,6 +2680,11 @@
                         <button class="btn btn-primary" style="background-color: var(--green-color); padding: 6px 12px; font-weight: 600;" onclick="abrirModalServidor('create')">
                             <i class="fa-solid fa-location-dot"></i> Plantar Servidor
                         </button>
+                        <div class="conv-barra" id="conv-barra" title="Entrar num servidor com um link ou código de convite">
+                            <i class="fa-solid fa-ticket"></i>
+                            <input type="text" id="radar-convite-input" placeholder="Link ou código de convite" maxlength="200" autocomplete="off" spellcheck="false">
+                            <button type="button" id="radar-convite-btn">Entrar</button>
+                        </div>
 
                     </div>
                     <div style="display: flex; gap: 16px; color: var(--text-muted); font-size: 18px; align-items: center;" id="dm-header-actions">
@@ -2911,6 +3014,41 @@
     <!-- ==========================================
          MENUS, POP-UPS E MODAIS FLUTUANTES
          ========================================== -->
+
+    <!-- Modal do "+": criar, entrar com convite ou explorar -->
+    <div class="modal-overlay" id="add-opcoes-modal">
+        <div class="bazinga-modal" style="width: 470px;">
+            <div class="modal-header" style="position: relative;">
+                <h2>Adicionar um servidor</h2>
+                <p>Crie o seu, entre num que te convidaram ou descubra novos.</p>
+                <i class="fa-solid fa-xmark modal-close-x" onclick="fecharAddOpcoes()"></i>
+            </div>
+            <div class="modal-content" style="gap: 10px;">
+                <div class="mais-card" id="mais-criar">
+                    <span class="mais-ico" style="background: #5865f2;"><i class="fa-solid fa-plus"></i></span>
+                    <div><b>Criar o meu</b><small>Seu próprio servidor, com seus canais e a sua cara.</small></div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+                <div class="mais-card" id="mais-entrar">
+                    <span class="mais-ico" style="background: #23a559;"><i class="fa-solid fa-ticket"></i></span>
+                    <div><b>Entrar com um convite</b><small>Cole o link ou o código que te mandaram.</small></div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+                <div id="mais-entrar-form">
+                    <div class="bz-input-wrap">
+                        <input type="text" id="add-convite-input" class="bz-input" placeholder="Link ou código do convite" maxlength="200" autocomplete="off" spellcheck="false" style="padding-left: 12px;">
+                        <button class="btn btn-primary" id="add-convite-btn" style="padding: 8px 16px; font-size: 13px; border-radius: 0 4px 4px 0; background: var(--green-color);">Entrar</button>
+                    </div>
+                </div>
+                <div class="mais-card em-breve" id="mais-explorar">
+                    <span class="mais-ico" style="background: #0a8fdc;"><i class="fa-solid fa-compass"></i></span>
+                    <div><b>Explorar servidores <span class="mais-selo">Em breve</span></b><small>Um mapa vivo, com barquinhos navegando e estruturas surgindo em terra. Clique num lugar pra ver a descrição e quantas pessoas estão lá.</small></div>
+                    <span class="mais-barco">⛵</span>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn-cancel" onclick="fecharAddOpcoes()">Fechar</button></div>
+        </div>
+    </div>
 
     <!-- Modal Criar Servidor -->
     <div class="modal-overlay" id="add-server-modal">
@@ -3338,27 +3476,35 @@
          CONVITE (link + QR + colar código)
          ========================================== -->
     <div class="modal-overlay" id="invite-modal">
-        <div class="bazinga-modal" style="width: 480px;">
+        <div class="bazinga-modal" style="width: 500px;">
             <div class="modal-header" style="position: relative;">
                 <h2>Convidar pra <span id="invite-server-name">o servidor</span></h2>
-                <p>Gere um link, mande por e-mail, mostre o QR ou cole um código que te deram.</p>
+                <p>Chame seus amigos direto pela DM ou compartilhe um link.</p>
                 <i class="fa-solid fa-xmark modal-close-x" onclick="fecharModalConvite()"></i>
             </div>
-            <div class="modal-content" style="gap: 18px;">
+            <div class="modal-content" style="gap: 0; display: block;">
+                <label class="bz-label">Convidar amigos</label>
+                <div class="bz-input-wrap">
+                    <input type="text" id="invite-busca" class="bz-input" placeholder="Buscar amigo..." autocomplete="off" style="padding-left: 12px;">
+                </div>
+                <div id="invite-amigos" class="cv-lista"></div>
+
+                <div class="cv-sep">ou envie um link</div>
+
                 <div id="invite-owner-area">
-                    <div style="display:flex; gap:10px; margin-bottom:14px;">
-                        <div style="flex:1;">
+                    <div class="cv-opcoes">
+                        <div>
                             <label class="bz-label">Expira em</label>
-                            <select id="invite-duracao" class="bz-input" style="padding-left:12px;">
+                            <select id="invite-duracao" class="bz-input" style="padding-left: 12px;">
                                 <option value="1">1 hora</option>
                                 <option value="24" selected>1 dia</option>
                                 <option value="168">7 dias</option>
                                 <option value="ilimitado">Nunca</option>
                             </select>
                         </div>
-                        <div style="flex:1;">
+                        <div>
                             <label class="bz-label">Limite de usos</label>
-                            <select id="invite-usos" class="bz-input" style="padding-left:12px;">
+                            <select id="invite-usos" class="bz-input" style="padding-left: 12px;">
                                 <option value="1">1 pessoa</option>
                                 <option value="5">5 pessoas</option>
                                 <option value="25">25 pessoas</option>
@@ -3366,37 +3512,31 @@
                             </select>
                         </div>
                     </div>
-                    <button class="btn btn-primary" style="width:100%;" onclick="gerarConvite()">
+                    <button class="btn btn-primary" style="width: 100%;" onclick="gerarConvite()">
                         <i class="fa-solid fa-link"></i> Gerar link de convite
                     </button>
 
-                    <div id="invite-result" style="display:none; margin-top:16px;">
-                        <label class="bz-label">Link do convite</label>
-                        <div class="bz-input-wrap" style="margin-bottom:12px;">
-                            <input type="text" id="invite-link" class="bz-input" readonly style="padding-left:12px;">
-                            <button class="btn btn-primary" style="padding:8px 14px; font-size:13px; border-radius:0 4px 4px 0;" onclick="copiarConvite()">Copiar</button>
+                    <div id="invite-result" style="display: none; margin-top: 14px;">
+                        <div class="bz-input-wrap" style="margin-bottom: 8px;">
+                            <input type="text" id="invite-link" class="bz-input" readonly style="padding-left: 12px;">
+                            <button class="btn btn-primary" style="padding: 8px 14px; font-size: 13px; border-radius: 0 4px 4px 0;" onclick="copiarConvite()">Copiar</button>
                         </div>
-                        <div class="invite-email-linha">
-                            <input type="email" id="invite-email" class="bz-input" placeholder="E-mail de quem você quer convidar (opcional)" maxlength="120" style="padding-left:12px;">
-                            <button class="btn" type="button" onclick="enviarConvitePorEmail('gmail')" title="Abre o Gmail com a mensagem pronta"><i class="fa-solid fa-envelope"></i> Gmail</button>
-                            <button class="btn" type="button" onclick="enviarConvitePorEmail('mailto')" title="Abre o seu programa de e-mail"><i class="fa-regular fa-paper-plane"></i> Outro</button>
-                        </div>
-                        <div style="display:flex; gap:16px; align-items:center; background:var(--bg-tertiary); padding:14px; border-radius:8px;">
-                            <div id="invite-qr" style="width:132px; height:132px; background:#fff; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;"></div>
-                            <div>
-                                <div class="bz-radio-title" style="font-size:14px;">Ou aponta a câmera</div>
-                                <div class="bz-radio-desc">Quem escanear cai direto no servidor. Funciona no celular sem precisar copiar nada.</div>
-                                <div id="invite-meta" class="bz-radio-desc" style="margin-top:8px; opacity:.75;"></div>
+                        <div id="invite-meta" class="bz-radio-desc" style="opacity: .75; margin-bottom: 4px;"></div>
+                        <details class="cv-mais">
+                            <summary>Mais opções: QR code e e-mail</summary>
+                            <div class="invite-email-linha" style="margin-top: 10px;">
+                                <input type="email" id="invite-email" class="bz-input" placeholder="E-mail de quem você quer convidar (opcional)" maxlength="120" style="padding-left: 12px;">
+                                <button class="btn" type="button" onclick="enviarConvitePorEmail('gmail')" title="Abre o Gmail com a mensagem pronta"><i class="fa-solid fa-envelope"></i> Gmail</button>
+                                <button class="btn" type="button" onclick="enviarConvitePorEmail('mailto')" title="Abre o seu programa de e-mail"><i class="fa-regular fa-paper-plane"></i> Outro</button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="border-top:1px solid rgba(255,255,255,.08); padding-top:16px;">
-                    <label class="bz-label">Recebeu um convite?</label>
-                    <div class="bz-input-wrap">
-                        <input type="text" id="invite-code-input" class="bz-input" placeholder="Cola o código ou o link aqui" style="padding-left:12px;">
-                        <button class="btn btn-primary" style="padding:8px 14px; font-size:13px; border-radius:0 4px 4px 0; background:var(--green-color);" onclick="entrarPorCodigo()">Entrar</button>
+                            <div style="display: flex; gap: 16px; align-items: center; background: var(--bg-tertiary); padding: 14px; border-radius: 8px; margin-top: 10px;">
+                                <div id="invite-qr" style="width: 132px; height: 132px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"></div>
+                                <div>
+                                    <div class="bz-radio-title" style="font-size: 14px;">Ou aponta a câmera</div>
+                                    <div class="bz-radio-desc">Quem escanear cai direto no servidor. Funciona no celular sem precisar copiar nada.</div>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -3924,7 +4064,7 @@
                     <div class="discord-toggle" id="tg-loc-ip-linha">
                         <div>
                             <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Reserva por IP</h4>
-                            <p style="color: var(--text-muted); font-size: 14px;">Se o aparelho não achar onde você está, usa o endereço de internet. É aproximado (cidade ou região) e <b>erra com VPN ou dados móveis</b>: nesses casos vale mais marcar o ponto com dois cliques no mapa.</p>
+                            <p style="color: var(--text-muted); font-size: 14px;">Se o aparelho não achar onde você está, usa o endereço de internet <b>só pra você ver o mapa</b>. É aproximado (cidade ou região) e <b>erra com VPN ou dados móveis</b>. Com ele você não consegue plantar, deixar nota nem entrar em servidor do mapa: isso exige a localização do aparelho (GPS ou Wi-Fi).</p>
                         </div>
                         <div class="toggle-switch tg-app" id="tg-loc-ip"></div>
                     </div>
@@ -4707,7 +4847,7 @@
         });
 
         document.getElementById('btn-add-server').addEventListener('click', () => {
-            document.getElementById('add-server-modal').style.display = 'flex';
+            abrirAddOpcoes();   // criar / entrar com convite / explorar (em breve)
         });
 
         // ==========================================
@@ -5200,7 +5340,7 @@
 
         function fecharTodosOsModais() {
             ['channel-modal', 'server-config-modal', 'invite-modal', 'event-modal',
-             'add-friend-modal', 'quick-switcher', 'painel-fixadas']
+             'add-friend-modal', 'quick-switcher', 'painel-fixadas', 'add-opcoes-modal']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
             // Chamando/recebendo ligação não entra aqui de propósito - ESC
             // fechar sem emitir cancelar/recusar deixaria o outro lado tocando
@@ -5782,6 +5922,16 @@
 
         // ---------- CONVITES ----------
         let conviteAtual = null;
+        // Fila de pedidos de convite: o servidor responde `convite_criado` e a gente casa pelo server_id. Serve pro modal
+        // (link) e pra DM (convite direto pra um amigo). Pedido que nunca respondeu (erro) expira em 8 s.
+        const pedidosConvite = [];
+        const convidadosNaSessao = new Set();   // `${servidor}:${amigo}`: já convidado nesta sessão (botão vira "Enviado")
+
+        function novoPedidoConvite(p) {
+            const agora = Date.now();
+            while (pedidosConvite.length && agora - pedidosConvite[0].t > 8000) pedidosConvite.shift();
+            pedidosConvite.push({ ...p, t: agora });
+        }
 
         function abrirModalConvite() {
             const srv = servidorAtivo();
@@ -5794,8 +5944,9 @@
                 .forEach(o => { o.disabled = !souDono; o.hidden = !souDono; });
             if (!souDono) { document.getElementById('invite-usos').value = '25'; document.getElementById('invite-duracao').value = '24'; }
             document.getElementById('invite-result').style.display = 'none';
-            document.getElementById('invite-code-input').value = '';
+            document.getElementById('invite-busca').value = '';
             conviteAtual = null;
+            desenharAmigosParaConvite();
 
             document.getElementById('invite-modal').style.display = 'flex';
         }
@@ -5804,8 +5955,41 @@
             document.getElementById('invite-modal').style.display = 'none';
         }
 
+        // Lista de amigos (online primeiro) com o botão Convidar: manda o convite direto na DM.
+        function desenharAmigosParaConvite() {
+            const lista = document.getElementById('invite-amigos');
+            if (!lista) return;
+            const todos = amizades.amigos || [];
+            if (!todos.length) { lista.innerHTML = '<div class="sf-vazio" style="padding: 12px 4px;">Você ainda não tem amigos adicionados. Gere um link logo abaixo.</div>'; return; }
+            const q = (document.getElementById('invite-busca').value || '').trim().toLowerCase();
+            const amigos = todos.filter(a => !q || String(a.nome || '').toLowerCase().includes(q))
+                .sort((x, y) => (y.online ? 1 : 0) - (x.online ? 1 : 0) || String(x.nome).localeCompare(String(y.nome)));
+            if (!amigos.length) { lista.innerHTML = '<div class="sf-vazio" style="padding: 12px 4px;">Ninguém com esse nome.</div>'; return; }
+            lista.innerHTML = amigos.map(a => {
+                const av = escUrl(a.avatar);
+                const jaEsta = membrosDoServidor.some(m => Number(m.id) === Number(a.id));
+                const enviado = convidadosNaSessao.has(`${activeMyServerId}:${a.id}`);
+                const acao = jaEsta ? '<span class="cv-ja">Já está aqui</span>'
+                    : `<button class="cv-enviar${enviado ? ' enviado' : ''}"${enviado ? ' disabled' : ''}>${enviado ? 'Enviado ✓' : 'Convidar'}</button>`;
+                return `<div class="cv-amigo" data-amigo="${Number(a.id)}" data-nome="${esc(a.nome)}">
+                    <span class="cv-av">${av ? `<img src="${av}" alt="">` : esc((a.nome || '?')[0].toUpperCase())}</span>
+                    <span class="cv-nome">${esc(a.nome)}</span>${acao}</div>`;
+            }).join('');
+        }
+        document.getElementById('invite-busca').addEventListener('input', desenharAmigosParaConvite);
+        document.getElementById('invite-amigos').addEventListener('click', (e) => {
+            const b = e.target.closest('.cv-enviar');
+            if (!b || b.disabled || !activeMyServerId) return;
+            const linha = b.closest('[data-amigo]');
+            b.disabled = true; b.textContent = 'Enviando...';
+            novoPedidoConvite({ tipo: 'dm', srv: activeMyServerId, amigo: Number(linha.dataset.amigo), nomeAmigo: linha.dataset.nome });
+            socket.emit('criar_convite', { server_id: activeMyServerId, duracao: '24', max_usos: '1' });
+            setTimeout(desenharAmigosParaConvite, 8500);   // se nada voltou (erro), o botão reaparece
+        });
+
         function gerarConvite() {
             if (!activeMyServerId) { showToast("Abra um servidor primeiro.", "warning"); return; }
+            novoPedidoConvite({ tipo: 'modal', srv: activeMyServerId });
             socket.emit('criar_convite', {
                 server_id: activeMyServerId,
                 duracao: document.getElementById('invite-duracao').value,
@@ -5815,6 +5999,22 @@
         }
 
         socket.on('convite_criado', function(cv) {
+            const i = pedidosConvite.findIndex(p => Number(p.srv) === Number(cv.server_id));
+            if (i < 0) return;
+            const [pedido] = pedidosConvite.splice(i, 1);
+            if (pedido.tipo === 'dm') { aoConviteCriadoParaDM(cv, pedido); return; }
+            mostrarConviteGerado(cv);
+        });
+
+        // Convite direto pra um amigo: vai na DM só o link, e o chat desenha o cartão animado.
+        function aoConviteCriadoParaDM(cv, pedido) {
+            socket.emit('enviar_mensagem_direta', { target_id: pedido.amigo, texto: `${window.location.origin}/convite/${cv.code}` });
+            convidadosNaSessao.add(`${pedido.srv}:${pedido.amigo}`);
+            if (document.getElementById('invite-modal').style.display === 'flex') desenharAmigosParaConvite();
+            showToast(pedido.nomeAmigo ? `Convite enviado pra ${pedido.nomeAmigo}!` : 'Convite enviado na DM!', 'success');
+        }
+
+        function mostrarConviteGerado(cv) {
             conviteAtual = cv;
             const link = `${window.location.origin}/convite/${cv.code}`;
             document.getElementById('invite-link').value = link;
@@ -5836,7 +6036,7 @@
                 caixa.innerHTML = '<span style="color:#666; font-size:11px; padding:8px; text-align:center;">QR indisponível<br>(use o link)</span>';
             });
             showToast("Convite pronto!", "success");
-        });
+        }
 
         function copiarConvite() {
             const campo = document.getElementById('invite-link');
@@ -5858,12 +6058,104 @@
             else window.location.href = `mailto:${encodeURIComponent(para)}?${q.replace('su=', 'subject=')}`;
         }
 
-        function entrarPorCodigo() {
-            const valor = document.getElementById('invite-code-input').value.trim();
-            if (!valor) { showToast("Cola o código ou o link do convite.", "warning"); return; }
+        // Entrar com link OU código (o servidor aceita os dois). Usado pela barra do mapa, pelo "+" e pelo botão do cartão.
+        function entrarComConvite(valor) {
+            valor = String(valor || '').trim();
+            if (!valor) { showToast('Cole o link ou o código do convite.', 'warning'); return false; }
+            if (valor.length > 200) { showToast('Isso não parece um convite.', 'warning'); return false; }
             socket.emit('entrar_por_convite', { code: valor });
-            showToast("Entrando...", "info");
+            showToast('Entrando...', 'info');
+            return true;
         }
+
+        // Barra ao lado de "Plantar Servidor"
+        const campoConviteBarra = document.getElementById('radar-convite-input');
+        function entrarPelaBarra() { if (entrarComConvite(campoConviteBarra.value)) campoConviteBarra.value = ''; }
+        document.getElementById('radar-convite-btn').addEventListener('click', entrarPelaBarra);
+        campoConviteBarra.addEventListener('keydown', (e) => { if (e.key === 'Enter') entrarPelaBarra(); });
+
+        // "+" da barra de servidores: criar / entrar / explorar
+        function abrirAddOpcoes() {
+            document.getElementById('mais-entrar-form').style.display = 'none';
+            document.getElementById('add-opcoes-modal').style.display = 'flex';
+        }
+        function fecharAddOpcoes() { document.getElementById('add-opcoes-modal').style.display = 'none'; }
+        document.getElementById('mais-criar').addEventListener('click', () => { fecharAddOpcoes(); document.getElementById('add-server-modal').style.display = 'flex'; });
+        document.getElementById('mais-entrar').addEventListener('click', () => {
+            const f = document.getElementById('mais-entrar-form');
+            f.style.display = f.style.display === 'block' ? 'none' : 'block';
+            if (f.style.display === 'block') document.getElementById('add-convite-input').focus();
+        });
+        function entrarPeloMais() { if (entrarComConvite(document.getElementById('add-convite-input').value)) document.getElementById('add-convite-input').value = ''; }
+        document.getElementById('add-convite-btn').addEventListener('click', entrarPeloMais);
+        document.getElementById('add-convite-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrarPeloMais(); });
+        document.getElementById('mais-explorar').addEventListener('click', () => showToast('Explorar servidores vem aí: um mapa vivo, com barquinhos navegando e estruturas em terra. Aguenta firme!', 'info'));
+
+        // ---------- CARTÃO DO CONVITE (na DM e no chat) ----------
+        // Link do próprio site /convite/<código> vira um cartão animado com nome, ícone e quantos membros. Os dados vêm
+        // de /api/convite/<código>/previa (só nome/ícone/contagem); tudo passa por esc()/escUrl().
+        const RE_LINK_CONVITE = new RegExp(window.location.origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/convite/([a-z0-9]{4,16})\\b', 'gi');
+        function codigosDeConvite(texto) {
+            const out = [];
+            String(texto || '').replace(RE_LINK_CONVITE, (m, c) => { c = c.toLowerCase(); if (!out.includes(c) && out.length < 3) out.push(c); return m; });
+            return out;
+        }
+        function textoSemConvite(texto) {
+            return String(texto || '').replace(RE_LINK_CONVITE, '')
+                .replace(/^\s*Te convidei pro servidor[^:]*:\s*/i, '').replace(/\(vale [^)]*\)/i, '').trim();
+        }
+        function htmlCartoesDeConvite(codigos) {
+            return codigos.map(c => `<div class="conv-card conv-esqueleto" data-codigo="${esc(c)}"><div class="conv-card-int">
+                <div class="conv-rotulo"><i class="fa-solid fa-ticket"></i> Convite pra um servidor</div>
+                <div class="conv-linha"><div class="conv-icone"><i class="fa-solid fa-ticket"></i></div></div></div></div>`).join('');
+        }
+        const previasDeConvite = {};
+        function previaDoConvite(codigo) {
+            if (!previasDeConvite[codigo]) previasDeConvite[codigo] = fetch(`/api/convite/${encodeURIComponent(codigo)}/previa`)
+                .then(r => r.json()).catch(() => ({ valido: false }));
+            return previasDeConvite[codigo];
+        }
+        function duracaoCurta(seg) {
+            if (seg < 90) return 'menos de 1 min';
+            if (seg < 3600) return `${Math.round(seg / 60)} min`;
+            if (seg < 86400) return `${Math.round(seg / 3600)} h`;
+            return `${Math.round(seg / 86400)} dia(s)`;
+        }
+        function hidratarConvites(raiz) {
+            raiz.querySelectorAll('.conv-card[data-codigo]:not([data-ok])').forEach(card => {
+                card.dataset.ok = '1';
+                previaDoConvite(card.dataset.codigo).then(d => pintarConvite(card, d));
+            });
+        }
+        function pintarConvite(card, d) {
+            card.classList.remove('conv-esqueleto');
+            if (!d || !d.valido) {
+                card.classList.add('invalido');
+                card.innerHTML = `<div class="conv-card-int"><div class="conv-rotulo"><i class="fa-solid fa-ticket"></i> Convite</div>
+                    <div class="conv-linha"><div class="conv-icone"><i class="fa-solid fa-ban"></i></div>
+                    <div class="conv-info"><div class="conv-nome">Convite inválido ou expirado</div><div class="conv-meta">Peça um link novo pra quem te chamou.</div></div></div></div>`;
+                return;
+            }
+            const sv = d.servidor || {};
+            const icone = sv.icone ? `<img src="${escUrl(sv.icone)}" alt="">` : esc(iniciaisServidor(sv.nome || '?'));
+            const membros = Number(sv.membros) || 0;
+            const meta = [`${membros} ${membros === 1 ? 'membro' : 'membros'}`];
+            if (d.restante_s != null) meta.push('expira em ' + duracaoCurta(d.restante_s));
+            if (d.usos_restantes != null) meta.push(d.usos_restantes === 1 ? 'último uso' : `${d.usos_restantes} usos`);
+            const botao = d.ja_membro ? `<button class="conv-btn ja" data-acao="abrir" data-servidor="${Number(d.server_id) || 0}">Abrir</button>`
+                                      : '<button class="conv-btn" data-acao="entrar">Entrar</button>';
+            card.innerHTML = `<div class="conv-card-int"><div class="conv-rotulo"><i class="fa-solid fa-ticket"></i> ${d.criado_por ? esc(d.criado_por) + ' te convidou' : 'Convite pra um servidor'}</div>
+                <div class="conv-linha"><div class="conv-icone">${icone}</div>
+                <div class="conv-info"><div class="conv-nome">${esc(sv.nome)}</div><div class="conv-meta"><span class="conv-ponto"></span><span>${meta.join(' · ')}</span></div></div>${botao}</div></div>`;
+        }
+        document.addEventListener('click', (e) => {
+            const b = e.target.closest('.conv-btn'); if (!b || b.disabled) return;
+            const card = b.closest('.conv-card');
+            if (b.dataset.acao === 'abrir') { const id = Number(b.dataset.servidor); if (id) entrarNoServidor(id); return; }
+            b.disabled = true; b.textContent = 'Entrando...';
+            entrarComConvite(card.dataset.codigo);
+            setTimeout(() => { if (document.body.contains(b)) { b.disabled = false; b.textContent = 'Entrar'; } }, 6000);
+        });
 
         // ---------- MENU DO SERVIDOR (clique no nome) ----------
         function posicionarMenu(menu, x, y) {
@@ -5965,7 +6257,7 @@
 
             const algumModalAberto = ['channel-modal', 'server-config-modal', 'invite-modal',
                                       'event-modal', 'avatar-crop-modal', 'add-friend-modal',
-                                      'quick-switcher', 'painel-fixadas']
+                                      'quick-switcher', 'painel-fixadas', 'add-opcoes-modal']
                 .some(id => (document.getElementById(id) || {}).style?.display === 'flex');
 
             if (algumModalAberto) { fecharTodosOsModais(); return; }
@@ -6611,10 +6903,19 @@
         let localizacaoAtiva = "{{ 0 if usuario_atual.localizacao_ativa is sameas false else 1 }}" === "1";
         let localizacaoIp = "{{ 0 if usuario_atual.localizacao_ip is sameas false else 1 }}" === "1";
         let origemPosicao = '', lugarPorIp = '', rastreio = null;   // rastreio = { iniciar(), parar() }, criado dentro do initMap
-        function exigirLocalizacao() {
-            if (localizacaoAtiva) return true;
-            showToast('A localização está desligada. Ligue em Configurações > Geral pra fazer isso.', 'warning');
-            return false;
+        let modoExplorar = null, marcadorExplorar = null, faixaExplorar = null, timerExplorar = null;   // "explorar": olhar o mapa em outro lugar, só leitura
+        // `presenca` = a ação precisa da posição do APARELHO (GPS/Wi-Fi): plantar, deixar nota, copiar nota. Posição só por IP ou
+        // "explorando" serve pra olhar. O servidor confere de novo (a regra de verdade mora lá).
+        function exigirLocalizacao(presenca) {
+            if (!localizacaoAtiva) {
+                showToast('A localização está desligada. Ligue em Configurações > Geral pra fazer isso.', 'warning');
+                return false;
+            }
+            if (!presenca) return true;
+            if (modoExplorar) { showToast('Você está só explorando. Volte pra sua posição (botão no topo do mapa) pra fazer isso.', 'info'); return false; }
+            if (origemPosicao === 'ip') { showToast('Sua posição veio só da internet (aproximada demais). Pra fazer isso o app precisa da localização do aparelho (GPS ou Wi-Fi).', 'warning'); return false; }
+            if (origemPosicao !== 'aparelho') { showToast('Ainda estou achando a sua posição pelo aparelho...', 'info'); return false; }
+            return true;
         }
         try { localStorage.removeItem('bzGhostMode'); } catch (e) {}
         const btnToggleGhost = document.getElementById('btn-toggle-ghost');
@@ -6788,7 +7089,7 @@
 
         // Modal de NOTA
         function abrirModalNota(modo, id = null, txt = "", cor = "#5865F2", icone = "💬") {
-            if (modo === 'create' && !exigirLocalizacao()) return;
+            if (modo === 'create' && !exigirLocalizacao(true)) return;
             document.getElementById('note-modal').style.display = 'flex';
             definirIconeNota(modo === 'create' ? '💬' : icone);
             document.getElementById('note-duration-group').style.display = modo === 'create' ? '' : 'none';
@@ -6903,7 +7204,7 @@
         }
 
         function abrirModalServidor(modo, id = null, vagasAtuais = null) {
-            if (modo === 'create' && !exigirLocalizacao()) return;
+            if (modo === 'create' && !exigirLocalizacao(true)) return;
             if (modo === 'create' && meUserServers.length === 0) {
                 showToast("Crie um servidor antes de plantá-lo no mapa!", "warning");
                 document.getElementById('add-server-modal').style.display = 'flex';
@@ -7006,6 +7307,7 @@
                 btn.style.width = '30px'; btn.style.height = '30px'; btn.style.padding = '0'; btn.style.borderRadius = '4px'; btn.style.margin = '10px'; btn.style.cursor = 'pointer'; btn.style.backgroundColor = 'var(--bg-secondary)'; btn.style.border = '1px solid rgba(0,0,0,0.5)'; btn.style.color = 'var(--text-normal)';
                 btn.title = "Centralizar em mim";
                 btn.onclick = function() {
+                    if (modoExplorar) { sairDoExplorar(); return; }
                     // Voltar ao GPS real (cancela o teletransporte manual) e centralizar.
                     if (posicaoManual && navigator.geolocation && localizacaoAtiva) {
                         posicaoManual = false; ultimoFixGps = null;
@@ -7088,21 +7390,25 @@
                 plantingMode = null;
             });
 
-            // TELETRANSPORTE (Correção do GPS do PC): Dois cliques para mover seu avatar manualmente
+            // EXPLORAR (antes: teletransporte). Dois cliques deixam OLHAR o mapa em outro lugar (evento em outra cidade, por
+            // exemplo), mas só olhar: a posição que vale pra agir continua sendo a do aparelho, e o servidor não deixa
+            // plantar, deixar nota nem entrar em servidor de lá. Também não mostra pessoas (radar) do outro lado.
             bazingaMap.on('dblclick', function(e) {
                 if (!exigirLocalizacao()) return;
-                openConfirmModal("Correção de GPS (Teletransporte)", "Mover seu avatar exatamente para este ponto? Vale até você clicar em \"Centralizar em mim\".", () => {
-                    posicaoManual = true; posicaoConfiavel = true;
-                    try { localStorage.setItem('pnt_pos_manual', JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng, t: Date.now() })); } catch (err) {}
-                    mostrarPrecisao(e.latlng.lat, e.latlng.lng, 0);
-                    ultimoCentroPedido = null;
-                    atualizarMinhaPosicao(e.latlng.lat, e.latlng.lng);
-                    if(typeof socket !== 'undefined' && socket.connected) {
-                        socket.emit('atualizar_localizacao', { lat: e.latlng.lat, lng: e.latlng.lng });
-                    }
-                    pedirArredoresDoMapa(true);
-                    showToast("GPS Corrigido! Teletransporte concluído.", "success");
-                });
+                openConfirmModal('Explorar este ponto',
+                    'Quer olhar o mapa por ali? Você vê as notas e os servidores plantados, mas só olha: pra deixar nota, plantar ou entrar num servidor você precisa estar lá de verdade.',
+                    () => explorarPonto(e.latlng.lat, e.latlng.lng));
+            });
+            bazingaMap.on('moveend', function() {
+                if (!modoExplorar) return;
+                clearTimeout(timerExplorar);
+                timerExplorar = setTimeout(() => {
+                    if (!modoExplorar) return;
+                    const c = bazingaMap.getCenter();
+                    modoExplorar = { lat: c.lat, lng: c.lng };
+                    if (marcadorExplorar) marcadorExplorar.setLatLng(c);
+                    socket.emit('mapa_explorar', { lat: c.lat, lng: c.lng });
+                }, 800);
             });
             // Desabilita o zoom nativo de dois cliques para não conflitar
             bazingaMap.doubleClickZoom.disable();
@@ -7134,9 +7440,10 @@
                 }
                 atualizarMinhaPosicao(lat, lng);
                 mostrarPrecisao(lat, lng, accuracy);
-                // Avisa o servidor (Flask) que eu me movi para espalhar pros amigos! (Apenas se ghost mode = off)
-                if (!ghostMode && typeof socket !== 'undefined' && socket.connected) {
-                    socket.emit('atualizar_localizacao', { lat: lat, lng: lng });
+                // O servidor precisa saber onde estou até no Modo Fantasma (pra conferir alcance); ele é quem esconde o pino dos
+                // outros. `fonte` diz de onde veio: IP só deixa olhar o mapa, aparelho deixa agir.
+                if (typeof socket !== 'undefined' && socket.connected) {
+                    socket.emit('atualizar_localizacao', { lat: lat, lng: lng, fonte: position._ip ? 'ip' : 'aparelho' });
                 }
             };
             // Reserva por IP: o servidor descobre onde o IP fica. Só entra se NADA melhor chegou, e uma leitura
@@ -7151,7 +7458,7 @@
                     avisouAproximado = true;   // este aviso já explica; não repete o do "PC sem GPS"
                     lugarPorIp = d.lugar || '';
                     aoReceberGps({ coords: { latitude: d.lat, longitude: d.lng, accuracy: d.precisao_m }, _ip: true });
-                    showToast(`Localização aproximada pela internet${d.lugar ? ' (' + d.lugar + ')' : ''}. Com VPN ou dados móveis ela pode estar longe: dê dois cliques no mapa onde você está de verdade.`, 'warning');
+                    showToast(`Localização aproximada pela internet${d.lugar ? ' (' + d.lugar + ')' : ''}. Ela pode estar bem longe de você (VPN, dados móveis, operadora). Assim dá pra ver e explorar o mapa, mas pra plantar, deixar nota ou entrar em servidor o app precisa da localização do aparelho.`, 'warning');
                     return true;
                 } catch (e) {
                     console.warn('[localização por IP]', e.message);
@@ -7167,15 +7474,7 @@
                     : 'Não consegui achar sua localização. Dê dois cliques no mapa, no ponto onde você está.', 'warning');
                 atualizarMinhaPosicao(-23.550520, -46.633308);   // só pra o mapa existir; o teletransporte corrige
             };
-            try {
-                const salvo = JSON.parse(localStorage.getItem('pnt_pos_manual') || 'null');
-                if (salvo && localizacaoAtiva && Date.now() - salvo.t < 6 * 3600 * 1000 && Math.abs(salvo.lat) <= 90 && Math.abs(salvo.lng) <= 180) {
-                    posicaoManual = true; posicaoConfiavel = true;
-                    atualizarMinhaPosicao(salvo.lat, salvo.lng);
-                    anunciarMinhaPosicao();
-                    setTimeout(() => showToast('Usando o ponto que você marcou no mapa. Clique em "Centralizar em mim" pra voltar ao GPS.', 'info'), 1500);
-                } else if (salvo) { localStorage.removeItem('pnt_pos_manual'); }
-            } catch (e) {}
+            try { localStorage.removeItem('pnt_pos_manual'); } catch (e) {}   // o teletransporte acabou (virou "explorar")
             let watchId = null, timerReservaIp = null;
             function iniciarRastreio() {
                 if (!localizacaoAtiva || watchId !== null) return;
@@ -7231,9 +7530,9 @@
 
         // Reanuncia a minha posição (só se ela é de verdade: nunca o ponto "falso" de São Paulo do fallback).
         function anunciarMinhaPosicao() {
-            if (!myMapMarker || !posicaoConfiavel || ghostMode || !localizacaoAtiva || !socket.connected) return;
+            if (!myMapMarker || !posicaoConfiavel || !localizacaoAtiva || modoExplorar || !socket.connected) return;
             const p = myMapMarker.getLatLng();
-            socket.emit('atualizar_localizacao', { lat: p.lat, lng: p.lng });
+            socket.emit('atualizar_localizacao', { lat: p.lat, lng: p.lng, fonte: origemPosicao === 'ip' ? 'ip' : 'aparelho' });
         }
         setInterval(anunciarMinhaPosicao, 45000);   // o servidor só mostra quem manda sinal nos últimos ~3 min
 
@@ -7306,8 +7605,47 @@
             bazingaMap.setMinZoom(12);
         }
 
+        // ---------- EXPLORAR: olhar o mapa em outro lugar, só leitura ----------
+        function explorarPonto(lat, lng) {
+            if (!bazingaMap) return;
+            modoExplorar = { lat, lng };
+            clearTimeout(timerExplorar);
+            bazingaMap.setMaxBounds([[-85, -180], [85, 180]]);   // solta a rolagem presa ao meu alcance
+            bazingaMap.setMinZoom(10);
+            if (marcadorExplorar) bazingaMap.removeLayer(marcadorExplorar);
+            marcadorExplorar = L.marker([lat, lng], { icon: L.divIcon({ className: 'explorar-pino', html: '<i class="fa-solid fa-eye"></i>', iconSize: [38, 38], iconAnchor: [19, 19] }), interactive: false, zIndexOffset: 900 }).addTo(bazingaMap);
+            bazingaMap.setView([lat, lng], 15);
+            if (!faixaExplorar) {
+                faixaExplorar = document.createElement('div');
+                faixaExplorar.className = 'explorar-faixa';
+                faixaExplorar.innerHTML = '<span><i class="fa-solid fa-eye"></i> Explorando: só olhando</span><button type="button">Voltar pra mim</button>';
+                faixaExplorar.querySelector('button').addEventListener('click', sairDoExplorar);
+                L.DomEvent.disableClickPropagation(faixaExplorar);
+                bazingaMap.getContainer().appendChild(faixaExplorar);
+            }
+            socket.emit('mapa_explorar', { lat, lng });
+        }
+
+        function sairDoExplorar() {
+            if (!modoExplorar) return;
+            modoExplorar = null;
+            clearTimeout(timerExplorar);
+            if (marcadorExplorar && bazingaMap) bazingaMap.removeLayer(marcadorExplorar);
+            marcadorExplorar = null;
+            if (faixaExplorar) { faixaExplorar.remove(); faixaExplorar = null; }
+            if (myMapMarker) {
+                const p = myMapMarker.getLatLng();
+                aplicarLimitesDoMapa(p.lat, p.lng);
+                bazingaMap.setView(p, 16);
+                ultimoCentroPedido = null;
+                pedirArredoresDoMapa(true);
+            } else if (bazingaMap) {
+                bazingaMap.setMinZoom(3);
+            }
+        }
+
         function pedirArredoresDoMapa(forcar) {
-            if (!myMapMarker || !socket.connected) return;
+            if (!myMapMarker || !socket.connected || modoExplorar) return;
             const p = myMapMarker.getLatLng();
             if (!forcar && ultimoCentroPedido && calcularDistanciaMetros(p.lat, p.lng, ultimoCentroPedido.lat, ultimoCentroPedido.lng) < 150) return;
             ultimoCentroPedido = { lat: p.lat, lng: p.lng };
@@ -7315,6 +7653,7 @@
         }
 
         function aoMoverMinhaPosicao(lat, lng) {
+            if (modoExplorar) return;   // olhando outro lugar: não puxa o mapa nem os limites de volta
             desenharRaios(lat, lng);
             aplicarLimitesDoMapa(lat, lng);
             pedirArredoresDoMapa(false);
@@ -7382,7 +7721,7 @@
         // Copiar nota: você ESCOLHE no mapa onde colocar a cópia (dentro do círculo azul do seu alcance).
         let copiaDeNotaId = null;
         function copiarNotaParaMeuAlcance(id) {   // nome mantido por causa do onclick do balão
-            if (!exigirLocalizacao()) return;
+            if (!exigirLocalizacao(true)) return;
             if (!myMapMarker) { showToast('Ainda estou achando sua posição...', 'info'); return; }
             copiaDeNotaId = Number(id);
             plantingMode = 'copia';
@@ -7653,9 +7992,10 @@
             // O servidor manda só o que está dentro do raio de quem olha
             socket.on('mapa_arredores', function(d) {
                 if (!bazingaMap) return;
+                if (modoExplorar && !d.explorando) return;   // resposta velha do meu entorno chegando durante a exploração
                 if (d.raio_notas_m) raioNotasM = d.raio_notas_m;
                 if (d.raio_servidores_m) raioServidoresM = d.raio_servidores_m;
-                if (myMapMarker) { const p = myMapMarker.getLatLng(); desenharRaios(p.lat, p.lng); aplicarLimitesDoMapa(p.lat, p.lng); }
+                if (!d.explorando && myMapMarker) { const p = myMapMarker.getLatLng(); desenharRaios(p.lat, p.lng); aplicarLimitesDoMapa(p.lat, p.lng); }
                 sincronizarMapa(d.notas, d.servers);
             });
 
@@ -7850,9 +8190,13 @@
             const reacoesHtml = htmlDasReacoes(id, extras.reacoes);
             const acoesHtml = htmlDasAcoes(souAutor);
 
+            // Link de convite do próprio site vira cartão animado (e some do texto); o resto da mensagem segue igual.
+            const codigosConvite = codigosDeConvite(texto);
+            const textoMostrado = codigosConvite.length ? textoSemConvite(texto) : texto;
+            const cartoesConviteHtml = htmlCartoesDeConvite(codigosConvite);
             // Mensagem só de anexo não mostra o parágrafo de texto vazio
-            const textoHtml = texto
-                ? `<p class="message-text">${htmlTexto(texto)}${marcaEditada}</p>`
+            const textoHtml = textoMostrado
+                ? `<p class="message-text">${htmlTexto(textoMostrado)}${marcaEditada}</p>`
                 : (marcaEditada ? `<p class="message-text">${marcaEditada}</p>` : '');
 
             if (isGrouped) {
@@ -7864,6 +8208,7 @@
                     <div class="message-content">
                         ${textoHtml}
                         ${anexoHtml}
+                        ${cartoesConviteHtml}
                         ${reacoesHtml}
                     </div>
                 `;
@@ -7878,10 +8223,12 @@
                         </div>
                         ${textoHtml}
                         ${anexoHtml}
+                        ${cartoesConviteHtml}
                         ${reacoesHtml}
                     </div>
                 `;
             }
+            if (codigosConvite.length) hidratarConvites(div);
 
             // Só anima quem chega com o canal já aberto; no carregamento do
             // histórico isso viraria 50 animações ao mesmo tempo.
@@ -10339,8 +10686,7 @@
             if (estado) {
                 let t;
                 if (!localizacaoAtiva) t = 'Desligada: nada de radar, mapa ao redor ou posição enviada.';
-                else if (posicaoManual) t = 'Agora: no ponto que você marcou no mapa.';
-                else if (origemPosicao === 'ip') t = `Agora: aproximada pela internet${lugarPorIp ? ' (' + lugarPorIp + ')' : ''}.`;
+                else if (origemPosicao === 'ip') t = `Agora: aproximada pela internet${lugarPorIp ? ' (' + lugarPorIp + ')' : ''}. Dá pra ver e explorar o mapa, mas não agir.`;
                 else if (origemPosicao === 'aparelho' && ultimoFixGps) t = `Agora: pelo aparelho (±${ultimoFixGps.acc >= 1000 ? (ultimoFixGps.acc / 1000).toFixed(1) + ' km' : Math.round(ultimoFixGps.acc) + ' m'}).`;
                 else t = 'Procurando você...';
                 estado.textContent = t;
@@ -10371,6 +10717,7 @@
                 showToast('Localização ligada.', 'success');
             } else if (mudou) {
                 // desligou: para de rastrear, tira o meu pino e os dos amigos do meu mapa, esquece a posição
+                if (modoExplorar) sairDoExplorar();
                 if (rastreio) rastreio.parar();
                 if (myMapMarker && bazingaMap) { bazingaMap.removeLayer(myMapMarker); myMapMarker = null; }
                 if (circuloPrecisao && bazingaMap) { bazingaMap.removeLayer(circuloPrecisao); circuloPrecisao = null; }
@@ -12665,31 +13012,26 @@
         document.addEventListener('click', (e) => { if (!e.target.closest('#dm-contato-menu')) menuContato.style.display = 'none'; });
         document.addEventListener('contextmenu', (e) => { if (!e.target.closest('.user-dm-item')) menuContato.style.display = 'none'; });
 
-        // Convidar um amigo pra um servidor meu: cria um convite de 1 uso/24h e manda o link na DM.
-        let _conviteParaDM = null;
+        // Convidar um amigo pra um servidor meu (menu do contato): cria um convite de 1 uso/24h e manda o link na DM.
         function abrirConvidar(amigoId, nome) {
             const meus = (meUserServers || []).filter(s => Number(s.owner_id) === Number(currentUserId));
             const lista = document.getElementById('convidar-lista');
-            document.getElementById('convidar-sub').textContent = `Escolha o servidor: o link de convite vai pra DM com ${nome}.`;
+            document.getElementById('convidar-sub').textContent = `Escolha o servidor: o convite vai pra DM com ${nome}.`;
             lista.innerHTML = meus.length ? meus.map(s => `<button class="convidar-item" data-srv="${Number(s.id)}"><span class="convidar-ico">${s.iconUrl ? `<img src="${escUrl(s.iconUrl)}" alt="">` : esc(iniciaisServidor(s.name))}</span><span>${esc(s.name)}</span></button>`).join('')
                 : '<div class="sf-vazio">Você não é dono de nenhum servidor.</div>';
             lista.dataset.amigo = amigoId;
+            lista.dataset.nome = nome;
             document.getElementById('convidar-modal').style.display = 'flex';
         }
         document.getElementById('convidar-lista').addEventListener('click', (e) => {
             const b = e.target.closest('[data-srv]'); if (!b) return;
-            _conviteParaDM = { amigo: Number(document.getElementById('convidar-lista').dataset.amigo), srv: Number(b.dataset.srv) };
-            socket.emit('criar_convite', { server_id: _conviteParaDM.srv, duracao: '24', max_usos: '1' });
+            const lista = document.getElementById('convidar-lista');
+            const srvId = Number(b.dataset.srv);
+            novoPedidoConvite({ tipo: 'dm', srv: srvId, amigo: Number(lista.dataset.amigo), nomeAmigo: lista.dataset.nome });
+            socket.emit('criar_convite', { server_id: srvId, duracao: '24', max_usos: '1' });
             document.getElementById('convidar-modal').style.display = 'none';
         });
         document.getElementById('convidar-fechar').addEventListener('click', () => { document.getElementById('convidar-modal').style.display = 'none'; });
-        socket.on('convite_criado', (cv) => {
-            if (!_conviteParaDM) return;
-            const alvo = _conviteParaDM; _conviteParaDM = null;
-            const srv = (meUserServers || []).find(s => Number(s.id) === alvo.srv);
-            socket.emit('enviar_mensagem_direta', { target_id: alvo.amigo, texto: `Te convidei pro servidor ${srv ? srv.name : ''}: ${window.location.origin}/convite/${cv.code} (vale 24h, 1 uso)` });
-            showToast('Convite enviado na DM!', 'success');
-        });
 
         // ---------- CONVERSA DE DM ----------
         function htmlAcoesPadraoHeader() {

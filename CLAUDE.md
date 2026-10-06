@@ -309,7 +309,7 @@ sua própria versão do servidor.
 `/manifest.webmanifest` · `/sw.js` ·
 `/api/mensagens/<id>` · `/api/dms/<id>` · `/api/mapa/dados` ·
 `/api/produtos` · `/api/produtos/<id>/comprar` · `/api/inventario` ·
-`/api/upload` · `/api/gifs?q=<busca>` · `/api/localizacao/ip`
+`/api/upload` · `/api/gifs?q=<busca>` · `/api/localizacao/ip` · `/api/convite/<code>/previa`
 
 ---
 
@@ -1344,7 +1344,7 @@ pessoa — não enviamos e-mail do servidor).
   amigos_ids)`, `_avisar_amigos`). O cliente re-filtra por distância em `nova_geonote`.
 - **GPS**: o timeout de 5 s com alta precisão estourava no PC e caía num fallback **silencioso em São Paulo**; o GPS também
   sobrescrevia o teletransporte. Agora: timeout 20 s, 2ª tentativa sem alta precisão, toast honesto, círculo de precisão,
-  e o teletransporte (`posicaoManual`) vale até clicar em "Centralizar em mim".
+  e o teletransporte (`posicaoManual`) vale até clicar em "Centralizar em mim" *(removido em 06/10/2026: virou Explorar, ver Rodada 7)*.
 
 ### Outros
 - **Missões em cartões estilo Quests** (`.qs-card`: capa colorida pelo ícone, XP em destaque, barra, estado). Dados e
@@ -1600,7 +1600,31 @@ pede `garantir_salas` (o `connect` agora tenta de novo se o banco estava acordan
   qualquer lugar) e `entrar_servidor_pin` só aceita servidor **plantado**, vivo (não vencido/oculto) e **dentro de `RAIO_SERVIDORES_M`** do pino
   (antes qualquer pessoa entrava em QUALQUER servidor só chutando o id: sem pino a checagem era pulada). O mapa nasce com `minZoom 3`,
   `maxBounds` do mundo e `noWrap` (antes só havia limite depois da 1ª posição e dava pra ver/clicar o mundo repetido).
-  **Em aberto (decisão de produto)**: o teletransporte (duplo clique) ainda existe e deixa qualquer pessoa "estar" em qualquer lugar.
+- **Confiança da posição + Explorar (06/10/2026)**: o cliente manda `fonte` em `atualizar_localizacao` e o servidor guarda por socket em
+  `fontes_mapa`: `'aparelho'` (GPS/Wi-Fi: **pode agir**), `'ip'` (só aproximada: **só olha o mapa**, não vira pino pros amigos) ou `'suspeita'`
+  (dois fixes seguidos com salto > 50 km e > 1000 km/h = teletransporte: 30 min sem agir, sem pino; `VELOCIDADE_MAX_KMH`, `SALTO_MIN_M`,
+  `SUSPEITA_SEGUNDOS` em `events.py`). **Agir** = `plantar_servidor`, `criar_geonote`, `copiar_geonote`, `entrar_servidor_pin`
+  (`_exigir_presenca()`); comprar só exige a localização ligada. O **teletransporte (duplo clique) acabou**: virou **Explorar**
+  (`mapa_explorar` → `mapa_arredores` com `explorando: true`): olhar notas e servidores plantados em outro lugar (ex.: evento em outra
+  cidade), **sem radar de pessoas** (senão dava pra espiar quem está na casa de alguém), **sem mexer em onde o servidor acha que você está**
+  (então não dá pra agir de lá) e com limite de ritmo (0,8 s). O cliente mostra a faixa "Explorando: só olhando / Voltar pra mim"
+  (`explorarPonto`/`sairDoExplorar`, `modoExplorar`) e `exigirLocalizacao(true)` barra a ação com o motivo. Ponto salvo do teletransporte
+  antigo (`pnt_pos_manual`) é apagado no boot. **Modo Fantasma**: o cliente passou a mandar a posição mesmo com ele ligado (o servidor é quem
+  esconde o pino); sem isso o servidor "não sabia onde a pessoa estava" e barrava plantar/nota. **Consequência assumida**: PC sem sensor
+  (só IP) vê e explora, mas não age; o celular (PWA, com GPS) tem tudo. Continua sendo trava leve: cliente adulterado manda `fonte: 'aparelho'`
+  com qualquer coordenada; não existe API que prove presença.
+- **DM: link e anexo só entre amigos**: em `enviar_mensagem_direta`, quem não é amigo (conversa rápida, pedido pendente, só divide servidor)
+  tem link (`texto_tem_link()` em `utils.py`, propositalmente largo: prefere barrar a mais) e anexo recusados com o motivo. Anotações (a si
+  mesmo) e amigos seguem normais. Vira amigo e libera.
+- **Convites (06/10/2026)**: (1) link `/convite/<código>` do próprio site, em qualquer mensagem (DM ou canal), vira **cartão animado** (borda em
+  gradiente, ícone flutuando, botão com brilho) desenhado por `htmlCartoesDeConvite`/`hidratarConvites`/`pintarConvite` a partir de
+  `GET /api/convite/<code>/previa` (login obrigatório; só nome, ícone, nº de membros, validade; inválido = esgotado = inexistente;
+  `server_id` só pra quem já é membro, pro botão "Abrir"). O link sai do texto (e o texto antigo "Te convidei pro servidor X: ..." também).
+  (2) **Convidar** (modal do servidor): lista de amigos com botão Convidar (manda só o link na DM, convite de 1 uso/24h) + "ou envie um link"
+  (validade/usos, copiar, QR e e-mail dentro de "Mais opções"). Os pedidos `criar_convite` passam por uma fila (`pedidosConvite`, casa por
+  `server_id`, expira em 8 s) porque modal e DM compartilham o evento `convite_criado`. (3) **Barra "Link ou código de convite + Entrar"**
+  ao lado de "Plantar Servidor" (`entrarComConvite`). (4) **"+" da barra de servidores** abre `#add-opcoes-modal`: Criar o meu / Entrar com um
+  convite / Explorar servidores (**em breve**: mapa vivo com barquinhos e estruturas; ainda só o cartão). O campo "Recebeu um convite?" saiu do modal de convidar.
 - **Reserva por IP**: `GET /api/localizacao/ip` (`routes.py`) acha o 1º IP público de `X-Forwarded-For` e consulta `PROVEDOR_IP`
   (ipwho.is, sem chave; troque a constante pra mudar de provedor). Cache de 1h por IP, 1 pedido a cada 15s por pessoa; precisão fixa
   de 10 km. **Erra com VPN e dados móveis** (o IP é do provedor): o cliente avisa e o duplo clique no mapa (teletransporte) continua mandando.

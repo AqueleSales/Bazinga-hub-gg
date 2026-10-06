@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app, Response
 from sqlalchemy.exc import OperationalError, PendingRollbackError, SQLAlchemyError
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload
 import os
 import re
@@ -10,8 +10,8 @@ import cloudinary
 import cloudinary.uploader
 import requests
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
-                      GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
-from ..utils import (com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
+                      GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db, server_members)
+from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                      localizacao_ligada, localizacao_ip_permitida, MSG_LOCALIZACAO_DESLIGADA,
                      recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO)
@@ -847,6 +847,54 @@ def animar_video():
         print(f"[ERRO VIDEO->ANIMACAO] {e}")
         return jsonify({'error': 'Não consegui converter esse vídeo'}), 422
     return Response(saida, mimetype='image/webp')
+
+
+# ==========================================
+# PRÉVIA DO CONVITE (o cartão bonito na DM e no chat)
+# ------------------------------------------------------------------
+# Só nome, ícone e número de membros: o suficiente pra decidir entrar, e nada que vaze canais/membros. Exige login e
+# um código VÁLIDO (quem chuta código não descobre servidor nenhum: o inválido e o inexistente respondem igual).
+# ==========================================
+_RE_CODIGO_CONVITE = re.compile(r'^[a-z0-9]{4,16}$')
+
+
+@main_bp.route("/api/convite/<code>/previa")
+def previa_do_convite(code):
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'error': 'Acesso negado'}), 401
+    code = (code or '').strip().lower()
+    if not _RE_CODIGO_CONVITE.match(code):
+        return jsonify({'valido': False})
+    try:
+        convite = com_retry(lambda: Invite.query.filter_by(code=code).first())
+        if not convite or not convite.esta_valido():
+            return jsonify({'valido': False})
+        srv = com_retry(lambda: Server.query.get(convite.server_id))
+        if not srv:
+            return jsonify({'valido': False})
+        membros = com_retry(lambda: db.session.query(func.count()).select_from(server_members)
+                            .filter(server_members.c.server_id == srv.id).scalar()) or 0
+        restante_s = None
+        if convite.expires_at:
+            restante_s = max(0, int((convite.expires_at - br_now()).total_seconds()))
+        usos_restantes = None if convite.max_uses is None else max(0, convite.max_uses - (convite.uses or 0))
+        return jsonify({
+            'valido': True,
+            'codigo': convite.code,
+            'servidor': {'nome': srv.name, 'icone': srv.icon_url, 'membros': int(membros),
+                         'descricao': (srv.description or '')[:120]},
+            'criado_por': convite.creator.name if convite.creator else None,
+            'restante_s': restante_s,
+            'usos_restantes': usos_restantes,
+            'ja_membro': bool(eh_membro(usuario, srv.id)),
+            # só pra quem já é membro (botão "Abrir"): quem não é não precisa do id e não ganha nada com ele
+            'server_id': srv.id if eh_membro(usuario, srv.id) else None,
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO PREVIA CONVITE] {e}")
+        return jsonify({'valido': False})
 
 
 # ==========================================

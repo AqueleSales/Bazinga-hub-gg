@@ -10,7 +10,7 @@ from . import socketio, APP_VERSAO
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product,
                      Denuncia, Notificacao, Silenciado, server_members, channel_members)
-from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
+from .utils import (texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
@@ -516,6 +516,8 @@ def handle_disconnect():
     # sem isso, quem caiu ficava "fantasma" na prévia de participantes da
     # call pro resto da sessão de todo mundo.
     centros_mapa.pop(request.sid, None)
+    fontes_mapa.pop(request.sid, None)
+    _explorar_ts.pop(request.sid, None)
     call_info = _call_por_sid.pop(request.sid, None)
     if call_info and _meta_call.get(call_info, {}).get('sid') == request.sid:
         # Não tira da call na hora: o socket costuma só piscar (Render, troca de rede) e a mídia WebRTC segue viva.
@@ -1638,7 +1640,7 @@ def entrar_servidor_pin(dados):
             if not pino or pino.oculta or (pino.expires_at and pino.expires_at <= br_now()):
                 emit('erro_bazinga', {'msg': 'Esse servidor não está plantado no mapa.'})
                 return
-            if not _exigir_posicao():
+            if not _exigir_presenca():
                 return
             if not _dentro_do_alcance((pino.lat, pino.lng), RAIO_SERVIDORES_M):
                 emit('erro_bazinga', {'msg': 'Esse servidor está longe demais. Chegue mais perto pra entrar.'})
@@ -1670,6 +1672,17 @@ def entrar_servidor_pin(dados):
 # Fantasma: a posição só serve pro servidor filtrar, não aparece pra outros).
 # ==========================================
 centros_mapa = {}   # sid -> (lat, lng)
+# De ONDE veio a posição de cada socket: 'aparelho' (GPS/Wi-Fi), 'ip' (só aproximada) ou 'suspeita' (salto impossível).
+# Só 'aparelho' deixa AGIR (plantar, nota, copiar, entrar por pino); as outras servem pra olhar o mapa.
+# O servidor não consegue PROVAR que o aparelho é verdadeiro (um cliente adulterado manda 'aparelho' com qualquer
+# coordenada); isto, o alcance e a checagem de plausibilidade abaixo só encarecem a fraude e limitam o estrago.
+fontes_mapa = {}      # sid -> 'aparelho' | 'ip' | 'suspeita'
+ultimo_fix = {}       # usuario_id -> (lat, lng, t) do último fix de aparelho
+suspeitos_ate = {}    # usuario_id -> ts até quando a posição fica sem poder agir
+_explorar_ts = {}     # sid -> ts do último pedido de explorar (limite de ritmo)
+VELOCIDADE_MAX_KMH = 1000   # acima disso (avião comercial ~900) entre dois fixes seguidos, não é a mesma pessoa andando
+SALTO_MIN_M = 50_000        # saltos menores que isso são só o Wi-Fi errando, não teletransporte
+SUSPEITA_SEGUNDOS = 30 * 60
 # Última posição de quem NÃO está no Fantasma (usuario_id -> payload). É o que faltava pra amigo aparecer assim que
 # você abre o mapa: antes a posição só existia no instante em que a pessoa se mexia, e quem chegava depois via mapa vazio.
 ultimas_posicoes = {}
@@ -1753,6 +1766,22 @@ def _exigir_posicao():
     return False
 
 
+def _exigir_presenca():
+    """Pra AGIR no mapa (plantar, nota, copiar nota, entrar por pino) a posição precisa ter vindo do APARELHO (GPS/Wi-Fi)
+    e não ter dado um salto impossível. Posição só por IP (errada por centenas de km) ou 'explorada' serve pra olhar."""
+    if not _exigir_posicao():
+        return False
+    fonte = fontes_mapa.get(request.sid, 'aparelho')
+    if fonte == 'aparelho':
+        return True
+    if fonte == 'ip':
+        msg = 'Sua posição veio só do endereço de internet (aproximada demais). Pra fazer isso o app precisa da localização do aparelho (GPS ou Wi-Fi). Você ainda pode explorar o mapa.'
+    else:
+        msg = 'Sua posição mudou rápido demais pra ser verdade. Espere alguns minutos parado e tente de novo.'
+    emit('erro_bazinga', {'msg': msg})
+    return False
+
+
 @socketio.on('mapa_pedir_arredores')
 def mapa_pedir_arredores(dados):
     """O cliente avisa onde está olhando e recebe SÓ o que está no raio."""
@@ -1783,6 +1812,34 @@ def mapa_pedir_arredores(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível carregar o mapa: {e}'})
 
 
+@socketio.on('mapa_explorar')
+def mapa_explorar(dados):
+    """Olhar o mapa em OUTRO lugar (o cenário "evento do outro lado do país"). Só LEITURA: devolve as notas e os
+    servidores plantados em volta do ponto, sem amigos/radar, sem mexer em onde ESTE socket está (por isso não dá
+    pra agir lá: plantar/nota/entrar por pino seguem exigindo a posição do aparelho). Limite de ritmo por socket."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    if not localizacao_ligada(usuario):
+        return
+    pos = coordenada_valida((dados or {}).get('lat'), (dados or {}).get('lng'))
+    if not pos:
+        return
+    agora = time.time()
+    if agora - _explorar_ts.get(request.sid, 0) < 0.8:
+        return
+    _explorar_ts[request.sid] = agora
+    try:
+        d = com_retry(lambda: dados_do_mapa_perto(pos[0], pos[1], None))
+        d['centro'] = {'lat': pos[0], 'lng': pos[1]}
+        d['explorando'] = True
+        emit('mapa_arredores', d)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MAPA EXPLORAR] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível explorar o mapa: {e}'})
+
+
 def _validar_nota_texto(dados):
     return (dados.get('texto') or '').strip()[:LIM_NOTA]
 
@@ -1802,7 +1859,7 @@ def criar_geonote(dados):
         if not pos:
             emit('erro_bazinga', {'msg': 'Local inválido para a nota.'})
             return
-        if not _exigir_posicao():
+        if not _exigir_presenca():
             return
         if not _dentro_do_alcance(pos, RAIO_NOTAS_M):
             emit('erro_bazinga', {'msg': 'Esse ponto está fora do seu alcance - chegue mais perto pra deixar a nota.'})
@@ -1909,6 +1966,9 @@ def copiar_geonote(dados):
         emit('erro_bazinga', {'msg': MSG_LOCALIZACAO_DESLIGADA})
         return
 
+    if not _exigir_presenca():
+        return
+
     try:
         centro = centros_mapa.get(request.sid)
         nota = com_retry(lambda: GeoNote.query.get(dados.get('id')))
@@ -1969,7 +2029,7 @@ def plantar_servidor(dados):
         if not pos:
             emit('erro_bazinga', {'msg': 'Local inválido para o servidor.'})
             return
-        if not _exigir_posicao():
+        if not _exigir_presenca():
             return
         if not _dentro_do_alcance(pos, RAIO_SERVIDORES_M):
             emit('erro_bazinga', {'msg': 'Esse ponto está fora do seu alcance.'})
@@ -2132,6 +2192,30 @@ def atualizar_localizacao(dados):
     # O servidor sempre sabe onde este socket está olhando (pro filtro por raio),
     # mas isso nunca sai daqui - o Fantasma só controla se OUTROS veem o pino.
     centros_mapa[request.sid] = pos
+
+    # Posição só por IP: serve pra olhar o mapa, mas é aproximada demais (centenas de km, VPN, dados móveis):
+    # não vira pino pros amigos e não deixa agir.
+    if (dados or {}).get('fonte') == 'ip':
+        fontes_mapa[request.sid] = 'ip'
+        ultimas_posicoes.pop(usuario.id, None)
+        return
+
+    # Plausibilidade: dois fixes seguidos longe demais pro tempo que passou = teletransporte (ou Wi-Fi/IP errando feio).
+    # Fica "suspeita" por um tempo: não vira pino pros amigos e não deixa agir.
+    agora = time.time()
+    anterior = ultimo_fix.get(usuario.id)
+    if anterior:
+        d = distancia_m(anterior[0], anterior[1], pos[0], pos[1])
+        dt = max(agora - anterior[2], 1.0)
+        if d > SALTO_MIN_M and (d / dt) * 3.6 > VELOCIDADE_MAX_KMH:
+            suspeitos_ate[usuario.id] = agora + SUSPEITA_SEGUNDOS
+            print(f"[POSICAO SUSPEITA] {usuario.name}: {d/1000:.0f} km em {dt:.0f}s")
+    ultimo_fix[usuario.id] = (pos[0], pos[1], agora)
+    if suspeitos_ate.get(usuario.id, 0) > agora:
+        fontes_mapa[request.sid] = 'suspeita'
+        ultimas_posicoes.pop(usuario.id, None)
+        return
+    fontes_mapa[request.sid] = 'aparelho'
 
     # Fantasma valendo de verdade: a posição nem sai do servidor. Antes só o
     # navegador se continha, então um cliente adulterado (ou o teletransporte
@@ -3300,6 +3384,13 @@ def on_enviar_mensagem_direta(data):
             limpar_pedidos_expirados(usuario.id)
             rel = None
         criar_rapida = target_id != usuario.id and rel is None
+
+        # Quem NÃO é amigo (conversa rápida, pedido pendente, só divide servidor) não manda link nem anexo: é por aqui
+        # que entra spam e golpe. Vira amigo e libera. Anotações (a si mesmo) e amigos seguem normais.
+        eh_amigo = target_id == usuario.id or bool(rel and rel.status == 'accepted')
+        if not eh_amigo and (anexo_url or texto_tem_link(texto)):
+            emit('erro_bazinga', {'msg': f'Links e anexos só entre amigos. Peça amizade a {destinatario.name} primeiro; até lá dá pra conversar por texto.'})
+            return
         oculto_pro_destino = False
         if rel and rel.status == 'pending':
             oculto_pro_destino = oculta_pra(rel, target_id)

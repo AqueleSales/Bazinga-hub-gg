@@ -592,6 +592,19 @@ def distancia_m(lat1, lng1, lat2, lng2):
     return 2 * 6371000 * asin(sqrt(a))
 
 
+_RE_LINK = re.compile(
+    r'(?:https?://|ftp://|www\.|discord(?:app)?\.(?:gg|com)/|t\.me/|wa\.me/|bit\.ly/'
+    r'|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|info|biz|br|io|gg|me|ly|co|app|dev|xyz|link|click|top|site|online|shop|store|live|ru|cn|tk|ml|ga|cf|gq|cc|ws|to|vip|club|pw|su)\b)',
+    re.IGNORECASE)
+
+
+def texto_tem_link(texto):
+    """True se o texto parece conter um link/endereço. Usado pra barrar link de quem não é amigo
+    (conversa rápida): o ponto é cortar spam e golpe, então prefere pecar pra mais (falso positivo aqui só
+    pede pra a pessoa virar amiga antes)."""
+    return bool(_RE_LINK.search(texto or ''))
+
+
 def localizacao_ligada(usuario):
     """False só se a pessoa DESLIGOU a localização em Configurações > Geral (NULL = nunca mexeu = ligada).
     É a trava de segurança: comprar/vender, plantar, deixar/copiar nota e o radar checam isto NO SERVIDOR.
