@@ -1,7 +1,7 @@
 {
   "name": "panteao-desktop",
   "productName": "Panteão",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Casca desktop do Panteão (carrega o site e cuida de login, tray e atualização).",
   "main": "main.js",
   "private": true,
@@ -49,7 +49,8 @@
         "owner": "AqueleSales",
         "repo": "panteao-releases"
       }
-    ]
+    ],
+    "artifactName": "Panteao-Setup-${version}.${ext}"
   },
   "devDependencies": {
     "electron": "^44.5.1",

@@ -1577,11 +1577,13 @@ pede `garantir_salas` (o `connect` agora tenta de novo se o banco estava acordan
   `https://bazinga-hub-gg.onrender.com` (já no `desktop/config.json`).
 - **Auto-update** (`iniciarAtualizador()` em `main.js`; só no app empacotado): baixa em segundo plano, avisa "Reiniciar agora / Depois",
   confere de novo a cada 4h e tem "Procurar atualizações" na bandeja. Como o código é privado, os instaladores vão num repo **público só
-  de binários**: `AqueleSales/panteao-releases` (campo `publish` do `desktop/package.json`). **Publicar uma versão nova**:
-  (1) subir `version` em `desktop/package.json`; (2) `cd desktop && npm run dist`; (3) no repo `panteao-releases` criar um Release com a
-  tag `v<versão>` e anexar **os 3 arquivos** de `desktop/dist/`: `Panteão Setup <v>.exe`, `Panteão Setup <v>.exe.blockmap` e `latest.yml`
-  (sem o `latest.yml` o app não enxerga a versão nova). Mudança só no site (Flask/chat.html) **não** exige novo instalador. Não testado de
-  ponta a ponta ainda (precisa de duas versões publicadas).
+  de binários**: `AqueleSales/panteao-releases` (campo `publish` do `desktop/package.json`). **Publicar uma versão nova**: (1) subir `version` em `desktop/package.json`; (2) `cd desktop && npm run dist` (o nome é fixo, só ASCII:
+  `Panteao-Setup-<v>.exe`, porque o GitHub troca espaço/acento no upload e quebraria o `latest.yml`); (3) `cd dist` e
+  `gh release create v<v> Panteao-Setup-<v>.exe Panteao-Setup-<v>.exe.blockmap latest.yml --repo AqueleSales/panteao-releases --title "Panteão Desktop <v>" --notes "..."`
+  (os **3 arquivos**: sem o `latest.yml` o app não enxerga a versão nova; o `gh` precisa de `gh auth login` feito uma vez). A v0.2.0 já está
+  publicada (06/10/2026). O repo de releases é público: **nada de chave dentro do instalador** além do que já é público (a `googleApiKey` do
+  `config.json` só entra se for restrita à Geolocation API). Mudança só no site (Flask/chat.html) **não** exige novo instalador. Não testado de
+  ponta a ponta ainda (precisa de uma 2ª versão publicada pra ver o app se atualizar).
 - **Falta**: assinatura de código (SmartScreen); badge de não lidas; geolocalização no Electron (usa o Windows; se falhar, vale o
   teletransporte do mapa); testar com o Render dormindo e com duas contas (regra 6).
 
