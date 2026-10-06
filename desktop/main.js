@@ -12,9 +12,13 @@ function lerConfig() {
   let cfg = {};
   try { cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')); } catch (_) {}
   const servidor = (process.env.PANTEAO_URL || cfg.servidor || 'http://localhost:5000').replace(/\/+$/, '');
-  return { servidor };
+  // Chave da Geolocation API do Google (opcional). Vai dentro do instalador, então precisa ser RESTRITA à
+  // Geolocation API no Google Cloud (ver CLAUDE.md, Rodada 7). Pode vir de config.json ou da variável GOOGLE_API_KEY.
+  const googleApiKey = String(process.env.GOOGLE_API_KEY || cfg.googleApiKey || '').trim();
+  return { servidor, googleApiKey };
 }
-const { servidor: SERVIDOR } = lerConfig();
+const { servidor: SERVIDOR, googleApiKey: CHAVE_GOOGLE } = lerConfig();
+console.log(`[desktop] servidor: ${SERVIDOR}${process.env.PANTEAO_URL ? ' (vem da variável PANTEAO_URL)' : ''}`);
 const ORIGEM = new URL(SERVIDOR).origin;
 const PROTOCOLO = 'panteao';
 
@@ -23,6 +27,28 @@ let tray = null;
 let atualizarMenuTray = () => {};
 let saindo = false;
 let verificadorPendente = null;   // PKCE: o hash vai pro navegador, o original fica só aqui
+
+// ---------------------------------------------------------------- preferências DESTE aparelho (Configurações > Geral)
+// Ficam num arquivo em userData, não na conta: "iniciar com o Windows" e "como achar a localização" mudam de PC pra PC.
+// Windows/Google são lidos ANTES do app ficar pronto (flag do Chromium / variável de ambiente), então mudar exige reiniciar.
+const PREFS_PADRAO = { fecharNaBandeja: true, locWindows: true, locGoogle: true };
+const arquivoPrefs = () => path.join(app.getPath('userData'), 'prefs.json');
+
+function lerPrefs() {
+  try { return { ...PREFS_PADRAO, ...JSON.parse(fs.readFileSync(arquivoPrefs(), 'utf8')) }; } catch (_) { return { ...PREFS_PADRAO }; }
+}
+function gravarPrefs(p) {
+  try { fs.writeFileSync(arquivoPrefs(), JSON.stringify(p)); } catch (err) { console.warn('[prefs]', err.message); }
+}
+let prefs = lerPrefs();
+let precisaReiniciar = false;
+
+// Geolocalização: o Electron não tem o provedor de rede do Google de graça (exige chave de API), então sem nenhum dos
+// dois abaixo navigator.geolocation estoura o tempo (code 3) e o app cai na reserva por IP.
+//  - Windows: usa o serviço de localização do sistema; só funciona com o serviço "Geolocalização" (lfsvc) ativo.
+//  - Google: com a chave, o Chromium consulta o Google com os Wi-Fi ao redor (a variável precisa existir antes do ready).
+if (prefs.locWindows) app.commandLine.appendSwitch('enable-features', 'WinrtGeolocationImplementation');
+if (prefs.locGoogle && CHAVE_GOOGLE) process.env.GOOGLE_API_KEY = CHAVE_GOOGLE;
 
 // ---------------------------------------------------------------- instância única + deep link
 if (process.defaultApp && process.argv.length >= 2) {
@@ -103,7 +129,9 @@ function criarJanela() {
   janela.on('move', guardarEstadoJanela);
   // Fechar = esconder na bandeja (como o Discord); "Sair" no menu da bandeja encerra de verdade.
   janela.on('close', (e) => {
-    if (!saindo) { e.preventDefault(); janela.hide(); }
+    if (saindo) return;
+    if (prefs.fecharNaBandeja) { e.preventDefault(); janela.hide(); }
+    else { saindo = true; app.quit(); }   // opção "Fechar a janela deixa o app na bandeja" desligada
   });
 
   // Links externos abrem no navegador do sistema; o app só navega dentro do próprio site.
@@ -166,6 +194,57 @@ function vemDaTelaLocal(e) {
   const url = e.senderFrame ? e.senderFrame.url : '';
   return url.startsWith('file://');
 }
+
+// As telas de Configurações do SITE também chamam isto (window.panteao.prefs*): vale pra página do próprio servidor do app.
+function vemDoApp(e) {
+  const url = e.senderFrame ? e.senderFrame.url : '';
+  if (url.startsWith('file://')) return true;
+  try { return new URL(url).origin === ORIGEM; } catch (_) { return false; }
+}
+
+function estadoPrefs() {
+  return {
+    iniciarComWindows: app.getLoginItemSettings().openAtLogin,
+    fecharNaBandeja: prefs.fecharNaBandeja,
+    locWindows: prefs.locWindows,
+    locGoogle: prefs.locGoogle,
+    temChaveGoogle: !!CHAVE_GOOGLE,
+    precisaReiniciar,
+    versao: app.getVersion(),
+  };
+}
+
+ipcMain.handle('prefs:get', (e) => (vemDoApp(e) ? estadoPrefs() : null));
+
+ipcMain.handle('prefs:set', (e, chave, valor) => {
+  if (!vemDoApp(e) || typeof valor !== 'boolean') return null;
+  if (chave === 'iniciarComWindows') {
+    // em desenvolvimento isso registraria o electron.exe puro (abriria a tela padrão do Electron no boot)
+    if (!app.isPackaged) return { ...estadoPrefs(), aviso: 'Só funciona no app instalado (não no npm start).' };
+    app.setLoginItemSettings({ openAtLogin: valor });
+    atualizarMenuTray();
+  } else if (chave === 'fecharNaBandeja') {
+    prefs.fecharNaBandeja = valor;
+    gravarPrefs(prefs);
+  } else if (chave === 'locWindows' || chave === 'locGoogle') {
+    prefs[chave] = valor;
+    gravarPrefs(prefs);
+    precisaReiniciar = true;     // flag/variável do Chromium só valem na próxima abertura
+  }
+  return estadoPrefs();
+});
+
+ipcMain.handle('sistema:abrir-privacidade-localizacao', (e) => {
+  if (!vemDoApp(e)) return;
+  shell.openExternal('ms-settings:privacy-location');   // texto fixo: nada vindo da página entra aqui
+});
+
+ipcMain.handle('sistema:reiniciar', (e) => {
+  if (!vemDoApp(e)) return;
+  saindo = true;
+  app.relaunch();
+  app.exit(0);
+});
 
 ipcMain.handle('app:info', async (e) => {
   if (!vemDaTelaLocal(e)) return null;

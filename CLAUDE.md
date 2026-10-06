@@ -309,7 +309,7 @@ sua própria versão do servidor.
 `/manifest.webmanifest` · `/sw.js` ·
 `/api/mensagens/<id>` · `/api/dms/<id>` · `/api/mapa/dados` ·
 `/api/produtos` · `/api/produtos/<id>/comprar` · `/api/inventario` ·
-`/api/upload` · `/api/gifs?q=<busca>`
+`/api/upload` · `/api/gifs?q=<busca>` · `/api/localizacao/ip`
 
 ---
 
@@ -1584,6 +1584,32 @@ pede `garantir_salas` (o `connect` agora tenta de novo se o banco estava acordan
   ponta a ponta ainda (precisa de duas versões publicadas).
 - **Falta**: assinatura de código (SmartScreen); badge de não lidas; geolocalização no Electron (usa o Windows; se falhar, vale o
   teletransporte do mapa); testar com o Render dormindo e com duas contas (regra 6).
+
+### Localização na conta + aba "Geral" (Configurações do app)
+- **Interruptor na CONTA** (igual ao Modo Fantasma): `Person.localizacao_ativa` e `Person.localizacao_ip` (colunas **anuláveis**:
+  `NULL` = nunca mexeu = **ligada**; `atualizar_banco.py` passo 25). Evento `alternar_localizacao {ativa?, ip?}` → `preferencias_carregadas`
+  pra todas as abas; o valor inicial já vem no HTML (sem piscar).
+- **Desligada, o SERVIDOR recusa** (`localizacao_ligada()` em `utils.py`; regra 4): comprar (`/api/produtos/<id>/comprar` → 403;
+  **não existe rota de vender ainda**, o Bazar vai ser refeito: ligar a mesma checagem lá), `criar_geonote`, `copiar_geonote`,
+  `plantar_servidor`, `entrar_servidor_pin`, e o radar nos dois sentidos (`atualizar_localizacao` descarta a posição e
+  `mapa_pedir_arredores` não devolve nada). **XP/missões NÃO são bloqueados** (decisão do dono). Desligar emite `posicao_amigo_removida`
+  (regra 6). **É trava leve**: cliente adulterado ainda manda coordenada falsa; ela barra uso casual, não é prova de presença.
+- **Reserva por IP**: `GET /api/localizacao/ip` (`routes.py`) acha o 1º IP público de `X-Forwarded-For` e consulta `PROVEDOR_IP`
+  (ipwho.is, sem chave; troque a constante pra mudar de provedor). Cache de 1h por IP, 1 pedido a cada 15s por pessoa; precisão fixa
+  de 10 km. **Erra com VPN e dados móveis** (o IP é do provedor): o cliente avisa e o duplo clique no mapa (teletransporte) continua mandando.
+  No cliente (`tentarPosicaoPorIP` dentro do `initMap`) entra quando o aparelho erra OU em 8 s sem nenhuma posição (Electron/PC sem provedor
+  fica mudo ~35 s); uma leitura melhor do aparelho depois substitui o fix por IP.
+- **Aba "Geral"** (`#set-geral`, em "Configurações do app"): localização (+ estado atual: aparelho/IP/ponto marcado), sons e avisos
+  na área de trabalho (`localStorage`, por aparelho) e, **só no app desktop** (`window.panteao.prefsGet` existe): localização do Windows,
+  localização do Google, iniciar com o Windows e "fechar deixa o app na bandeja". Os toggles usam `.toggle-switch.tg-app` (o listener
+  genérico de toggle exclui essa classe: o estado vem do servidor/das prefs, nunca alterna sozinho).
+- **Prefs do app desktop** moram em `userData/prefs.json` (`desktop/main.js`: `prefs`, IPC `prefs:get/set`, só aceitos da tela local ou do
+  próprio servidor do app). Windows/Google são lidos **antes do ready** (flag `WinrtGeolocationImplementation` / `GOOGLE_API_KEY`), então
+  mudar exige **reiniciar** (a aba mostra o botão). A chave do Google vem de `desktop/config.json` (`googleApiKey`) ou da env `GOOGLE_API_KEY`;
+  fica dentro do instalador, então precisa ser **restrita à Geolocation API** no Google Cloud. "Iniciar com o Windows" não faz nada em
+  `npm start` (registraria o electron.exe puro): só no app instalado. O serviço "Geolocalização" (`lfsvc`) do Windows está **desativado**
+  no PC do dono; sem ele a flag do Windows não ajuda (por isso IP e Google).
+- Teste: `python testes/fumaca_localizacao.py` (travas, regra 6, IP). A parte do Electron (prefs/IPC) **não foi testada ao vivo**.
 
 ### Plano original (histórico)
 

@@ -13,6 +13,7 @@ from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db)
 from ..utils import (com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
+                     localizacao_ligada, localizacao_ip_permitida, MSG_LOCALIZACAO_DESLIGADA,
                      recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO)
 from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
@@ -257,6 +258,72 @@ self.addEventListener('fetch', e => {
   if (cdnVersionado(u)) e.respondWith(cacheAntes(req, CACHE_CDN));
 });
 """
+
+
+# ==========================================
+# LOCALIZAÇÃO POR IP (reserva)
+# ------------------------------------------------------------------
+# Só entra quando o aparelho não achou a posição (Windows/Google/GPS). É aproximada (cidade, às vezes só a região),
+# e VPN ou dados móveis fazem ela cair no provedor, não em você: por isso é só reserva e o cliente avisa.
+# O provedor é trocável (PROVEDOR_IP); sem chave, mas com limite - por isso o cache por IP.
+# ==========================================
+PROVEDOR_IP = "https://ipwho.is/{ip}?fields=success,latitude,longitude,city,region,country,message"
+_cache_ip = {}           # ip -> (ts, payload)
+_ultimo_pedido_ip = {}   # usuario_id -> ts
+
+
+def _ip_do_cliente():
+    """Primeiro IP público de X-Forwarded-For (o Render põe o do cliente ali) ou o do socket."""
+    import ipaddress
+    candidatos = [p.strip() for p in (request.headers.get('X-Forwarded-For') or '').split(',') if p.strip()]
+    candidatos.append(request.remote_addr or '')
+    for c in candidatos:
+        try:
+            ip = ipaddress.ip_address(c)
+        except ValueError:
+            continue
+        if ip.is_global:
+            return str(ip)
+    return None
+
+
+@main_bp.route("/api/localizacao/ip")
+def localizacao_por_ip():
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'error': 'Acesso negado'}), 401
+    if not localizacao_ip_permitida(usuario):
+        return jsonify({'error': 'A localização por IP está desligada nas suas configurações.'}), 403
+
+    agora = time.time()
+    if agora - _ultimo_pedido_ip.get(usuario.id, 0) < 15:
+        return jsonify({'error': 'Calma: espere uns segundos antes de tentar de novo.'}), 429
+    _ultimo_pedido_ip[usuario.id] = agora
+
+    ip = _ip_do_cliente()
+    if not ip:
+        return jsonify({'error': 'Não achei um IP público (rede local?).'}), 422
+
+    guardado = _cache_ip.get(ip)
+    if guardado and agora - guardado[0] < 3600:
+        return jsonify(guardado[1])
+
+    try:
+        r = requests.get(PROVEDOR_IP.format(ip=ip), timeout=4)
+        d = r.json()
+    except Exception as e:
+        print(f"[ERRO IP LOC] {e}")
+        return jsonify({'error': 'Não consegui consultar a localização por IP agora.'}), 502
+    pos = coordenada_valida(d.get('latitude'), d.get('longitude')) if d.get('success') else None
+    if not pos:
+        return jsonify({'error': 'Não consegui descobrir onde esse IP fica.'}), 502
+
+    payload = {'lat': pos[0], 'lng': pos[1], 'precisao_m': 10000,
+               'lugar': ', '.join(x for x in (d.get('city'), d.get('region')) if x)}
+    if len(_cache_ip) > 500:
+        _cache_ip.clear()
+    _cache_ip[ip] = (agora, payload)
+    return jsonify(payload)
 
 
 @main_bp.route("/chat")
@@ -544,6 +611,10 @@ def comprar_produto(produto_id):
     usuario = usuario_da_sessao()
     if not usuario:
         return jsonify({'error': 'Acesso negado'}), 401
+
+    # Medida de segurança: comprar (e, quando existir, vender) exige a localização ligada.
+    if not localizacao_ligada(usuario):
+        return jsonify({'error': MSG_LOCALIZACAO_DESLIGADA}), 403
 
     try:
         produto = com_retry(lambda: Product.query.get(produto_id))

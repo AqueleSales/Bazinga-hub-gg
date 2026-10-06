@@ -592,6 +592,20 @@ def distancia_m(lat1, lng1, lat2, lng2):
     return 2 * 6371000 * asin(sqrt(a))
 
 
+def localizacao_ligada(usuario):
+    """False só se a pessoa DESLIGOU a localização em Configurações > Geral (NULL = nunca mexeu = ligada).
+    É a trava de segurança: comprar/vender, plantar, deixar/copiar nota e o radar checam isto NO SERVIDOR.
+    Não é prova de presença (um cliente adulterado ainda pode mandar coordenada falsa); só barra o uso casual."""
+    return getattr(usuario, 'localizacao_ativa', None) is not False
+
+
+def localizacao_ip_permitida(usuario):
+    return localizacao_ligada(usuario) and getattr(usuario, 'localizacao_ip', None) is not False
+
+
+MSG_LOCALIZACAO_DESLIGADA = 'Ligue a localização em Configurações > Geral pra fazer isso.'
+
+
 def coordenada_valida(lat, lng):
     try:
         lat, lng = float(lat), float(lng)

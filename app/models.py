@@ -72,6 +72,12 @@ class Person(db.Model):
     # pessoa entre dispositivos - e pra o servidor poder barrar a posição dela
     # de verdade, em vez de confiar que o navegador se comporta.
     ghost_mode = db.Column(db.Boolean, default=False, nullable=False)
+    # Localização (Configurações > Geral). Também na conta. NULL = nunca mexeu = LIGADA (por isso a coluna é
+    # anulável: contas antigas e a migração automática não têm DEFAULT). Desligada, o servidor recusa comprar/vender,
+    # plantar servidor, deixar/copiar nota e o radar de amigos (ver localizacao_ligada em utils.py).
+    localizacao_ativa = db.Column(db.Boolean, nullable=True)
+    # Permite a posição aproximada por IP quando o aparelho não consegue achar a sua (só vale com a localização ligada).
+    localizacao_ip = db.Column(db.Boolean, nullable=True)
     # Tema visual (dark/light/amoled) - também na conta, pelo mesmo motivo.
     tema = db.Column(db.String(20), default='dark', nullable=False)
 

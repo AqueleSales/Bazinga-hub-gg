@@ -17,7 +17,7 @@ from .utils import (com_retry, comitar_com_retry, canal_permitido, pode_ver_cana
                     BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
                     ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok,
                     tema_perfil_valido, username_valido, ajuste_de_imagem_valido,
-                    distancia_m, coordenada_valida, dados_do_mapa_perto, nota_para_json,
+                    distancia_m, coordenada_valida, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, dados_do_mapa_perto, nota_para_json,
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
 from .cosmeticos import (CATALOGO, PACOTES, TIPOS_COLUNA, TIPOS_JSON, TIPOS_EQUIPAVEIS, item_exclusivo, efeito_servidor_valido,
@@ -447,7 +447,9 @@ def handle_connect():
 
         # Preferências que moram na conta (não no navegador): o cliente aplica
         # ao conectar, então valem em qualquer aparelho/rede.
-        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'tema': usuario.tema or 'dark'})
+        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'tema': usuario.tema or 'dark',
+                                         'localizacao_ativa': localizacao_ligada(usuario),
+                                         'localizacao_ip': usuario.localizacao_ip is not False})
 
         # Bônus diário: a primeira conexão do dia paga XP e mantém a sequência.
         # Em try próprio: falhar aqui não pode derrubar presença/amigos abaixo.
@@ -1616,6 +1618,10 @@ def entrar_servidor_pin(dados):
     if not usuario:
         return
 
+    if not localizacao_ligada(usuario):
+        emit('erro_bazinga', {'msg': MSG_LOCALIZACAO_DESLIGADA})
+        return
+
     try:
         server_id = int(dados.get('server_id'))
 
@@ -1734,6 +1740,8 @@ def mapa_pedir_arredores(dados):
     usuario = usuario_logado()
     if not usuario:
         return
+    if not localizacao_ligada(usuario):
+        return   # sem localização não vê o radar (nem notas/servidores ao redor)
     pos = coordenada_valida((dados or {}).get('lat'), (dados or {}).get('lng'))
     if not pos:
         return
@@ -1764,6 +1772,10 @@ def _validar_nota_texto(dados):
 def criar_geonote(dados):
     usuario = usuario_logado()
     if not usuario:
+        return
+
+    if not localizacao_ligada(usuario):
+        emit('erro_bazinga', {'msg': MSG_LOCALIZACAO_DESLIGADA})
         return
 
     try:
@@ -1872,6 +1884,10 @@ def copiar_geonote(dados):
     if not usuario:
         return
 
+    if not localizacao_ligada(usuario):
+        emit('erro_bazinga', {'msg': MSG_LOCALIZACAO_DESLIGADA})
+        return
+
     try:
         centro = centros_mapa.get(request.sid)
         nota = com_retry(lambda: GeoNote.query.get(dados.get('id')))
@@ -1915,6 +1931,10 @@ def copiar_geonote(dados):
 def plantar_servidor(dados):
     usuario = usuario_logado()
     if not usuario:
+        return
+
+    if not localizacao_ligada(usuario):
+        emit('erro_bazinga', {'msg': MSG_LOCALIZACAO_DESLIGADA})
         return
 
     try:
@@ -2074,6 +2094,12 @@ def atualizar_localizacao(dados):
     """
     usuario = usuario_logado()
     if not usuario:
+        return
+
+    # Localização desligada: a posição nem entra no servidor e some do radar de quem já via (regra 6).
+    if not localizacao_ligada(usuario):
+        ultimas_posicoes.pop(usuario.id, None)
+        centros_mapa.pop(request.sid, None)
         return
 
     pos = coordenada_valida((dados or {}).get('lat'), (dados or {}).get('lng'))
@@ -2434,6 +2460,41 @@ def alternar_fantasma(dados):
         db.session.rollback()
         print(f"[ERRO ALTERNAR FANTASMA] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível mudar o Modo Fantasma: {e}'})
+
+
+@socketio.on('alternar_localizacao')
+def alternar_localizacao(dados):
+    """Liga/desliga a localização (e a reserva por IP) na conta. Valor explícito, como no Modo Fantasma."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+
+    dados = dados or {}
+    try:
+        novo_ativa = bool(dados['ativa']) if 'ativa' in dados else None
+        novo_ip = bool(dados['ip']) if 'ip' in dados else None
+
+        def preparar():
+            if novo_ativa is not None:
+                usuario.localizacao_ativa = novo_ativa
+            if novo_ip is not None:
+                usuario.localizacao_ip = novo_ip
+
+        comitar_com_retry(preparar)
+
+        emit('preferencias_carregadas', {'localizacao_ativa': localizacao_ligada(usuario),
+                                         'localizacao_ip': usuario.localizacao_ip is not False},
+             to=sala_pessoal(usuario.id))
+
+        # Desligou: some do radar de quem já via o pino (igual ao Fantasma) e esquece onde estava.
+        if novo_ativa is False:
+            ultimas_posicoes.pop(usuario.id, None)
+            for sala in _salas_da_posicao(usuario):
+                emit('posicao_amigo_removida', {'usuario_id': usuario.id}, to=sala, include_self=False)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ALTERNAR LOCALIZACAO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível salvar a localização: {e}'})
 
 
 @socketio.on('mudar_tema')

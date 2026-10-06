@@ -3771,6 +3771,7 @@
                     <div class="set-tab" data-target="set-inventario">Inventário</div>
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
                     <div class="set-tab-header">Configurações do App</div>
+                    <div class="set-tab" data-target="set-geral">Geral</div>
                     <div class="set-tab" data-target="set-voz">Voz e Vídeo</div>
                     <div class="set-tab" data-target="set-aparencia">Aparência</div>
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
@@ -3906,6 +3907,93 @@
                 <div class="set-section" id="set-inventario" style="max-width: 1000px;">
                     <h2 class="set-title">Inventário</h2>
                     <div id="inv-raiz" class="inv-raiz"></div>
+                </div>
+
+                <!-- ABA: GERAL (localização na conta, avisos e, no app desktop, o que é da casca) -->
+                <div class="set-section" id="set-geral">
+                    <h2 class="set-title">Geral</h2>
+
+                    <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">Localização</h3>
+                    <div class="discord-toggle">
+                        <div>
+                            <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Usar a minha localização</h4>
+                            <p style="color: var(--text-muted); font-size: 14px;">Liga o radar de amigos e o mapa ao redor. Fica salvo na sua conta, em qualquer aparelho.</p>
+                        </div>
+                        <div class="toggle-switch tg-app" id="tg-loc"></div>
+                    </div>
+                    <div class="discord-toggle" id="tg-loc-ip-linha">
+                        <div>
+                            <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Reserva por IP</h4>
+                            <p style="color: var(--text-muted); font-size: 14px;">Se o aparelho não achar onde você está, usa o endereço de internet. É aproximado (cidade ou região) e <b>erra com VPN ou dados móveis</b>: nesses casos vale mais marcar o ponto com dois cliques no mapa.</p>
+                        </div>
+                        <div class="toggle-switch tg-app" id="tg-loc-ip"></div>
+                    </div>
+                    <p id="loc-estado" style="color: var(--text-muted); font-size: 13px; margin: -8px 0 16px;"></p>
+                    <p class="loc-aviso" id="loc-aviso" style="font-size: 13px; color: var(--yellow-color); margin: 0 0 16px;">
+                        Com a localização desligada você não consegue comprar nem vender, plantar servidor, deixar ou copiar notas, e não aparece (nem vê) o radar de amigos.
+                    </p>
+
+                    <!-- só no app desktop -->
+                    <div id="geral-desktop-loc" hidden>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Localização do Windows</h4>
+                                <p style="color: var(--text-muted); font-size: 14px;">Usa o serviço de localização do próprio Windows. Ele precisa estar ligado lá (Configurações do Windows &gt; Privacidade &gt; Localização) e o serviço “Geolocalização” ativo.</p>
+                                <button class="btn" id="btn-loc-win-abrir" style="margin-top: 8px;">Abrir a privacidade de localização do Windows</button>
+                            </div>
+                            <div class="toggle-switch tg-app" id="tg-loc-win"></div>
+                        </div>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Localização pelo Google</h4>
+                                <p style="color: var(--text-muted); font-size: 14px;" id="loc-google-desc">Usa o serviço de localização do Google (Wi-Fi ao redor).</p>
+                            </div>
+                            <div class="toggle-switch tg-app" id="tg-loc-google"></div>
+                        </div>
+                        <div id="loc-reiniciar" hidden style="margin: -8px 0 16px;">
+                            <span style="font-size: 13px; color: var(--yellow-color);">Pra aplicar essa mudança o app precisa reiniciar.</span>
+                            <button class="btn btn-primary" id="btn-reiniciar-app" style="margin-left: 8px;">Reiniciar agora</button>
+                        </div>
+                    </div>
+
+                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0;"></div>
+
+                    <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">Avisos</h3>
+                    <div class="discord-toggle">
+                        <div>
+                            <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Sons</h4>
+                            <p style="color: var(--text-muted); font-size: 14px;">Mensagens, menções, chamadas e missões. Fica só neste aparelho.</p>
+                        </div>
+                        <div class="toggle-switch tg-app" id="tg-som"></div>
+                    </div>
+                    <div class="discord-toggle">
+                        <div>
+                            <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Avisos na área de trabalho</h4>
+                            <p style="color: var(--text-muted); font-size: 14px;">Mostra uma notificação quando chega algo e o app não está na tela. Fica só neste aparelho.</p>
+                        </div>
+                        <div class="toggle-switch tg-app" id="tg-aviso"></div>
+                    </div>
+
+                    <!-- só no app desktop -->
+                    <div id="geral-desktop" hidden>
+                        <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0;"></div>
+                        <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">App no computador</h3>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Iniciar junto com o Windows</h4>
+                                <p style="color: var(--text-muted); font-size: 14px;">Abre o app quando você liga o computador.</p>
+                            </div>
+                            <div class="toggle-switch tg-app" id="tg-iniciar"></div>
+                        </div>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Fechar a janela deixa o app na bandeja</h4>
+                                <p style="color: var(--text-muted); font-size: 14px;">Desligado, fechar a janela encerra o app de vez.</p>
+                            </div>
+                            <div class="toggle-switch tg-app" id="tg-bandeja"></div>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 13px;" id="geral-versao"></p>
+                    </div>
                 </div>
 
                 <!-- ABA: APARÊNCIA -->
@@ -6517,6 +6605,17 @@
         // também barra a posição sozinho quando está ON.
         let ghostMode = "{{ 1 if usuario_atual.ghost_mode else 0 }}" === "1";   // valor da conta, já no HTML (sem piscar OFF->ON)
         let fantasmaAguardando = false;   // true = o clique foi meu, toast quando confirmar
+
+        // Localização (Configurações > Geral) também mora NA CONTA, igual ao Fantasma. O servidor é quem barra comprar/vender,
+        // plantar, nota e radar quando está desligada; aqui só evitamos pedir à toa e explicamos o porquê.
+        let localizacaoAtiva = "{{ 0 if usuario_atual.localizacao_ativa is sameas false else 1 }}" === "1";
+        let localizacaoIp = "{{ 0 if usuario_atual.localizacao_ip is sameas false else 1 }}" === "1";
+        let origemPosicao = '', lugarPorIp = '', rastreio = null;   // rastreio = { iniciar(), parar() }, criado dentro do initMap
+        function exigirLocalizacao() {
+            if (localizacaoAtiva) return true;
+            showToast('A localização está desligada. Ligue em Configurações > Geral pra fazer isso.', 'warning');
+            return false;
+        }
         try { localStorage.removeItem('bzGhostMode'); } catch (e) {}
         const btnToggleGhost = document.getElementById('btn-toggle-ghost');
 
@@ -6689,6 +6788,7 @@
 
         // Modal de NOTA
         function abrirModalNota(modo, id = null, txt = "", cor = "#5865F2", icone = "💬") {
+            if (modo === 'create' && !exigirLocalizacao()) return;
             document.getElementById('note-modal').style.display = 'flex';
             definirIconeNota(modo === 'create' ? '💬' : icone);
             document.getElementById('note-duration-group').style.display = modo === 'create' ? '' : 'none';
@@ -6803,6 +6903,7 @@
         }
 
         function abrirModalServidor(modo, id = null, vagasAtuais = null) {
+            if (modo === 'create' && !exigirLocalizacao()) return;
             if (modo === 'create' && meUserServers.length === 0) {
                 showToast("Crie um servidor antes de plantá-lo no mapa!", "warning");
                 document.getElementById('add-server-modal').style.display = 'flex';
@@ -6898,7 +6999,7 @@
                 btn.title = "Centralizar em mim";
                 btn.onclick = function() {
                     // Voltar ao GPS real (cancela o teletransporte manual) e centralizar.
-                    if (posicaoManual && navigator.geolocation) {
+                    if (posicaoManual && navigator.geolocation && localizacaoAtiva) {
                         posicaoManual = false; ultimoFixGps = null;
                         try { localStorage.removeItem('pnt_pos_manual'); } catch (e) {}
                         navigator.geolocation.getCurrentPosition(aoReceberGps, () => {}, { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 });
@@ -6981,6 +7082,7 @@
 
             // TELETRANSPORTE (Correção do GPS do PC): Dois cliques para mover seu avatar manualmente
             bazingaMap.on('dblclick', function(e) {
+                if (!exigirLocalizacao()) return;
                 openConfirmModal("Correção de GPS (Teletransporte)", "Mover seu avatar exatamente para este ponto? Vale até você clicar em \"Centralizar em mim\".", () => {
                     posicaoManual = true; posicaoConfiavel = true;
                     try { localStorage.setItem('pnt_pos_manual', JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng, t: Date.now() })); } catch (err) {}
@@ -7003,7 +7105,7 @@
             // aviso de precisão. Agora: timeout longo, 2ª tentativa sem alta precisão, círculo de precisão, e o
             // teletransporte manual vale até você clicar em "Centralizar em mim".
             const aoReceberGps = (position) => {
-                if (posicaoManual) return;
+                if (posicaoManual || !localizacaoAtiva) return;
                 const { latitude: lat, longitude: lng } = position.coords;
                 const accuracy = position.coords.accuracy || 0;
                 const agora = Date.now();
@@ -7016,6 +7118,8 @@
                 }
                 ultimoFixGps = { lat, lng, acc: accuracy, t: agora };
                 posicaoConfiavel = true;
+                origemPosicao = position._ip ? 'ip' : 'aparelho';
+                atualizarAbaGeral();
                 if (accuracy > 1500 && !avisouAproximado) {
                     avisouAproximado = true;
                     showToast(`Sua localização está aproximada (±${(accuracy / 1000).toFixed(1)} km): PC sem GPS chuta pelo Wi-Fi. Dê dois cliques no mapa onde você está de verdade — o ponto fica salvo.`, 'warning');
@@ -7027,8 +7131,29 @@
                     socket.emit('atualizar_localizacao', { lat: lat, lng: lng });
                 }
             };
-            const semGps = (err) => {
+            // Reserva por IP: o servidor descobre onde o IP fica. Só entra se NADA melhor chegou, e uma leitura
+            // melhor do aparelho depois disso substitui (aoReceberGps aceita fix mais preciso).
+            async function tentarPosicaoPorIP() {
+                if (!localizacaoAtiva || !localizacaoIp || posicaoManual || ultimoFixGps) return false;
+                try {
+                    const resp = await fetch('/api/localizacao/ip');
+                    const d = await resp.json();
+                    if (!resp.ok) throw new Error(d.error || 'sem resposta');
+                    if (ultimoFixGps || posicaoManual || !localizacaoAtiva) return true;   // chegou algo melhor enquanto isso
+                    avisouAproximado = true;   // este aviso já explica; não repete o do "PC sem GPS"
+                    lugarPorIp = d.lugar || '';
+                    aoReceberGps({ coords: { latitude: d.lat, longitude: d.lng, accuracy: d.precisao_m }, _ip: true });
+                    showToast(`Localização aproximada pela internet${d.lugar ? ' (' + d.lugar + ')' : ''}. Com VPN ou dados móveis ela pode estar longe: dê dois cliques no mapa onde você está de verdade.`, 'warning');
+                    return true;
+                } catch (e) {
+                    console.warn('[localização por IP]', e.message);
+                    return false;
+                }
+            }
+            const semGps = async (err) => {
                 if (myMapMarker) return;   // já tenho uma posição: não inventa outra
+                if (await tentarPosicaoPorIP()) return;
+                if (myMapMarker) return;
                 showToast(err && err.code === 1
                     ? 'Localização bloqueada no navegador. Libere no cadeado do endereço ou dê dois cliques no mapa onde você está.'
                     : 'Não consegui achar sua localização. Dê dois cliques no mapa, no ponto onde você está.', 'warning');
@@ -7036,20 +7161,40 @@
             };
             try {
                 const salvo = JSON.parse(localStorage.getItem('pnt_pos_manual') || 'null');
-                if (salvo && Date.now() - salvo.t < 6 * 3600 * 1000 && Math.abs(salvo.lat) <= 90 && Math.abs(salvo.lng) <= 180) {
+                if (salvo && localizacaoAtiva && Date.now() - salvo.t < 6 * 3600 * 1000 && Math.abs(salvo.lat) <= 90 && Math.abs(salvo.lng) <= 180) {
                     posicaoManual = true; posicaoConfiavel = true;
                     atualizarMinhaPosicao(salvo.lat, salvo.lng);
                     anunciarMinhaPosicao();
                     setTimeout(() => showToast('Usando o ponto que você marcou no mapa. Clique em "Centralizar em mim" pra voltar ao GPS.', 'info'), 1500);
                 } else if (salvo) { localStorage.removeItem('pnt_pos_manual'); }
             } catch (e) {}
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(aoReceberGps, (err) => {
-                    // Alta precisão falhou (comum em PC sem GPS): tenta o jeito simples (Wi-Fi/IP) antes de desistir.
-                    navigator.geolocation.getCurrentPosition(aoReceberGps, semGps, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
-                }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+            let watchId = null, timerReservaIp = null;
+            function iniciarRastreio() {
+                if (!localizacaoAtiva || watchId !== null) return;
+                if (navigator.geolocation) {
+                    watchId = navigator.geolocation.watchPosition(aoReceberGps, (err) => {
+                        // Alta precisão falhou (comum em PC sem GPS): tenta o jeito simples (Wi-Fi/IP) antes de desistir.
+                        navigator.geolocation.getCurrentPosition(aoReceberGps, semGps, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+                    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+                } else {
+                    semGps(null);
+                }
+                // Alguns aparelhos (e o app desktop sem provedor de localização) ficam mudos ~35 s antes de errar:
+                // se em 8 s nada chegou, a reserva por IP entra, sem esperar o erro.
+                clearTimeout(timerReservaIp);
+                timerReservaIp = setTimeout(() => { if (!ultimoFixGps && !posicaoManual) tentarPosicaoPorIP(); }, 8000);
+            }
+            function pararRastreio() {
+                clearTimeout(timerReservaIp);
+                if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            rastreio = { iniciar: iniciarRastreio, parar: pararRastreio };
+            if (localizacaoAtiva) {
+                iniciarRastreio();
             } else {
-                semGps(null);
+                // Localização desligada na conta: o mapa abre sem marcador seu e sem rastrear nada.
+                bazingaMap.setView([-23.550520, -46.633308], 11);
             }
 
             // Remover overlay de carregamento com transição suave
@@ -7078,7 +7223,7 @@
 
         // Reanuncia a minha posição (só se ela é de verdade: nunca o ponto "falso" de São Paulo do fallback).
         function anunciarMinhaPosicao() {
-            if (!myMapMarker || !posicaoConfiavel || ghostMode || !socket.connected) return;
+            if (!myMapMarker || !posicaoConfiavel || ghostMode || !localizacaoAtiva || !socket.connected) return;
             const p = myMapMarker.getLatLng();
             socket.emit('atualizar_localizacao', { lat: p.lat, lng: p.lng });
         }
@@ -7229,6 +7374,7 @@
         // Copiar nota: você ESCOLHE no mapa onde colocar a cópia (dentro do círculo azul do seu alcance).
         let copiaDeNotaId = null;
         function copiarNotaParaMeuAlcance(id) {   // nome mantido por causa do onclick do balão
+            if (!exigirLocalizacao()) return;
             if (!myMapMarker) { showToast('Ainda estou achando sua posição...', 'info'); return; }
             copiaDeNotaId = Number(id);
             plantingMode = 'copia';
@@ -10160,6 +10306,125 @@
             if (prefs.tema && prefs.tema !== document.documentElement.dataset.tema) aplicarTema(prefs.tema);
         });
 
+        // ==========================================
+        // CONFIGURAÇÕES > GERAL (localização na conta, avisos e o que é do app desktop)
+        // ------------------------------------------------------------
+        // Localização e reserva por IP moram na CONTA (o servidor confirma e todas as abas acompanham, como o Fantasma).
+        // Sons e avisos moram no aparelho (localStorage). Windows/Google/iniciar com o Windows/bandeja só existem no app
+        // desktop e ficam num arquivo do aparelho (window.panteao.prefs*), nunca na conta.
+        // ==========================================
+        const AVISO_CHAVE = 'pnt_aviso_desktop';
+        function avisoLigado() { try { return localStorage.getItem(AVISO_CHAVE) !== '0'; } catch (e) { return true; } }
+        const noAppDesktop = /PanteaoDesktop/.test(navigator.userAgent) && !!(window.panteao && window.panteao.prefsGet);
+        let prefsApp = null;
+
+        function atualizarAbaGeral() {
+            const marcar = (id, ligado) => document.getElementById(id)?.classList.toggle('active', !!ligado);
+            marcar('tg-loc', localizacaoAtiva);
+            marcar('tg-loc-ip', localizacaoAtiva && localizacaoIp);
+            marcar('tg-som', somLigado());
+            marcar('tg-aviso', avisoLigado());
+            const linhaIp = document.getElementById('tg-loc-ip-linha');
+            if (linhaIp) linhaIp.style.opacity = localizacaoAtiva ? '' : '.45';
+            document.getElementById('loc-aviso').style.display = localizacaoAtiva ? 'none' : '';
+            const estado = document.getElementById('loc-estado');
+            if (estado) {
+                let t;
+                if (!localizacaoAtiva) t = 'Desligada: nada de radar, mapa ao redor ou posição enviada.';
+                else if (posicaoManual) t = 'Agora: no ponto que você marcou no mapa.';
+                else if (origemPosicao === 'ip') t = `Agora: aproximada pela internet${lugarPorIp ? ' (' + lugarPorIp + ')' : ''}.`;
+                else if (origemPosicao === 'aparelho' && ultimoFixGps) t = `Agora: pelo aparelho (±${ultimoFixGps.acc >= 1000 ? (ultimoFixGps.acc / 1000).toFixed(1) + ' km' : Math.round(ultimoFixGps.acc) + ' m'}).`;
+                else t = 'Procurando você...';
+                estado.textContent = t;
+            }
+            if (noAppDesktop && prefsApp) {
+                marcar('tg-loc-win', prefsApp.locWindows);
+                marcar('tg-loc-google', prefsApp.locGoogle && prefsApp.temChaveGoogle);
+                marcar('tg-iniciar', prefsApp.iniciarComWindows);
+                marcar('tg-bandeja', prefsApp.fecharNaBandeja);
+                const desc = document.getElementById('loc-google-desc');
+                if (desc) desc.textContent = prefsApp.temChaveGoogle
+                    ? 'Usa o serviço de localização do Google (Wi-Fi ao redor).'
+                    : 'Precisa de uma chave de API do Google no config.json do app. Sem a chave este botão não faz nada.';
+                document.getElementById('loc-reiniciar').hidden = !prefsApp.precisaReiniciar;
+                document.getElementById('geral-versao').textContent = 'Panteão Desktop v' + (prefsApp.versao || '');
+            }
+        }
+
+        socket.on('preferencias_carregadas', (prefs) => {
+            if (typeof prefs.localizacao_ip === 'boolean') localizacaoIp = prefs.localizacao_ip;
+            if (typeof prefs.localizacao_ativa !== 'boolean') { atualizarAbaGeral(); return; }
+            const mudou = prefs.localizacao_ativa !== localizacaoAtiva;
+            localizacaoAtiva = prefs.localizacao_ativa;
+            if (mudou && localizacaoAtiva) {
+                // ligou (nesta aba ou em outra): volta a procurar onde estou
+                ultimoFixGps = null; posicaoConfiavel = false; origemPosicao = '';
+                if (rastreio) rastreio.iniciar();
+                showToast('Localização ligada.', 'success');
+            } else if (mudou) {
+                // desligou: para de rastrear, tira o meu pino e os dos amigos do meu mapa, esquece a posição
+                if (rastreio) rastreio.parar();
+                if (myMapMarker && bazingaMap) { bazingaMap.removeLayer(myMapMarker); myMapMarker = null; }
+                if (circuloPrecisao && bazingaMap) { bazingaMap.removeLayer(circuloPrecisao); circuloPrecisao = null; }
+                Object.keys(mapMarkers).forEach((id) => { if (bazingaMap) bazingaMap.removeLayer(mapMarkers[id]); delete mapMarkers[id]; });
+                ultimoFixGps = null; posicaoConfiavel = false; origemPosicao = '';
+                showToast('Localização desligada. Compras, notas, servidores no mapa e o radar ficam bloqueados.', 'warning');
+            }
+            atualizarAbaGeral();
+        });
+
+        document.getElementById('tg-loc').addEventListener('click', () => {
+            if (localizacaoAtiva) {
+                openConfirmModal('Desligar a localização?',
+                    'Sem ela você não consegue comprar nem vender, plantar servidor, deixar ou copiar notas, e some do radar de amigos (e não vê o deles). Dá pra ligar de novo quando quiser.',
+                    () => socket.emit('alternar_localizacao', { ativa: false }));
+            } else {
+                socket.emit('alternar_localizacao', { ativa: true });
+            }
+        });
+        document.getElementById('tg-loc-ip').addEventListener('click', () => {
+            if (!localizacaoAtiva) { showToast('Ligue a localização primeiro.', 'info'); return; }
+            socket.emit('alternar_localizacao', { ip: !localizacaoIp });
+        });
+        document.getElementById('tg-som').addEventListener('click', () => {
+            try { localStorage.setItem(SOM_CHAVE, somLigado() ? '0' : '1'); } catch (e) {}
+            if (somLigado()) tocarSom('msg');
+            atualizarAbaGeral();
+        });
+        document.getElementById('tg-aviso').addEventListener('click', () => {
+            const ligar = !avisoLigado();
+            try { localStorage.setItem(AVISO_CHAVE, ligar ? '1' : '0'); } catch (e) {}
+            if (ligar && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+            if (ligar && 'Notification' in window && Notification.permission === 'denied') showToast('O navegador está bloqueando avisos pra este site. Libere no cadeado do endereço.', 'warning');
+            atualizarAbaGeral();
+        });
+
+        if (noAppDesktop) {
+            document.getElementById('geral-desktop-loc').hidden = false;
+            document.getElementById('geral-desktop').hidden = false;
+            const mudarPref = async (chave, valor) => {
+                try {
+                    prefsApp = await window.panteao.prefsSet(chave, valor);
+                    if (prefsApp && prefsApp.aviso) showToast(prefsApp.aviso, 'info');
+                } catch (e) { showToast('Não consegui salvar essa opção do app.', 'error'); }
+                atualizarAbaGeral();
+            };
+            document.getElementById('tg-loc-win').addEventListener('click', () => prefsApp && mudarPref('locWindows', !prefsApp.locWindows));
+            document.getElementById('tg-loc-google').addEventListener('click', () => {
+                if (!prefsApp) return;
+                if (!prefsApp.temChaveGoogle) { showToast('Falta a chave de API do Google no config.json do app.', 'warning'); return; }
+                mudarPref('locGoogle', !prefsApp.locGoogle);
+            });
+            document.getElementById('tg-iniciar').addEventListener('click', () => prefsApp && mudarPref('iniciarComWindows', !prefsApp.iniciarComWindows));
+            document.getElementById('tg-bandeja').addEventListener('click', () => prefsApp && mudarPref('fecharNaBandeja', !prefsApp.fecharNaBandeja));
+            document.getElementById('btn-loc-win-abrir').addEventListener('click', () => window.panteao.abrirPrivacidadeLocalizacao());
+            document.getElementById('btn-reiniciar-app').addEventListener('click', () => window.panteao.reiniciar());
+            window.panteao.prefsGet().then((p) => { prefsApp = p; atualizarAbaGeral(); }).catch(() => {});
+        }
+        document.querySelector('.set-tab[data-target="set-geral"]').addEventListener('click', atualizarAbaGeral);
+        // adiado de propósito: usa somLigado()/SOM_CHAVE e variáveis do mapa declaradas mais abaixo no script
+        setTimeout(atualizarAbaGeral, 0);
+
         document.getElementById('bg-image-input').addEventListener('input', (e) => {
             const url = e.target.value.trim();
             if(url.length > 5) {
@@ -10368,7 +10633,7 @@
             isTestingModal = false;
         }
 
-        document.querySelectorAll('.toggle-switch:not(#toggle-noise):not(#toggle-echo):not(#toggle-gain)').forEach(toggle => { toggle.addEventListener('click', () => { toggle.classList.toggle('active'); }); });
+        document.querySelectorAll('.toggle-switch:not(#toggle-noise):not(#toggle-echo):not(#toggle-gain):not(.tg-app)').forEach(toggle => { toggle.addEventListener('click', () => { toggle.classList.toggle('active'); }); });
         // ==========================================
         // PERFIL DE ENTRADA DE ÁUDIO (Isolamento/Estúdio/Personalizado)
         // ------------------------------------------------------------
@@ -11830,6 +12095,7 @@
                 return;
             }
 
+            if (!exigirLocalizacao()) return;   // o servidor também recusa (403), isso só poupa o clique
             openConfirmModal(
                 "Confirmar Compra",
                 `Comprar "${nome}" por ${preco} {{ moeda_sigla }}?`,
@@ -11985,7 +12251,7 @@
         // aviso do navegador quando a aba está em segundo plano
         function avisoDoNavegador(titulo, corpo) {
             try {
-                if (!document.hidden || !('Notification' in window) || Notification.permission !== 'granted') return;
+                if (!document.hidden || !avisoLigado() || !('Notification' in window) || Notification.permission !== 'granted') return;
                 if (typeof perfilMeu !== 'undefined' && perfilMeu.status === 'dnd') return;
                 const n = new Notification(titulo, { body: corpo, icon: '/static/img/icone-192.png', silent: true });
                 n.onclick = () => { window.focus(); n.close(); };

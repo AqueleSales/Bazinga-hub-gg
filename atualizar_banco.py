@@ -120,6 +120,9 @@ def atualizar_banco():
 
             # 16. Modo Fantasma salvo no servidor + sequência diária do Battle Pass
             add_column_se_nao_existir("person", "ghost_mode BOOLEAN DEFAULT FALSE NOT NULL")
+            # 25. Localização na conta (NULL = ligada; sem NOT NULL de propósito)
+            add_column_se_nao_existir("person", "localizacao_ativa BOOLEAN")
+            add_column_se_nao_existir("person", "localizacao_ip BOOLEAN")
             add_column_se_nao_existir("person", "streak_dias INTEGER DEFAULT 0 NOT NULL")
             add_column_se_nao_existir("person", "streak_em DATE")
             add_column_se_nao_existir("person", "tema VARCHAR(20) DEFAULT 'dark' NOT NULL")
