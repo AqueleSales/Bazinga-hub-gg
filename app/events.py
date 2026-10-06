@@ -1631,9 +1631,19 @@ def entrar_servidor_pin(dados):
             return
 
         if usuario not in srv.members:
-            # Respeita o limite de vagas do pino plantado no mapa, se existir.
-            pino = MapServer.query.filter_by(server_id=srv.id).first()
-            if pino and pino.max_tickets is not None and len(srv.members) >= pino.max_tickets:
+            # Entrar "pelo mapa" só vale pra servidor que o dono PLANTOU, que ainda não venceu nem foi
+            # escondido por denúncia, e só pra quem está dentro do alcance do pino. Antes qualquer pessoa
+            # entrava em QUALQUER servidor só chutando o id (sem pino a checagem inteira era pulada).
+            pino = com_retry(lambda: MapServer.query.filter_by(server_id=srv.id).first())
+            if not pino or pino.oculta or (pino.expires_at and pino.expires_at <= br_now()):
+                emit('erro_bazinga', {'msg': 'Esse servidor não está plantado no mapa.'})
+                return
+            if not _exigir_posicao():
+                return
+            if not _dentro_do_alcance((pino.lat, pino.lng), RAIO_SERVIDORES_M):
+                emit('erro_bazinga', {'msg': 'Esse servidor está longe demais. Chegue mais perto pra entrar.'})
+                return
+            if pino.max_tickets is not None and len(srv.members) >= pino.max_tickets:
                 emit('erro_bazinga', {'msg': 'Esse servidor já está lotado - sem mais ingressos.'})
                 return
 
@@ -1729,9 +1739,18 @@ def _parse_ilimitado(valor):
 
 def _dentro_do_alcance(pos, raio_m):
     """True se `pos` está dentro do raio do que este socket está olhando.
-    Sem centro conhecido (ainda não mandou posição) não dá pra checar: deixa passar."""
+    Sem centro conhecido (ainda não mandou posição) é FALSE: antes isto deixava passar, e quem nunca mandava
+    posição plantava servidor/nota de qualquer lugar do mundo."""
     centro = centros_mapa.get(request.sid)
-    return centro is None or distancia_m(centro[0], centro[1], pos[0], pos[1]) <= raio_m * 1.15
+    return centro is not None and distancia_m(centro[0], centro[1], pos[0], pos[1]) <= raio_m * 1.15
+
+
+def _exigir_posicao():
+    """True se o servidor sabe onde este socket está; senão explica (em vez de dizer 'fora do alcance')."""
+    if request.sid in centros_mapa:
+        return True
+    emit('erro_bazinga', {'msg': 'Ainda não sei onde você está. Espere a localização chegar (ou ligue em Configurações > Geral).'})
+    return False
 
 
 @socketio.on('mapa_pedir_arredores')
@@ -1782,6 +1801,8 @@ def criar_geonote(dados):
         pos = coordenada_valida(dados.get('lat'), dados.get('lng'))
         if not pos:
             emit('erro_bazinga', {'msg': 'Local inválido para a nota.'})
+            return
+        if not _exigir_posicao():
             return
         if not _dentro_do_alcance(pos, RAIO_NOTAS_M):
             emit('erro_bazinga', {'msg': 'Esse ponto está fora do seu alcance - chegue mais perto pra deixar a nota.'})
@@ -1947,6 +1968,8 @@ def plantar_servidor(dados):
         pos = coordenada_valida(dados.get('lat'), dados.get('lng'))
         if not pos:
             emit('erro_bazinga', {'msg': 'Local inválido para o servidor.'})
+            return
+        if not _exigir_posicao():
             return
         if not _dentro_do_alcance(pos, RAIO_SERVIDORES_M):
             emit('erro_bazinga', {'msg': 'Esse ponto está fora do seu alcance.'})

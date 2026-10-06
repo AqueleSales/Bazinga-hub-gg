@@ -1596,6 +1596,11 @@ pede `garantir_salas` (o `connect` agora tenta de novo se o banco estava acordan
   `plantar_servidor`, `entrar_servidor_pin`, e o radar nos dois sentidos (`atualizar_localizacao` descarta a posição e
   `mapa_pedir_arredores` não devolve nada). **XP/missões NÃO são bloqueados** (decisão do dono). Desligar emite `posicao_amigo_removida`
   (regra 6). **É trava leve**: cliente adulterado ainda manda coordenada falsa; ela barra uso casual, não é prova de presença.
+- **Alcance e pino (corrigido em 06/10/2026)**: `_dentro_do_alcance()` **não deixa mais passar sem posição conhecida** (antes plantava servidor/nota de
+  qualquer lugar) e `entrar_servidor_pin` só aceita servidor **plantado**, vivo (não vencido/oculto) e **dentro de `RAIO_SERVIDORES_M`** do pino
+  (antes qualquer pessoa entrava em QUALQUER servidor só chutando o id: sem pino a checagem era pulada). O mapa nasce com `minZoom 3`,
+  `maxBounds` do mundo e `noWrap` (antes só havia limite depois da 1ª posição e dava pra ver/clicar o mundo repetido).
+  **Em aberto (decisão de produto)**: o teletransporte (duplo clique) ainda existe e deixa qualquer pessoa "estar" em qualquer lugar.
 - **Reserva por IP**: `GET /api/localizacao/ip` (`routes.py`) acha o 1º IP público de `X-Forwarded-For` e consulta `PROVEDOR_IP`
   (ipwho.is, sem chave; troque a constante pra mudar de provedor). Cache de 1h por IP, 1 pedido a cada 15s por pessoa; precisão fixa
   de 10 km. **Erra com VPN e dados móveis** (o IP é do provedor): o cliente avisa e o duplo clique no mapa (teletransporte) continua mandando.

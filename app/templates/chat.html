@@ -6977,14 +6977,22 @@
             if(bazingaMap) return; // Evita inicialização dupla
 
             // Inicializa o mapa vazio primeiro, centrado no Brasil/SP como padrão
+            // Limites desde o início (antes só existiam depois da 1ª posição): sem isso, com a localização desligada ou
+            // antes do 1º fix, dava pra afastar o zoom até ver o mundo REPETIDO e clicar nas cópias, fora do planeta.
+            // Quando a posição chega, aplicarLimitesDoMapa() aperta isto pro alcance dos servidores.
             bazingaMap = L.map('bazinga-map', {
                 zoomControl: false,
-                attributionControl: false // Mantém o visual imersivo
+                attributionControl: false, // Mantém o visual imersivo
+                minZoom: 3,
+                maxBounds: [[-85, -180], [85, 180]],
+                maxBoundsViscosity: 1.0
             }).setView([-23.550520, -46.633308], 16);
 
             // A CURA DEFINITIVA DO API KEY: OpenStreetMap oficial + CSS Filter (Dark Mode)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
+                noWrap: true,   // sem cópias do mundo ao lado (o servidor também recusa longitude fora de -180..180)
+                bounds: [[-85, -180], [85, 180]],
                 attribution: '© OpenStreetMap'
             }).addTo(bazingaMap);
 
