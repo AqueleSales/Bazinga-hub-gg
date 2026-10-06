@@ -177,9 +177,15 @@ ipcMain.handle('app:ping', async (e) => {
   if (!vemDaTelaLocal(e)) return false;
   try {
     // manifesto: leve, sem banco, então responde mesmo com o Neon dormindo
-    const r = await net.fetch(`${SERVIDOR}/manifest.webmanifest`, { method: 'GET', cache: 'no-store' });
+    // timeout: servidor acordando pode segurar a requisição por um minuto; sem isso o laço da tela trava nela
+    const r = await net.fetch(`${SERVIDOR}/manifest.webmanifest`, {
+      method: 'GET', cache: 'no-store', signal: AbortSignal.timeout(8000),
+    });
     return r.ok;
-  } catch (_) { return false; }
+  } catch (err) {
+    console.warn('[ping]', err && err.message);
+    return false;
+  }
 });
 
 ipcMain.handle('app:abrir-chat', (e) => {
