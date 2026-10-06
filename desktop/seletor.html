@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:;">
+  <title>Compartilhar tela</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #16171d; color: #f2f3f5; font-family: "Segoe UI", system-ui, sans-serif; padding: 18px; height: 100vh; display: flex; flex-direction: column; }
+    h1 { font-size: 17px; margin-bottom: 4px; }
+    p { color: #9aa0a6; font-size: 12.5px; margin-bottom: 14px; }
+    .grade { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-content: start; padding-right: 4px; }
+    .fonte { background: #20222a; border: 2px solid transparent; border-radius: 10px; padding: 8px; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+    .fonte:hover { border-color: #5865F2; }
+    .fonte img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; background: #000; display: block; }
+    .fonte span { display: block; margin-top: 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rodape { padding-top: 12px; text-align: right; }
+    button.cancelar { background: rgba(255,255,255,.08); color: #fff; border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Compartilhar tela</h1>
+  <p>Escolha uma tela inteira ou uma janela.</p>
+  <div class="grade" id="grade"></div>
+  <div class="rodape"><button class="cancelar" id="cancelar">Cancelar</button></div>
+  <script src="assets/seletor.js"></script>
+</body>
+</html>

@@ -14,7 +14,7 @@ from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase
 from ..utils import (com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                      recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO)
-from .. import socketio, APP_NOME, MOEDA_NOME
+from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
 from ..cosmeticos import posses_da_pessoa, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
 from ..utils import nivel_da_pessoa
@@ -116,6 +116,16 @@ def index():
 # ==========================================
 @main_bp.route("/entrar")
 def entrar():
+    # Login pedido pelo app desktop (abre este link no navegador do sistema).
+    # Guardamos só o hash do verificador; o callback do Google emite o código.
+    if request.args.get('desktop') == '1':
+        from ..auth.routes import desafio_desktop_valido
+        desafio = request.args.get('desafio', '')
+        if desafio_desktop_valido(desafio):
+            session['desktop_desafio'] = desafio
+            if usuario_da_sessao():
+                return redirect(url_for('auth.desktop_concluir'))
+            return render_template("entrar.html")
     # Já logado (veio da home ou de uma sessão anterior): entra direto no
     # Bazingacord, sem passar por essa página de bloqueio.
     if usuario_da_sessao():
@@ -143,8 +153,10 @@ def manifest():
         "name": APP_NOME,
         "short_name": APP_NOME,
         "description": f"Chat, mapa e eventos do {APP_NOME}.",
+        "id": "/chat",
         "start_url": "/chat",
         "scope": "/",
+        "categories": ["social"],
         "display": "standalone",
         "background_color": "#0b0c10",
         "theme_color": "#7289da",
@@ -162,18 +174,89 @@ def manifest():
 
 @main_bp.route("/sw.js")
 def service_worker():
-    """Service worker mínimo.
+    """Service worker: guarda só o que é ESTÁTICO, nunca a parte dinâmica.
 
-    Não faz cache de nada de propósito: o app é todo dinâmico (socket, banco),
-    e um cache agressivo só serviria pra servir tela velha. Ele existe porque
-    o navegador exige um service worker registrado para permitir instalar o PWA.
+    O app é todo dinâmico (socket, banco), então cache de página/API serviria
+    tela velha. Aqui entram apenas:
+      - /static/* (css, js, imagens, emoji, áudio): cache versionado por
+        APP_VERSAO. O texto deste arquivo muda a cada deploy, então o
+        navegador instala o SW novo e a ativação apaga o cache antigo.
+      - bibliotecas de CDN com versão fixa na URL (Leaflet, socket.io,
+        fontes...): cache à parte, que sobrevive a deploys.
+    Jamais cacheados: /chat, /entrar, /socket.io, /api/*, /auth/* e qualquer
+    POST. Navegação sem rede cai numa página "sem conexão" com botão de
+    tentar de novo (em vez da tela de erro do navegador).
     """
-    js = (
-        "self.addEventListener('install', () => self.skipWaiting());\n"
-        "self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\n"
-        "self.addEventListener('fetch', () => {});\n"
-    )
-    return current_app.response_class(js, mimetype='application/javascript')
+    # Em debug o estático NÃO é cacheado: editar css/js sem reiniciar o servidor
+    # não muda APP_VERSAO, e o navegador ficaria mostrando o arquivo velho.
+    js = (_SW_TEMPLATE.replace('__VERSAO__', APP_VERSAO).replace('__NOME__', APP_NOME)
+          .replace('__CACHEAR_ESTATICO__', 'false' if current_app.debug else 'true'))
+    resposta = current_app.response_class(js, mimetype='application/javascript')
+    resposta.headers['Cache-Control'] = 'no-cache'   # o navegador precisa ver o SW novo logo após o deploy
+    resposta.headers['Service-Worker-Allowed'] = '/'
+    return resposta
+
+
+_SW_TEMPLATE = r"""
+const VERSAO = '__VERSAO__';
+const CACHE_ESTATICO = 'estatico-' + VERSAO;
+const CACHE_CDN = 'cdn-v1';
+const CACHEAR_ESTATICO = __CACHEAR_ESTATICO__;
+
+// CDN só entra no cache se a URL carrega versão fixa (nunca @latest / @1):
+// senão a biblioteca nova nunca chegaria.
+function cdnVersionado(u) {
+  if (u.hostname === 'cdnjs.cloudflare.com' || u.hostname === 'fonts.gstatic.com') return true;
+  if (u.hostname === 'cdn.jsdelivr.net' || u.hostname === 'unpkg.com') return /@\d+\.\d+\.\d+/.test(u.pathname);
+  return false;
+}
+
+self.addEventListener('install', () => self.skipWaiting());
+
+self.addEventListener('activate', e => e.waitUntil((async () => {
+  const nomes = await caches.keys();
+  await Promise.all(nomes.filter(n => n !== CACHE_ESTATICO && n !== CACHE_CDN).map(n => caches.delete(n)));
+  await self.clients.claim();
+})()));
+
+async function cacheAntes(req, nomeCache) {
+  const cache = await caches.open(nomeCache);
+  const guardado = await cache.match(req);
+  if (guardado) return guardado;
+  const resp = await fetch(req);
+  // 200 normal ou opaca (script/estilo de CDN sem CORS); erro nunca é guardado
+  if (resp.ok || resp.type === 'opaque') cache.put(req, resp.clone());
+  return resp;
+}
+
+const PAGINA_OFFLINE = `<!doctype html><html lang="pt-br"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Sem conexão · __NOME__</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0c10;color:#f2f3f5;
+font-family:system-ui,sans-serif;text-align:center;padding:24px}p{color:#9aa0a6;margin:8px 0 22px}
+button{background:#5865F2;color:#fff;border:0;border-radius:12px;padding:12px 22px;font:600 15px system-ui;cursor:pointer}</style></head>
+<body><div><h1>Sem conexão</h1><p>Não consegui falar com o servidor. Confira a internet e tente de novo.</p>
+<button onclick="location.reload()">Tentar de novo</button></div></body></html>`;
+
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const u = new URL(req.url);
+
+  if (u.origin === self.location.origin) {
+    if (u.pathname.startsWith('/static/')) {
+      if (CACHEAR_ESTATICO) e.respondWith(cacheAntes(req, CACHE_ESTATICO));
+      return;
+    }
+    if (req.mode === 'navigate') {
+      e.respondWith(fetch(req).catch(() => new Response(PAGINA_OFFLINE,
+        { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } })));
+    }
+    return;   // o resto (api, socket.io, auth...) vai direto pra rede, sem tocar
+  }
+
+  if (cdnVersionado(u)) e.respondWith(cacheAntes(req, CACHE_CDN));
+});
+"""
 
 
 @main_bp.route("/chat")

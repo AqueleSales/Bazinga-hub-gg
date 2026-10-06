@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voltando pro app · {{ app_nome }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}" type="image/svg+xml">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #0b0c10; color: #f2f3f5;
+           font-family: system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; }
+    .cartao { max-width: 380px; }
+    img { width: 64px; height: 64px; margin-bottom: 18px; }
+    h1 { font-size: 22px; margin-bottom: 8px; }
+    p { color: #9aa0a6; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+    a { display: inline-block; padding: 12px 22px; border-radius: 12px; background: #5865F2; color: #fff;
+        text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="cartao">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ app_nome }}">
+    <h1>Login feito!</h1>
+    <p>Voltando pro app do {{ app_nome }}. Se o navegador perguntar, clique em <strong>Abrir</strong>. Depois você pode fechar esta aba.</p>
+    <a id="abrir" href="{{ link_app }}">Abrir o app</a>
+  </div>
+  <script>
+    // O navegador pede confirmação pra abrir um protocolo externo; disparar
+    // sozinho poupa um clique, e o botão fica de reserva se ele bloquear.
+    setTimeout(function () { window.location.href = document.getElementById('abrir').href; }, 400);
+  </script>
+</body>
+</html>

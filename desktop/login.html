@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Panteão</title>
+  <style>
+    :root { --brand: #5865F2; --brand-2: #23a559; --bg: #0b0c10; --texto: #f2f3f5; --fraco: #9aa0a6; --borda: rgba(255,255,255,.1); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { background: var(--bg); color: var(--texto); font-family: "Segoe UI", system-ui, sans-serif;
+           display: grid; place-items: center; overflow: hidden; user-select: none; -webkit-app-region: drag; }
+    button, a { -webkit-app-region: no-drag; }
+
+    .aurora { position: fixed; border-radius: 50%; filter: blur(90px); opacity: .45; pointer-events: none; will-change: transform; }
+    .a1 { width: 52vmax; height: 52vmax; background: radial-gradient(circle, var(--brand) 0%, transparent 68%);
+          top: -18vmax; left: -14vmax; animation: flutuar1 19s ease-in-out infinite; }
+    .a2 { width: 46vmax; height: 46vmax; background: radial-gradient(circle, var(--brand-2) 0%, transparent 68%);
+          bottom: -16vmax; right: -12vmax; animation: flutuar2 23s ease-in-out infinite; }
+    @keyframes flutuar1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8vmax,6vmax) scale(1.12); } }
+    @keyframes flutuar2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-7vmax,-5vmax) scale(1.15); } }
+    .grade { position: fixed; inset: 0; pointer-events: none;
+             background-image: linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+             background-size: 56px 56px; mask-image: radial-gradient(ellipse at center, #000 20%, transparent 78%); }
+
+    .cartao { position: relative; width: min(420px, 90vw); padding: 44px 38px 36px; text-align: center;
+              background: rgba(20,21,26,.72); border: 1px solid var(--borda); border-radius: 26px;
+              box-shadow: 0 28px 70px rgba(0,0,0,.6); animation: subir .7s cubic-bezier(.16,.84,.44,1) both; }
+    @keyframes subir { from { opacity: 0; transform: translateY(22px) scale(.98); } to { opacity: 1; transform: none; } }
+
+    .logo { width: 84px; height: 84px; margin: 0 auto 22px; border-radius: 24px; overflow: hidden;
+            background: linear-gradient(140deg, var(--brand), var(--brand-2));
+            box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 14px 34px rgba(88,101,242,.34); animation: pulsar 4.5s ease-in-out infinite; }
+    .logo img { width: 100%; height: 100%; object-fit: cover; }
+    @keyframes pulsar {
+      0%,100% { transform: translateY(0); box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 14px 34px rgba(88,101,242,.34); }
+      50%     { transform: translateY(-6px); box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 22px 46px rgba(88,101,242,.5); }
+    }
+    h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 8px; }
+    .sub { color: var(--fraco); font-size: 14px; line-height: 1.5; min-height: 42px; margin-bottom: 24px; }
+
+    /* barra "acordando": desliza enquanto o servidor não responde */
+    .barra { height: 4px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; margin: 0 auto 6px; width: 70%; }
+    .barra i { display: block; height: 100%; width: 40%; border-radius: 4px;
+               background: linear-gradient(90deg, var(--brand), var(--brand-2)); animation: deslizar 1.4s ease-in-out infinite; }
+    @keyframes deslizar { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+    [hidden] { display: none !important; }
+
+    .btn-google { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 18px;
+                  background: #fff; color: #1f1f1f; border: none; border-radius: 12px; font: 600 15px "Segoe UI", sans-serif; cursor: pointer;
+                  box-shadow: 0 6px 18px rgba(0,0,0,.3); transition: transform .16s cubic-bezier(.16,.84,.44,1), box-shadow .16s; }
+    .btn-google:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,.42); }
+    .btn-google svg { width: 19px; height: 19px; }
+    .nota { margin-top: 16px; font-size: 12px; color: var(--fraco); line-height: 1.5; }
+    .erro { margin-bottom: 14px; padding: 10px 12px; border-radius: 10px; font-size: 13px; color: #ffb3b3; background: rgba(237,66,69,.14); }
+    .rodape { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 11.5px; color: rgba(255,255,255,.26); }
+    @media (prefers-reduced-motion: reduce) { .aurora, .logo, .cartao, .barra i { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="aurora a1"></div><div class="aurora a2"></div><div class="grade"></div>
+
+  <main class="cartao">
+    <div class="logo"><img src="assets/logo.svg" alt="Panteão"></div>
+    <h1>Panteão</h1>
+    <div class="erro" id="erro" hidden>Não deu pra concluir o login. Tenta de novo.</div>
+    <p class="sub" id="msg">Conectando ao servidor…</p>
+
+    <div class="barra" id="barra"><i></i></div>
+
+    <button class="btn-google" id="btn-entrar" hidden>
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Continuar com Google
+    </button>
+    <p class="nota" id="nota" hidden>O login abre no seu navegador. Depois do Google, é só voltar pra cá.</p>
+  </main>
+  <p class="rodape" id="rodape"></p>
+
+  <script src="assets/login.js"></script>
+</body>
+</html>

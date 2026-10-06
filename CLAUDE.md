@@ -35,6 +35,7 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 | `app/auth/routes.py` | Login Google OAuth |
 | `app/templates/chat.html` | O app inteiro (HTML+CSS+JS) — ~8100 linhas |
 | `app/templates/entrar.html` | Página de bloqueio/login (ver seção) |
+| `desktop/` | Casca Electron do app desktop (`main.js`, `preload.js`, `login.html`, `seletor.html`; ver Rodada 7) |
 | `app/templates/abrir.html` | Tela pós-login "continuar/instalar" — hoje órfã (ver seção) |
 | `atualizar_banco.py` | Migração manual — **rodar sempre que mexer em `models.py`** |
 | `seed.py` / `seed_loja.py` | Popula cargos/canais/produtos padrão |
@@ -338,10 +339,9 @@ O que é honesto em cada botão de `/entrar` e `/abrir`:
 
 - **Instalar app** nasce escondido e só aparece quando o navegador dispara
   `beforeinstallprompt`, ou seja, quando o site é mesmo instalável. Para
-  isso existem `/manifest.webmanifest` e `/sw.js`. O service worker **não
-  faz cache de propósito** (o app é todo dinâmico; cache só serviria para
-  mostrar tela velha) — ele existe porque o navegador exige um registrado
-  para permitir a instalação.
+  isso existem `/manifest.webmanifest` e `/sw.js`. O service worker só cacheia
+  **estático** (`/static/*` versionado por `APP_VERSAO` + CDN com versão fixa na URL) e
+  nunca `/chat`, `/api`, `/socket.io`, `/auth` nem POST (ver Rodada 7).
 - **Abrir no Chrome** usa `intent://` no Android. No desktop **não existe**
   forma de uma página abrir outro navegador; lá ele copia o link e explica,
   em vez de fingir que abriu.
@@ -1543,6 +1543,88 @@ pede `garantir_salas` (o `connect` agora tenta de novo se o banco estava acordan
 - Configurações/modais travavam por **blur aninhado** (overlay `blur(6px)` + cartão `blur(22px)`) sobre um fundo cheio de animação
   (placas, molduras, nomes). Agora overlay e cartão são sólidos, `body.painel-aberto` pausa a animação do fundo e as prévias do
   catálogo/inventário só animam sob o mouse (ou equipadas).
+
+---
+
+## Rodada 7 de 05/10/2026 — PWA com cache + app desktop (Electron)
+
+### O que foi feito (testado em 05/10/2026; commit/deploy ainda não)
+- **Código em `desktop/`** (casca Electron 44; `npm install` e `npm start` lá dentro; `npm run dist` gera
+  `dist/Panteão Setup 0.1.0.exe`, ~107 MB, **sem assinatura**). Servidor vem de `desktop/config.json` (`servidor`) ou da
+  env `PANTEAO_URL`. **O `config.json` ainda aponta pra `http://localhost:5000`: trocar pela URL do Render antes de distribuir.**
+- **Fluxo de login do desktop** (testado de ponta a ponta com servidor SQLite descartável): `login.html` local (animado,
+  pinga `/manifest.webmanifest` e avisa "acordando o servidor") → botão abre o navegador em `/entrar?desktop=1&desafio=<sha256>`
+  → Google → `auth.callback` vê `session['desktop_desafio']` e gera código de uso único (60s, em memória) → página
+  `desktop_ok.html` abre `panteao://auth?codigo=...` → o app navega em `/auth/desktop/trocar?codigo&verificador` e recebe o cookie.
+  **PKCE**: só o hash (`desafio`) sai do app; o `verificador` fica na memória do processo principal. O código morre na
+  1ª tentativa (certa ou errada). Teste: `python testes/fumaca_desktop.py`.
+- **Service worker** (`service_worker()` em `main/routes.py`): cache de `/static/*` versionado (`estatico-<APP_VERSAO>`,
+  o texto do SW muda a cada deploy → navegador instala o novo e `activate` apaga o velho), cache `cdn-v1` só pra CDN com versão
+  fixa (nada de `@latest`/`@1`), página "Sem conexão" em navegação offline. Em `debug=True` o estático **não** é cacheado.
+  Registrado em `chat.html`, `entrar.html`, `abrir.html`.
+- **Pegadinhas que apareceram**: (1) **o Cache Storage do SW derruba o renderer do Electron 44** ("bad Mojo message ...
+  CacheStorageCache") e, com `render-process-gone` recarregando, virava loop — por isso o SW **não é registrado** quando o UA tem
+  `PanteaoDesktop` (o app limpa SW/cache antigos ao iniciar). O PWA em Chrome real **não foi testado** com o SW novo.
+  (2) CSP `default-src 'self'` das telas locais bloqueia `<script>` inline: o JS fica em `desktop/assets/*.js`.
+  (3) O cookie `session` continua existindo depois do logout (o `/entrar` grava `veio_do_entrar`), então **cookie não prova
+  sessão**: o app tenta `/chat` e, se o servidor redirecionar pra `/entrar`, volta ao login local com `?sem=1` (sem isso: loop).
+  (4) Renderer que cai 3x em 30s mostra erro em vez de recarregar de novo.
+- Já pronto na casca: instância única, `panteao://` (second-instance no Windows), bandeja (fechar = esconder; "Sair" encerra;
+  "Iniciar com o Windows"), tamanho/posição lembrados, links externos no navegador do sistema, permissões só pro domínio do app,
+  seletor próprio de tela/janela (`seletor.html`, áudio `loopback`), auto-update via `electron-updater` (só empacotado).
+- **Repo é PRIVADO desde 05/10/2026** (o `.env` com senha do Neon/Google/SECRET_KEY foi commitado no passado, commit `e7e2a27`, quando
+  o repo era público: **trocar essas credenciais** — pendente, e `instance/*.db` também está no histórico). Produção:
+  `https://bazinga-hub-gg.onrender.com` (já no `desktop/config.json`).
+- **Auto-update** (`iniciarAtualizador()` em `main.js`; só no app empacotado): baixa em segundo plano, avisa "Reiniciar agora / Depois",
+  confere de novo a cada 4h e tem "Procurar atualizações" na bandeja. Como o código é privado, os instaladores vão num repo **público só
+  de binários**: `AqueleSales/panteao-releases` (campo `publish` do `desktop/package.json`). **Publicar uma versão nova**:
+  (1) subir `version` em `desktop/package.json`; (2) `cd desktop && npm run dist`; (3) no repo `panteao-releases` criar um Release com a
+  tag `v<versão>` e anexar **os 3 arquivos** de `desktop/dist/`: `Panteão Setup <v>.exe`, `Panteão Setup <v>.exe.blockmap` e `latest.yml`
+  (sem o `latest.yml` o app não enxerga a versão nova). Mudança só no site (Flask/chat.html) **não** exige novo instalador. Não testado de
+  ponta a ponta ainda (precisa de duas versões publicadas).
+- **Falta**: assinatura de código (SmartScreen); badge de não lidas; geolocalização no Electron (usa o Windows; se falhar, vale o
+  teletransporte do mapa); testar com o Render dormindo e com duas contas (regra 6).
+
+### Plano original (histórico)
+
+**DECISÃO FINAL (05/10/2026): fazer PWA instalável E Electron juntos, PWA primeiro.** Motivo: o Electron não deixa nada mais
+rápido (+150–300 MB de RAM, instalador ~80–100 MB, mesma latência de Render/Neon), e parte do público tem internet ruim. Então:
+(a) **PWA** é o caminho leve e universal (já existem `/manifest.webmanifest` e `/sw.js`): falta tela de login animada, **cache dos
+estáticos no service worker** (hoje ele propositalmente não faz cache — mudar com cuidado: nunca cachear `/chat`, `/socket.io`, `/api/*`,
+senão mostra tela velha; versionar o cache por `APP_VERSAO`) e o botão de instalar; (b) **Electron** reaproveita a mesma tela de login e
+só entra pelo que o PWA não faz (auto-update com cara de Discord, iniciar com o Windows, seletor de captura de tela, tray). Ordem:
+login animado → cache no SW → PWA polido → casca Electron. Perguntas em aberto pro dono: Node.js instalado? repo do GitHub é privado
+(decide onde ficam os Releases)?
+
+Objetivo: app instalável no Windows (estilo Discord), com tela de login própria e animada e **atualização
+automática**. Plano do Electron: **Electron como casca** (`desktop/` na raiz do repo) que carrega o site do Render. Nada do
+`chat.html` é reescrito; o app é só uma janela + login + atualizador.
+
+- **Por que Electron e não "app nativo"**: o produto inteiro é HTML/JS/WebRTC/Leaflet. Electron = Chromium embutido,
+  então call, mapa e emoji funcionam como no Chrome. Reescrever em Kotlin/Java (como o SamusChat do amigo) seria refazer tudo.
+- **Duas camadas de atualização**: (1) o **site** atualiza sozinho a cada deploy no Render (já existe o aviso
+  `versao_app`/`mostrarAvisoNovaVersao`, ver Rodada 6) — 95% das mudanças não exigem novo instalador; (2) a **casca**
+  (`electron-updater` + GitHub Releases, instalador NSIS) baixa a versão nova em segundo plano e instala ao fechar/reabrir.
+  Sem certificado de assinatura o Windows mostra o SmartScreen ("editor desconhecido") na 1ª instalação; o auto-update funciona igual.
+- **Login (armadilha)**: o Google **bloqueia OAuth dentro de webview/Electron** (`disallowed_useragent`). Fluxo certo:
+  tela de login local (`desktop/login.html`, animada, empacotada no app, funciona mesmo com o Render dormindo) → botão abre o
+  **navegador do sistema** em `/entrar?desktop=1` → depois do Google o servidor redireciona pra `panteao://auth?codigo=<uso único, ~60s>`
+  → o Electron troca o código por sessão (rota nova no Flask, guarda o cookie na janela). Exige: rota `/auth/desktop/trocar`, tabela/dict
+  de códigos de uso único, e **nunca** colocar o cookie/sessão na URL do protocolo. Checar `Origin`/uso único no servidor (regra 4).
+- **Splash/"acordando"**: o Render free dorme; a tela local faz ping em `/` e mostra animação + mensagem honesta enquanto o servidor sobe.
+- **Casca**: `BrowserWindow` com `contextIsolation: true`, `nodeIntegration: false`, `webSecurity` ligado, navegação restrita ao domínio do
+  app (links externos abrem no navegador do sistema), instância única, lembra tamanho/posição, bandeja (tray), iniciar com o Windows (opcional),
+  notificação nativa (reaproveita as do site), badge de não lidas.
+- **Compartilhar tela**: `getDisplayMedia` no Electron exige `session.setDisplayMediaRequestHandler` (escolher a tela/janela) — sem isso
+  o botão falha em silêncio. Microfone/câmera: `setPermissionRequestHandler` liberando só o domínio do app.
+- **Fora de escopo agora**: macOS/Linux (precisa assinatura/notarização pra atualizar no Mac), loja da Microsoft, mobile (PWA/Capacitor
+  é outra rodada), Rich Presence.
+- **Repo/Release**: se o repositório for privado, o `electron-updater` não baixa sem token — publicar os Releases num repo público só de
+  binários ou tornar o de releases público.
+
+Ordem de trabalho: (1) casca mínima abrindo o Render; (2) tela de login animada + splash; (3) deep link `panteao://` + rota de troca no Flask;
+(4) electron-builder gerando o instalador; (5) auto-update via GitHub Releases; (6) tray/notificações/captura de tela.
+Testar sempre com duas contas (regra 6) e com o Render dormindo.
 
 ---
 
