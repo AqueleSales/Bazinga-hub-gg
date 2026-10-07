@@ -63,31 +63,41 @@
 .bd-3d-cam .bd-svg { width: 100%; height: 100%; display: block; }
 @keyframes bdGira3D { to { transform: rotateY(360deg); } }
 
-/* ALPHA TESTER: olhos vermelhos que acendem num flash e somem */
-.bd-olhos-v { opacity: 0; transform-origin: 32px 47px; }
-.bd-flash-v { opacity: 0; transform-origin: 32px 47px; }
-.bd-wrap-alpha_tester:hover .bd-olhos-v, .orb-grande .bd-svg.bd-alpha_tester .bd-olhos-v { animation: bdOlhoV 3.4s ease-in-out infinite; }
-.bd-wrap-alpha_tester:hover .bd-flash-v, .orb-grande .bd-svg.bd-alpha_tester .bd-flash-v { animation: bdFlashV 3.4s ease-in-out infinite; }
-@keyframes bdOlhoV { 0%, 40% { opacity: 0; transform: scale(.2); } 48% { opacity: 1; transform: scale(1.55); filter: brightness(1.8); } 56% { opacity: 1; transform: scale(1); filter: none; } 72% { opacity: 1; transform: scale(1.04); } 84%, 100% { opacity: 0; transform: scale(.5); } }
-@keyframes bdFlashV { 0%, 41% { opacity: 0; transform: scale(.3); } 48% { opacity: 1; transform: scale(2.4); } 66%, 100% { opacity: 0; transform: scale(2.8); } }
+/* ALPHA TESTER: crista balança sempre; ao passar o mouse/no zoom o brilho varre o ouro e os olhos vermelhos acendem num flash */
+.bd-crista { transform-origin: 32px 28px; animation: bdCrista 2.6s ease-in-out infinite alternate; }
+@keyframes bdCrista { from { transform: rotate(-2.2deg) skewX(-2deg); } to { transform: rotate(2deg) skewX(2deg); } }
+.bd-olhos-v { opacity: 0; transform-origin: 32px 39.8px; }
+.bd-flash-v { opacity: 0; transform-origin: 32px 39.8px; }
+.bd-brilho { opacity: 0; }
+.bd-wrap-alpha_tester:hover .bd-olhos-v, .orb-grande .bd-svg.bd-alpha_tester .bd-olhos-v { animation: bdOlhoV 3.2s ease-in-out infinite; }
+.bd-wrap-alpha_tester:hover .bd-flash-v, .orb-grande .bd-svg.bd-alpha_tester .bd-flash-v { animation: bdFlashV 3.2s ease-in-out infinite; }
+.bd-wrap-alpha_tester:hover .bd-brilho, .orb-grande .bd-svg.bd-alpha_tester .bd-brilho { animation: bdBrilho 3.2s ease-in-out infinite; }
+@keyframes bdOlhoV { 0%, 38% { opacity: 0; transform: scale(.2); } 46% { opacity: 1; transform: scale(1.7); filter: brightness(2); } 54% { opacity: 1; transform: scale(1); filter: none; } 74% { opacity: 1; transform: scale(1.06); } 86%, 100% { opacity: 0; transform: scale(.5); } }
+@keyframes bdFlashV { 0%, 39% { opacity: 0; transform: scale(.3); } 46% { opacity: 1; transform: scale(2.2); } 66%, 100% { opacity: 0; transform: scale(2.8); } }
+@keyframes bdBrilho { 0%, 8% { opacity: 0; transform: translateX(0); } 12% { opacity: .55; } 30% { opacity: .55; transform: translateX(70px); } 34%, 100% { opacity: 0; transform: translateX(70px); } }
 
-/* BETA TESTER: Medusa dormindo; acorda num susto (cobras se agitam) e volta a dormir */
-.bd-cobra { transform-origin: 32px 31px; }
-.bd-cobra-olho { opacity: 0; }
-.bd-med-cabeca { transform-origin: 32px 33px; }
+/* BETA TESTER: Medusa. Dorme quieta (parece pedra); no zoom acorda num bote — olhos brilham, boca e presas abrem, cobras se agitam — e volta a dormir */
+.bd-cobra { transform-origin: 32px 32px; }
+.bd-cobra-olho, .bd-presa { opacity: 0; }
+.bd-med-cabeca { transform-origin: 32px 34px; }
 .bd-med-acorda { opacity: 0; }
-.bd-wrap-beta_tester:hover .bd-cobra, .orb-grande .bd-svg.bd-beta_tester .bd-cobra { animation: bdCobra 5.4s ease-in-out infinite; animation-delay: var(--d); }
-.bd-wrap-beta_tester:hover .bd-med-cabeca, .orb-grande .bd-svg.bd-beta_tester .bd-med-cabeca { animation: bdMedSusto 5.4s ease-in-out infinite; }
-.bd-wrap-beta_tester:hover .bd-med-dorme, .orb-grande .bd-svg.bd-beta_tester .bd-med-dorme { animation: bdMedDorme 5.4s step-end infinite; }
-.bd-wrap-beta_tester:hover .bd-med-acorda, .orb-grande .bd-svg.bd-beta_tester .bd-med-acorda { animation: bdMedAcorda 5.4s step-end infinite; }
-.bd-wrap-beta_tester:hover .bd-med-boca, .orb-grande .bd-svg.bd-beta_tester .bd-med-boca { animation: bdMedDorme 5.4s step-end infinite; }
-.bd-wrap-beta_tester:hover .bd-cobra-olho, .orb-grande .bd-svg.bd-beta_tester .bd-cobra-olho { animation: bdMedAcorda 5.4s step-end infinite; }
-@keyframes bdCobra { 0% { transform: rotate(0); } 18% { transform: rotate(calc(var(--r) * 1.6deg)); } 38% { transform: rotate(calc(var(--r) * -1.6deg)); } 56% { transform: rotate(0); }
-    60% { transform: rotate(calc(var(--r) * -24deg)) scale(1.1); } 64% { transform: rotate(calc(var(--r) * 22deg)) scale(1.08); } 68% { transform: rotate(calc(var(--r) * -18deg)); }
-    72% { transform: rotate(calc(var(--r) * 14deg)); } 77% { transform: rotate(calc(var(--r) * -8deg)); } 84% { transform: rotate(calc(var(--r) * 3deg)); } 92%, 100% { transform: rotate(0); } }
-@keyframes bdMedSusto { 0%, 57% { transform: none; } 60% { transform: translateY(-2.6px) scale(1.09); } 65% { transform: translateY(.4px) scale(1.02); } 71% { transform: translateY(-1.2px) scale(1.06); } 86%, 100% { transform: none; } }
+.bd-med-brilho { opacity: 0; transform-origin: 32px 32px; }
+.bd-wrap-beta_tester:hover .bd-cobra, .orb-grande .bd-svg.bd-beta_tester .bd-cobra { animation: bdCobra 5.2s ease-in-out infinite; animation-delay: var(--d); }
+.bd-wrap-beta_tester:hover .bd-med-cabeca, .orb-grande .bd-svg.bd-beta_tester .bd-med-cabeca { animation: bdMedSusto 5.2s ease-in-out infinite; }
+.bd-wrap-beta_tester:hover .bd-med-dorme, .orb-grande .bd-svg.bd-beta_tester .bd-med-dorme { animation: bdMedDorme 5.2s step-end infinite; }
+.bd-wrap-beta_tester:hover .bd-med-boca, .orb-grande .bd-svg.bd-beta_tester .bd-med-boca { animation: bdMedDorme 5.2s step-end infinite; }
+.bd-wrap-beta_tester:hover .bd-med-acorda, .orb-grande .bd-svg.bd-beta_tester .bd-med-acorda,
+.bd-wrap-beta_tester:hover .bd-cobra-olho, .orb-grande .bd-svg.bd-beta_tester .bd-cobra-olho,
+.bd-wrap-beta_tester:hover .bd-presa, .orb-grande .bd-svg.bd-beta_tester .bd-presa { animation: bdMedAcorda 5.2s step-end infinite; }
+.bd-wrap-beta_tester:hover .bd-med-brilho, .orb-grande .bd-svg.bd-beta_tester .bd-med-brilho { animation: bdMedBrilho 5.2s ease-out infinite; }
+@keyframes bdCobra { 0% { transform: rotate(0); } 20% { transform: rotate(calc(var(--r) * 1.2deg)); } 40% { transform: rotate(calc(var(--r) * -1.2deg)); } 56% { transform: rotate(0); }
+    59% { transform: rotate(calc(var(--r) * -30deg)) scale(1.16); } 63% { transform: rotate(calc(var(--r) * 26deg)) scale(1.12); } 67% { transform: rotate(calc(var(--r) * -22deg)) scale(1.1); }
+    71% { transform: rotate(calc(var(--r) * 18deg)); } 76% { transform: rotate(calc(var(--r) * -12deg)); } 82% { transform: rotate(calc(var(--r) * 6deg)); } 90%, 100% { transform: rotate(0); } }
+@keyframes bdMedSusto { 0%, 56% { transform: none; } 58% { transform: translateY(-3px) scale(1.2); } 62% { transform: translate(-1.2px, 0) scale(1.1) rotate(-3deg); } 66% { transform: translate(1.2px, 0) scale(1.14) rotate(3deg); }
+    72% { transform: scale(1.1); } 86%, 100% { transform: none; } }
 @keyframes bdMedDorme { 0% { opacity: 1; } 58% { opacity: 0; } 86% { opacity: 1; } }
 @keyframes bdMedAcorda { 0% { opacity: 0; } 58% { opacity: 1; } 86% { opacity: 0; } }
+@keyframes bdMedBrilho { 0%, 56% { opacity: 0; transform: scale(.6); } 59% { opacity: .85; transform: scale(1.9); } 80% { opacity: .5; transform: scale(2.3); } 88%, 100% { opacity: 0; transform: scale(2.4); } }
 
 /* BAZINGA: partículas verdes se juntam, explodem e sobra uma aura verde enquanto o popover estiver aberto */
 .bd-bz-part { opacity: 0; transform-origin: 32px 32px; }
@@ -109,18 +119,20 @@
 @keyframes bdBzBrilhoFixo { from { filter: drop-shadow(0 0 6px #3dff7a); } to { filter: drop-shadow(0 0 13px #3dff7a); } }
 
 /* SÓ NÓS: sarça ardente. Parada, arde sem se consumir; no zoom: brasas -> raio cai -> o fogo cresce */
-.bd-sc-fogo { transform-origin: 32px 57px; }
-.bd-sc-f1, .bd-sc-f2, .bd-sc-f3, .bd-sc-f4 { transform-origin: 32px 56px; animation: bdScLabareda 1.3s ease-in-out infinite alternate; }
+.bd-sc-fogo { transform-origin: 32px 58px; }
+.bd-sc-f1, .bd-sc-f2, .bd-sc-f3, .bd-sc-f4 { transform-origin: 32px 58px; animation: bdScLabareda 1.3s ease-in-out infinite alternate; }
 .bd-sc-f2 { animation-delay: -.4s; } .bd-sc-f3 { animation-delay: -.8s; } .bd-sc-f4 { animation-duration: .9s; }
+.bd-sc-lingua { transform-origin: 32px 40px; animation: bdScLabareda 1s ease-in-out infinite alternate; }
 @keyframes bdScLabareda { from { transform: scale(1, .94); } to { transform: scale(1.04, 1.06); } }
 .bd-sc-raio, .bd-sc-clarao { opacity: 0; pointer-events: none; }
 .bd-sc-brasas circle { animation: bdScBrasa 2.2s ease-in infinite; }
 .bd-sc-brasas circle:nth-child(2n) { animation-delay: -.9s; } .bd-sc-brasas circle:nth-child(3n) { animation-delay: -1.5s; }
 @keyframes bdScBrasa { 0% { transform: translateY(6px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
 .bd-wrap-so_nos:hover .bd-sc-fogo, .orb-grande .bd-svg.bd-so_nos .bd-sc-fogo { animation: bdScFogo 6s ease-in-out infinite; }
+.bd-wrap-so_nos:hover .bd-sc-lingua, .orb-grande .bd-svg.bd-so_nos .bd-sc-lingua { animation: bdScFogo 6s ease-in-out infinite; }
 .bd-wrap-so_nos:hover .bd-sc-raio, .orb-grande .bd-svg.bd-so_nos .bd-sc-raio { animation: bdScRaio 6s linear infinite; }
 .bd-wrap-so_nos:hover .bd-sc-clarao, .orb-grande .bd-svg.bd-so_nos .bd-sc-clarao { animation: bdScClarao 6s linear infinite; }
-@keyframes bdScFogo { 0%, 38% { transform: scale(.5, .3); opacity: .55; filter: brightness(.8); } 41% { transform: scale(1.3, 1.25); opacity: 1; filter: brightness(1.9); } 52% { transform: scale(1.05); filter: brightness(1.15); } 88% { transform: scale(1); opacity: 1; filter: none; } 100% { transform: scale(.5, .3); opacity: .55; } }
+@keyframes bdScFogo { 0%, 38% { transform: scale(.45, .25); opacity: .55; filter: brightness(.8); } 41% { transform: scale(1.3, 1.25); opacity: 1; filter: brightness(1.9); } 52% { transform: scale(1.05); filter: brightness(1.15); } 88% { transform: scale(1); opacity: 1; filter: none; } 100% { transform: scale(.45, .25); opacity: .55; } }
 @keyframes bdScRaio { 0%, 37% { opacity: 0; } 38% { opacity: 1; } 39.5% { opacity: 0; } 40.5% { opacity: 1; } 44%, 100% { opacity: 0; } }
 @keyframes bdScClarao { 0%, 37% { opacity: 0; } 38% { opacity: .9; } 43%, 100% { opacity: 0; } }
 

@@ -235,9 +235,9 @@ def _itens_do_tema(tema):
 
 
 LABORATORIO = {
-    'aquele.sales': (['badge:criador', 'badge:beta_tester', 'badge:coder', 'badge:so_nos']
+    'aquele.sales': (['badge:criador', 'badge:alpha_tester', 'badge:beta_tester', 'badge:coder', 'badge:so_nos']
                      + _itens_do_tema('gogeta') + _itens_do_tema('fusao')),
-    'filippo.chiarion': (['badge:criador', 'badge:beta_tester', 'badge:coder', 'badge:so_nos']
+    'filippo.chiarion': (['badge:criador', 'badge:alpha_tester', 'badge:beta_tester', 'badge:coder', 'badge:so_nos']
                          + _itens_do_tema('sasuke') + _itens_do_tema('fusao')),
 }
 

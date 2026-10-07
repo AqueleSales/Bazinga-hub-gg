@@ -47,6 +47,8 @@ const Cosm = (() => {
         h += grad('bdg-ouro', ['#fff2b0', '#ffb62e', '#b45309']) + grad('bdg-cobre', ['#ffd9b0', '#f08a30', '#8c3a07']);
         h += grad('bdg-roxo', ['#e9d5ff', '#a45cf5', '#4c1d95']) + grad('bdg-aco', ['#f1f5f9', '#94a3b8', '#334155']);
         h += grad('bdg-verde', ['#d1fae5', '#34d399', '#047857']) + grad('bdg-ciano', ['#cffafe', '#22d3ee', '#0e7490']);
+        h += grad('bdg-crista', ['#ff9aa0', '#e11d2e', '#7f1220']) + grad('bdg-medusa', ['#b9e9c9', '#3aa56b', '#0d4a2b']) + grad('bdg-folha', ['#4aa04a', '#2a7a32', '#14501e']);
+        h += `<radialGradient id="bdg-flash-y"><stop offset="0" stop-color="#fde047" stop-opacity=".9"/><stop offset=".55" stop-color="#facc15" stop-opacity=".35"/><stop offset="1" stop-color="#facc15" stop-opacity="0"/></radialGradient>`;
         h += grad('bdg-cobra', ['#bbf7d0', '#22a55a', '#0b5a2b']) + grad('bdg-lant', ['#e0ffe9', '#3ddc6e', '#0a7a36']);
         h += `<radialGradient id="bdg-flash-r"><stop offset="0" stop-color="#ff3b4a" stop-opacity=".95"/><stop offset=".55" stop-color="#ff1a2b" stop-opacity=".35"/><stop offset="1" stop-color="#ff1a2b" stop-opacity="0"/></radialGradient>`;
         h += `<radialGradient id="bdg-flash-v"><stop offset="0" stop-color="#5dff8a" stop-opacity=".0"/><stop offset=".7" stop-color="#3dff7a" stop-opacity=".45"/><stop offset="1" stop-color="#3dff7a" stop-opacity="0"/></radialGradient>`;
@@ -299,23 +301,26 @@ const Cosm = (() => {
         return `<path class="${cls}" d="${d} Z" fill="${fill}"/>`;
     };
 
-    // Cobras da Medusa: 9 saindo da cabeça (arco em cima e nas laterais). Cada uma balança no seu ritmo.
-    const COBRAS = [...Array(9)].map((_, i) => {
-        const ang = (-205 + i * (230 / 8)) * Math.PI / 180, c = Math.cos(ang), sn = Math.sin(ang), lado = i % 2 ? 1 : -1;
+    // Cobras da Medusa: 11 em volta da cabeça (menos embaixo), grossas, com presas. Cada uma balança no seu ritmo.
+    const COBRAS = [...Array(11)].map((_, i) => {
+        const ang = (-250 + i * (320 / 10)) * Math.PI / 180, c = Math.cos(ang), sn = Math.sin(ang), lado = i % 2 ? 1 : -1;
         const f = (n) => n.toFixed(1);
-        const bx = 32 + c * 12, by = 31 + sn * 12, ex = 32 + c * 29, ey = 31 + sn * 29;
-        const mx = 32 + c * 21 - sn * 7 * lado, my = 31 + sn * 21 + c * 7 * lado;
-        const graus = ang * 180 / Math.PI;
-        return `<g class="bd-cobra" style="--r:${lado};--d:${(-i * 0.43).toFixed(2)}s">
-            <path d="M${f(bx)} ${f(by)} Q${f(mx)} ${f(my)} ${f(ex)} ${f(ey)}" fill="none" stroke="#06452a" stroke-width="5.6" stroke-linecap="round"/>
-            <path d="M${f(bx)} ${f(by)} Q${f(mx)} ${f(my)} ${f(ex)} ${f(ey)}" fill="none" stroke="url(#bdg-cobra)" stroke-width="3.8" stroke-linecap="round"/>
-            <ellipse cx="${f(ex)}" cy="${f(ey)}" rx="3.4" ry="2.6" transform="rotate(${f(graus)} ${f(ex)} ${f(ey)})" fill="url(#bdg-cobra)" stroke="#06452a" stroke-width="1.1"/>
-            <circle class="bd-cobra-olho" cx="${f(ex + c * 0.6 - sn * 1.2)}" cy="${f(ey + sn * 0.6 + c * 1.2)}" r="0.95" fill="#fde047"/></g>`;
+        const bx = 32 + c * 12, by = 32 + sn * 12, ex = 32 + c * 29.5, ey = 32 + sn * 29.5;
+        const mx = 32 + c * 21 - sn * 9 * lado, my = 32 + sn * 21 + c * 9 * lado;
+        const graus = Math.atan2(ey - my, ex - mx) * 180 / Math.PI;
+        const lx = (a, b) => f(ex + Math.cos((graus + a) * Math.PI / 180) * b), ly = (a, b) => f(ey + Math.sin((graus + a) * Math.PI / 180) * b);
+        return `<g class="bd-cobra" style="--r:${lado};--d:${(-i * 0.41).toFixed(2)}s">
+            <path d="M${f(bx)} ${f(by)} Q${f(mx)} ${f(my)} ${f(ex)} ${f(ey)}" fill="none" stroke="#031a10" stroke-width="6.6" stroke-linecap="round"/>
+            <path d="M${f(bx)} ${f(by)} Q${f(mx)} ${f(my)} ${f(ex)} ${f(ey)}" fill="none" stroke="url(#bdg-cobra)" stroke-width="4.6" stroke-linecap="round"/>
+            <path d="M${f(bx)} ${f(by)} Q${f(mx)} ${f(my)} ${f(ex)} ${f(ey)}" fill="none" stroke="#052e1a" stroke-width="1.2" stroke-dasharray="1.2 3.2" opacity=".55"/>
+            <ellipse cx="${f(ex)}" cy="${f(ey)}" rx="4.4" ry="3.2" transform="rotate(${f(graus)} ${f(ex)} ${f(ey)})" fill="url(#bdg-cobra)" stroke="#031a10" stroke-width="1.3"/>
+            <path class="bd-presa" d="M${lx(-28, 4.4)} ${ly(-28, 4.4)} L${lx(-22, 7.6)} ${ly(-22, 7.6)} L${lx(-10, 4.6)} ${ly(-10, 4.6)} Z M${lx(28, 4.4)} ${ly(28, 4.4)} L${lx(22, 7.6)} ${ly(22, 7.6)} L${lx(10, 4.6)} ${ly(10, 4.6)} Z" fill="#fff"/>
+            <circle class="bd-cobra-olho" cx="${lx(-70, 1.5)}" cy="${ly(-70, 1.5)}" r="1.15" fill="#fde047"/><circle class="bd-cobra-olho" cx="${lx(70, 1.5)}" cy="${ly(70, 1.5)}" r="1.15" fill="#fde047"/></g>`;
     }).join('');
 
     // olho vermelho do Alpha: cruz irregular com núcleo branco, como um flash de aura
-    const flareOlho = (x, y) => `<g transform="translate(${x} ${y})"><path class="bd-flare" d="M0 -9.5 L1.3 -2 L9.5 0 L1.3 2 L0 9.5 L-1.3 2 L-9.5 0 L-1.3 -2 Z" fill="#ff1a2b"/>
-        <path d="M0 -5 L.8 -.8 L5 0 L.8 .8 L0 5 L-.8 .8 L-5 0 L-.8 -.8 Z" fill="#ff7a84"/><ellipse rx="2.4" ry="1.5" fill="#ff3b4a"/><circle r=".9" fill="#fff"/></g>`;
+    const flareOlho = (x, y) => `<g transform="translate(${x} ${y})"><path class="bd-flare" d="M0 -8.5 L1.2 -1.8 L8.5 0 L1.2 1.8 L0 8.5 L-1.2 1.8 L-8.5 0 L-1.2 -1.8 Z" fill="#ff1a2b"/>
+        <path d="M0 -4.6 L.7 -.7 L4.6 0 L.7 .7 L0 4.6 L-.7 .7 L-4.6 0 L-.7 -.7 Z" fill="#ff8a92"/><ellipse rx="2.7" ry="1.4" fill="#ff3b4a"/><circle r=".9" fill="#fff"/></g>`;
 
     // Lanterna Verde (símbolo BAZINGA)
     const PARTICULAS = [...Array(12)].map((_, i) => {
@@ -332,31 +337,40 @@ const Cosm = (() => {
             <path d="M29.2 13.8 L29.2 41.5 M34.8 13.8 L34.8 41.5" stroke="#c97a0a" stroke-width="1.3"/>
             <rect x="8.4" y="38.2" width="4.4" height="4.6" rx="1.2" fill="#d97706" stroke="#7a3e05" stroke-width="1"/><rect x="51.2" y="38.2" width="4.4" height="4.6" rx="1.2" fill="#d97706" stroke="#7a3e05" stroke-width="1"/>
             <path d="M15.5 34 Q15.5 22 23 17.5" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2.6" stroke-linecap="round"/>`,
-        // capacete romano com a crista vermelha; no zoom os olhos vermelhos acendem num flash
+        // capacete espartano: crista vermelha alta, ouro e as fendas dos olhos; no zoom os olhos acendem em vermelho num flash
         alpha_tester: () => `
-            <path d="M9 33 Q32 -6 55 33" fill="none" stroke="#7f1220" stroke-width="9" stroke-linecap="round"/>
-            <path d="M9 33 Q32 -6 55 33" fill="none" stroke="#e11d2e" stroke-width="6" stroke-linecap="round"/>
-            <path d="M9 33 Q32 -6 55 33" fill="none" stroke="#ff7a84" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 2.3"/>
-            <path d="M13 45 Q13 20.5 32 20.5 Q51 20.5 51 45 Z" fill="url(#bdg-ouro)" stroke="#6b3a07" stroke-width="1.9" stroke-linejoin="round"/>
-            <path d="M13.4 38.5 L50.6 38.5" stroke="#6b3a07" stroke-width="1.7"/>
-            <path d="M24 42 H40 V55 Q40 60 32 60 Q24 60 24 55 Z" fill="#12060a"/>
-            <path d="M13 44.5 L23.4 40.5 L24.6 58.6 Q16 57 13 47 Z" fill="url(#bdg-cobre)" stroke="#6b3a07" stroke-width="1.7" stroke-linejoin="round"/>
-            <path d="M51 44.5 L40.6 40.5 L39.4 58.6 Q48 57 51 47 Z" fill="url(#bdg-cobre)" stroke="#6b3a07" stroke-width="1.7" stroke-linejoin="round"/>
-            <rect x="30.3" y="40.5" width="3.4" height="15" rx="1.3" fill="url(#bdg-ouro)" stroke="#6b3a07" stroke-width="1"/>
-            <path d="M18 31 Q18 25 24 23" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2.2" stroke-linecap="round"/>
-            <circle class="bd-flash-v" cx="32" cy="47" r="15" fill="url(#bdg-flash-r)"/>
-            <g class="bd-olhos-v">${flareOlho(27.4, 47)}${flareOlho(36.6, 47)}</g>`,
-        // cabeça da Medusa: dorme com as cobras quietas; no zoom acorda num susto e volta a dormir
+            <clipPath id="bdc-capacete"><path d="M15 31 Q15 19 32 19 Q49 19 49 31 L48 46 Q47 57 41 60 L37 60 L36.5 52 L27.5 52 L27 60 L23 60 Q17 57 16 46 Z"/></clipPath>
+            <g class="bd-crista">
+              <path d="M16.5 30 C10 16 20 3 33.5 4.5 C47 6 51 17 46.5 28 C43 22 37 19.5 31 20.5 C25 21.5 20 25 16.5 30 Z" fill="url(#bdg-crista)" stroke="#5c0d18" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="M21.5 18 C23.5 11.5 29 8 35 8.5" fill="none" stroke="#ffc9cd" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+              <path d="M25 24 Q33 17.5 42 20 M23 20.5 Q31 13 41 15.5 M28 27 Q35 21.5 44 23.5" fill="none" stroke="#7f1220" stroke-width="1" opacity=".55"/>
+            </g>
+            <path d="M15 31 Q15 19 32 19 Q49 19 49 31 L48 46 Q47 57 41 60 L37 60 L36.5 52 L27.5 52 L27 60 L23 60 Q17 57 16 46 Z" fill="url(#bdg-ouro)" stroke="#6b3a07" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M19 31 Q19 24 26 22" fill="none" stroke="#fff8d6" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>
+            <path d="M45.4 33 Q46 41 44.6 48" fill="none" stroke="#8a4b05" stroke-width="1.3" opacity=".55"/>
+            <path d="M15.6 36.5 Q32 31.5 48.4 36.5" fill="none" stroke="#6b3a07" stroke-width="1.5" opacity=".8"/>
+            <path d="M19.8 35.6 L30 38 L30 42.4 L20.6 41.2 Z" fill="#150709"/><path d="M44.2 35.6 L34 38 L34 42.4 L43.4 41.2 Z" fill="#150709"/>
+            <rect x="30.1" y="34.5" width="3.8" height="19.5" rx="1.5" fill="url(#bdg-ouro)" stroke="#6b3a07" stroke-width="1.1"/>
+            <path d="M27.5 52 H36.5 V57 H27.5 Z" fill="#150709"/>
+            <g clip-path="url(#bdc-capacete)"><path class="bd-brilho" d="M6 12 L15 12 L5 64 L-4 64 Z" fill="#fff"/></g>
+            <circle class="bd-flash-v" cx="32" cy="39.8" r="17" fill="url(#bdg-flash-r)"/>
+            <g class="bd-olhos-v">${flareOlho(25.4, 39.8)}${flareOlho(38.6, 39.8)}</g>`,
+        // Medusa: rosto magro e sério, cobras com presas. Dormindo parece pedra; no zoom acorda num bote (olhos brilhando, boca aberta) e volta a dormir
         beta_tester: () => `${COBRAS}
             <g class="bd-med-cabeca">
-              <circle cx="32" cy="33" r="15.5" fill="url(#bdg-verde)" stroke="#065f46" stroke-width="2"/>
-              <path d="M19 28 Q32 14.5 45 28" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/>
-              <g class="bd-med-dorme" fill="none" stroke="#053b2a" stroke-width="2" stroke-linecap="round"><path d="M22 32 Q25.2 35.2 28.4 32"/><path d="M35.6 32 Q38.8 35.2 42 32"/></g>
-              <g class="bd-med-acorda"><ellipse cx="25.2" cy="32" rx="4" ry="3.3" fill="#fde047" stroke="#053b2a" stroke-width="1.2"/><ellipse cx="38.8" cy="32" rx="4" ry="3.3" fill="#fde047" stroke="#053b2a" stroke-width="1.2"/>
-                <rect x="24.6" y="28.8" width="1.3" height="6.4" rx=".6" fill="#111"/><rect x="38.1" y="28.8" width="1.3" height="6.4" rx=".6" fill="#111"/>
-                <ellipse cx="32" cy="42" rx="4.2" ry="2.6" fill="#3b0a14" stroke="#053b2a" stroke-width="1.2"/></g>
-              <path class="bd-med-boca" d="M27.5 41.5 Q32 44.4 36.5 41.5" fill="none" stroke="#053b2a" stroke-width="1.8" stroke-linecap="round"/>
-              <path d="M30.6 35.6 Q32 37.4 33.4 35.6" fill="none" stroke="#053b2a" stroke-width="1.3" stroke-linecap="round"/>
+              <path d="M19.6 30 Q19.6 17 32 17 Q44.4 17 44.4 30 Q44.4 40.5 38.4 48 Q35 52.4 32 52.4 Q29 52.4 25.6 48 Q19.6 40.5 19.6 30 Z" fill="url(#bdg-medusa)" stroke="#031a10" stroke-width="2.2" stroke-linejoin="round"/>
+              <path d="M22 27 Q32 19 42 27" fill="none" stroke="#d8ffe8" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/>
+              <path d="M22.4 38 Q24.5 44 28 48 M41.6 38 Q39.5 44 36 48" fill="none" stroke="#06361f" stroke-width="2.2" stroke-linecap="round" opacity=".5"/>
+              <circle class="bd-med-brilho" cx="32" cy="32" r="13" fill="url(#bdg-flash-y)"/>
+              <g class="bd-med-dorme" fill="none" stroke="#031a10" stroke-width="2.4" stroke-linecap="round"><path d="M21.2 31.6 L28.8 33.6"/><path d="M42.8 31.6 L35.2 33.6"/></g>
+              <g class="bd-med-acorda">
+                <path d="M20.6 31.6 Q25 26.6 29.6 32.4 Q25 35.6 20.6 31.6 Z" fill="#fde047" stroke="#031a10" stroke-width="1.3"/><path d="M43.4 31.6 Q39 26.6 34.4 32.4 Q39 35.6 43.4 31.6 Z" fill="#fde047" stroke="#031a10" stroke-width="1.3"/>
+                <rect x="24.4" y="28.6" width="1.4" height="6" rx=".7" fill="#050505"/><rect x="38.2" y="28.6" width="1.4" height="6" rx=".7" fill="#050505"/>
+                <path d="M24.4 42.6 Q32 53.6 39.6 42.6 Q32 46.4 24.4 42.6 Z" fill="#2a0710" stroke="#031a10" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M27.4 43.6 L28.6 48.6 L30 44.4 Z M34 44.4 L35.4 48.6 L36.6 43.6 Z" fill="#fff"/></g>
+              <path d="M19.4 27.4 L30.4 30.6 M44.6 27.4 L33.6 30.6" stroke="#031a10" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+              <path class="bd-med-boca" d="M26.6 44.2 Q32 45.6 37.4 44.2" fill="none" stroke="#031a10" stroke-width="1.9" stroke-linecap="round"/>
+              <path d="M30.2 36.4 Q32 38.8 33.8 36.4" fill="none" stroke="#031a10" stroke-width="1.5" stroke-linecap="round"/>
             </g>`,
         // símbolo dos Lanternas Verdes; no zoom as partículas se juntam, explodem e ficam numa aura verde
         bazinga: () => `
@@ -378,26 +392,27 @@ const Cosm = (() => {
             <g class="bd-codigo" fill="none" stroke="#67e8f9" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 24 L14.5 32 L23 40"/><path d="M41 24 L49.5 32 L41 40"/><path d="M35.5 22 L28.5 42" stroke="#a5f3fc" stroke-width="3.6"/>
             </g>`,
-        // sarça ardente: arde sem se consumir; no zoom cai um raio e ela pega fogo
+        // sarça ardente: um arbusto verde envolto em fogo que não o consome; no zoom cai um raio e ela pega fogo
         so_nos: () => `
             <g class="bd-sc-fogo">
-              <g class="bd-sc-f1">${chama(32, 54, 19, 46, '#ff7a1a')}</g>
-              <g class="bd-sc-f2">${chama(15.5, 55, 10.5, 32, '#ff9a24')}</g>
-              <g class="bd-sc-f3">${chama(48.5, 55, 10.5, 32, '#ff9a24')}</g>
-              <g class="bd-sc-f4">${chama(32, 55, 11.5, 32, '#ffcf3a')}${chama(22, 56, 6.5, 21, '#ffe27a')}${chama(42, 56, 6.5, 21, '#ffe27a')}</g>
+              <g class="bd-sc-f1">${chama(32, 57, 27, 56, '#ff6a14')}</g>
+              <g class="bd-sc-f2">${chama(11.5, 58, 9, 32, '#ff8a1f')}${chama(52.5, 58, 9, 32, '#ff8a1f')}</g>
+              <g class="bd-sc-f3">${chama(32, 58, 19, 46, '#ff9a24')}</g>
+              <g class="bd-sc-f4">${chama(32, 58, 11, 34, '#ffd23a')}${chama(19, 58, 6, 22, '#ffe27a')}${chama(45, 58, 6, 22, '#ffe27a')}</g>
             </g>
-            <path d="M10 59 Q32 54 54 59" fill="none" stroke="#4a2c12" stroke-width="3.2" stroke-linecap="round"/>
-            <g class="bd-sc-arbusto" stroke-linecap="round">
-              <path d="M32 58 L32 40 M32 50 L22 39 M32 50 L43 38 M32 44 L26 32 M32 44 L38 30" stroke="#4a2c12" stroke-width="2.8" fill="none"/>
-              <g fill="#2e7d32" stroke="#14532d" stroke-width=".9">
-                <ellipse cx="20.5" cy="37" rx="5.6" ry="3.4" transform="rotate(-32 20.5 37)"/><ellipse cx="44.5" cy="36" rx="5.6" ry="3.4" transform="rotate(32 44.5 36)"/>
-                <ellipse cx="25" cy="30.5" rx="5.2" ry="3.2" transform="rotate(-50 25 30.5)"/><ellipse cx="39.5" cy="28.5" rx="5.2" ry="3.2" transform="rotate(50 39.5 28.5)"/>
-                <ellipse cx="29" cy="46" rx="5.4" ry="3.3" transform="rotate(-20 29 46)"/><ellipse cx="36" cy="47" rx="5.4" ry="3.3" transform="rotate(20 36 47)"/></g>
-              <g fill="#ffb347" opacity=".85"><circle cx="21" cy="35.5" r="1.2"/><circle cx="43.5" cy="34.5" r="1.2"/><circle cx="32" cy="38" r="1.3"/><circle cx="26" cy="29" r="1"/><circle cx="39" cy="27.5" r="1"/></g>
+            <g class="bd-sc-arbusto">
+              <path d="M28.6 60 L30.4 44 L33.6 44 L35.4 60 Z" fill="#5a3515" stroke="#2e1a08" stroke-width="1.3" stroke-linejoin="round"/>
+              <path d="M30.5 47 L24 40 M33.5 47 L40 39.5 M32 45 L32 36" stroke="#5a3515" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+              <g fill="url(#bdg-folha)" stroke="#0f3d1a" stroke-width="1.2">
+                <circle cx="21.5" cy="38" r="8.2"/><circle cx="42.5" cy="37.5" r="8.4"/><circle cx="32" cy="30.5" r="10.2"/>
+                <circle cx="26.5" cy="43.5" r="7.6"/><circle cx="37.5" cy="43.5" r="7.6"/><circle cx="32" cy="38.5" r="8.4"/></g>
+              <g fill="#7ccf6b" opacity=".55"><circle cx="27" cy="28" r="2.2"/><circle cx="19" cy="35.5" r="1.8"/><circle cx="38" cy="26.5" r="1.7"/><circle cx="44.5" cy="35" r="1.8"/></g>
+              <g fill="none" stroke="#ffb347" stroke-width="1.5" opacity=".8" stroke-linecap="round"><path d="M14 36 Q15 29 21 28"/><path d="M50 35 Q49 29 43 27.5"/><path d="M25 21.5 Q32 17.5 39 21.5"/></g>
             </g>
-            <g class="bd-sc-brasas" fill="#ffd36b"><circle cx="19" cy="22" r="1.1"/><circle cx="46" cy="18" r="1"/><circle cx="32" cy="9" r="1.2"/><circle cx="12" cy="36" r=".9"/><circle cx="53" cy="33" r=".9"/></g>
+            <g class="bd-sc-lingua">${chama(22, 36, 4.6, 14, '#ff9a24')}${chama(42.5, 35, 4.6, 14, '#ff9a24')}${chama(32, 26, 5.2, 16, '#ffd23a')}${chama(32, 26, 2.6, 9, '#fff2b0')}</g>
+            <g class="bd-sc-brasas" fill="#ffd36b"><circle cx="15" cy="20" r="1.1"/><circle cx="49" cy="17" r="1"/><circle cx="32" cy="5" r="1.2"/><circle cx="9" cy="34" r=".9"/><circle cx="55" cy="31" r=".9"/></g>
             <rect class="bd-sc-clarao" x="-10" y="-10" width="84" height="84" fill="#fff"/>
-            <path class="bd-sc-raio" d="M41 -6 L30.5 16 L37 16 L25 41 L43 13 L35.5 13 L45 -6 Z" fill="#fffbd5" stroke="#fff" stroke-width=".9" stroke-linejoin="round"/>`,
+            <path class="bd-sc-raio" d="M41 -6 L30.5 15 L37 15 L25 38 L43 12 L35.5 12 L45 -6 Z" fill="#fffbd5" stroke="#fff" stroke-width=".9" stroke-linejoin="round"/>`,
     };
 
     function svgBadge(id, decorativo = false) {
