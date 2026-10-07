@@ -1167,7 +1167,13 @@ python testes/fumaca_conversa_rapida.py  # conversa rápida, nome repetido, sile
 python testes/fumaca_rodada3.py    # convite por membro, posição/notas de amigos, câmera, ornamentos, limites
 python testes/contar_queries.py    # quantas queries cada carga faz (use antes/depois de mexer em performance)
 python testes/fumaca_call.py       # uma call por pessoa, graça no disconnect, reentrada, ligação por DM (aba certa), versão do app
+python testes/fumaca_cosmeticos.py # curva de nível, patentes, catálogo, posse, equipar, efeito de servidor
+python testes/fumaca_localizacao.py  # localização na conta, travas do mapa, IP
+python testes/fumaca_resposta.py   # responder mensagem (canal e DM)
+python testes/fumaca_push.py       # notificações push (chaves, inscrição, quem recebe)
+python testes/fumaca_insignias.py  # Beta pra todos, BAZINGA por servidor, Alpha por nome
 ```
+Rode **todos** antes de commitar (um comando encadeado com `;`/`&&` não para na falha: confira a última linha de cada).
 
 ---
 
@@ -1384,9 +1390,8 @@ a posse continua (é por id); para conceder de novo: `python conceder_item.py <@
   do nome nas mensagens/lista de membros (precisaria do nível do autor em cada payload).
 
 ### Insígnias (não equipáveis: aparecem sempre)
-`badge:criador`, `badge:beta_tester`, `badge:coder` e `badge:so_nos` (os quatro são dos dois testers). **"Só nós"** = duas chamas
-(laranja = Gogeta, roxa = Sasuke) que **se fundem numa só ao passar o mouse** (transições em `.bd-so_nos:hover`; dentro do popover o
-ciclo separa→junta→funde roda sozinho, `.orb-grande`). Desenho em `DESENHO_BADGE`; nomes/descrições espelham `cosmeticos.CATALOGO`.
+*(Atualizado em 07/10/2026: hoje são 6, com desenhos novos e regras de quem recebe — ver "Insígnias" na Rodada 8.)* Eram `criador`, `beta_tester`, `coder` e `so_nos`
+só dos dois testers; o "Só nós" das duas chamas virou a sarça ardente. Desenho em `DESENHO_BADGE`; nomes/descrições espelham `cosmeticos.CATALOGO`.
 
 ### Catálogo, posse e inventário (regra 4 em ação)
 - `app/cosmeticos.py` é a fonte da verdade dos itens **exclusivos**: `CATALOGO["<tipo>:<id>"]`. Os itens **livres** (neon, ouro,
@@ -1740,13 +1745,21 @@ teclado/configurações, e responder). Não cria telas novas: chama o que o desk
   (envio real não é testado: `pywebpush.webpush` é trocado por um registrador).
 - **Insígnias (07/10/2026)**: 6 em `cosmeticos.CATALOGO` (ordem do cartão): Criador (capacete de obra; no popover é uma pilha de 9 camadas em `translateZ` que gira
   em `rotateY` = objeto 3D, `svgBadge3D`), Alpha Tester (capacete romano; olhos vermelhos em flash), Beta Tester (Medusa dormindo; acorda e volta a dormir), BAZINGA
-  (símbolo dos Lanternas Verdes, "on top!"; partículas -> explosão -> aura), Coder, Só nós (sarça ardente; raio -> fogo). "No zoom" = popover `.orb-grande`
+  (símbolo dos Lanternas Verdes, "on top!"; partículas -> explosão -> aura), Coder, Só nós (sarça ardente; raio -> fogo). **Desenhos finais (07/10)**: Alpha = capacete
+  espartano de crista vermelha alta (crista balança sempre; brilho varre o ouro e olhos vermelhos em flash no zoom); Beta = Medusa magra e sombria (dormindo parece pedra;
+  no zoom acorda num bote com olhos amarelos, boca com presas e 11 cobras com presas, depois volta a dormir); Só nós = arbusto verde envolto em fogo, raio no zoom.
+  **Arte é vetor desenhado à mão no JS**: um PNG de 46 px (capacete) não serve (borrado, com halo branco) — se o dono mandar arte melhor (>= 400 px, fundo transparente, de
+  fonte que ele possa usar), dá pra usar `<image>` no SVG com a animação por cima. O dono (`@aquele.sales`) e `@filippo.chiarion` também têm Alpha, via `LABORATORIO`. "No zoom" = popover `.orb-grande`
   (animação em loop) e, nas pequenas, `:hover`. **Quem recebe**: Beta = **todo mundo** (`posses_com_regras()` no `/chat`, 1 escrita só na 1ª vez);
   BAZINGA = membro do servidor cujo id está em `config_app.servidor_bazinga_id` (ou env `BAZINGA_SERVER_ID`) — **por ID, nunca por nome** (qualquer um cria um servidor
   "Bazinga"); Alpha = lista `ALPHA_NOMES` por nome de exibição, concedida só no `atualizar_banco.py` passo 26 (nome repetido ou não achado vira aviso; use
   `conceder_item.py <@usuario> badge:alpha_tester`). O passo 26 também define o servidor Bazinga (o mais antigo com esse nome: **confira o id impresso**) e dá beta/BAZINGA
   a quem já existe. A insígnia não é retirada se a pessoa sair do servidor. O "!" do cartão só aparece abaixo do nível 10. Teste: `python testes/fumaca_insignias.py`.
-- **Não testado ao vivo**: toque longo, arrastar pro lado, teclado e call em celular real; losango com call real.
+- **Não testado ao vivo**: toque longo, arrastar pro lado, teclado, call, rumo (bússola) e entrega real de push em celular; losango com call real.
+- **Ideias combinadas e ainda não feitas**: APK/Play Store (TWA via PWABuilder/Bubblewrap: precisa conta de dev US$25 + `assetlinks.json` + ícones maiores; **não melhora
+  desempenho nem layout**, só dá presença na loja); IPA na App Store (Mac + US$99/ano); chave Google Geolocation no `desktop/config.json` pra o app do Windows achar a posição
+  por Wi-Fi (sem ela cai no IP, que erra); aumentar `RAIO_SERVIDORES_M` se o dono quiser; assinatura de código do instalador; seletor completo de emoji com fonte Twemoji
+  hospedada (`app/static/fonts/twemoji.woff2` já está lá e entra na pilha de fontes).
 
 ---
 
