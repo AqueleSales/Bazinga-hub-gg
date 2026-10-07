@@ -837,3 +837,41 @@ def animar_quadros(lista_bytes, fps):
     quadros[0].save(saida, format='WEBP', save_all=True, append_images=quadros[1:],
                     duration=round(1000 / fps), loop=0, quality=75, method=3)
     return saida.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Resposta a mensagem (estilo WhatsApp): o cliente manda só o id da mensagem citada
+# e o servidor monta o resumo — nunca confia no texto que veio do navegador.
+# ---------------------------------------------------------------------------
+def _trecho_resposta(texto, anexo_nome):
+    t = ' '.join((texto or '').split())
+    return t[:140] if t else ('📎 ' + (anexo_nome or 'Anexo'))
+
+
+def resumos_de_resposta_canal(ids, canal_id):
+    """{id: {id, autor, autor_id, texto}} das mensagens citadas, só se forem DO MESMO canal."""
+    from sqlalchemy.orm import joinedload
+    from .models import Message
+    ids = {int(i) for i in ids if i}
+    if not ids:
+        return {}
+    msgs = com_retry(lambda: Message.query.options(joinedload(Message.author))
+                     .filter(Message.id.in_(ids), Message.channel_id == canal_id).all())
+    return {m.id: {'id': m.id, 'autor': m.author.name, 'autor_id': m.person_id,
+                   'texto': _trecho_resposta(m.text, m.attachment_name)} for m in msgs}
+
+
+def resumos_de_resposta_dm(ids, pessoa_a, pessoa_b):
+    """Idem para DM: só mensagens trocadas entre as duas pessoas da conversa."""
+    from sqlalchemy import or_, and_
+    from sqlalchemy.orm import joinedload
+    from .models import DirectMessage
+    ids = {int(i) for i in ids if i}
+    if not ids:
+        return {}
+    msgs = com_retry(lambda: DirectMessage.query.options(joinedload(DirectMessage.sender))
+                     .filter(DirectMessage.id.in_(ids),
+                             or_(and_(DirectMessage.sender_id == pessoa_a, DirectMessage.receiver_id == pessoa_b),
+                                 and_(DirectMessage.sender_id == pessoa_b, DirectMessage.receiver_id == pessoa_a))).all())
+    return {m.id: {'id': m.id, 'autor': m.sender.name, 'autor_id': m.sender_id,
+                   'texto': _trecho_resposta(m.content, m.attachment_name)} for m in msgs}

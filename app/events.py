@@ -10,7 +10,7 @@ from . import socketio, APP_VERSAO
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product,
                      Denuncia, Notificacao, Silenciado, server_members, channel_members)
-from .utils import (texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
+from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
@@ -635,11 +635,23 @@ def lidar_com_mensagem(dados):
     if not texto and not anexo_url:
         return
 
+    # Resposta: só vale citar mensagem DESTE canal (o resumo vem do banco, não do cliente).
+    resposta = None
+    try:
+        rid = int(dados.get('reply_to') or 0)
+    except (TypeError, ValueError):
+        rid = 0
+    if rid:
+        try:
+            resposta = resumos_de_resposta_canal([rid], canal.id).get(rid)
+        except Exception as e:
+            print(f"[ERRO RESPOSTA] {e}")
+
     try:
         def preparar():
             nova = Message(text=texto or None, person_id=usuario.id, channel_id=canal.id,
                            attachment_url=anexo_url, attachment_type=anexo_tipo,
-                           attachment_name=anexo_nome)
+                           attachment_name=anexo_nome, reply_to_id=resposta['id'] if resposta else None)
             db.session.add(nova)
             return nova
 
@@ -665,6 +677,7 @@ def lidar_com_mensagem(dados):
         'anexo_nome': nova_msg.attachment_name,
         'hora': hora_formatada(nova_msg.timestamp),
         'cor': cor,
+        'reply': resposta,
         # Ecoa de volta pra quem mandou trocar a bolha otimista pela real
         # sem duplicar (ver enviarMensagemOtimista() no chat.html).
         'temp_id': temp_id_seguro(dados)
@@ -3395,6 +3408,15 @@ def on_enviar_mensagem_direta(data):
         if rel and rel.status == 'pending':
             oculto_pro_destino = oculta_pra(rel, target_id)
 
+        # Resposta: só vale citar mensagem DESTA conversa.
+        resposta = None
+        try:
+            rid = int(data.get('reply_to') or 0)
+        except (TypeError, ValueError):
+            rid = 0
+        if rid:
+            resposta = resumos_de_resposta_dm([rid], usuario.id, target_id).get(rid)
+
         def preparar():
             if criar_rapida:
                 db.session.add(Friendship(requester_id=usuario.id, addressee_id=target_id,
@@ -3408,7 +3430,8 @@ def on_enviar_mensagem_direta(data):
             # content '' (e não None) quando é só anexo: a coluna do Neon ainda pode ser NOT NULL.
             nova = DirectMessage(sender_id=usuario.id, receiver_id=target_id, content=texto or '',
                                  attachment_url=anexo_url, attachment_type=anexo_tipo,
-                                 attachment_name=anexo_nome, lida=(target_id == usuario.id))
+                                 attachment_name=anexo_nome, lida=(target_id == usuario.id),
+                                 reply_to_id=resposta['id'] if resposta else None)
             db.session.add(nova)
             return nova
 
@@ -3427,6 +3450,7 @@ def on_enviar_mensagem_direta(data):
             'anexo_nome': nova_msg.attachment_name,
             'hora': hora_formatada(nova_msg.timestamp),
             'cor': usuario.role.color if usuario.role else '#5865F2',
+            'reply': resposta,
             # Ecoa pra quem mandou trocar a bolha otimista pela real, sem duplicar.
             'temp_id': temp_id_seguro(data)
         }

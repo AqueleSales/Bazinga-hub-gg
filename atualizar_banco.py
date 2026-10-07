@@ -99,6 +99,10 @@ def atualizar_banco():
             # 12. Mensagens fixadas
             add_column_se_nao_existir("message", "is_pinned BOOLEAN DEFAULT FALSE")
 
+            # 12b. Responder mensagem (canal e DM)
+            add_column_se_nao_existir("message", "reply_to_id INTEGER")
+            add_column_se_nao_existir("direct_message", "reply_to_id INTEGER")
+
             # 13. Amizades de verdade (tabela nova - o db.create_all() acima já
             # cria; isso aqui só avisa se faltar).
             try:

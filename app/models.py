@@ -203,6 +203,9 @@ class Message(db.Model):
 
     edited_at = db.Column(db.DateTime, nullable=True)
     is_pinned = db.Column(db.Boolean, default=False)
+    # Resposta (estilo WhatsApp): id da mensagem citada, no mesmo canal. Sem FK de propósito:
+    # apagar a original não pode apagar nem travar a resposta (o cliente mostra "mensagem apagada").
+    reply_to_id = db.Column(db.Integer, nullable=True)
 
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'), nullable=False)
@@ -327,6 +330,7 @@ class DirectMessage(db.Model):
     attachment_type = db.Column(db.String(20), nullable=True)   # 'image' | 'video' | 'file'
     attachment_name = db.Column(db.String(255), nullable=True)
     lida = db.Column(db.Boolean, default=False)
+    reply_to_id = db.Column(db.Integer, nullable=True)   # ver Message.reply_to_id
 
     sender = db.relationship('Person', foreign_keys=[sender_id])
     receiver = db.relationship('Person', foreign_keys=[receiver_id])

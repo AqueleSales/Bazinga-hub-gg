@@ -18,7 +18,7 @@ from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, m
 from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
 from ..cosmeticos import posses_da_pessoa, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
-from ..utils import nivel_da_pessoa
+from ..utils import nivel_da_pessoa, resumos_de_resposta_canal, resumos_de_resposta_dm
 
 main_bp = Blueprint("main", __name__)
 
@@ -500,10 +500,13 @@ def pegar_mensagens(canal_id):
             item['total'] += 1
             item['quem'].append(r.person_id)
 
+    respostas = resumos_de_resposta_canal([m.reply_to_id for m in mensagens_db if m.reply_to_id], canal_id)
     dados = []
     for msg in mensagens_db:
         dados.append({
             'id': msg.id,
+            'reply': respostas.get(msg.reply_to_id) if msg.reply_to_id else None,
+            'reply_apagada': bool(msg.reply_to_id and msg.reply_to_id not in respostas),
             'autor': msg.author.name,
             'autor_id': msg.person_id,
             'avatar': msg.author.avatar,
@@ -551,10 +554,13 @@ def get_dms(target_id):
         db.session.rollback()
         mensagens_db = []
 
+    respostas = resumos_de_resposta_dm([m.reply_to_id for m in mensagens_db if m.reply_to_id], meu_id, target_id)
     dados = []
     for msg in mensagens_db:
         dados.append({
             'id': msg.id,
+            'reply': respostas.get(msg.reply_to_id) if msg.reply_to_id else None,
+            'reply_apagada': bool(msg.reply_to_id and msg.reply_to_id not in respostas),
             'autor': msg.sender.name,
             'autor_id': msg.sender_id,
             'avatar': msg.sender.avatar,

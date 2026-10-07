@@ -1693,6 +1693,30 @@ Ordem de trabalho: (1) casca mínima abrindo o Render; (2) tela de login animada
 (4) electron-builder gerando o instalador; (5) auto-update via GitHub Releases; (6) tray/notificações/captura de tela.
 Testar sempre com duas contas (regra 6) e com o Render dormindo.
 
+## Rodada 8 de 06/10/2026 — mobile (só CSS/JS em `chat.html`, abaixo de 720px) + responder mensagem
+
+Tudo mobile vive em 3 blocos no fim do `chat.html`: CSS "MOBILE" (fim do último `<style>`, dentro de `@media (max-width: 720px)`; fora do
+media só a lista que **esconde** os elementos mobile no desktop) e 3 `<script>` no fim do `<body>` (navegação, botão de ação do mapa, toque longo/membros/
+teclado/configurações, e responder). Não cria telas novas: chama o que o desktop já usa (`switchMainView`, `#btn-mercado`...).
+
+- **Barra inferior de 5 slots**: 1 Servidores (painel: faixa de bolinhas + canais), 2 Chat do canal atual, 3 **multi-uso** (Radar/Loja/Passe: toque
+  abre o triângulo, arrastar pra cima e soltar também seleciona; com call vira losango e a Call ocupa o vértice de baixo), 4 Amigos/DMs (painel),
+  5 Você (folha: perfil, inventário, configurações, mic, fone, sair). Os painéis são as sidebars do desktop em `position: fixed`
+  (`body[data-painel]`); clique **confiável** (`e.isTrusted`) num canal/DM fecha o painel — o app clica sozinho no 1º canal ao entrar no servidor.
+- **Botão de ação do Radar** (`#mob-fab`): arrasta pros 4 cantos, abre fantasma/nota/plantar em leque; no canto de baixo-direita sobe acima dos
+  controles do Leaflet (mede `.leaflet-bottom.leaflet-right .leaflet-control`). O cabeçalho do Radar no celular só tem título + caixa de entrada.
+- **Armadilhas**: `.discord-app` tem `z-index:1` (contexto de empilhamento): tudo que fica dentro dele (sidebar de membros) fica **abaixo** da barra
+  (`z-index:1300`), por isso a folha de membros usa `bottom: var(--nav-h)`. A barra de baixo **só some com teclado de verdade** (janela encolheu >150px);
+  esconder por "campo focado" sumia a barra na DM, que abre com o cursor no texto. `interactive-widget=resizes-content` no viewport.
+- **Mensagem**: toque longo abre o menu como folha (reações rápidas no topo); a barra de hover (`.msg-actions`) some no celular. Config: tela cheia com
+  abas rolando de lado, alça no topo (puxar pra baixo fecha), botão "Pré-visualização" mostra só o cartão por cima. Cartão de perfil abre centralizado.
+- **Responder (canal e DM, desktop e celular)**: `Message.reply_to_id` e `DirectMessage.reply_to_id` (inteiro **sem FK**: apagar a original não apaga a
+  resposta; o cliente mostra "Mensagem apagada"). O cliente manda só `reply_to` (id); o **servidor** valida que é do mesmo canal/conversa e monta o
+  resumo (`resumos_de_resposta_canal/_dm` em `utils.py`) — nunca confia no texto do navegador. Gatilhos: seta ao passar o mouse, item "Responder" do menu,
+  Alt+clique, triplo clique (opção em Configurações > Geral > Mensagens, `localStorage pnt_resp_triplo`), arrastar pra direita (celular). Teste:
+  `python testes/fumaca_resposta.py`. **Rodar `python atualizar_banco.py` depois do deploy** (a rede de segurança do boot também cria as colunas).
+- **Não testado ao vivo**: toque longo, arrastar pro lado, teclado e call em celular real; losango com call real.
+
 ---
 
 # Convenções
