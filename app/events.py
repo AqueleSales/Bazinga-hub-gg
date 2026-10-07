@@ -1157,6 +1157,24 @@ def lidar_estado_camera(dados):
          to=f"voz_{chave}", include_self=False)
 
 
+@socketio.on('estado_audio')
+def lidar_estado_audio(dados):
+    """Microfone mutado / fone desligado: avisa a sala da call pra mostrar o selo vermelho no cartão de quem mutou
+    (mesma regra do estado_camera: só quem está de verdade na call, com esse peer_id)."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    canal_id = dados.get('canal_id')
+    peer_id = dados.get('peer_id')
+    if canal_id is None or not peer_id:
+        return
+    chave = canal_id if (isinstance(canal_id, str) and canal_id.startswith('dm_')) else str(canal_id)
+    if not any(p.get('peer_id') == peer_id and p.get('usuario_id') == usuario.id for p in participantes_call.get(chave, [])):
+        return
+    emit('estado_audio', {'peer_id': peer_id, 'mudo': bool(dados.get('mudo')), 'surdo': bool(dados.get('surdo'))},
+         to=f"voz_{chave}", include_self=False)
+
+
 # Só avisa quem mais está na call - não grava nada no servidor. A gravação em
 # si acontece 100% no navegador de quem clicou (ver iniciarGravacao no chat.html).
 @socketio.on('iniciar_gravacao')

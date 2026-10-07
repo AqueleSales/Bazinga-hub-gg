@@ -813,9 +813,11 @@ const Cosm = (() => {
         const montanhaLonge = (cx, larg, h, cor) => `<path d="M${cx - larg} ${H} C${cx - larg * .55} ${H - h * 1.05} ${cx - larg * .2} ${H - h} ${cx} ${H - h} C${cx + larg * .2} ${H - h} ${cx + larg * .55} ${H - h * 1.05} ${cx + larg} ${H} Z" fill="${cor}"/>`;
 
         // trilha: pontos das estações; a parte já percorrida é dourada e termina na pessoa
-        const pt = (i) => [xDe(i) * 10, H - yDe(i) - 70];
+        // a trilha liga as PEDRAS das estações (não os ícones), e a bandeira da pessoa fica na linha, entre a estação dela e a próxima
+        const pt = (i) => [xDe(i) * 10, H - yDe(i) - 14];
         const todos = pats.map((_, i) => pt(i));
-        const eu = [(pi % 2 ? 1 : -1) * 0 + 500, H - yEu];
+        const aqui = pt(pi), prox = pi < N - 1 ? pt(pi + 1) : null;
+        const eu = prox ? [aqui[0] + (prox[0] - aqui[0]) * frac, aqui[1] + (prox[1] - aqui[1]) * frac] : [aqui[0], aqui[1] - frac * 260];
         const feitos = [[500, H - 90], ...todos.slice(0, pi + 1), eu];
         const linha = (pts) => 'M' + pts.map(([x, y]) => `${x.toFixed(0)} ${y.toFixed(0)}`).join(' L');
 
@@ -872,7 +874,7 @@ const Cosm = (() => {
                 </svg>
                 <div class="mt-nuvens">${nuvens}</div>
                 ${est}
-                <div class="mt-eu" style="bottom:${yEu.toFixed(0)}px"><div class="mt-eu-anel"></div><i class="fa-solid fa-flag"></i><span>Você · Nv. ${nivel}</span></div>
+                <div class="mt-eu" style="bottom:${yEu.toFixed(0)}px;left:${(eu[0] / 10).toFixed(1)}%"><div class="mt-eu-anel"></div><i class="fa-solid fa-flag"></i><span>Você · Nv. ${nivel}</span></div>
                 <div class="mt-aves">${aves}</div>
             </div></div>
             <div class="mt-luz"></div>`;

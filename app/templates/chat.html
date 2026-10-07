@@ -638,6 +638,7 @@
         .call-btn.danger { background-color: var(--red-color); color: #fff; }
         .call-btn.danger:hover { background-color: #a12828; }
         .call-btn.muted { color: #f23f42; }
+        .badge-audio { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: #ed4245; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.5); z-index: 6; pointer-events: none; }
         .call-btn.muted::after {
             content: ''; position: absolute; width: 34px; height: 3px; background-color: #f23f42; transform: rotate(45deg);
             box-shadow: 0 0 0 3px var(--bg-primary); border-radius: 2px; pointer-events: none;
@@ -2550,14 +2551,17 @@
             .cj-topo { touch-action: none; }
             /* sem janelinha no celular: a call minimizada some da tela (continua rodando, com áudio) e vira a faixa verde no topo */
             .call-janela.mini { visibility: hidden !important; pointer-events: none !important; width: 2px !important; height: 2px !important; min-width: 0 !important; left: 0 !important; top: 0 !important; border: 0; overflow: hidden; }
-            #mob-callbar.on { display: flex; position: fixed; top: 0; left: 0; right: 0; height: 42px; z-index: 1260; align-items: center; gap: 10px; padding: 0 8px 0 14px; background: linear-gradient(90deg, #1b8a49, #2dc770); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
-            #mob-callbar .cb-ponto { width: 9px; height: 9px; border-radius: 50%; background: #fff; flex: none; animation: mobBatida 1.4s ease-in-out infinite; }
+            #mob-callbar.on { display: flex; position: fixed; top: 0; left: 0; right: 0; height: 54px; z-index: 1260; align-items: center; gap: 10px; padding: 0 10px 0 14px; background: linear-gradient(90deg, #1b8a49, #2dc770); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+            #mob-callbar .cb-ponto { width: 11px; height: 11px; border-radius: 50%; background: #fff; flex: none; animation: mobBatida 1.4s ease-in-out infinite; }
             #mob-callbar .cb-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             #mob-callbar .cb-nome small { font-weight: 600; opacity: .85; margin-left: 6px; }
-            #mob-callbar button { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,.28); color: #fff; font-size: 14px; cursor: pointer; }
+            #mob-callbar button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0,0,0,.28); color: #fff; font-size: 17px; cursor: pointer; }
+            #mob-callbar button.mutado { background: #fff; color: #ed4245; }
             #mob-callbar button.cb-sair { background: #ed4245; }
-            body.mob-em-call .discord-app { margin-top: 42px; height: calc(100vh - var(--nav-h) - 42px); height: calc(100dvh - var(--nav-h) - 42px); }
-            body.mob-em-call .left-sidebar-wrapper { top: 42px; }
+            body.mob-em-call .discord-app { margin-top: 54px; height: calc(100vh - var(--nav-h) - 54px); height: calc(100dvh - var(--nav-h) - 54px); }
+            body.mob-em-call .left-sidebar-wrapper { top: 54px; }
+            .call-janela { z-index: 1280; }   /* abaixo da barra de baixo (1300): o losango do botão do meio nunca fica cortado */
+            .call-btn { width: 56px; height: 56px; font-size: 21px; }
             #mob-multi.losango::before { content: ''; position: absolute; top: -14px; left: 50%; margin-left: 12px; width: 11px; height: 11px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 0 3px var(--bg-tertiary); z-index: 2; animation: mobBatida 1.4s ease-in-out infinite; }
 
             /* modais e configurações: tela cheia / folha larga */
@@ -2672,8 +2676,8 @@
             .mob-item span { color: var(--text-muted); }
             .mob-item i { font-size: 27px; }
             .mob-item[data-id="radar"] { --cor: #6ea8ff; }
-            .mob-item[data-id="loja"] { --cor: #ffb347; }
-            .mob-item[data-id="bp"] { --cor: #ff7ac6; }
+            .mob-item[data-id="loja"] { --cor: #ff7ac6; }
+            .mob-item[data-id="bp"] { --cor: #ffd76a; }
             .mob-item[data-id="call"] { --cor: #3ddc84; }
             .mob-item.on { transform: scale(1.14); }
             .mob-item.on span { color: var(--text-header); }
@@ -2764,7 +2768,7 @@
                     <div class="channels-list">
                         <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA {{ app_nome|upper }}</div>
                         <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
-                        <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px;"></i> Mercado Elite</div>
+                        <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px; color: #ff7ac6;"></i> Mercado Elite</div>
                         <div class="channel-item" id="btn-inventario" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Suas insígnias, molduras, efeitos e patentes"><i class="fa-solid fa-box-open" style="font-size: 16px; color: #c4b5fd;"></i> Inventário</div>
                         <div class="channel-item" id="btn-battlepass" style="gap: 12px; margin: 0 8px; padding: 8px; justify-content: space-between;" title="Seu nível e progresso">
                             <div style="display:flex; align-items:center; gap:12px;"><i class="fa-solid fa-ranking-star" style="font-size: 16px; color: #ffd76a;"></i> Battle Pass</div>
@@ -3050,6 +3054,7 @@
 
                         <div class="call-controls-bar">
                             <button class="call-btn" id="btn-main-mic" title="Silenciar"><i class="fa-solid fa-microphone"></i></button>
+                            <button class="call-btn" id="btn-main-deafen" title="Ensurdecer (parar de ouvir)"><i class="fa-solid fa-headphones"></i></button>
                             <button class="call-btn" id="btn-main-camera" title="Ligar Câmera"><i class="fa-solid fa-video"></i></button>
                             <button class="call-btn" id="btn-main-screen" title="Compartilhar Tela"><i class="fa-solid fa-desktop"></i></button>
 
@@ -3109,7 +3114,7 @@
             <div id="market-content-wrapper" class="market-wrapper">
                 <header class="market-header">
                     <h2 style="color: var(--text-header); font-size: 16px; display: flex; align-items: center; gap: 8px; font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 16px;">
-                        <i class="fa-solid fa-store" style="color: var(--text-muted);"></i> Mercado Elite
+                        <i class="fa-solid fa-store" style="color: #ff7ac6;"></i> Mercado Elite
                     </h2>
                     <div style="display: flex; gap: 24px; height: 100%;">
                         <div class="market-tab active" data-tab="tab-loja">Loja {{ app_nome }}</div>
@@ -8777,6 +8782,7 @@
                 const b = document.createElement('div');
                 b.className = 'reaction-op';
                 b.textContent = emoji;
+                emojificar(b);   // emoji vetorial (igual no Windows, Android e iPhone), não o da fonte do aparelho
                 b.addEventListener('click', () => {
                     if (msgAlvoId) reagirOtimista(msgAlvoId, emoji);
                     document.getElementById('reaction-picker').style.display = 'none';
@@ -12130,8 +12136,28 @@
             const ligada = !!camLigada[peerId];
             if (vid) vid.style.display = ligada ? 'block' : 'none';
             if (av) av.style.display = ligada ? 'none' : 'flex';
+            aplicarEstadoAudio(peerId);
         }
         socket.on('estado_camera', (d) => { if (!d || !d.peer_id) return; camLigada[d.peer_id] = !!d.ligada; aplicarEstadoCamera(d.peer_id); });
+        // Mic mudo / fone desligado: selo vermelho no cartão (o de quem mutou e o que os outros veem)
+        const audioEstado = {};   // peerId -> { mudo, surdo } (vem do evento estado_audio)
+        function aplicarEstadoAudio(peerId) {
+            const card = peerId === 'eu' ? document.getElementById('my-video-card') : document.getElementById(`vc-${peerId}`);
+            if (!card) return;
+            const e = peerId === 'eu' ? { mudo: micMuted, surdo: deafened } : (audioEstado[peerId] || {});
+            let b = card.querySelector('.badge-audio');
+            if (!e.mudo && !e.surdo) { if (b) b.remove(); return; }
+            if (!b) { b = document.createElement('div'); b.className = 'badge-audio'; card.appendChild(b); }
+            b.innerHTML = e.surdo ? '<i class="fa-solid fa-ear-deaf"></i>' : '<i class="fa-solid fa-microphone-slash"></i>';
+            b.title = e.surdo ? 'Sem ouvir (fone desligado)' : 'Microfone mudo';
+        }
+        function anunciarMeuAudio() {
+            if (inCall && myPeerId && currentVoiceChannelId) socket.emit('estado_audio', { canal_id: currentVoiceChannelId, peer_id: myPeerId, mudo: !!micMuted, surdo: !!deafened });
+        }
+        socket.on('estado_audio', (d) => { if (!d || !d.peer_id) return; audioEstado[d.peer_id] = { mudo: !!d.mudo, surdo: !!d.surdo }; aplicarEstadoAudio(d.peer_id); });
+        // reanuncia enquanto estiver mudo: quem entrou depois (ou perdeu o aviso) também fica sabendo
+        setInterval(() => { if (inCall && (micMuted || deafened)) { anunciarMeuAudio(); aplicarEstadoAudio('eu'); } }, 10000);
+
         function anunciarMinhaCamera() {
             if (inCall && myPeerId && currentVoiceChannelId) socket.emit('estado_camera', { canal_id: currentVoiceChannelId, peer_id: myPeerId, ligada: !!myCamStream });
         }
@@ -12678,18 +12704,22 @@
                 const myCard = document.getElementById('my-video-card');
                 if(micMuted && myCard) myCard.classList.remove('is-speaking');
             }
+            aplicarEstadoAudio('eu'); anunciarMeuAudio();
         }
 
         function toggleDeafen(forceState) {
             deafened = forceState !== undefined ? forceState : !deafened;
             document.getElementById('deafen-group').classList.toggle('muted', deafened);
+            const bf = document.getElementById('btn-main-deafen'); if (bf) bf.classList.toggle('muted', deafened);
             if(deafened) { micMutedBeforeDeafen = micMuted; toggleMic(true); }
             else { toggleMic(micMutedBeforeDeafen); }
+            aplicarEstadoAudio('eu'); anunciarMeuAudio();
         }
 
         document.getElementById('btn-mic').addEventListener('click', () => toggleMic());
         document.getElementById('btn-main-mic').addEventListener('click', () => toggleMic());
         document.getElementById('btn-deafen').addEventListener('click', () => toggleDeafen());
+        document.getElementById('btn-main-deafen').addEventListener('click', () => toggleDeafen());
 
         function disconnectCall() {
             if(!inCall) return;
@@ -14152,6 +14182,7 @@
         <span class="cb-ponto"></span>
         <span class="cb-nome">Em call<small></small></span>
         <button type="button" class="cb-mic" aria-label="Microfone"><i class="fa-solid fa-microphone"></i></button>
+        <button type="button" class="cb-fone" aria-label="Fone"><i class="fa-solid fa-headphones"></i></button>
         <button type="button" class="cb-sair" aria-label="Sair da call"><i class="fa-solid fa-phone-slash"></i></button>
     </div>
     <nav id="mob-nav" aria-label="Navegação">
@@ -14234,6 +14265,8 @@
                 const sm = bar.querySelector('.cb-nome small'); if (sm.textContent !== nm) sm.textContent = nm;
                 const ic = document.querySelector('#btn-main-mic i'); const mi = bar.querySelector('.cb-mic i');
                 if (ic && mi && mi.className !== ic.className) mi.className = ic.className;
+                bar.querySelector('.cb-mic').classList.toggle('mutado', !!(ic && /slash/.test(ic.className)));
+                const df = $('btn-main-deafen'); bar.querySelector('.cb-fone').classList.toggle('mutado', !!(df && df.classList.contains('muted')));
             }
             // foto no slot 5
             const av = $('bottom-avatar-container');
@@ -14304,6 +14337,7 @@
         // ---- faixa da call ----
         $('mob-callbar').addEventListener('click', (e) => {
             if (e.target.closest('.cb-mic')) { const m = $('btn-main-mic'); if (m) m.click(); setTimeout(atualizar, 80); return; }
+            if (e.target.closest('.cb-fone')) { const m = $('btn-main-deafen'); if (m) m.click(); setTimeout(atualizar, 80); return; }
             if (e.target.closest('.cb-sair')) { const d = $('btn-main-disconnect'); if (d) d.click(); setTimeout(atualizar, 200); return; }
             fecharSel(); setPainel(null); if (emCall()) callMostrar('cheia'); atualizar();
         });
@@ -14473,7 +14507,8 @@
         if (previaBtn) {
             previaBtn.addEventListener('click', () => document.body.classList.add('mob-previa'));
             document.querySelector('.pf-previa-x').addEventListener('click', fechaPrevia);
-            document.addEventListener('pointerdown', (e) => { if (document.body.classList.contains('mob-previa') && !e.target.closest('.pf-previa')) { e.preventDefault(); e.stopPropagation(); fechaPrevia(); } }, true);
+            // fecha no CLIQUE (e engole ele): fechar no pointerdown deixava o clique cair no botão que estava embaixo
+            document.addEventListener('click', (e) => { if (document.body.classList.contains('mob-previa') && !e.target.closest('.pf-previa, #mob-previa-btn')) { e.preventDefault(); e.stopPropagation(); fechaPrevia(); } }, true);
             setInterval(() => { if (document.body.classList.contains('mob-previa') && !document.querySelector('.settings-overlay.active')) fechaPrevia(); }, 500);
         }
         const alca = document.querySelector('.mob-grab');
@@ -14492,11 +14527,15 @@
         }
 
         // reações rápidas dentro da folha
-        document.querySelectorAll('#ctx-rapidas button').forEach((b) => b.addEventListener('click', () => {
-            const id = (typeof msgAlvoId !== 'undefined') ? msgAlvoId : null;
-            fecharMenuMensagem();
-            if (id) reagirOtimista(id, b.textContent.trim());
-        }));
+        document.querySelectorAll('#ctx-rapidas button').forEach((b) => {
+            b.dataset.e = b.textContent.trim();
+            emojificar(b);   // desenho vetorial em vez do emoji da fonte do aparelho
+            b.addEventListener('click', () => {
+                const id = (typeof msgAlvoId !== 'undefined') ? msgAlvoId : null;
+                fecharMenuMensagem();
+                if (id) reagirOtimista(id, b.dataset.e);
+            });
+        });
 
         // membros em folha
         const mem = document.getElementById('server-members-sidebar');
