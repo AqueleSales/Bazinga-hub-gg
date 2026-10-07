@@ -1724,7 +1724,10 @@ teclado/configurações, e responder). Não cria telas novas: chama o que o desk
   `/entrar?erro=login` com aviso; existe um handler 500 próprio (HTML simples; `/api/*` devolve JSON).
 - **Largura das barras laterais**: `.left-sidebar-wrapper` é `calc(72px + var(--w-canais))`. Era `312px` fixo: arrastar a barra de DMs pra mais larga
   vazava pra baixo do mapa e a alça (que fica na borda) sumia, sem como arrastar de volta.
-- **Celular em "Versão para computador"** (página larga, tudo "zoom out"): o chat avisa uma vez por sessão (`innerWidth > 720` com tela de toque pequena).
+- **O layout de celular não depende só da largura**: `@media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px)` (e `MOBILE_Q` no JS, mesma regra). Assim vale também quando o navegador/PWA abre em "Versão para computador" (viewport 980, tudo "zoom out"); o chat ainda avisa uma vez por sessão nesse caso.
+- **Escala do celular**: bloco "escala do celular" no CSS mobile (cabeçalhos 58px, fotos de DM 52px, campo de mensagem 58px, textos 16.5–17px). O "Amigos" do painel de conversas é um título com atalho "Abrir ›" (o `#btn-amigos::after` do desktop é um brilho absoluto: sobrescrito com `!important`).
+- **Rumo no mapa (só celular)**: leque azul suave no avatar apontando pra onde o aparelho aponta (`deviceorientationabsolute` no Android, `webkitCompassHeading` no iPhone, que pede permissão num toque). Não testado em aparelho.
+- X das notas do mapa: 28px no desktop, 40px no celular, com área de toque maior que o desenho.
 - **Radar** é o alvo azul (`.ic-radar`), Loja rosa (`.ic-loja`), Passe dourado (`.ic-passe`) em todo lugar; Loja/Passe mexem no hover/ativo.
 - **Não testado ao vivo**: toque longo, arrastar pro lado, teclado e call em celular real; losango com call real.
 

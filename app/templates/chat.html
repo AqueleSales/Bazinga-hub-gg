@@ -2484,6 +2484,16 @@
         @keyframes icPulo { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-3px) scale(1.12); } }
         @media (prefers-reduced-motion: reduce) { .ic-loja, .ic-passe { animation: none !important; } }
 
+        /* ---- X das notas do mapa: era 18px, difícil de acertar ---- */
+        .geo-note-bubble .nota-x { width: 28px; height: 28px; top: -12px; right: -12px; font-size: 14px; }
+        .geo-note-bubble .nota-x::before { content: ''; position: absolute; inset: -8px; }   /* área de toque maior que o desenho */
+        .leaflet-popup-close-button { width: 30px !important; height: 30px !important; font-size: 22px !important; line-height: 30px !important; }
+        .rumo-wrap { pointer-events: none; }
+        .rumo-seta { position: absolute; left: -52px; top: -52px; width: 104px; height: 104px; border-radius: 50%; pointer-events: none;
+            background: conic-gradient(from -26deg at 50% 50%, rgba(110,168,255,.5) 0deg, rgba(110,168,255,.5) 52deg, transparent 52deg);
+            -webkit-mask-image: radial-gradient(circle, transparent 20px, #000 24px, transparent 52px); mask-image: radial-gradient(circle, transparent 20px, #000 24px, transparent 52px);
+            transform: rotate(var(--rumo, 0deg)); transition: transform .15s linear; }
+
         /* ---- responder mensagem (citação na mensagem + barra em cima do campo de texto) ---- */
         .msg-citacao { display: flex; align-items: center; gap: 6px; max-width: min(100%, 520px); margin: 2px 0 4px; padding: 4px 10px; border-left: 3px solid var(--brand-color); background: rgba(255,255,255,.05); border-radius: 0 8px 8px 0; font-size: 12.5px; color: var(--text-muted); cursor: pointer; overflow: hidden; }
         .msg-citacao i { font-size: 10px; opacity: .7; flex: none; }
@@ -2504,7 +2514,7 @@
         .message.swipe-ok::before { background: var(--brand-color); color: #fff; }
 
         #mob-callbar, #mob-nav, #mob-sel, #mob-sel-fundo, #mob-voce, #mob-dica, #ctx-rapidas, .mob-grab, #mob-previa-btn, .pf-previa-x, #mob-fab, #mob-vazio { display: none; }
-        @media (max-width: 720px) {
+        @media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
             :root { --nav-h: calc(64px + env(safe-area-inset-bottom, 0px)); }
             body { overflow: hidden; }
             .discord-app { height: calc(100vh - var(--nav-h)); height: calc(100dvh - var(--nav-h)); width: 100%; flex-direction: column; }
@@ -2546,6 +2556,35 @@
             .msg-actions { display: none !important; }
             .message { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
             .message .msg-edit-input { -webkit-user-select: text; user-select: text; }
+
+            /* ---- escala do celular: barras, textos, fotos e campos maiores (tudo parecia fino e pequeno) ---- */
+            .chat-header { height: 58px; padding: 0 14px; }
+            #radar-header-title, #current-channel-header { font-size: 20px !important; }
+            #current-channel-header i { font-size: 22px !important; }
+            .chat-header .dm-head-nome { font-size: 20px; }
+            #dm-header-actions { font-size: 22px !important; gap: 20px !important; }
+            .channel-item { font-size: 17px; padding: 10px 12px; gap: 10px; }
+            .channel-category { font-size: 13px; }
+            #dms-sidebar > div:first-child { height: 68px !important; padding: 10px 14px !important; }
+            #btn-abrir-busca { font-size: 16px !important; padding: 12px 16px !important; }
+            .dm-card { padding: 12px 14px; margin: 6px 12px; border-radius: 14px; gap: 14px; }
+            .dm-card .user-avatar-wrapper { width: 52px !important; height: 52px !important; }
+            .dm-card .dm-nome { font-size: 17px !important; }
+            .dm-card .dm-sub { font-size: 14px !important; }
+            .chat-input-wrapper { padding: 0 12px 14px 12px; }
+            .chat-input-container { min-height: 58px; border-radius: 20px; padding: 0 10px; }
+            .chat-input { font-size: 17px; padding: 16px 0; }
+            .chat-input-btn { font-size: 25px; padding: 11px; }
+            .message-text { font-size: 16.5px; line-height: 1.45; }
+            .message-author { font-size: 16.5px; }
+            .discord-input, #qs-input, #amigos-view input { font-size: 17px !important; padding: 14px 16px !important; min-height: 52px; border-radius: 14px !important; }
+            .geo-note-bubble .nota-x { width: 40px; height: 40px; top: -17px; right: -17px; font-size: 19px; }
+            .geo-note-bubble .nota-x::before { inset: -6px; }
+            /* "Amigos" no painel de conversas é um TÍTULO com atalho, não um botão marcado */
+            #dms-sidebar #btn-amigos { background: none !important; box-shadow: none !important; transform: none !important; font-size: 21px; font-weight: 800; color: var(--text-header); padding: 14px 14px !important; margin: 4px 0 0 !important; }
+            #dms-sidebar #btn-amigos i { font-size: 22px !important; color: var(--text-muted); }
+            #dms-sidebar #btn-amigos::after { content: 'Abrir ›'; position: static !important; inset: auto !important; width: auto !important; height: auto !important; opacity: 1 !important; transform: none !important; margin-left: auto; font-size: 13px; font-weight: 700; color: #aab4ff; background: color-mix(in srgb, var(--brand-color) 18%, transparent) !important; padding: 7px 14px; border-radius: 999px; }
+            #dms-sidebar #btn-amigos .amigos-badge { margin-left: auto; margin-right: 8px; }
 
             /* call: 2 colunas, controles sempre visíveis (não existe hover no toque), sem gravar/clipar nem tela */
             .video-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 10px 10px 96px; }
@@ -14235,11 +14274,12 @@
             </div>
         </div>
     </div>
+    <script>const MOBILE_Q = '(max-width: 720px), (pointer: coarse) and (max-device-width: 820px)';   // mesma regra do CSS "MOBILE"</script>
     <script>
     // Navegação mobile: 1 Servidores · 2 Chat do canal · 3 multi-uso (Radar/Loja/Passe; vira losango com a Call) · 4 Amigos/DMs · 5 Você.
     // Não cria telas novas: só chama os cliques/funções que o desktop já usa (switchMainView, #btn-mercado...).
     (function () {
-        const mq = window.matchMedia('(max-width: 720px)');
+        const mq = window.matchMedia(MOBILE_Q);
         const $ = (id) => document.getElementById(id);
         const nav = $('mob-nav'), multi = $('mob-multi'), sel = $('mob-sel'), fundo = $('mob-sel-fundo'), voce = $('mob-voce');
         const MULTI = { radar: ['fa-location-crosshairs', 'Radar'], loja: ['fa-store', 'Loja'], bp: ['fa-ranking-star', 'Passe'] };
@@ -14358,6 +14398,37 @@
             if (e.target.closest('.channel-item.text-channel, .channel-item.voice-channel, .user-dm-item, #btn-amigos, #btn-mercado, #btn-battlepass, #btn-voltar-radar, .atalho-servidor')) setTimeout(() => setPainel(null), 0);
         });
 
+        // ---- rumo: um leque suave no avatar do mapa mostrando pra onde o celular aponta (só celular, só com bússola) ----
+        (function () {
+            let rumo = null, rumoM = null, pedido = false;
+            function pintar() {
+                if (rumo === null || typeof myMapMarker === 'undefined' || !myMapMarker || typeof bazingaMap === 'undefined' || !bazingaMap) return;
+                if (!rumoM) {
+                    rumoM = L.marker(myMapMarker.getLatLng(), { icon: L.divIcon({ className: 'rumo-wrap', html: '<div class="rumo-seta"></div>', iconSize: [0, 0] }), interactive: false, keyboard: false, zIndexOffset: 900 }).addTo(bazingaMap);
+                } else rumoM.setLatLng(myMapMarker.getLatLng());
+                const el = rumoM.getElement(); if (el && el.firstChild) el.firstChild.style.setProperty('--rumo', rumo.toFixed(0) + 'deg');
+            }
+            function aoOrientar(e) {
+                if (!mq.matches) return;
+                let h = null;
+                if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;                 // iPhone
+                else if (e.alpha !== null && e.alpha !== undefined && (e.absolute || e.type === 'deviceorientationabsolute')) h = (360 - e.alpha) % 360;   // Android
+                if (h === null) return;
+                const giro = (screen.orientation && screen.orientation.angle) || 0;
+                rumo = (h + giro + 360) % 360;
+                pintar();
+            }
+            window.addEventListener('deviceorientationabsolute', aoOrientar, true);
+            window.addEventListener('deviceorientation', aoOrientar, true);
+            setInterval(() => { if (rumoM && typeof myMapMarker !== 'undefined' && myMapMarker) rumoM.setLatLng(myMapMarker.getLatLng()); }, 700);
+            // iPhone só libera a bússola depois de um toque da pessoa
+            document.addEventListener('click', () => {
+                if (pedido || typeof DeviceOrientationEvent === 'undefined' || typeof DeviceOrientationEvent.requestPermission !== 'function') return;
+                pedido = true;
+                DeviceOrientationEvent.requestPermission().catch(() => {});
+            }, { once: false, passive: true });
+        })();
+
         // ---- faixa da call ----
         $('mob-callbar').addEventListener('click', (e) => {
             if (e.target.closest('.cb-mic')) { const m = $('btn-main-mic'); if (m) m.click(); setTimeout(atualizar, 80); return; }
@@ -14418,7 +14489,7 @@
     // Botão de ação do mapa (mobile): arrasta pros 4 cantos, abre Fantasma / Nota / Plantar em leque.
     // No canto de baixo-direita ele sobe acima dos controles do Leaflet (zoom e "centralizar em mim").
     (function () {
-        const mq = window.matchMedia('(max-width: 720px)');
+        const mq = window.matchMedia(MOBILE_Q);
         const fab = document.getElementById('mob-fab'), main = fab.querySelector('.fab-main');
         const ops = [...fab.querySelectorAll('.fab-op')];
         const T = 54, M = 12;
@@ -14499,7 +14570,7 @@
     <script>
     // Mobile: toque longo na mensagem abre o menu (que no celular é uma folha de baixo), membros em folha, e a barra some com o teclado.
     (function () {
-        const mq = window.matchMedia('(max-width: 720px)');
+        const mq = window.matchMedia(MOBILE_Q);
 
         // toque longo
         let lp = null, ultimoLP = 0;
@@ -14607,7 +14678,7 @@
     <script>
     // Responder mensagem: seta ao passar o mouse, menu, Alt+clique, triplo clique (opcional) e arrastar pro lado (celular).
     (function () {
-        const mq = window.matchMedia('(max-width: 720px)');
+        const mq = window.matchMedia(MOBILE_Q);
         const SEM_RESP = 'a, button, textarea, input, video, .msg-edit-input, .msg-reacao, .msg-add-reacao, .msg-citacao, .convite-cartao';
         const msgDe = (t) => t.closest && t.closest('.message');
         const chaveTriplo = 'pnt_resp_triplo';
