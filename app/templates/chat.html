@@ -297,8 +297,8 @@
         .username { font-weight: 600; font-size: 14px; color: var(--text-header); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
         .status-text { color: var(--text-muted); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 
-        .hardware-controls { display: flex; align-items: center; gap: 2px; }
-        .hw-group { display: flex; align-items: center; border-radius: 4px; transition: background-color 0.2s; background-color: transparent; position: relative; }
+        .hardware-controls { display: flex; align-items: center; gap: 6px; }
+        .hw-group { display: flex; align-items: center; border-radius: 8px; transition: background-color 0.2s; background-color: transparent; position: relative; }
         .hw-group:hover { background-color: rgba(255,255,255,0.05); }
         .hw-btn { background: none; border: none; color: #b5bac1; cursor: pointer; padding: 8px 6px; font-size: 16px; border-radius: 4px 0 0 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; position: relative;}
         .hw-btn:hover { color: var(--text-normal); }
@@ -640,7 +640,7 @@
         .call-btn.danger:hover { background-color: #a12828; }
         .call-btn.muted { color: #f23f42; background-color: rgba(242, 63, 66, .16); }
         .call-btn:focus, .call-btn:focus-visible { outline: none; }
-        #btn-main-mic.muted::after, #mic-group.muted .hw-btn::after { display: none; }   /* o ícone do microfone já troca pra "cortado": o risco extra ficava duplo */
+        #btn-main-mic.muted::after, #btn-main-deafen.muted::after, .hw-group.muted .hw-btn::after { display: none; }   /* o ícone do microfone já troca pra "cortado": o risco extra ficava duplo */
         .badge-audio { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: #ed4245; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.5); z-index: 6; pointer-events: none; }
         .call-btn.muted::after {
             content: ''; position: absolute; width: 26px; height: 3px; background-color: #f23f42; transform: rotate(45deg);
@@ -2259,7 +2259,7 @@
         .user-profile-section .user-avatar-wrapper { width: 34px; height: 34px; }
         .user-info .username { font-size: 13.5px !important; letter-spacing: 0 !important; }
         .user-info .status-text { font-size: 11.5px; }
-        .hardware-controls { gap: 0; margin-left: 2px; }
+        .hardware-controls { gap: 6px; margin-left: 2px; }
         .hw-group { border-radius: 8px; }
         .hw-btn { width: 30px; border-radius: 8px 0 0 8px; }
         .hw-arrow-btn { padding: 8px 3px; border-radius: 0 8px 8px 0; }
@@ -12697,7 +12697,7 @@
 
         function toggleMic(forceState) {
             micMuted = forceState !== undefined ? forceState : !micMuted;
-            if(!micMuted && deafened) toggleDeafen(false);
+            if(!micMuted && deafened) { micMutedBeforeDeafen = false; toggleDeafen(false); }   // desmutar o mic com o fone desligado liga os dois
             document.getElementById('mic-group').classList.toggle('muted', micMuted);
             document.getElementById('btn-main-mic').classList.toggle('muted', micMuted);
             const iconHtml = micMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
@@ -12714,6 +12714,9 @@
             deafened = forceState !== undefined ? forceState : !deafened;
             document.getElementById('deafen-group').classList.toggle('muted', deafened);
             const bf = document.getElementById('btn-main-deafen'); if (bf) bf.classList.toggle('muted', deafened);
+            const iconeFone = deafened ? '<i class="fa-solid fa-ear-deaf"></i>' : '<i class="fa-solid fa-headphones"></i>';
+            document.getElementById('btn-deafen').innerHTML = iconeFone;
+            if (bf) bf.innerHTML = iconeFone;
             if(deafened) { micMutedBeforeDeafen = micMuted; toggleMic(true); }
             else { toggleMic(micMutedBeforeDeafen); }
             aplicarEstadoAudio('eu'); anunciarMeuAudio();
