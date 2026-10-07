@@ -2474,6 +2474,18 @@
            MOBILE: barra inferior de 5 slots (Servidores · Chat · multi-uso · Amigos · Você)
            Só vale abaixo de 720px; no desktop nada disso aparece. Lógica no fim do <body> (#mob-nav).
            ========================================================================== */
+        /* ---- ícones de serviço: Radar azul (onda), Loja rosa e Passe dourado (mexem ao passar o mouse / no ativo) ---- */
+        .ic-radar { color: #6ea8ff !important; position: relative; display: inline-block; }
+        .ic-radar::after { content: ''; position: absolute; left: 50%; top: 50%; width: 140%; height: 140%; margin: -70% 0 0 -70%; border-radius: 50%; border: 2px solid #6ea8ff; opacity: 0; animation: icOnda 2.6s ease-out infinite; pointer-events: none; }
+        @keyframes icOnda { 0% { transform: scale(.45); opacity: .75; } 100% { transform: scale(1.35); opacity: 0; } }
+        .ic-loja { color: #ff7ac6 !important; display: inline-block; transform-origin: 50% 90%; }
+        .ic-passe { color: #ffd76a !important; display: inline-block; }
+        .channel-item:hover .ic-loja, .channel-item.active .ic-loja, .market-header .ic-loja { animation: icBalanco 1.1s ease-in-out infinite; }
+        .channel-item:hover .ic-passe, .channel-item.active .ic-passe { animation: icPulo 1.1s ease-in-out infinite; }
+        @keyframes icBalanco { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+        @keyframes icPulo { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-3px) scale(1.12); } }
+        @media (prefers-reduced-motion: reduce) { .ic-radar::after, .ic-loja, .ic-passe { animation: none !important; } }
+
         /* ---- responder mensagem (citação na mensagem + barra em cima do campo de texto) ---- */
         .msg-citacao { display: flex; align-items: center; gap: 6px; max-width: min(100%, 520px); margin: 2px 0 4px; padding: 4px 10px; border-left: 3px solid var(--brand-color); background: rgba(255,255,255,.05); border-radius: 0 8px 8px 0; font-size: 12.5px; color: var(--text-muted); cursor: pointer; overflow: hidden; }
         .msg-citacao i { font-size: 10px; opacity: .7; flex: none; }
@@ -2770,11 +2782,11 @@
 
                     <div class="channels-list">
                         <div style="padding: 16px 8px; font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 1px;">SISTEMA {{ app_nome|upper }}</div>
-                        <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-satellite-dish" style="font-size: 16px;"></i> Radar de Amigos</div>
-                        <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store" style="font-size: 16px; color: #ff7ac6;"></i> Mercado Elite</div>
+                        <div class="channel-item active" id="btn-voltar-radar" style="gap: 12px; margin: 0 8px; padding: 8px;"><i class="fa-solid fa-location-crosshairs ic-radar" style="font-size: 16px;"></i> Radar</div>
+                        <div class="channel-item" id="btn-mercado" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Loja, Battle Pass e Missões!"><i class="fa-solid fa-store ic-loja" style="font-size: 16px;"></i> Mercado Elite</div>
                         <div class="channel-item" id="btn-inventario" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Suas insígnias, molduras, efeitos e patentes"><i class="fa-solid fa-box-open" style="font-size: 16px; color: #c4b5fd;"></i> Inventário</div>
                         <div class="channel-item" id="btn-battlepass" style="gap: 12px; margin: 0 8px; padding: 8px; justify-content: space-between;" title="Seu nível e progresso">
-                            <div style="display:flex; align-items:center; gap:12px;"><i class="fa-solid fa-ranking-star" style="font-size: 16px; color: #ffd76a;"></i> Battle Pass</div>
+                            <div style="display:flex; align-items:center; gap:12px;"><i class="fa-solid fa-ranking-star ic-passe" style="font-size: 16px;"></i> Battle Pass</div>
                             <span id="sidebar-nivel-badge" style="background: var(--brand-color); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">1</span>
                         </div>
 
@@ -2939,7 +2951,7 @@
             <div id="home-content-wrapper" style="display: flex; flex-direction: column; flex-grow: 1; height: 100%; position: relative;">
                 <header class="chat-header" id="radar-header" style="background: var(--bg-primary); border-bottom: 1px solid rgba(0,0,0,0.2); gap: 16px; z-index: 10;">
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--text-header); padding-right: 16px; border-right: 1px solid rgba(255,255,255,0.1);" id="radar-header-title">
-                        <i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar
+                        <i class="fa-solid fa-location-crosshairs ic-radar"></i> Radar
                     </div>
                     <div style="display: flex; gap: 12px; align-items: center; flex-grow: 1; margin-left: 16px;" id="radar-header-actions">
                         <div class="bz-pill-btn active" id="btn-toggle-ghost" style="background: rgba(255,255,255,0.1); color: var(--text-header); cursor: pointer;"><i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF</div>
@@ -3117,7 +3129,7 @@
             <div id="market-content-wrapper" class="market-wrapper">
                 <header class="market-header">
                     <h2 style="color: var(--text-header); font-size: 16px; display: flex; align-items: center; gap: 8px; font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 16px;">
-                        <i class="fa-solid fa-store" style="color: #ff7ac6;"></i> Mercado Elite
+                        <i class="fa-solid fa-store ic-loja"></i> Mercado Elite
                     </h2>
                     <div style="display: flex; gap: 24px; height: 100%;">
                         <div class="market-tab active" data-tab="tab-loja">Loja {{ app_nome }}</div>
@@ -3167,7 +3179,7 @@
             <div id="battlepass-content-wrapper" class="market-wrapper">
                 <header class="market-header">
                     <h2 style="color: var(--text-header); font-size: 16px; display: flex; align-items: center; gap: 8px; font-weight: 800;">
-                        <i class="fa-solid fa-ranking-star" style="color: #ffd76a;"></i> Battle Pass
+                        <i class="fa-solid fa-ranking-star ic-passe"></i> Battle Pass
                     </h2>
                 </header>
                 <div class="bp-content">
@@ -4798,7 +4810,7 @@
                 // Voltou pro Radar: o cabeçalho volta ao padrão. Antes ficavam os ícones de
                 // ligar voz/vídeo da última DM aberta, que não fazem sentido no mapa.
                 if (typeof htmlAcoesPadraoHeader === 'function') document.getElementById('dm-header-actions').innerHTML = htmlAcoesPadraoHeader();
-                document.getElementById('radar-header-title').innerHTML = `<i class="fa-solid fa-satellite-dish" style="color: var(--text-muted);"></i> Radar`;
+                document.getElementById('radar-header-title').innerHTML = `<i class="fa-solid fa-location-crosshairs ic-radar"></i> Radar`;
             } else if (viewName === 'dm') {
                 if(homeContent) homeContent.style.display = 'flex';
                 if(dmChat) dmChat.style.display = 'flex';
@@ -14240,6 +14252,7 @@
 
         function setPainel(p) {
             painel = p;
+            if (p && callCheia()) callMostrar('mini');   // a call em tela cheia ficava por cima do painel; vai pra faixa verde
             if (p) document.body.dataset.painel = p; else delete document.body.dataset.painel;
             atualizar();
         }
