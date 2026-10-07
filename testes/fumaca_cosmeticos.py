@@ -96,7 +96,7 @@ with app.app_context():
     n1 = db.session.query(Posse).count()
     cos.conceder_laboratorio(lambda *_: None)
     ok(db.session.query(Posse).count() == n1, 'conceder_laboratorio é idempotente (rodar de novo não duplica)')
-    ok(cos.badges_do_conjunto(p_sales) == ['criador', 'beta_tester', 'coder', 'so_nos'], 'Insígnias saem na ordem do catálogo')
+    ok(cos.badges_do_conjunto(p_sales) == ['criador', 'alpha_tester', 'beta_tester', 'coder', 'so_nos'], 'Insígnias saem na ordem do catálogo')
 
     def cliente(user):
         fc = app.test_client()
@@ -203,11 +203,11 @@ with app.app_context():
     fil, _ = cliente('filippo.chiarion')
     fil.emit('obter_perfil', {'usuario_id': ids['aquele.sales']})
     perf = ev(fil, 'perfil_publico')[-1]['args'][0]
-    ok(perf['badges'] == ['criador', 'beta_tester', 'coder', 'so_nos'], 'Cartão do dono mostra as 4 insígnias')
+    ok(perf['badges'] == ['criador', 'alpha_tester', 'beta_tester', 'coder', 'so_nos'], 'Cartão do dono mostra as 5 insígnias')
     ok(perf['patente']['id'] == 'lenda' and perf['nivel'] == 230, 'Cartão traz a patente do nível 230 (Lenda)')
     ok(perf['equipados'].get('efeito_perfil') == 'gogeta', 'Cartão traz os efeitos equipados')
     fil.emit('obter_perfil', {'usuario_id': ids['filippo.chiarion']})
-    ok(ev(fil, 'perfil_publico')[-1]['args'][0]['badges'] == ['criador', 'beta_tester', 'coder', 'so_nos'], 'Cartão do amigo também mostra as 4 insígnias')
+    ok(ev(fil, 'perfil_publico')[-1]['args'][0]['badges'] == ['criador', 'alpha_tester', 'beta_tester', 'coder', 'so_nos'], 'Cartão do amigo também mostra as 5 insígnias')
     est.emit('obter_perfil', {'usuario_id': ids['aquele.sales']})
     restrito = ev(est, 'perfil_publico')[-1]['args'][0]
     ok(restrito.get('restrito') and 'badges' not in restrito, 'Quem não convive não recebe nem as insígnias')
