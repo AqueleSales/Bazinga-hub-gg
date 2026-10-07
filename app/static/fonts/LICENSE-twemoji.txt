@@ -1,0 +1,4 @@
+Twemoji.woff2 - fonte COLR do Twemoji (empacotada em @sableclient/twemoji-font 1.0.4, baseada em mozilla/twemoji-colr).
+Codigo: Copyright 2016-2018 Mozilla Foundation, Apache License 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+Graficos: Copyright 2020 Twitter, Inc and other contributors, CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Usada so como reserva para desenhar emoji igual em qualquer aparelho (ver static/css/twemoji-font.css).

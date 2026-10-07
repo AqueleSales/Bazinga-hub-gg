@@ -70,6 +70,7 @@
         }
     </script>
 
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/twemoji-font.css') }}">
     <style>
         /* ==========================================================================
            1. VARIÁVEIS E BASE (Cores exatas do Discord e Temas Dinâmicos)
@@ -102,7 +103,7 @@
             --clip-color: #ff8c1a;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito Sans', 'gg sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito Sans', 'gg sans', 'Twemoji', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-tertiary); color: var(--text-normal); height: 100vh; overflow: hidden; display: flex; transition: background-color 0.3s; }
         .discord-app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
 
@@ -310,8 +311,8 @@
         .hw-group.muted .hw-btn, .hw-group.muted .hw-arrow-btn { color: #f23f42; }
         .hw-group.muted .hw-divider { background-color: rgba(242, 63, 66, 0.4); }
         .hw-group.muted .hw-btn::after {
-            content: ''; position: absolute; width: 22px; height: 2px; background-color: #f23f42; transform: rotate(45deg);
-            box-shadow: 0 0 0 2px var(--bg-tertiary); border-radius: 2px; pointer-events: none; transition: box-shadow 0.3s;
+            content: ''; position: absolute; width: 18px; height: 2px; background-color: #f23f42; transform: rotate(45deg);
+            box-shadow: 0 0 0 1.5px var(--bg-tertiary); border-radius: 2px; pointer-events: none; transition: box-shadow 0.3s;
         }
 
         .hardware-menu { position: absolute; bottom: calc(100% + 8px); left: 0; background-color: var(--bg-quaternary); border-radius: 8px; padding: 8px; min-width: 260px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); display: none; z-index: 1000; border: 1px solid var(--bg-tertiary); }
@@ -637,11 +638,13 @@
         .call-btn.active-green { background-color: var(--green-color); color: #fff; }
         .call-btn.danger { background-color: var(--red-color); color: #fff; }
         .call-btn.danger:hover { background-color: #a12828; }
-        .call-btn.muted { color: #f23f42; }
+        .call-btn.muted { color: #f23f42; background-color: rgba(242, 63, 66, .16); }
+        .call-btn:focus, .call-btn:focus-visible { outline: none; }
+        #btn-main-mic.muted::after, #mic-group.muted .hw-btn::after { display: none; }   /* o ícone do microfone já troca pra "cortado": o risco extra ficava duplo */
         .badge-audio { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: #ed4245; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.5); z-index: 6; pointer-events: none; }
         .call-btn.muted::after {
-            content: ''; position: absolute; width: 34px; height: 3px; background-color: #f23f42; transform: rotate(45deg);
-            box-shadow: 0 0 0 3px var(--bg-primary); border-radius: 2px; pointer-events: none;
+            content: ''; position: absolute; width: 26px; height: 3px; background-color: #f23f42; transform: rotate(45deg);
+            box-shadow: 0 0 0 2px #2b2d31; border-radius: 2px; pointer-events: none;
         }
 
         /* ---- Chamada 1-a-1 por DM (toque/aceitar) ---- */
@@ -2033,7 +2036,7 @@
 
         /* ---------- EMOJI (catálogo completo) ---------- */
         #emoji-full-panel { position: fixed; z-index: 10900; border-radius: 14px; overflow: hidden; box-shadow: 0 16px 44px rgba(0,0,0,.65); border: 1px solid rgba(255,255,255,.09); animation: modalPop .14s both; }
-        emoji-picker { width: 352px; height: 400px; --background: var(--bg-quaternary); --border-color: rgba(255,255,255,.08); --border-radius: 0; --input-border-color: rgba(255,255,255,.12); --input-font-color: var(--text-header); --input-placeholder-color: var(--text-muted); --indicator-color: var(--brand-color); --button-hover-background: rgba(255,255,255,.1); --button-active-background: rgba(255,255,255,.18); --category-font-color: var(--text-muted); --outline-color: var(--brand-color); --num-columns: 8; --emoji-size: 1.45rem; font-family: inherit; }
+        emoji-picker { width: 352px; height: 400px; --background: var(--bg-quaternary); --border-color: rgba(255,255,255,.08); --border-radius: 0; --input-border-color: rgba(255,255,255,.12); --input-font-color: var(--text-header); --input-placeholder-color: var(--text-muted); --indicator-color: var(--brand-color); --button-hover-background: rgba(255,255,255,.1); --button-active-background: rgba(255,255,255,.18); --category-font-color: var(--text-muted); --outline-color: var(--brand-color); --num-columns: 8; --emoji-size: 1.45rem; --emoji-font-family: 'Twemoji', 'Nunito Sans', sans-serif; font-family: inherit; }
         .nota-icone-btn { background: var(--bg-tertiary); border: 1px solid rgba(255,255,255,.1); width: 64px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border-radius: 12px; padding: 0; cursor: pointer; }
         .nota-icone-btn span { font-size: 26px; line-height: 1.1; }
         .nota-icone-btn small { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); font-weight: 800; }
