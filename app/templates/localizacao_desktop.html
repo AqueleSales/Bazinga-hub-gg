@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Localização · {{ app_nome }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}" type="image/svg+xml">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #0b0c10; color: #f2f3f5;
+           font-family: system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; }
+    .cartao { max-width: 400px; }
+    img { width: 64px; height: 64px; margin-bottom: 18px; }
+    h1 { font-size: 22px; margin-bottom: 8px; }
+    p { color: #9aa0a6; font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+    button, a.b { display: inline-block; padding: 12px 22px; border: 0; border-radius: 12px; background: #5865F2; color: #fff;
+        text-decoration: none; font: inherit; font-weight: 600; cursor: pointer; }
+    #msg { min-height: 20px; margin-top: 16px; font-size: 13px; color: #faa61a; }
+  </style>
+</head>
+<body>
+  <div class="cartao">
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ app_nome }}">
+    <h1>Onde você está?</h1>
+    <p>O navegador sabe achar sua localização melhor que o app. Permita aqui e a posição volta pro {{ app_nome }}. Ela só é enviada ao app instalado neste computador.</p>
+    <button id="ir" type="button">Permitir e enviar ao app</button>
+    <div id="msg"></div>
+  </div>
+  <script>
+    (function () {
+      var n = new URLSearchParams(location.search).get('n') || '';
+      var msg = document.getElementById('msg'), btn = document.getElementById('ir');
+      if (!/^[A-Za-z0-9_-]{16,64}$/.test(n)) { btn.disabled = true; msg.textContent = 'Link inválido. Peça de novo pelo app.'; return; }
+      function achar() {
+        msg.textContent = 'Procurando você...';
+        if (!navigator.geolocation) { msg.textContent = 'Este navegador não consegue achar a localização.'; return; }
+        navigator.geolocation.getCurrentPosition(function (p) {
+          var c = p.coords;
+          var link = 'panteao://localizacao?n=' + encodeURIComponent(n) + '&lat=' + c.latitude + '&lng=' + c.longitude + '&acc=' + Math.round(c.accuracy || 0);
+          msg.style.color = '#43b581';
+          msg.textContent = 'Achei! Se o navegador perguntar, clique em Abrir. Depois pode fechar esta aba.';
+          location.href = link;
+        }, function (e) {
+          msg.style.color = '#faa61a';
+          msg.textContent = e.code === 1
+            ? 'A localização está bloqueada neste site. Libere no cadeado do endereço e tente de novo.'
+            : 'Não consegui achar sua localização. Confira se a localização do Windows está ligada.';
+        }, { enableHighAccuracy: false, timeout: 20000, maximumAge: 0 });
+      }
+      btn.addEventListener('click', achar);
+    })();
+  </script>
+</body>
+</html>

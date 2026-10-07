@@ -1761,6 +1761,17 @@ teclado/configurações, e responder). Não cria telas novas: chama o que o desk
   por Wi-Fi (sem ela cai no IP, que erra); aumentar `RAIO_SERVIDORES_M` se o dono quiser; assinatura de código do instalador; seletor completo de emoji com fonte Twemoji
   hospedada (`app/static/fonts/twemoji.woff2` já está lá e entra na pilha de fontes).
 
+## Rodada 9 de 07/10/2026 — localização no desktop pelo navegador + ajustes do celular (não testados em aparelho)
+
+- **Desktop sem posição**: o Electron não tem o provedor de rede do Google (o Chrome tem, com a chave dele, que não dá pra usar). Além de Windows/Google
+  (chave própria no `config.json`), há a **ponte pelo navegador**: `localizacao:navegador` (IPC) abre `/localizacao-desktop?n=<código de uso único>` no navegador do
+  sistema, ele acha a posição e volta por `panteao://localizacao?n&lat&lng&acc` (`tratarLocalizacao` em `desktop/main.js`: confere o código, 5 min, uso único). O cliente
+  guarda 3 h em `localStorage pnt_loc_navegador`. Aparece como confirmação quando só há posição por IP e em Configurações > Geral. **Exige instalador novo** (preload/main).
+- Celular: botão de enviar no canal (`#btn-enviar-canal`), Enter quebra linha em teclado de toque (`tecladoDeToque()`), `autoCrescer` volta ao tamanho do CSS quando vazio,
+  pedido de amizade com 3 botões só de ícone (`.rot` escondido) e **relógio HH:MM:SS** (`expiraEmTexto`, 1 s), busca de amigos em quadrado/tela expandida, `theme-color`
+  (status bar) = `--bg-primary`, e botão voltar do aparelho (`popstate` no último `<script>`: fecha o que está aberto, volta ao Radar, só sai com 2 toques).
+- Call: `vigiarConexaoDaCall` avisa quando a mídia não conecta (`failed`). Áudio mudo com todo mundo "na call" = quase sempre falta TURN próprio (`TURN_URLS` no Render).
+
 ---
 
 # Convenções

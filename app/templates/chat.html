@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#36393f">
     <title>Chat - {{ app_nome }}</title>
     <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}" type="image/svg+xml">
     <!-- Fonte: Nunito Sans (humanista arredondada, parente próxima da fonte do Discord clássico) -->
@@ -2676,6 +2677,33 @@
             #radar-header-title { padding-right: 0 !important; border-right: 0 !important; }
             #radar-header-actions { display: none !important; }
             #dm-header-actions { margin-left: auto; }
+
+            /* pedido de amizade: três quadrados só de ícone + relógio correndo (nada de texto espremido) */
+            .dm-head-btn, .av2-pedido .av2-btn { width: 46px; height: 46px; padding: 0; justify-content: center; border-radius: 13px; font-size: 18px; }
+            .dm-head-btn .rot, .av2-pedido .rot, .temp-tag .tt-rot, .av2-pedido .tt-rot { display: none; }
+            .temp-tag { margin-left: 8px !important; white-space: nowrap; font-size: 13px !important; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+            #radar-header-title { min-width: 0; flex: 1 1 0; overflow: hidden; }
+            #radar-header-title > .fa-at { display: none; }
+            #radar-header-title .dm-head-nome { flex: 0 1 auto; margin-left: 0 !important; }
+            .dm-head-btn { width: 40px; height: 40px; font-size: 16px; }
+            .temp-tag { padding: 3px 8px !important; font-size: 12px !important; }
+            .chat-header .dm-head-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            #dm-header-actions { gap: 8px !important; flex-shrink: 0; }
+            .av2-pedido { flex-wrap: nowrap; gap: 10px; }
+            .av2-pedido .av2-info { min-width: 0; flex: 1 1 auto; }
+            .av2-acoes-txt { flex-wrap: nowrap; gap: 8px; flex-shrink: 0; }
+            .av2-pedido .av2-sub { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+            /* busca de amigos: quadrado com lupa; ao tocar, o fundo escurece e embaça e a barra aparece grande por cima */
+            .av2-topo { flex-wrap: nowrap; gap: 8px; padding: 12px 14px; }
+            .av2-busca { flex: 0 0 52px; max-width: 52px; height: 52px; background: var(--bg-tertiary); border-radius: 14px; cursor: pointer; }
+            .av2-busca i { left: 50%; transform: translate(-50%, -50%); font-size: 18px; }
+            #amigos-view .av2-busca input { opacity: 0; pointer-events: none; width: 100%; height: 100%; min-height: 0; padding: 0 !important; }
+            .av2-busca.aberta { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 84px); left: 14px; right: 14px; max-width: none; flex: none; height: 56px; z-index: 30; background: var(--bg-secondary); box-shadow: 0 16px 44px rgba(0,0,0,.65); }
+            .av2-busca.aberta i { left: 20px; transform: translateY(-50%); }
+            #amigos-view .av2-busca.aberta input { opacity: 1; pointer-events: auto; padding: 0 16px 0 50px !important; }
+            #av-busca-fundo { display: none; position: fixed; inset: 0; z-index: 25; background: rgba(8,9,12,.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+            #av-busca-fundo.on { display: block; }
             .conv-barra { display: none !important; }
             .chat-header { padding: 0 10px; }
 
@@ -3049,6 +3077,7 @@
                             <button data-f="todos" class="ativo">Todos <span id="av2-n-todos"></span></button>
                             <button data-f="online">Online <span id="av2-n-online"></span></button>
                         </div>
+                        <div id="av-busca-fundo"></div>
                         <div class="av2-busca"><i class="fa-solid fa-magnifying-glass"></i><input id="av-busca" type="text" placeholder="Buscar amigo" autocomplete="off"></div>
                         <button class="av2-add" id="av-btn-adicionar"><i class="fa-solid fa-plus"></i> Adicionar</button>
                     </div>
@@ -3146,6 +3175,7 @@
                                 <div class="chat-input-actions">
                                     <button class="chat-input-btn" id="btn-anexar-gif" title="Buscar GIF" style="font-size: 11px; font-weight: 800; letter-spacing: .3px;">GIF</button>
                                     <button class="chat-input-btn" id="btn-emoji-mensagem" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
+                                    <button class="chat-input-btn dm-enviar" id="btn-enviar-canal" title="Enviar" style="display:none;"><i class="fa-solid fa-paper-plane"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -4419,6 +4449,13 @@
                                 <p style="color: var(--text-muted); font-size: 14px;" id="loc-google-desc">Usa o serviço de localização do Google (Wi-Fi ao redor).</p>
                             </div>
                             <div class="toggle-switch tg-app" id="tg-loc-google"></div>
+                        </div>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Localização pelo navegador</h4>
+                                <p style="color: var(--text-muted); font-size: 14px;">Não achou a sua posição? Abre o navegador do computador, que consegue achar, e traz o resultado pra cá. Vale por 3 horas.</p>
+                                <button class="btn btn-primary" id="btn-loc-navegador" style="margin-top: 8px;">Pegar pelo navegador</button>
+                            </div>
                         </div>
                         <div id="loc-reiniciar" hidden style="margin: -8px 0 16px;">
                             <span style="font-size: 13px; color: var(--yellow-color);">Pra aplicar essa mudança o app precisa reiniciar.</span>
@@ -7261,6 +7298,22 @@
         let modoExplorar = null, marcadorExplorar = null, faixaExplorar = null, timerExplorar = null;   // "explorar": olhar o mapa em outro lugar, só leitura
         // `presenca` = a ação precisa da posição do APARELHO (GPS/Wi-Fi): plantar, deixar nota, copiar nota. Posição só por IP ou
         // "explorando" serve pra olhar. O servidor confere de novo (a regra de verdade mora lá).
+        // App desktop: o Electron não acha a posição sozinho (o Chrome acha, com o serviço do Google dele). Então o app abre o
+        // navegador do sistema, ele acha e devolve a posição por panteao://localizacao (ver desktop/main.js).
+        const LOC_NAV_CHAVE = 'pnt_loc_navegador';
+        function appDesktopComLocalizacao() { return /PanteaoDesktop/.test(navigator.userAgent) && !!(window.panteao && window.panteao.localizacaoPeloNavegador); }
+        function pedirLocalizacaoNavegador() {
+            window.panteao.localizacaoPeloNavegador().then((ok) => {
+                if (ok) showToast('Abri o navegador. Permita a localização lá e volte pro app.', 'info');
+            }).catch(() => showToast('Não consegui abrir o navegador.', 'error'));
+        }
+        function ofereceLocalizacaoNavegador() {
+            if (!appDesktopComLocalizacao()) return false;
+            openConfirmModal('Usar a localização do navegador?',
+                'O app não consegue achar sua posição sozinho neste computador. O seu navegador (Chrome, Edge...) consegue: vou abrir uma aba, você permite a localização lá e a posição volta pra cá.',
+                pedirLocalizacaoNavegador);
+            return true;
+        }
         function exigirLocalizacao(presenca) {
             if (!localizacaoAtiva) {
                 showToast('A localização está desligada. Ligue em Configurações > Geral pra fazer isso.', 'warning');
@@ -7268,7 +7321,11 @@
             }
             if (!presenca) return true;
             if (modoExplorar) { showToast('Você está só explorando. Volte pra sua posição (botão no topo do mapa) pra fazer isso.', 'info'); return false; }
-            if (origemPosicao === 'ip') { showToast('Sua posição veio só da internet (aproximada demais). Pra fazer isso o app precisa da localização do aparelho (GPS ou Wi-Fi).', 'warning'); return false; }
+            if (origemPosicao === 'ip') {
+                if (ofereceLocalizacaoNavegador()) return false;
+                showToast('Sua posição veio só da internet (aproximada demais). Pra fazer isso o app precisa da localização do aparelho (GPS ou Wi-Fi).', 'warning');
+                return false;
+            }
             if (origemPosicao !== 'aparelho') { showToast('Ainda estou achando a sua posição pelo aparelho...', 'info'); return false; }
             return true;
         }
@@ -7814,6 +7871,7 @@
                     lugarPorIp = d.lugar || '';
                     aoReceberGps({ coords: { latitude: d.lat, longitude: d.lng, accuracy: d.precisao_m }, _ip: true });
                     showToast(`Localização aproximada pela internet${d.lugar ? ' (' + d.lugar + ')' : ''}. Ela pode estar bem longe de você (VPN, dados móveis, operadora). Assim dá pra ver e explorar o mapa, mas pra plantar, deixar nota ou entrar em servidor o app precisa da localização do aparelho.`, 'warning');
+                    if (appDesktopComLocalizacao() && !offereceuNavegadorNestaSessao) { offereceuNavegadorNestaSessao = true; setTimeout(ofereceLocalizacaoNavegador, 1200); }
                     return true;
                 } catch (e) {
                     console.warn('[localização por IP]', e.message);
@@ -7833,6 +7891,12 @@
             let watchId = null, timerReservaIp = null;
             function iniciarRastreio() {
                 if (!localizacaoAtiva || watchId !== null) return;
+                if (appDesktopComLocalizacao()) {
+                    try {
+                        const g = JSON.parse(localStorage.getItem(LOC_NAV_CHAVE) || 'null');
+                        if (g && Date.now() - g.t < 3 * 3600 * 1000) aoReceberGps({ coords: { latitude: g.lat, longitude: g.lng, accuracy: g.acc } });
+                    } catch (e) {}
+                }
                 if (navigator.geolocation) {
                     watchId = navigator.geolocation.watchPosition(aoReceberGps, (err) => {
                         // Alta precisão falhou (comum em PC sem GPS): tenta o jeito simples (Wi-Fi/IP) antes de desistir.
@@ -7852,6 +7916,16 @@
                 watchId = null;
             }
             rastreio = { iniciar: iniciarRastreio, parar: pararRastreio };
+            if (appDesktopComLocalizacao() && window.panteao.aoChegarLocalizacao) {
+                window.panteao.aoChegarLocalizacao((p) => {
+                    if (!localizacaoAtiva) return;
+                    try { localStorage.setItem(LOC_NAV_CHAVE, JSON.stringify({ lat: p.lat, lng: p.lng, acc: p.acc, t: Date.now() })); } catch (e) {}
+                    ultimoFixGps = null; posicaoManual = false;   // deixa a leitura nova valer sobre a de IP
+                    aoReceberGps({ coords: { latitude: p.lat, longitude: p.lng, accuracy: p.acc } });
+                    if (bazingaMap) bazingaMap.setView([p.lat, p.lng], Math.max(bazingaMap.getZoom(), 15));
+                    showToast('Localização pega pelo navegador. Agora você pode plantar, deixar nota e entrar em servidores.', 'success');
+                });
+            }
             if (localizacaoAtiva) {
                 iniciarRastreio();
             } else {
@@ -7870,7 +7944,7 @@
         }
 
         let posicaoManual = false, circuloPrecisao = null, timerPrecisao = null;
-        let ultimoFixGps = null, avisouAproximado = false, posicaoConfiavel = false;
+        let ultimoFixGps = null, avisouAproximado = false, posicaoConfiavel = false, offereceuNavegadorNestaSessao = false;
         // Círculo de "estou em algum lugar aqui dentro" quando o aparelho só sabe a região (Wi-Fi/IP).
         // Some sozinho em 10s: ficava parado no mapa pra sempre e parecia um "mini radar verde" sem explicação.
         function mostrarPrecisao(lat, lng, acc) {
@@ -8730,11 +8804,28 @@
         }
 
         // Campo de texto que cresce com as quebras de linha (Shift+Enter quebra, Enter envia)
-        function autoCrescer(el) { if (!el) return; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 176) + 'px'; }
+        // Vazio volta à altura do CSS (apagar tudo no celular deixava a barra grande); com box-sizing de conteúdo o padding
+        // do scrollHeight não pode entrar duas vezes.
+        function autoCrescer(el) {
+            if (!el) return;
+            if (!el.value) { el.style.height = ''; return; }
+            el.style.height = 'auto';
+            const cs = getComputedStyle(el);
+            const extra = cs.boxSizing === 'border-box' ? 0 : (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+            el.style.height = (Math.min(el.scrollHeight, 176) - extra) + 'px';
+        }
+        // Teclado de toque (celular/tablet): Enter quebra linha e quem envia é o botão de avião. Shift+Enter/Enter só vale com mouse.
+        const tecladoDeToque = () => window.matchMedia('(pointer: coarse)').matches;
+        function atualizarBotaoEnviarCanal() {
+            const b = document.getElementById('btn-enviar-canal'), i = document.getElementById('message-input');
+            if (!b || !i) return;
+            b.style.display = (i.value.trim().length > 0 || (typeof anexosPendentes !== 'undefined' && anexosPendentes.some(a => a.url))) ? '' : 'none';
+        }
         ['message-input', 'dm-message-input'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener('input', () => autoCrescer(el));
+            if (el) el.addEventListener('input', () => { autoCrescer(el); if (id === 'message-input') atualizarBotaoEnviarCanal(); });
         });
+        document.getElementById('btn-enviar-canal').addEventListener('click', () => { enviarMensagemDoCanal(); document.getElementById('message-input').focus(); });
 
         function enviarMensagemDoCanal() {
             const input = document.getElementById('message-input');
@@ -8779,10 +8870,11 @@
             desenharAnexosPendentes();
             input.value = '';
             autoCrescer(input);
+            atualizarBotaoEnviarCanal();
         }
 
         document.getElementById('message-input').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
+            if (event.key === 'Enter' && !event.shiftKey && !tecladoDeToque()) {
                 event.preventDefault();
                 enviarMensagemDoCanal();
             }
@@ -9072,6 +9164,7 @@
         function desenharAnexosPendentes() {
             const area = document.getElementById('anexos-pendentes');
             if (!area) return;
+            if (typeof atualizarBotaoEnviarCanal === 'function') atualizarBotaoEnviarCanal();
 
             if (anexosPendentes.length === 0) {
                 area.style.display = 'none';
@@ -11053,6 +11146,10 @@
             document.body.style.backgroundImage = 'none';
             Object.entries(TEMAS[theme]).forEach(([k, v]) => root.style.setProperty(k, v));
             document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-theme') === theme));
+            // barra de status do celular na cor do app (antes ficava no azul do manifesto)
+            const cor = getComputedStyle(root).getPropertyValue('--bg-primary').trim();
+            const mt = document.querySelector('meta[name="theme-color"]');
+            if (mt && cor) mt.setAttribute('content', cor);
         }
 
         aplicarTema("{{ usuario_atual.tema or 'dark' }}");
@@ -11182,6 +11279,11 @@
             document.getElementById('tg-bandeja').addEventListener('click', () => prefsApp && mudarPref('fecharNaBandeja', !prefsApp.fecharNaBandeja));
             document.getElementById('btn-loc-win-abrir').addEventListener('click', () => window.panteao.abrirPrivacidadeLocalizacao());
             document.getElementById('btn-reiniciar-app').addEventListener('click', () => window.panteao.reiniciar());
+            document.getElementById('btn-loc-navegador').addEventListener('click', () => {
+                if (!localizacaoAtiva) { showToast('Ligue a localização primeiro.', 'info'); return; }
+                if (appDesktopComLocalizacao()) pedirLocalizacaoNavegador();
+                else showToast('Atualize o app desktop pra usar isto.', 'info');
+            });
             window.panteao.prefsGet().then((p) => { prefsApp = p; atualizarAbaGeral(); }).catch(() => {});
         }
 
@@ -11628,7 +11730,19 @@
             return t ? t.sender : null;
         }
         // Libera a vaga de vídeo logo que a call abre: sem câmera ligada, manda "nada" (o outro lado mostra o avatar).
+        // Entrar na call (sinalização) não prova que a mídia passou: se a conexão direta falha (NAT fechado, sem TURN), a pessoa
+        // aparece na call e ninguém ouve ninguém. Avisa em vez de falhar em silêncio e deixa o motivo no console.
+        function vigiarConexaoDaCall(call) {
+            const pc = call && call.peerConnection;
+            if (!pc || pc._vigiado) return;
+            pc._vigiado = true;
+            pc.addEventListener('connectionstatechange', () => {
+                console.warn('[call] conexão com', call.peer, '->', pc.connectionState);
+                if (pc.connectionState === 'failed') showToast('Não consegui ligar o áudio/vídeo com uma pessoa da call: a rede de um dos dois bloqueia a conexão direta. Sair e entrar de novo às vezes resolve.', 'error');
+            });
+        }
         function prepararVideoDaCall(call, tentativa = 0) {
+            vigiarConexaoDaCall(call);
             const sender = senderDeVideo(call);
             if (!sender) { if (tentativa < 10) setTimeout(() => prepararVideoDaCall(call, tentativa + 1), 150); return; }
             if (myCamStream) sender.replaceTrack(myCamStream.getVideoTracks()[0]).catch(() => {});
@@ -13110,8 +13224,8 @@
         function expiraEmTexto(p) {
             const rest = Math.max(0, (p.restante_s || 0) - Math.floor((Date.now() - amizadesRecebidasEm) / 1000));
             if (rest <= 0) return 'expirando...';
-            const h = Math.floor(rest / 3600), m = Math.floor((rest % 3600) / 60);
-            return h > 0 ? `${h}h ${String(m).padStart(2, '0')}min` : `${Math.max(1, m)} min`;
+            const dois = (n) => String(n).padStart(2, '0');
+            return `${dois(Math.floor(rest / 3600))}:${dois(Math.floor((rest % 3600) / 60))}:${dois(rest % 60)}`;
         }
 
         socket.on('amizades', (snap) => {
@@ -13324,20 +13438,20 @@
             const rotulo = p.rapida ? 'Conversa rápida · some em' : (recebido ? 'Quer ser seu amigo · expira em' : 'Aguardando resposta · expira em');
             let acoes;
             if (recebido) {
-                acoes = `<button class="av2-btn ok" data-av="aceitar"><i class="fa-solid fa-check"></i> ${p.rapida ? 'Adicionar amigo' : 'Aceitar'}</button>
-                         <button class="av2-btn neutro" data-av="recusar"><i class="fa-solid fa-xmark"></i> Recusar</button>
+                acoes = `<button title="Aceitar" class="av2-btn ok" data-av="aceitar"><i class="fa-solid fa-check"></i> <span class="rot">${p.rapida ? 'Adicionar amigo' : 'Aceitar'}</span></button>
+                         <button title="Recusar" class="av2-btn neutro" data-av="recusar"><i class="fa-solid fa-xmark"></i> <span class="rot">Recusar</span></button>
                          <button class="av2-btn perigo" data-av="bloquear" title="Bloquear"><i class="fa-solid fa-ban"></i></button>`;
             } else if (p.rapida) {
-                acoes = `<button class="av2-btn ok" data-av="adicionar"><i class="fa-solid fa-user-plus"></i> Adicionar amigo</button>
-                         <button class="av2-btn neutro" data-av="cancelar"><i class="fa-solid fa-xmark"></i> Fechar</button>`;
+                acoes = `<button title="Adicionar amigo" class="av2-btn ok" data-av="adicionar"><i class="fa-solid fa-user-plus"></i> <span class="rot">Adicionar amigo</span></button>
+                         <button title="Fechar" class="av2-btn neutro" data-av="cancelar"><i class="fa-solid fa-xmark"></i> <span class="rot">Fechar</span></button>`;
             } else {
-                acoes = `<button class="av2-btn neutro" data-av="cancelar"><i class="fa-solid fa-rotate-left"></i> Cancelar pedido</button>`;
+                acoes = `<button title="Cancelar pedido" class="av2-btn neutro" data-av="cancelar"><i class="fa-solid fa-rotate-left"></i> <span class="rot">Cancelar pedido</span></button>`;
             }
             return `<div class="av2-pedido ${recebido ? 'recebido' : 'enviado'}" data-id="${Number(p.id)}" data-pedido="${Number(p.pedido_id)}">
                 ${avatarHtmlAmigo(p, null, 'av2-av')}
                 <div class="av2-info">
                     <div class="av2-nome"><span class="${classeNome(p.nome_estilo)}">${esc(p.nome)}</span></div>
-                    <div class="av2-sub alerta">${rotulo} <span data-expira="${Number(p.pedido_id)}">${expiraEmTexto(p)}</span></div>
+                    <div class="av2-sub alerta"><i class="fa-regular fa-clock"></i> <span class="tt-rot">${rotulo} </span><span data-expira="${Number(p.pedido_id)}">${expiraEmTexto(p)}</span></div>
                 </div>
                 <div class="av2-acoes-txt">${acoes}</div>
             </div>`;
@@ -13375,7 +13489,7 @@
             const bloq = document.getElementById('av2-bloqueados');
             bloq.innerHTML = amizades.bloqueados.length
                 ? `<details class="av2-bloq" ${bloqueadosAbertos ? 'open' : ''}><summary><i class="fa-solid fa-ban"></i> Bloqueados (${amizades.bloqueados.length})</summary>
-                   ${amizades.bloqueados.map(b => `<div class="av2-bloq-linha" data-id="${Number(b.id)}">${esc(b.nome)}${b.username ? ` <small>@${esc(b.username)}</small>` : ''}<button class="av2-btn neutro" data-av="desbloquear"><i class="fa-solid fa-lock-open"></i> Desbloquear</button></div>`).join('')}</details>` : '';
+                   ${amizades.bloqueados.map(b => `<div class="av2-bloq-linha" data-id="${Number(b.id)}">${esc(b.nome)}${b.username ? ` <small>@${esc(b.username)}</small>` : ''}<button title="Desbloquear" class="av2-btn neutro" data-av="desbloquear"><i class="fa-solid fa-lock-open"></i> <span class="rot">Desbloquear</span></button></div>`).join('')}</details>` : '';
             const det = bloq.querySelector('details'); if (det) det.addEventListener('toggle', () => { bloqueadosAbertos = det.open; });
             emojificar(document.getElementById('amigos-view'));
         }
@@ -13404,13 +13518,15 @@
             else if (acao === 'desbloquear') socket.emit('desbloquear_usuario', { usuario_id: id });
         });
 
-        // contagem regressiva dos pedidos (a cada 30s); expirou = pede o retrato de novo
+        // relógio dos pedidos (1x por segundo, HH:MM:SS); a cada 30s confere se algum expirou e, se sim, = pede o retrato de novo
+        let tiquesRelogio = 0;
         setInterval(() => {
             document.querySelectorAll('[data-expira]').forEach(el => {
                 const p = amizades.pedidos.find(x => String(x.pedido_id) === el.dataset.expira);
                 if (p) el.textContent = expiraEmTexto(p);
             });
             if (vistaAtual === 'dm') atualizarContagemCabecalho();
+            if (++tiquesRelogio % 30) return;
             const vencido = amizades.pedidos.some(p => (p.restante_s || 0) - Math.floor((Date.now() - amizadesRecebidasEm) / 1000) <= 0);
             if (vencido && socket.connected) socket.emit('listar_amizades');
         }, 30000);
@@ -13550,28 +13666,28 @@
             } else {
                 titulo = `<i class="fa-solid fa-at" style="color: var(--text-muted); font-size: 20px;"></i><span class="dm-head-nome">${esc(nome)}</span>${htmlBolinha(pr.status, pr.emoji, 'dm-head-dot')}`;
                 if (estado === 'recebido') {
-                    titulo += `<span class="temp-tag verde" id="dm-tag-pedido">Pedido de amizade · expira em ${prazo}</span>`;
-                    acoes = `<button class="dm-head-btn ok" data-dm-acao="aceitar"><i class="fa-solid fa-user-check"></i> Aceitar</button>
-                             <button class="dm-head-btn neutro" data-dm-acao="recusar"><i class="fa-solid fa-xmark"></i> Recusar</button>
-                             <button class="dm-head-btn no" data-dm-acao="bloquear"><i class="fa-solid fa-ban"></i> Bloquear</button>`;
+                    titulo += `<span class="temp-tag verde" id="dm-tag-pedido"><i class="fa-regular fa-clock"></i> <span class="tt-rot">Pedido de amizade · expira em </span><span class="tt-tempo">${prazo}</span></span>`;
+                    acoes = `<button title="Aceitar" class="dm-head-btn ok" data-dm-acao="aceitar"><i class="fa-solid fa-user-check"></i> <span class="rot">Aceitar</span></button>
+                             <button title="Recusar" class="dm-head-btn neutro" data-dm-acao="recusar"><i class="fa-solid fa-xmark"></i> <span class="rot">Recusar</span></button>
+                             <button title="Bloquear" class="dm-head-btn no" data-dm-acao="bloquear"><i class="fa-solid fa-ban"></i> <span class="rot">Bloquear</span></button>`;
                 } else if (estado === 'recebido-rapida') {
                     // Um desconhecido puxou conversa: quem recebe decide (adicionar, recusar ou bloquear)
-                    titulo += `<span class="temp-tag verde" id="dm-tag-pedido">Conversa rápida · some em ${prazo}</span>`;
-                    acoes = `<button class="dm-head-btn ok" data-dm-acao="aceitar"><i class="fa-solid fa-user-plus"></i> Adicionar amigo</button>
-                             <button class="dm-head-btn neutro" data-dm-acao="recusar"><i class="fa-solid fa-xmark"></i> Recusar</button>
-                             <button class="dm-head-btn no" data-dm-acao="bloquear"><i class="fa-solid fa-ban"></i> Bloquear</button>`;
+                    titulo += `<span class="temp-tag verde" id="dm-tag-pedido"><i class="fa-regular fa-clock"></i> <span class="tt-rot">Conversa rápida · some em </span><span class="tt-tempo">${prazo}</span></span>`;
+                    acoes = `<button title="Adicionar amigo" class="dm-head-btn ok" data-dm-acao="aceitar"><i class="fa-solid fa-user-plus"></i> <span class="rot">Adicionar amigo</span></button>
+                             <button title="Recusar" class="dm-head-btn neutro" data-dm-acao="recusar"><i class="fa-solid fa-xmark"></i> <span class="rot">Recusar</span></button>
+                             <button title="Bloquear" class="dm-head-btn no" data-dm-acao="bloquear"><i class="fa-solid fa-ban"></i> <span class="rot">Bloquear</span></button>`;
                 } else if (estado === 'enviado') {
-                    titulo += `<span class="temp-tag" id="dm-tag-pedido">Aguardando resposta · expira em ${prazo}</span>`;
-                    acoes = `<button class="dm-head-btn neutro" data-dm-acao="cancelar"><i class="fa-solid fa-rotate-left"></i> Cancelar pedido</button>`;
+                    titulo += `<span class="temp-tag" id="dm-tag-pedido"><i class="fa-regular fa-clock"></i> <span class="tt-rot">Aguardando resposta · expira em </span><span class="tt-tempo">${prazo}</span></span>`;
+                    acoes = `<button title="Cancelar pedido" class="dm-head-btn neutro" data-dm-acao="cancelar"><i class="fa-solid fa-rotate-left"></i> <span class="rot">Cancelar pedido</span></button>`;
                 } else if (estado === 'enviado-rapida') {
                     // Quem puxou a conversa NÃO bloqueia: só fecha (some do seu lado) ou vira pedido de amizade
-                    titulo += `<span class="temp-tag" id="dm-tag-pedido">Conversa rápida · some em ${prazo}</span>`;
-                    acoes = `<button class="dm-head-btn ok" data-dm-acao="adicionar"><i class="fa-solid fa-user-plus"></i> Adicionar amigo</button>
-                             <button class="dm-head-btn neutro" data-dm-acao="cancelar"><i class="fa-solid fa-xmark"></i> Fechar conversa</button>`;
+                    titulo += `<span class="temp-tag" id="dm-tag-pedido"><i class="fa-regular fa-clock"></i> <span class="tt-rot">Conversa rápida · some em </span><span class="tt-tempo">${prazo}</span></span>`;
+                    acoes = `<button title="Adicionar amigo" class="dm-head-btn ok" data-dm-acao="adicionar"><i class="fa-solid fa-user-plus"></i> <span class="rot">Adicionar amigo</span></button>
+                             <button title="Fechar conversa" class="dm-head-btn neutro" data-dm-acao="cancelar"><i class="fa-solid fa-xmark"></i> <span class="rot">Fechar conversa</span></button>`;
                 } else if (estado === 'rapida') {
-                    titulo += `<span class="temp-tag">Conversa rápida · some em 24h</span>`;
-                    acoes = `<button class="dm-head-btn ok" data-dm-acao="adicionar"><i class="fa-solid fa-user-plus"></i> Adicionar amigo</button>
-                             <button class="dm-head-btn neutro" data-dm-acao="fechar"><i class="fa-solid fa-xmark"></i> Fechar conversa</button>`;
+                    titulo += `<span class="temp-tag"><i class="fa-regular fa-clock"></i> <span class="tt-rot">Conversa rápida · some em </span><span class="tt-tempo">24:00:00</span></span>`;
+                    acoes = `<button title="Adicionar amigo" class="dm-head-btn ok" data-dm-acao="adicionar"><i class="fa-solid fa-user-plus"></i> <span class="rot">Adicionar amigo</span></button>
+                             <button title="Fechar conversa" class="dm-head-btn neutro" data-dm-acao="fechar"><i class="fa-solid fa-xmark"></i> <span class="rot">Fechar conversa</span></button>`;
                 } else {
                     acoes = `<span class="dm-head-ico" title="Ligar" data-dm-acao="voz"><i class="fa-solid fa-phone"></i></span>
                              <span class="dm-head-ico" title="Chamada de vídeo" data-dm-acao="video"><i class="fa-solid fa-video"></i></span>
@@ -13590,7 +13706,8 @@
             const tag = document.getElementById('dm-tag-pedido'); if (!tag) return;
             const card = cartaoDaDM(currentDmUserId);
             const pedido = card && amizades.pedidos.find(p => String(p.pedido_id) === String(card.dataset.pedidoId));
-            if (pedido) tag.textContent = tag.textContent.replace(/(expira|some) em .*/, '$1 em ' + expiraEmTexto(pedido));
+            const t = tag.querySelector('.tt-tempo');
+            if (pedido && t) t.textContent = expiraEmTexto(pedido);
         }
 
         document.getElementById('dm-header-actions').addEventListener('click', (e) => {
@@ -13816,7 +13933,7 @@
         }
         function enviarGifNaDM(url, nome) { dmEnviarPronto('', { anexo_url: url, anexo_tipo: 'image', anexo_nome: nome }); }
 
-        dmInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); dmEnviar(); } });
+        dmInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !tecladoDeToque()) { e.preventDefault(); dmEnviar(); } });
         dmBtnEnviar.addEventListener('click', dmEnviar);
         document.getElementById('dm-btn-anexar').addEventListener('click', () => document.getElementById('dm-input-anexo').click());
         document.getElementById('dm-input-anexo').addEventListener('change', (e) => { dmAdicionarAnexos(e.target.files); e.target.value = ''; });
@@ -14858,6 +14975,50 @@
                 try { showToast('Quer receber avisos de mensagem com o app fechado? Ative em Configurações > Geral > Avisos no aparelho.', 'info'); } catch (e) {}
             }, 45000);
         }
+    })();
+    </script>
+    <script>
+    // ---------- celular: busca de amigos em tela expandida + botão voltar do aparelho ----------
+    (function () {
+        const mq = window.matchMedia(MOBILE_Q);
+        const caixa = document.querySelector('.av2-busca'), campo = document.getElementById('av-busca'), fundo = document.getElementById('av-busca-fundo');
+        function fecharBusca() { if (!caixa) return; caixa.classList.remove('aberta'); fundo.classList.remove('on'); campo.blur(); }
+        function abrirBusca() { caixa.classList.add('aberta'); fundo.classList.add('on'); setTimeout(() => campo.focus(), 30); }
+        if (caixa) {
+            caixa.addEventListener('click', () => { if (mq.matches && !caixa.classList.contains('aberta')) abrirBusca(); });
+            fundo.addEventListener('click', fecharBusca);
+            campo.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); fecharBusca(); } });
+        }
+
+        // Botão voltar: sem isto ele saía do /chat direto pra tela de login (o histórico do navegador tem a /entrar antes).
+        // Cada "voltar" fecha o que está aberto por cima (popup, painel, busca), depois volta pro Radar; só no Radar avisa e sai.
+        function fecharAlgoAberto() {
+            if (caixa && caixa.classList.contains('aberta')) { fecharBusca(); return true; }
+            const topo = Array.from(document.querySelectorAll('.modal-overlay, .settings-overlay')).filter((el) => el.classList.contains('active') || (el.classList.contains('modal-overlay') && getComputedStyle(el).display !== 'none')).pop();
+            if (topo) {
+                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                setTimeout(() => {
+                    if (topo.classList.contains('active')) topo.classList.remove('active');
+                    else if (getComputedStyle(topo).display !== 'none') topo.style.display = 'none';
+                }, 0);
+                return true;
+            }
+            if (document.body.dataset.painel) { delete document.body.dataset.painel; return true; }
+            return false;
+        }
+        let avisouSair = 0;
+        function empilhar() { try { history.pushState({ pnt: 1 }, '', location.href); } catch (e) {} }
+        try { history.replaceState({ pnt: 0 }, '', location.href); } catch (e) {}
+        empilhar();
+        window.addEventListener('popstate', () => {
+            if (!mq.matches) return;
+            empilhar();   // mantém uma entrada à frente: o próximo "voltar" cai aqui de novo, nunca na /entrar
+            if (fecharAlgoAberto()) return;
+            if (typeof vistaAtual !== 'undefined' && vistaAtual !== 'home') { switchMainView('home'); return; }
+            if (Date.now() - avisouSair < 2000) { try { window.close(); } catch (e) {} return; }
+            avisouSair = Date.now();
+            showToast('Aperte voltar de novo para sair.', 'info');
+        });
     })();
     </script>
 </body>

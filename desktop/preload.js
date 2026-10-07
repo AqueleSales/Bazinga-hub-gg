@@ -15,6 +15,12 @@ contextBridge.exposeInMainWorld('panteao', {
   prefsGet: () => ipcRenderer.invoke('prefs:get'),
   prefsSet: (chave, valor) => ipcRenderer.invoke('prefs:set', chave, valor),
   abrirPrivacidadeLocalizacao: () => ipcRenderer.invoke('sistema:abrir-privacidade-localizacao'),
+  localizacaoPeloNavegador: () => ipcRenderer.invoke('localizacao:navegador'),
+  aoChegarLocalizacao: (cb) => {
+    const f = (_e, pos) => cb(pos);
+    ipcRenderer.on('localizacao:chegou', f);
+    return () => ipcRenderer.removeListener('localizacao:chegou', f);
+  },
   reiniciar: () => ipcRenderer.invoke('sistema:reiniciar'),
   // atualização do próprio app (instalador): estado, instalar, procurar e ouvir mudanças
   atualizacaoEstado: () => ipcRenderer.invoke('atualizacao:get'),

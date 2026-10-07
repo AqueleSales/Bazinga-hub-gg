@@ -240,7 +240,7 @@ def manifest():
         "categories": ["social"],
         "display": "standalone",
         "background_color": "#0b0c10",
-        "theme_color": "#7289da",
+        "theme_color": "#36393f",
         "orientation": "any",
         "icons": [
             {"src": url_for('static', filename='img/icone-192.png'),
@@ -399,6 +399,13 @@ def _ip_do_cliente():
         if ip.is_global:
             return str(ip)
     return None
+
+
+@main_bp.route("/localizacao-desktop")
+def localizacao_desktop():
+    """Página que o app desktop abre no navegador do sistema: o Chrome acha a posição (serviço do Google dele) e
+    devolve pro app por panteao://localizacao. Sem login: não mostra nem guarda nada, só repassa pro app local."""
+    return render_template('localizacao_desktop.html')
 
 
 @main_bp.route("/api/localizacao/ip")

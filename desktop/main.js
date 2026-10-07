@@ -67,10 +67,28 @@ if (!app.requestSingleInstanceLock()) {
   });
 }
 
+// Localização pelo navegador do sistema: o Electron não tem o provedor de rede do Google (exige chave), o Chrome tem.
+// O app abre /localizacao-desktop com um código de uso único; o navegador devolve panteao://localizacao com a posição.
+let localizacaoPendente = null;   // { n, t }
+
+function tratarLocalizacao(u) {
+  const p = localizacaoPendente;
+  const n = u.searchParams.get('n') || '';
+  if (!p || p.n !== n || Date.now() - p.t > 5 * 60 * 1000) return;   // ninguém pediu (ou expirou): ignora link solto
+  localizacaoPendente = null;                                         // uso único
+  const lat = Number(u.searchParams.get('lat')), lng = Number(u.searchParams.get('lng'));
+  const acc = Math.max(0, Number(u.searchParams.get('acc')) || 0);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
+  mostrarJanela();
+  if (janela && !janela.isDestroyed()) janela.webContents.send('localizacao:chegou', { lat, lng, acc });
+}
+
 function tratarLink(url) {
   let u;
   try { u = new URL(url); } catch (_) { return; }
-  if (u.protocol !== PROTOCOLO + ':' || u.hostname !== 'auth') return;
+  if (u.protocol !== PROTOCOLO + ':') return;
+  if (u.hostname === 'localizacao') { tratarLocalizacao(u); return; }
+  if (u.hostname !== 'auth') return;
   const codigo = u.searchParams.get('codigo') || '';
   if (!/^[A-Za-z0-9_-]{20,80}$/.test(codigo)) return;
   if (!verificadorPendente) return;            // ninguém pediu login: ignora link solto
@@ -237,6 +255,14 @@ ipcMain.handle('prefs:set', (e, chave, valor) => {
 ipcMain.handle('sistema:abrir-privacidade-localizacao', (e) => {
   if (!vemDoApp(e)) return;
   shell.openExternal('ms-settings:privacy-location');   // texto fixo: nada vindo da página entra aqui
+});
+
+ipcMain.handle('localizacao:navegador', (e) => {
+  if (!vemDoApp(e)) return false;
+  const n = crypto.randomBytes(18).toString('base64url');
+  localizacaoPendente = { n, t: Date.now() };
+  shell.openExternal(`${SERVIDOR}/localizacao-desktop?n=${n}`);
+  return true;
 });
 
 ipcMain.handle('sistema:reiniciar', (e) => {
