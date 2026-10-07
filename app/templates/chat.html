@@ -2553,20 +2553,22 @@
             .modal-overlay, .settings-overlay { height: 100vh; height: 100dvh; }
             .bazinga-modal { width: calc(100vw - 20px); max-width: 440px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; }
             .settings-modal { width: 100vw; height: 100vh; height: 100dvh; max-width: none; border-radius: 0 !important; flex-direction: column; border: 0; }
-            .settings-sidebar { width: 100%; max-width: none; padding: 22px 0 0 8px; overflow-x: auto; overflow-y: hidden; align-items: center; flex: none; scrollbar-width: none; -ms-overflow-style: none;
+            .settings-sidebar { width: 100%; max-width: none; padding: 22px 0 0 8px; overflow-x: auto; overflow-y: hidden; align-items: flex-start; flex: none; scrollbar-width: none; -ms-overflow-style: none;
                 -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 70px), transparent calc(100% - 58px)); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 70px), transparent calc(100% - 58px)); }
             .settings-sidebar::-webkit-scrollbar, .settings-sidebar .set-tab-group::-webkit-scrollbar { display: none; }
-            .settings-sidebar .set-tab-group { display: flex; flex-direction: row; align-items: center; gap: 6px; margin: 0 auto; padding-right: 58px; }
+            .settings-sidebar .set-tab-group { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; width: max-content; min-width: 100%; max-width: none; margin: 0; padding: 0 58px 0 0; }
+            .settings-sidebar a { display: contents; }
             /* alça no topo: puxe pra baixo pra fechar */
             .mob-grab { display: block; position: absolute; top: 7px; left: 50%; width: 58px; height: 6px; margin-left: -29px; border-radius: 6px; background: rgba(255,255,255,.4); z-index: 32; touch-action: none; animation: mobAlca 2.4s ease-in-out 1; }
             .mob-grab::before { content: ''; position: absolute; left: -40px; right: -40px; top: -8px; bottom: -14px; }
             @keyframes mobAlca { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(5px); background: rgba(255,255,255,.75); } }
             .esc-hint { display: none; }
             .settings-sidebar .set-tab-header, .settings-sidebar .set-tab-group > div[style*="height: 1px"] { display: none; }
-            .settings-sidebar .set-tab, .settings-sidebar a { flex: none; white-space: nowrap; margin: 0; padding: 7px 13px; }
+            .settings-sidebar .set-tab { flex: none; white-space: nowrap; margin: 0; padding: 8px 14px; border-radius: 999px; font-size: 14px; justify-content: center; transform: none !important; box-shadow: none !important; }
+            .settings-sidebar .set-tab.active { background: color-mix(in srgb, var(--brand-color) 30%, transparent); color: var(--text-header); font-weight: 700; }
             .settings-content { padding: 6px 14px 90px; min-height: 0; }
             .settings-content .set-title { margin-top: 6px; }
-            .settings-close-wrap { top: 24px !important; right: 10px !important; }
+            .settings-close-wrap { top: 30px !important; right: 10px !important; }
             .settings-close-btn { width: 34px; height: 34px; font-size: 16px; }
 
             /* pré-visualização do perfil: botão flutuante + cartão por cima (toque fora ou no X volta) */
