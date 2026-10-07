@@ -11725,7 +11725,13 @@
             conectandoCall = true;
             try { await _conectarNaCall(voiceId, voiceName, opcoes || {}); } finally { conectandoCall = false; }
         }
+        // Entrar numa call sempre começa com microfone e fone LIGADOS (o "mudo" da call anterior não vem junto)
+        function resetarMudo() {
+            if (deafened) { micMutedBeforeDeafen = false; toggleDeafen(false); }
+            if (micMuted) toggleMic(false);
+        }
         async function _conectarNaCall(voiceId, voiceName, opcoes) {
+            if (!inCall) resetarMudo();
             const ehDM = String(voiceId).startsWith('dm_');   // DM: janela mini (você segue no chat); canal de voz: tela cheia
             if (inCall) {
                 // Já está nesta mesma call: só volta pra tela da call.
@@ -12731,6 +12737,7 @@
             if(!inCall) return;
             inCall = false;
             tocarSom('call_sair');
+            resetarMudo();
             document.getElementById('voice-panel').classList.remove('active');
             callOcultar();
             document.getElementById('text-view').classList.remove('hidden'); document.getElementById('text-view').classList.remove('sidebar-mode');
