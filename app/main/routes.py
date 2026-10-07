@@ -17,7 +17,7 @@ from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, m
                      recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO)
 from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
-from ..cosmeticos import posses_da_pessoa, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
+from ..cosmeticos import posses_da_pessoa, posses_com_regras, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
 from ..utils import nivel_da_pessoa, resumos_de_resposta_canal, resumos_de_resposta_dm
 
 main_bp = Blueprint("main", __name__)
@@ -483,7 +483,7 @@ def chat():
             servidores_iniciais = servidores_para_json(list(usuario_atual.servers), usuario_atual)
 
             # Inventário já no HTML (1 query): moldura/efeitos/insígnias nascem desenhados, sem esperar o socket.
-            inventario_inicial = _estado_inventario(usuario_atual, posses_da_pessoa(usuario_atual.id))
+            inventario_inicial = _estado_inventario(usuario_atual, posses_com_regras(usuario_atual))
 
             return (usuario_atual, text_channels, voice_channels, default_channel, messages, amigos,
                     servidores_iniciais, inventario_inicial)

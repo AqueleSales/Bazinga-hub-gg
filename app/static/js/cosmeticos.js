@@ -47,6 +47,9 @@ const Cosm = (() => {
         h += grad('bdg-ouro', ['#fff2b0', '#ffb62e', '#b45309']) + grad('bdg-cobre', ['#ffd9b0', '#f08a30', '#8c3a07']);
         h += grad('bdg-roxo', ['#e9d5ff', '#a45cf5', '#4c1d95']) + grad('bdg-aco', ['#f1f5f9', '#94a3b8', '#334155']);
         h += grad('bdg-verde', ['#d1fae5', '#34d399', '#047857']) + grad('bdg-ciano', ['#cffafe', '#22d3ee', '#0e7490']);
+        h += grad('bdg-cobra', ['#bbf7d0', '#22a55a', '#0b5a2b']) + grad('bdg-lant', ['#e0ffe9', '#3ddc6e', '#0a7a36']);
+        h += `<radialGradient id="bdg-flash-r"><stop offset="0" stop-color="#ff3b4a" stop-opacity=".95"/><stop offset=".55" stop-color="#ff1a2b" stop-opacity=".35"/><stop offset="1" stop-color="#ff1a2b" stop-opacity="0"/></radialGradient>`;
+        h += `<radialGradient id="bdg-flash-v"><stop offset="0" stop-color="#5dff8a" stop-opacity=".0"/><stop offset=".7" stop-color="#3dff7a" stop-opacity=".45"/><stop offset="1" stop-color="#3dff7a" stop-opacity="0"/></radialGradient>`;
         h += `<linearGradient id="bdg-fusao" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff9d2e"/><stop offset=".5" stop-color="#f06ab8"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>`;
         return `<svg id="cosm-defs" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false"><defs>${h}</defs></svg>`;
     }
@@ -279,10 +282,12 @@ const Cosm = (() => {
     // INSÍGNIAS (exclusivas: ver cosmeticos.py). Mesmo molde: id -> desenho.
     // ---------------------------------------------------------------------
     const BADGES = {
-        criador:     { nome: 'Criador', desc: 'Quem criou o Panteão do zero.', cor: '#ffb62e' },
-        beta_tester: { nome: 'Beta Tester', desc: 'Testou tudo antes de existir. Cada bug achado é uma medalha.', cor: '#34d399' },
-        coder:       { nome: 'Coder', desc: 'Mexeu no código por baixo do capô.', cor: '#22d3ee' },
-        so_nos:      { nome: 'Só nós', desc: 'Duas chamas, uma fusão. Só quem começou isso tem.', cor: '#e879f9' },
+        criador:      { nome: 'Criador', desc: 'Quem construiu o Panteão do zero, tijolo por tijolo.', cor: '#ffb62e' },
+        alpha_tester: { nome: 'Alpha Tester', desc: 'Esteve aqui antes de todo mundo e viu o Panteão nascer.', cor: '#ff3b4a' },
+        beta_tester:  { nome: 'Beta Tester', desc: 'Está no beta. Cada bug achado acorda a Medusa.', cor: '#34d399' },
+        bazinga:      { nome: 'BAZINGA', desc: 'on top!', cor: '#3ddc6e' },
+        coder:        { nome: 'Coder', desc: 'Mexeu no código por baixo do capô.', cor: '#22d3ee' },
+        so_nos:       { nome: 'Só nós', desc: 'Uma sarça que arde e não se consome. Só quem começou isso tem.', cor: '#ff8a1f' },
     };
     // Chama de 7 pontos (contorno em coordenadas 0-1, ponta em cima, "lambida" na esquerda), escalada pra caixa dada.
     const CHAMA = [[.50, 0], [.55, .18, .78, .28, .86, .55], [.94, .80, .78, 1, .50, 1], [.22, 1, .06, .80, .14, .55],
@@ -294,21 +299,78 @@ const Cosm = (() => {
         return `<path class="${cls}" d="${d} Z" fill="${fill}"/>`;
     };
 
+    // Cobras da Medusa: 9 saindo da cabeça (arco em cima e nas laterais). Cada uma balança no seu ritmo.
+    const COBRAS = [...Array(9)].map((_, i) => {
+        const ang = (-205 + i * (230 / 8)) * Math.PI / 180, c = Math.cos(ang), sn = Math.sin(ang), lado = i % 2 ? 1 : -1;
+        const f = (n) => n.toFixed(1);
+        const bx = 32 + c * 12, by = 31 + sn * 12, ex = 32 + c * 29, ey = 31 + sn * 29;
+        const mx = 32 + c * 21 - sn * 7 * lado, my = 31 + sn * 21 + c * 7 * lado;
+        const graus = ang * 180 / Math.PI;
+        return `<g class="bd-cobra" style="--r:${lado};--d:${(-i * 0.43).toFixed(2)}s">
+            <path d="M${f(bx)} ${f(by)} Q${f(mx)} ${f(my)} ${f(ex)} ${f(ey)}" fill="none" stroke="#06452a" stroke-width="5.6" stroke-linecap="round"/>
+            <path d="M${f(bx)} ${f(by)} Q${f(mx)} ${f(my)} ${f(ex)} ${f(ey)}" fill="none" stroke="url(#bdg-cobra)" stroke-width="3.8" stroke-linecap="round"/>
+            <ellipse cx="${f(ex)}" cy="${f(ey)}" rx="3.4" ry="2.6" transform="rotate(${f(graus)} ${f(ex)} ${f(ey)})" fill="url(#bdg-cobra)" stroke="#06452a" stroke-width="1.1"/>
+            <circle class="bd-cobra-olho" cx="${f(ex + c * 0.6 - sn * 1.2)}" cy="${f(ey + sn * 0.6 + c * 1.2)}" r="0.95" fill="#fde047"/></g>`;
+    }).join('');
+
+    // olho vermelho do Alpha: cruz irregular com núcleo branco, como um flash de aura
+    const flareOlho = (x, y) => `<g transform="translate(${x} ${y})"><path class="bd-flare" d="M0 -9.5 L1.3 -2 L9.5 0 L1.3 2 L0 9.5 L-1.3 2 L-9.5 0 L-1.3 -2 Z" fill="#ff1a2b"/>
+        <path d="M0 -5 L.8 -.8 L5 0 L.8 .8 L0 5 L-.8 .8 L-5 0 L-.8 -.8 Z" fill="#ff7a84"/><ellipse rx="2.4" ry="1.5" fill="#ff3b4a"/><circle r=".9" fill="#fff"/></g>`;
+
+    // Lanterna Verde (símbolo BAZINGA)
+    const PARTICULAS = [...Array(12)].map((_, i) => {
+        const a = (i / 12) * Math.PI * 2 + .3, r = 40 + (i % 3) * 5;
+        return `<circle class="bd-bz-part" cx="32" cy="32" r="${(1.5 + (i % 3) * .5).toFixed(1)}" fill="#7dffa0" style="--x:${(Math.cos(a) * r).toFixed(1)}px;--y:${(Math.sin(a) * r).toFixed(1)}px;--d:${(i * 0.06).toFixed(2)}s"/>`;
+    }).join('');
+
     const DESENHO_BADGE = {
-        // coroa com chama
+        // capacete de construção (no popover gira como objeto 3D: ver svgBadge3D)
         criador: () => `
-            <path d="M8 46 L12 20 L24 33 L32 12 L40 33 L52 20 L56 46 Z" fill="url(#bdg-ouro)" stroke="#7a3e05" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M8 46 L56 46 L54 54 L10 54 Z" fill="url(#bdg-ouro)" stroke="#7a3e05" stroke-width="1.8" stroke-linejoin="round"/>
-            ${ponto(12, 20, 3, '#fff3b8')}${ponto(52, 20, 3, '#fff3b8')}${ponto(32, 12, 3.4, '#fff3b8')}
-            ${chama(32, 44, 7.5, 17, '#ff6a1a', 'bd-chama')}${chama(32, 44, 4, 10, '#ffe27a', 'bd-chama bd-chama2')}
-            <path d="M14 49.5 L50 49.5" stroke="#fff" stroke-width="1.2" opacity=".5"/>`,
-        // selo com engrenagem e estrela
-        beta_tester: () => {
-            const dentes = [...Array(8)].map((_, i) => `<rect x="29" y="6" width="6" height="9" rx="1.4" transform="rotate(${i * 45} 32 32)" fill="url(#bdg-verde)" stroke="#065f46" stroke-width="1.2"/>`).join('');
-            return `<g class="bd-gira">${dentes}<circle cx="32" cy="32" r="21" fill="url(#bdg-verde)" stroke="#065f46" stroke-width="1.8"/></g>
-                <circle cx="32" cy="32" r="15" fill="#06382b"/>
-                <path d="M32 19 L35.4 27.8 L44.8 28.4 L37.6 34.4 L40 43.6 L32 38.6 L24 43.6 L26.4 34.4 L19.2 28.4 L28.6 27.8 Z" fill="#fef9c3" stroke="#fde047" stroke-width="1" stroke-linejoin="round" class="bd-estrela"/>`;
-        },
+            <path d="M5 45 Q5 40.5 11 40.5 L53 40.5 Q59 40.5 59 45 L59 47 Q59 51 54 51 L10 51 Q5 51 5 47 Z" fill="url(#bdg-cobre)" stroke="#7a3e05" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M10.5 41.5 Q10.5 13 32 13 Q53.5 13 53.5 41.5 Z" fill="url(#bdg-ouro)" stroke="#7a3e05" stroke-width="1.9" stroke-linejoin="round"/>
+            <path d="M25.5 14.6 L25.5 41.5 L38.5 41.5 L38.5 14.6 Q32 12.4 25.5 14.6 Z" fill="#ffd34d" stroke="#7a3e05" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M29.2 13.8 L29.2 41.5 M34.8 13.8 L34.8 41.5" stroke="#c97a0a" stroke-width="1.3"/>
+            <rect x="8.4" y="38.2" width="4.4" height="4.6" rx="1.2" fill="#d97706" stroke="#7a3e05" stroke-width="1"/><rect x="51.2" y="38.2" width="4.4" height="4.6" rx="1.2" fill="#d97706" stroke="#7a3e05" stroke-width="1"/>
+            <path d="M15.5 34 Q15.5 22 23 17.5" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2.6" stroke-linecap="round"/>`,
+        // capacete romano com a crista vermelha; no zoom os olhos vermelhos acendem num flash
+        alpha_tester: () => `
+            <path d="M9 33 Q32 -6 55 33" fill="none" stroke="#7f1220" stroke-width="9" stroke-linecap="round"/>
+            <path d="M9 33 Q32 -6 55 33" fill="none" stroke="#e11d2e" stroke-width="6" stroke-linecap="round"/>
+            <path d="M9 33 Q32 -6 55 33" fill="none" stroke="#ff7a84" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 2.3"/>
+            <path d="M13 45 Q13 20.5 32 20.5 Q51 20.5 51 45 Z" fill="url(#bdg-ouro)" stroke="#6b3a07" stroke-width="1.9" stroke-linejoin="round"/>
+            <path d="M13.4 38.5 L50.6 38.5" stroke="#6b3a07" stroke-width="1.7"/>
+            <path d="M24 42 H40 V55 Q40 60 32 60 Q24 60 24 55 Z" fill="#12060a"/>
+            <path d="M13 44.5 L23.4 40.5 L24.6 58.6 Q16 57 13 47 Z" fill="url(#bdg-cobre)" stroke="#6b3a07" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M51 44.5 L40.6 40.5 L39.4 58.6 Q48 57 51 47 Z" fill="url(#bdg-cobre)" stroke="#6b3a07" stroke-width="1.7" stroke-linejoin="round"/>
+            <rect x="30.3" y="40.5" width="3.4" height="15" rx="1.3" fill="url(#bdg-ouro)" stroke="#6b3a07" stroke-width="1"/>
+            <path d="M18 31 Q18 25 24 23" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2.2" stroke-linecap="round"/>
+            <circle class="bd-flash-v" cx="32" cy="47" r="15" fill="url(#bdg-flash-r)"/>
+            <g class="bd-olhos-v">${flareOlho(27.4, 47)}${flareOlho(36.6, 47)}</g>`,
+        // cabeça da Medusa: dorme com as cobras quietas; no zoom acorda num susto e volta a dormir
+        beta_tester: () => `${COBRAS}
+            <g class="bd-med-cabeca">
+              <circle cx="32" cy="33" r="15.5" fill="url(#bdg-verde)" stroke="#065f46" stroke-width="2"/>
+              <path d="M19 28 Q32 14.5 45 28" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/>
+              <g class="bd-med-dorme" fill="none" stroke="#053b2a" stroke-width="2" stroke-linecap="round"><path d="M22 32 Q25.2 35.2 28.4 32"/><path d="M35.6 32 Q38.8 35.2 42 32"/></g>
+              <g class="bd-med-acorda"><ellipse cx="25.2" cy="32" rx="4" ry="3.3" fill="#fde047" stroke="#053b2a" stroke-width="1.2"/><ellipse cx="38.8" cy="32" rx="4" ry="3.3" fill="#fde047" stroke="#053b2a" stroke-width="1.2"/>
+                <rect x="24.6" y="28.8" width="1.3" height="6.4" rx=".6" fill="#111"/><rect x="38.1" y="28.8" width="1.3" height="6.4" rx=".6" fill="#111"/>
+                <ellipse cx="32" cy="42" rx="4.2" ry="2.6" fill="#3b0a14" stroke="#053b2a" stroke-width="1.2"/></g>
+              <path class="bd-med-boca" d="M27.5 41.5 Q32 44.4 36.5 41.5" fill="none" stroke="#053b2a" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M30.6 35.6 Q32 37.4 33.4 35.6" fill="none" stroke="#053b2a" stroke-width="1.3" stroke-linecap="round"/>
+            </g>`,
+        // símbolo dos Lanternas Verdes; no zoom as partículas se juntam, explodem e ficam numa aura verde
+        bazinga: () => `
+            <circle class="bd-bz-aura" cx="32" cy="32" r="29" fill="url(#bdg-flash-v)"/>
+            <g class="bd-bz-simbolo">
+              <circle cx="32" cy="32" r="26.5" fill="#06210f" stroke="url(#bdg-lant)" stroke-width="4.4"/>
+              <polygon points="15,15 49,15 43.6,22.4 20.4,22.4" fill="url(#bdg-lant)"/>
+              <polygon points="15,49 49,49 43.6,41.6 20.4,41.6" fill="url(#bdg-lant)"/>
+              <polygon points="24.4,22.4 39.6,22.4 37.6,28 26.4,28" fill="url(#bdg-lant)"/>
+              <polygon points="24.4,41.6 39.6,41.6 37.6,36 26.4,36" fill="url(#bdg-lant)"/>
+              <circle cx="32" cy="32" r="8.2" fill="#06210f" stroke="url(#bdg-lant)" stroke-width="4.6"/>
+            </g>
+            <circle class="bd-bz-onda" cx="32" cy="32" r="12" fill="none" stroke="#b9ffcb" stroke-width="3"/>
+            <g class="bd-bz-particulas">${PARTICULAS}</g>`,
         // </> luminoso
         coder: () => `
             <path d="M32 4 L56 17 L56 47 L32 60 L8 47 L8 17 Z" fill="#0b1f2a" stroke="url(#bdg-ciano)" stroke-width="3" stroke-linejoin="round"/>
@@ -316,17 +378,40 @@ const Cosm = (() => {
             <g class="bd-codigo" fill="none" stroke="#67e8f9" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 24 L14.5 32 L23 40"/><path d="M41 24 L49.5 32 L41 40"/><path d="M35.5 22 L28.5 42" stroke="#a5f3fc" stroke-width="3.6"/>
             </g>`,
-        // duas chamas que se fundem
-        so_nos: () => `<g transform="translate(32 33) scale(1.28) translate(-32 -33)">
-            <g class="bd-fl-a">${chama(22, 52, 11, 38, '#ff8a1f')}${chama(22, 52, 5.5, 22, '#ffd36b')}</g>
-            <g class="bd-fl-b">${chama(42, 52, 11, 38, '#8b5cf6')}${chama(42, 52, 5.5, 22, '#d8b4fe')}</g>
-            <g class="bd-fl-f">${chama(32, 54, 16, 46, 'url(#bdg-fusao)')}${chama(32, 54, 7.5, 28, '#fff2d6')}</g>
-            <g class="bd-fa" fill="#fff"><circle cx="32" cy="14" r="1.6"/><circle cx="20" cy="22" r="1.1"/><circle cx="45" cy="20" r="1.2"/></g></g>`,
+        // sarça ardente: arde sem se consumir; no zoom cai um raio e ela pega fogo
+        so_nos: () => `
+            <g class="bd-sc-fogo">
+              <g class="bd-sc-f1">${chama(32, 54, 19, 46, '#ff7a1a')}</g>
+              <g class="bd-sc-f2">${chama(15.5, 55, 10.5, 32, '#ff9a24')}</g>
+              <g class="bd-sc-f3">${chama(48.5, 55, 10.5, 32, '#ff9a24')}</g>
+              <g class="bd-sc-f4">${chama(32, 55, 11.5, 32, '#ffcf3a')}${chama(22, 56, 6.5, 21, '#ffe27a')}${chama(42, 56, 6.5, 21, '#ffe27a')}</g>
+            </g>
+            <path d="M10 59 Q32 54 54 59" fill="none" stroke="#4a2c12" stroke-width="3.2" stroke-linecap="round"/>
+            <g class="bd-sc-arbusto" stroke-linecap="round">
+              <path d="M32 58 L32 40 M32 50 L22 39 M32 50 L43 38 M32 44 L26 32 M32 44 L38 30" stroke="#4a2c12" stroke-width="2.8" fill="none"/>
+              <g fill="#2e7d32" stroke="#14532d" stroke-width=".9">
+                <ellipse cx="20.5" cy="37" rx="5.6" ry="3.4" transform="rotate(-32 20.5 37)"/><ellipse cx="44.5" cy="36" rx="5.6" ry="3.4" transform="rotate(32 44.5 36)"/>
+                <ellipse cx="25" cy="30.5" rx="5.2" ry="3.2" transform="rotate(-50 25 30.5)"/><ellipse cx="39.5" cy="28.5" rx="5.2" ry="3.2" transform="rotate(50 39.5 28.5)"/>
+                <ellipse cx="29" cy="46" rx="5.4" ry="3.3" transform="rotate(-20 29 46)"/><ellipse cx="36" cy="47" rx="5.4" ry="3.3" transform="rotate(20 36 47)"/></g>
+              <g fill="#ffb347" opacity=".85"><circle cx="21" cy="35.5" r="1.2"/><circle cx="43.5" cy="34.5" r="1.2"/><circle cx="32" cy="38" r="1.3"/><circle cx="26" cy="29" r="1"/><circle cx="39" cy="27.5" r="1"/></g>
+            </g>
+            <g class="bd-sc-brasas" fill="#ffd36b"><circle cx="19" cy="22" r="1.1"/><circle cx="46" cy="18" r="1"/><circle cx="32" cy="9" r="1.2"/><circle cx="12" cy="36" r=".9"/><circle cx="53" cy="33" r=".9"/></g>
+            <rect class="bd-sc-clarao" x="-10" y="-10" width="84" height="84" fill="#fff"/>
+            <path class="bd-sc-raio" d="M41 -6 L30.5 16 L37 16 L25 41 L43 13 L35.5 13 L45 -6 Z" fill="#fffbd5" stroke="#fff" stroke-width=".9" stroke-linejoin="round"/>`,
     };
 
-    function svgBadge(id) {
+    function svgBadge(id, decorativo = false) {
         if (!DESENHO_BADGE[id]) return '';
-        return `<svg viewBox="0 0 64 64" class="bd-svg bd-${id}" role="img" aria-label="Insígnia ${esc(BADGES[id].nome)}" focusable="false">${DESENHO_BADGE[id]()}</svg>`;
+        const acess = decorativo ? 'aria-hidden="true"' : `role="img" aria-label="Insígnia ${esc(BADGES[id].nome)}"`;
+        return `<svg viewBox="0 0 64 64" class="bd-svg bd-${id}" ${acess} focusable="false">${DESENHO_BADGE[id]()}</svg>`;
+    }
+
+    // Capacete do Criador no popover: camadas empilhadas em profundidade, girando no eixo (objeto 3D, não um "fidget spinner").
+    function svgBadge3D(id) {
+        const n = 9, meio = (n - 1) / 2;
+        const camadas = [...Array(n)].map((_, k) =>
+            `<span class="bd-3d-cam" style="transform:translateZ(${((k - meio) * 1.7).toFixed(1)}px);${k < n - 1 ? 'filter:brightness(' + (0.55 + 0.3 * k / n).toFixed(2) + ')' : ''}">${svgBadge(id, true)}</span>`).join('');
+        return `<span class="bd-3d" role="img" aria-label="Insígnia ${esc(BADGES[id].nome)}">${camadas}</span>`;
     }
 
     function htmlBadge(id, tamanho = 22) {
@@ -358,7 +443,7 @@ const Cosm = (() => {
         }
         if (tipo === 'badge' && BADGES[id]) {
             const b = BADGES[id];
-            return `<div class="orb-ico bd bd-wrap-${id} orb-grande" style="--pt-tam:112px;--bd-cor:${b.cor}">${svgBadge(id)}</div>
+            return `<div class="orb-ico bd bd-wrap-${id} orb-grande" style="--pt-tam:112px;--bd-cor:${b.cor}">${id === 'criador' ? svgBadge3D(id) : svgBadge(id)}</div>
                 <div class="orb-rotulo">Insígnia</div>
                 <div class="orb-nome">${esc(b.nome)}</div>
                 <div class="orb-linha">${esc(b.desc)}</div>`;
@@ -1213,7 +1298,7 @@ const Cosm = (() => {
         return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
+    return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, svgBadge3D, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
         renderInventario, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
         mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, _passo: passoCanvas };
 })();

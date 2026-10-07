@@ -229,6 +229,15 @@ def atualizar_banco():
                 db.session.rollback()
                 print(f"⚠️ Não consegui conceder o laboratório: {e}")
 
+            # 26. Insígnias: Beta pra todo mundo, BAZINGA pros membros do servidor Bazinga (define o id em config_app)
+            # e Alpha Tester pra lista de nomes. Idempotente; confira os avisos no fim (nome repetido, servidor não achado).
+            try:
+                from app.cosmeticos import conceder_insignias_iniciais
+                conceder_insignias_iniciais(print)
+            except Exception as e:
+                db.session.rollback()
+                print(f"⚠️ Não consegui conceder as insígnias: {e}")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

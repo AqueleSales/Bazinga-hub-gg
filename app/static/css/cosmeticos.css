@@ -52,29 +52,77 @@
 .bd-codigo { animation: bdCodigo 2.4s ease-in-out infinite; }
 @keyframes bdCodigo { 0%, 100% { filter: drop-shadow(0 0 1px #22d3ee); } 50% { filter: drop-shadow(0 0 4px #22d3ee); } }
 
-/* "Só nós": duas chamas (laranja = Gogeta, roxa = Sasuke) que se fundem numa só.
-   Em repouso, lado a lado; no hover (e em loop dentro do popover) elas se juntam e a chama fundida nasce. */
-.bd-fl-a, .bd-fl-b, .bd-fl-f { transform-origin: 32px 54px; transition: transform .7s cubic-bezier(.5, 0, .2, 1), opacity .5s ease; }
-.bd-fl-a, .bd-fl-b { animation: bdTremor 1.3s ease-in-out infinite alternate; }
-.bd-fl-b { animation-delay: -.5s; }
-.bd-fl-f { opacity: 0; transform: scale(.55); }
-@keyframes bdTremor { from { filter: brightness(1); } to { filter: brightness(1.2); } }
-.bd-wrap-so_nos:hover .bd-fl-a, .bd-wrap-so_nos:focus-visible .bd-fl-a { transform: translateX(10px) scale(.7); opacity: 0; }
-.bd-wrap-so_nos:hover .bd-fl-b, .bd-wrap-so_nos:focus-visible .bd-fl-b { transform: translateX(-10px) scale(.7); opacity: 0; }
-.bd-wrap-so_nos:hover .bd-fl-f, .bd-wrap-so_nos:focus-visible .bd-fl-f { opacity: 1; transform: scale(1); animation: bdFusaoPulso 1s ease-in-out .5s infinite alternate; }
-@keyframes bdFusaoPulso { from { filter: brightness(1) drop-shadow(0 0 2px #f06ab8); } to { filter: brightness(1.2) drop-shadow(0 0 7px #f06ab8); } }
-.bd-fa circle { opacity: 0; transition: opacity .4s .3s; }
-.bd-wrap-so_nos:hover .bd-fa circle { opacity: 1; animation: bdFaisca 1s ease-in-out infinite alternate; }
-@keyframes bdFaisca { from { transform: translateY(2px); opacity: .3; } to { transform: translateY(-3px); opacity: 1; } }
-/* dentro do popover (grande): o ciclo é automático - separa, junta, funde, separa */
-.orb-grande .bd-svg.bd-so_nos .bd-fl-a { animation: bdOrbA 5s ease-in-out infinite; }
-.orb-grande .bd-svg.bd-so_nos .bd-fl-b { animation: bdOrbB 5s ease-in-out infinite; }
-.orb-grande .bd-svg.bd-so_nos .bd-fl-f { animation: bdOrbF 5s ease-in-out infinite; }
-.orb-grande .bd-svg.bd-so_nos .bd-fa circle { animation: bdOrbFa 5s ease-in-out infinite; transition: none; }
-@keyframes bdOrbA { 0%, 22% { transform: none; opacity: 1; } 42%, 62% { transform: translateX(10px) scale(.7); opacity: 0; } 82%, 100% { transform: none; opacity: 1; } }
-@keyframes bdOrbB { 0%, 22% { transform: none; opacity: 1; } 42%, 62% { transform: translateX(-10px) scale(.7); opacity: 0; } 82%, 100% { transform: none; opacity: 1; } }
-@keyframes bdOrbF { 0%, 36% { opacity: 0; transform: scale(.55); } 48%, 60% { opacity: 1; transform: scale(1); filter: brightness(1.15) drop-shadow(0 0 8px #f06ab8); } 76%, 100% { opacity: 0; transform: scale(.55); } }
-@keyframes bdOrbFa { 0%, 40% { opacity: 0; transform: translateY(2px); } 52%, 62% { opacity: 1; transform: translateY(-4px); } 78%, 100% { opacity: 0; transform: translateY(-6px); } }
+/* Animações das insígnias: rodam em loop no popover grande (.orb-grande) e, nas pequenas, enquanto o mouse está em cima. */
+
+/* CRIADOR: capacete. Pequeno: gira no eixo ao passar o mouse. Popover: pilha em 3D (ver svgBadge3D). */
+.bd-wrap-criador { perspective: 160px; }
+.bd-wrap-criador:hover .bd-svg.bd-criador { animation: bdGira3D 2.6s linear infinite; }
+.orb-ico.orb-grande { perspective: 420px; }
+.bd-3d { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; animation: bdGira3D 6s linear infinite; }
+.bd-3d-cam { position: absolute; inset: 0; display: block; }
+.bd-3d-cam .bd-svg { width: 100%; height: 100%; display: block; }
+@keyframes bdGira3D { to { transform: rotateY(360deg); } }
+
+/* ALPHA TESTER: olhos vermelhos que acendem num flash e somem */
+.bd-olhos-v { opacity: 0; transform-origin: 32px 47px; }
+.bd-flash-v { opacity: 0; transform-origin: 32px 47px; }
+.bd-wrap-alpha_tester:hover .bd-olhos-v, .orb-grande .bd-svg.bd-alpha_tester .bd-olhos-v { animation: bdOlhoV 3.4s ease-in-out infinite; }
+.bd-wrap-alpha_tester:hover .bd-flash-v, .orb-grande .bd-svg.bd-alpha_tester .bd-flash-v { animation: bdFlashV 3.4s ease-in-out infinite; }
+@keyframes bdOlhoV { 0%, 40% { opacity: 0; transform: scale(.2); } 48% { opacity: 1; transform: scale(1.55); filter: brightness(1.8); } 56% { opacity: 1; transform: scale(1); filter: none; } 72% { opacity: 1; transform: scale(1.04); } 84%, 100% { opacity: 0; transform: scale(.5); } }
+@keyframes bdFlashV { 0%, 41% { opacity: 0; transform: scale(.3); } 48% { opacity: 1; transform: scale(2.4); } 66%, 100% { opacity: 0; transform: scale(2.8); } }
+
+/* BETA TESTER: Medusa dormindo; acorda num susto (cobras se agitam) e volta a dormir */
+.bd-cobra { transform-origin: 32px 31px; }
+.bd-cobra-olho { opacity: 0; }
+.bd-med-cabeca { transform-origin: 32px 33px; }
+.bd-med-acorda { opacity: 0; }
+.bd-wrap-beta_tester:hover .bd-cobra, .orb-grande .bd-svg.bd-beta_tester .bd-cobra { animation: bdCobra 5.4s ease-in-out infinite; animation-delay: var(--d); }
+.bd-wrap-beta_tester:hover .bd-med-cabeca, .orb-grande .bd-svg.bd-beta_tester .bd-med-cabeca { animation: bdMedSusto 5.4s ease-in-out infinite; }
+.bd-wrap-beta_tester:hover .bd-med-dorme, .orb-grande .bd-svg.bd-beta_tester .bd-med-dorme { animation: bdMedDorme 5.4s step-end infinite; }
+.bd-wrap-beta_tester:hover .bd-med-acorda, .orb-grande .bd-svg.bd-beta_tester .bd-med-acorda { animation: bdMedAcorda 5.4s step-end infinite; }
+.bd-wrap-beta_tester:hover .bd-med-boca, .orb-grande .bd-svg.bd-beta_tester .bd-med-boca { animation: bdMedDorme 5.4s step-end infinite; }
+.bd-wrap-beta_tester:hover .bd-cobra-olho, .orb-grande .bd-svg.bd-beta_tester .bd-cobra-olho { animation: bdMedAcorda 5.4s step-end infinite; }
+@keyframes bdCobra { 0% { transform: rotate(0); } 18% { transform: rotate(calc(var(--r) * 1.6deg)); } 38% { transform: rotate(calc(var(--r) * -1.6deg)); } 56% { transform: rotate(0); }
+    60% { transform: rotate(calc(var(--r) * -24deg)) scale(1.1); } 64% { transform: rotate(calc(var(--r) * 22deg)) scale(1.08); } 68% { transform: rotate(calc(var(--r) * -18deg)); }
+    72% { transform: rotate(calc(var(--r) * 14deg)); } 77% { transform: rotate(calc(var(--r) * -8deg)); } 84% { transform: rotate(calc(var(--r) * 3deg)); } 92%, 100% { transform: rotate(0); } }
+@keyframes bdMedSusto { 0%, 57% { transform: none; } 60% { transform: translateY(-2.6px) scale(1.09); } 65% { transform: translateY(.4px) scale(1.02); } 71% { transform: translateY(-1.2px) scale(1.06); } 86%, 100% { transform: none; } }
+@keyframes bdMedDorme { 0% { opacity: 1; } 58% { opacity: 0; } 86% { opacity: 1; } }
+@keyframes bdMedAcorda { 0% { opacity: 0; } 58% { opacity: 1; } 86% { opacity: 0; } }
+
+/* BAZINGA: partículas verdes se juntam, explodem e sobra uma aura verde enquanto o popover estiver aberto */
+.bd-bz-part { opacity: 0; transform-origin: 32px 32px; }
+.bd-bz-onda { opacity: 0; transform-origin: 32px 32px; }
+.bd-bz-aura { opacity: 0; transform-origin: 32px 32px; }
+.bd-wrap-bazinga:hover .bd-svg.bd-bazinga, .orb-grande .bd-svg.bd-bazinga { filter: drop-shadow(0 0 5px #3dff7a); }
+.bd-wrap-bazinga:hover .bd-bz-aura { opacity: 1; animation: bdBzAura 1.8s ease-in-out infinite alternate; }
+.orb-grande .bd-svg.bd-bazinga .bd-bz-part { animation: bdBzJunta 1.7s cubic-bezier(.55, 0, .85, .45) var(--d) both; }
+.orb-grande .bd-svg.bd-bazinga .bd-bz-simbolo { transform-origin: 32px 32px; animation: bdBzNasce 2.3s ease-out both; }
+.orb-grande .bd-svg.bd-bazinga .bd-bz-onda { animation: bdBzOnda .9s ease-out 1.75s both; }
+.orb-grande .bd-svg.bd-bazinga .bd-bz-aura { animation: bdBzAuraEntra .5s ease-out 1.75s both, bdBzAura 2.2s ease-in-out 2.25s infinite alternate; }
+.orb-grande .bd-svg.bd-bazinga { animation: bdBzBrilho 2.4s ease-out both, bdBzBrilhoFixo 2.4s ease-in-out 2.4s infinite alternate; }
+@keyframes bdBzJunta { 0% { opacity: 0; transform: translate(var(--x), var(--y)) scale(1); } 14% { opacity: 1; } 88% { opacity: 1; transform: translate(0, 0) scale(.5); } 100% { opacity: 0; transform: translate(0, 0) scale(.1); } }
+@keyframes bdBzNasce { 0% { opacity: .2; transform: scale(.82); filter: brightness(.5); } 70% { opacity: .55; transform: scale(.9); filter: brightness(.7); } 76% { opacity: 1; transform: scale(1.22); filter: brightness(2.4); } 100% { opacity: 1; transform: scale(1); filter: brightness(1); } }
+@keyframes bdBzOnda { 0% { opacity: .95; transform: scale(.6); stroke-width: 4; } 100% { opacity: 0; transform: scale(3.4); stroke-width: .6; } }
+@keyframes bdBzAuraEntra { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes bdBzAura { from { opacity: .75; transform: scale(.96); } to { opacity: 1; transform: scale(1.1); } }
+@keyframes bdBzBrilho { 0%, 70% { filter: drop-shadow(0 0 0 #3dff7a); } 76% { filter: drop-shadow(0 0 16px #b9ffcb); } 100% { filter: drop-shadow(0 0 7px #3dff7a); } }
+@keyframes bdBzBrilhoFixo { from { filter: drop-shadow(0 0 6px #3dff7a); } to { filter: drop-shadow(0 0 13px #3dff7a); } }
+
+/* SÓ NÓS: sarça ardente. Parada, arde sem se consumir; no zoom: brasas -> raio cai -> o fogo cresce */
+.bd-sc-fogo { transform-origin: 32px 57px; }
+.bd-sc-f1, .bd-sc-f2, .bd-sc-f3, .bd-sc-f4 { transform-origin: 32px 56px; animation: bdScLabareda 1.3s ease-in-out infinite alternate; }
+.bd-sc-f2 { animation-delay: -.4s; } .bd-sc-f3 { animation-delay: -.8s; } .bd-sc-f4 { animation-duration: .9s; }
+@keyframes bdScLabareda { from { transform: scale(1, .94); } to { transform: scale(1.04, 1.06); } }
+.bd-sc-raio, .bd-sc-clarao { opacity: 0; pointer-events: none; }
+.bd-sc-brasas circle { animation: bdScBrasa 2.2s ease-in infinite; }
+.bd-sc-brasas circle:nth-child(2n) { animation-delay: -.9s; } .bd-sc-brasas circle:nth-child(3n) { animation-delay: -1.5s; }
+@keyframes bdScBrasa { 0% { transform: translateY(6px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
+.bd-wrap-so_nos:hover .bd-sc-fogo, .orb-grande .bd-svg.bd-so_nos .bd-sc-fogo { animation: bdScFogo 6s ease-in-out infinite; }
+.bd-wrap-so_nos:hover .bd-sc-raio, .orb-grande .bd-svg.bd-so_nos .bd-sc-raio { animation: bdScRaio 6s linear infinite; }
+.bd-wrap-so_nos:hover .bd-sc-clarao, .orb-grande .bd-svg.bd-so_nos .bd-sc-clarao { animation: bdScClarao 6s linear infinite; }
+@keyframes bdScFogo { 0%, 38% { transform: scale(.5, .3); opacity: .55; filter: brightness(.8); } 41% { transform: scale(1.3, 1.25); opacity: 1; filter: brightness(1.9); } 52% { transform: scale(1.05); filter: brightness(1.15); } 88% { transform: scale(1); opacity: 1; filter: none; } 100% { transform: scale(.5, .3); opacity: .55; } }
+@keyframes bdScRaio { 0%, 37% { opacity: 0; } 38% { opacity: 1; } 39.5% { opacity: 0; } 40.5% { opacity: 1; } 44%, 100% { opacity: 0; } }
+@keyframes bdScClarao { 0%, 37% { opacity: 0; } 38% { opacity: .9; } 43%, 100% { opacity: 0; } }
 
 /* ---------- POPOVER "ORB": ícone grande em cima, nome embaixo ---------- */
 #orb-pop { position: fixed; display: none; z-index: 12000; pointer-events: none; min-width: 176px; max-width: 270px; padding: 20px 22px 16px; border-radius: 16px; text-align: center;

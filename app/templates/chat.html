@@ -9554,7 +9554,7 @@
                 <span class="pc-chip nivel" title="Nível: experiência total acumulada">Nv. ${Number(pf.nivel || 1)}</span>
                 <span class="pc-patente">${Cosm.htmlPatente(pat, 34, { nivel: pf.nivel })}</span>
                 ${(pf.badges && pf.badges.length) ? `<span class="pc-sep-ins"></span><span class="pc-insignias">${Cosm.htmlBadges(pf.badges, 24)}</span>` : ''}
-                <button type="button" class="pc-info" data-acao="montanha" title="Como funcionam as patentes e as insígnias">!</button>
+                ${Number(pf.nivel || 1) < 10 ? `<button type="button" class="pc-info" data-acao="montanha" title="Como funcionam as patentes e as insígnias">!</button>` : ''}
             </div>`;
 
             const linhaUsuario = (pf.username || pf.pronomes)

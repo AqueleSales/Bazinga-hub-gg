@@ -320,7 +320,7 @@ with app.app_context():
     ok(db.session.get(Person, ids['estranho']).moldura is None, 'Desequipar item livre limpa o slot')
     est.emit('listar_inventario')
     inv_e = ev(est, 'inventario')[-1]['args'][0]
-    ok(inv_e['posses'] == [] and inv_e['catalogo'] == [], 'O inventário de quem não é tester não tem nenhum exclusivo')
+    ok(set(inv_e['posses']) <= {'badge:beta_tester'} and all(i['id'] == 'badge:beta_tester' for i in inv_e['catalogo']), 'Quem não é tester só tem a insígnia Beta (automática), nenhum outro exclusivo')
 
 print()
 print('TUDO CERTO' if not falhas else f'{len(falhas)} FALHA(S):\n  - ' + '\n  - '.join(falhas))

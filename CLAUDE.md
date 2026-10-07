@@ -1738,6 +1738,14 @@ teclado/configurações, e responder). Não cria telas novas: chama o que o desk
   avisos da conta velha continuariam chegando. Toque na notificação abre `/chat?dm=<id>` (ou `postMessage` pra aba aberta). **iPhone**: só funciona com o
   app instalado na Tela de Início (iOS 16.4+). O app do Windows (Electron) não usa (sem service worker; tem aviso próprio). Teste: `python testes/fumaca_push.py`
   (envio real não é testado: `pywebpush.webpush` é trocado por um registrador).
+- **Insígnias (07/10/2026)**: 6 em `cosmeticos.CATALOGO` (ordem do cartão): Criador (capacete de obra; no popover é uma pilha de 9 camadas em `translateZ` que gira
+  em `rotateY` = objeto 3D, `svgBadge3D`), Alpha Tester (capacete romano; olhos vermelhos em flash), Beta Tester (Medusa dormindo; acorda e volta a dormir), BAZINGA
+  (símbolo dos Lanternas Verdes, "on top!"; partículas -> explosão -> aura), Coder, Só nós (sarça ardente; raio -> fogo). "No zoom" = popover `.orb-grande`
+  (animação em loop) e, nas pequenas, `:hover`. **Quem recebe**: Beta = **todo mundo** (`posses_com_regras()` no `/chat`, 1 escrita só na 1ª vez);
+  BAZINGA = membro do servidor cujo id está em `config_app.servidor_bazinga_id` (ou env `BAZINGA_SERVER_ID`) — **por ID, nunca por nome** (qualquer um cria um servidor
+  "Bazinga"); Alpha = lista `ALPHA_NOMES` por nome de exibição, concedida só no `atualizar_banco.py` passo 26 (nome repetido ou não achado vira aviso; use
+  `conceder_item.py <@usuario> badge:alpha_tester`). O passo 26 também define o servidor Bazinga (o mais antigo com esse nome: **confira o id impresso**) e dá beta/BAZINGA
+  a quem já existe. A insígnia não é retirada se a pessoa sair do servidor. O "!" do cartão só aparece abaixo do nível 10. Teste: `python testes/fumaca_insignias.py`.
 - **Não testado ao vivo**: toque longo, arrastar pro lado, teclado e call em celular real; losango com call real.
 
 ---

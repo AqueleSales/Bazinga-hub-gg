@@ -126,10 +126,17 @@ def _item(tipo, id_, nome, desc, tema=None, raridade='lendario', **extra):
 
 
 # ---- Insígnias (aparecem no cartão de perfil, ao lado do nome) ----
-_item('badge', 'criador', 'Criador', 'Quem criou o Panteão do zero.', raridade='unico')
-_item('badge', 'beta_tester', 'Beta Tester', 'Testou tudo antes de existir. Cada bug achado é uma medalha.', raridade='unico')
+# A ordem aqui é a ordem em que aparecem no cartão. Regras de quem recebe cada uma:
+#   criador / coder / so_nos  -> manual (LABORATORIO abaixo ou conceder_item.py)
+#   alpha_tester              -> lista de pessoas (ALPHA_NOMES, concedida por atualizar_banco.py / conceder_item.py)
+#   beta_tester               -> TODO MUNDO (o app inteiro está no beta): garantir_insignias_automaticas()
+#   bazinga                   -> quem é membro do servidor Bazinga (id em config_app 'servidor_bazinga_id')
+_item('badge', 'criador', 'Criador', 'Quem construiu o Panteão do zero, tijolo por tijolo.', raridade='unico')
+_item('badge', 'alpha_tester', 'Alpha Tester', 'Esteve aqui antes de todo mundo e viu o Panteão nascer.', raridade='unico')
+_item('badge', 'beta_tester', 'Beta Tester', 'Está no beta. Cada bug achado acorda a Medusa.', raridade='lendario')
+_item('badge', 'bazinga', 'BAZINGA', 'on top!', raridade='lendario')
 _item('badge', 'coder', 'Coder', 'Mexeu no código por baixo do capô.', raridade='unico')
-_item('badge', 'so_nos', 'Só nós', 'Duas chamas, uma fusão. Só quem começou isso tem.', raridade='unico', tema='fusao')
+_item('badge', 'so_nos', 'Só nós', 'Uma sarça que arde e não se consome. Só quem começou isso tem.', raridade='unico', tema='fusao')
 
 # ---- Laboratório: itens do tema Gogeta ----
 _item('moldura', 'gogeta', 'Aura Dourada', 'Anel de ki dourado com chamas subindo.', 'gogeta')
@@ -233,6 +240,108 @@ LABORATORIO = {
     'filippo.chiarion': (['badge:criador', 'badge:beta_tester', 'badge:coder', 'badge:so_nos']
                          + _itens_do_tema('sasuke') + _itens_do_tema('fusao')),
 }
+
+
+# ==========================================
+# INSÍGNIAS POR REGRA (não precisam de concessão manual)
+# ==========================================
+BADGE_BETA = 'badge:beta_tester'
+BADGE_BAZINGA = 'badge:bazinga'
+ALPHA_NOMES = ['filippo', 'fernando albernaz', 'gabriel alves santana', 'gabriel silva', 'arthur neves fiorotti', 'juarez']
+_cache_bazinga = {}
+
+
+def _normalizar(texto):
+    import unicodedata
+    t = unicodedata.normalize('NFKD', texto or '')
+    return ' '.join(''.join(c for c in t if not unicodedata.combining(c)).lower().split())
+
+
+def id_servidor_bazinga():
+    """Id do servidor Bazinga (config_app 'servidor_bazinga_id', ou a env BAZINGA_SERVER_ID). Por ID, nunca por nome:
+    qualquer um pode criar um servidor chamado "Bazinga". None se ainda não foi definido."""
+    import os
+    if 'id' in _cache_bazinga:
+        return _cache_bazinga['id']
+    from .models import ConfigApp
+    valor = os.environ.get('BAZINGA_SERVER_ID')
+    if not valor:
+        c = ConfigApp.query.get('servidor_bazinga_id')
+        valor = c.valor if c else None
+    if valor and str(valor).isdigit():
+        _cache_bazinga['id'] = int(valor)   # só guarda quando existe: se ainda não foi definido, olha de novo da próxima vez
+        return _cache_bazinga['id']
+    return None
+
+
+def garantir_insignias_automaticas(pessoa, posses):
+    """Beta pra todo mundo; BAZINGA pra quem está no servidor Bazinga. Mexe em `posses` e devolve True se concedeu algo
+    (quem chama comita). Só consulta o servidor quando a pessoa ainda NÃO tem a insígnia."""
+    mudou = False
+    if BADGE_BETA not in posses and conceder_item(pessoa.id, BADGE_BETA, 'beta'):
+        posses.add(BADGE_BETA); mudou = True
+    if BADGE_BAZINGA not in posses:
+        sid = id_servidor_bazinga()
+        if sid:
+            from .utils import eh_membro
+            if eh_membro(pessoa, sid) and conceder_item(pessoa.id, BADGE_BAZINGA, 'bazinga'):
+                posses.add(BADGE_BAZINGA); mudou = True
+    return mudou
+
+
+def posses_com_regras(pessoa):
+    """posses_da_pessoa + insígnias automáticas (1 escrita só na primeira vez de cada insígnia). Nunca quebra o /chat."""
+    from .models import db
+    posses = posses_da_pessoa(pessoa.id)
+    try:
+        if garantir_insignias_automaticas(pessoa, posses):
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f'[ERRO INSIGNIAS AUTOMATICAS] {e}')
+        posses = posses_da_pessoa(pessoa.id)
+    return posses
+
+
+def conceder_insignias_iniciais(log=print):
+    """Passo único do atualizar_banco.py (idempotente): beta pra todos, define o servidor Bazinga e dá a insígnia aos
+    membros, e alpha pra lista ALPHA_NOMES (por nome de exibição; avisa se não achar ou se tiver nome repetido)."""
+    from sqlalchemy import func
+    from .models import db, Person, Server, ConfigApp
+    todas = Person.query.all()
+    novos = sum(1 for p in todas if conceder_item(p.id, BADGE_BETA, 'beta'))
+    log(f'✅ Beta Tester: {novos} pessoa(s) receberam agora (de {len(todas)}).')
+
+    srv_cfg = ConfigApp.query.get('servidor_bazinga_id')
+    if not (srv_cfg and srv_cfg.valor):
+        srv = Server.query.filter(func.lower(Server.name) == 'bazinga').order_by(Server.id).first()
+        if srv:
+            db.session.add(ConfigApp(chave='servidor_bazinga_id', valor=str(srv.id)))
+            db.session.flush()
+            log(f'✅ Servidor Bazinga definido: id {srv.id} ("{srv.name}", dono id {srv.owner_id}). Confira se é o certo.')
+    srv_cfg = ConfigApp.query.get('servidor_bazinga_id')
+    if srv_cfg and srv_cfg.valor and srv_cfg.valor.isdigit():
+        srv = Server.query.get(int(srv_cfg.valor))
+        if srv:
+            n = sum(1 for m in srv.members if conceder_item(m.id, BADGE_BAZINGA, 'bazinga'))
+            log(f'✅ BAZINGA: {n} membro(s) do servidor "{srv.name}" receberam agora (de {len(srv.members)}).')
+    else:
+        log('ℹ️ Não achei um servidor chamado "Bazinga". Defina com a env BAZINGA_SERVER_ID ou insira em config_app.')
+
+    por_nome = {}
+    for p in todas:
+        por_nome.setdefault(_normalizar(p.name), []).append(p)
+    for nome in ALPHA_NOMES:
+        achados = por_nome.get(nome, [])
+        if len(achados) == 1:
+            ok = conceder_item(achados[0].id, 'badge:alpha_tester', 'alpha')
+            log(f'✅ Alpha Tester: {achados[0].name} (id {achados[0].id}, @{achados[0].username}) {"recebeu" if ok else "já tinha"}.')
+        elif not achados:
+            log(f'⚠️ Alpha Tester: não achei "{nome}". Use: python conceder_item.py <@usuario> badge:alpha_tester')
+        else:
+            log(f'⚠️ Alpha Tester: "{nome}" bate com {len(achados)} contas ({", ".join("@" + str(a.username) for a in achados)}). '
+                f'Use conceder_item.py na certa.')
+    db.session.commit()
 
 
 # ==========================================
