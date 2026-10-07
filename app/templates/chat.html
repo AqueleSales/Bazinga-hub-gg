@@ -114,7 +114,7 @@
         /* ==========================================================================
            2. SIDEBARS E DASHBOARD
            ========================================================================== */
-        .left-sidebar-wrapper { width: 312px; display: flex; flex-direction: column; flex-shrink: 0; background-color: var(--bg-tertiary); border-right: 1px solid rgba(0,0,0,0.2); transition: background-color 0.3s;}
+        .left-sidebar-wrapper { width: calc(72px + var(--w-canais, 240px)); display: flex; flex-direction: column; flex-shrink: 0; background-color: var(--bg-tertiary); border-right: 1px solid rgba(0,0,0,0.2); transition: background-color 0.3s;}
         .left-top-section { display: flex; flex-grow: 1; overflow: hidden; }
 
         .servers-sidebar { width: 72px; background-color: var(--bg-tertiary); display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; transition: background-color 0.3s; }
@@ -2475,16 +2475,14 @@
            Só vale abaixo de 720px; no desktop nada disso aparece. Lógica no fim do <body> (#mob-nav).
            ========================================================================== */
         /* ---- ícones de serviço: Radar azul (onda), Loja rosa e Passe dourado (mexem ao passar o mouse / no ativo) ---- */
-        .ic-radar { color: #6ea8ff !important; position: relative; display: inline-block; }
-        .ic-radar::after { content: ''; position: absolute; left: 50%; top: 50%; width: 140%; height: 140%; margin: -70% 0 0 -70%; border-radius: 50%; border: 2px solid #6ea8ff; opacity: 0; animation: icOnda 2.6s ease-out infinite; pointer-events: none; }
-        @keyframes icOnda { 0% { transform: scale(.45); opacity: .75; } 100% { transform: scale(1.35); opacity: 0; } }
+        .ic-radar { color: #6ea8ff !important; }
         .ic-loja { color: #ff7ac6 !important; display: inline-block; transform-origin: 50% 90%; }
         .ic-passe { color: #ffd76a !important; display: inline-block; }
         .channel-item:hover .ic-loja, .channel-item.active .ic-loja, .market-header .ic-loja { animation: icBalanco 1.1s ease-in-out infinite; }
         .channel-item:hover .ic-passe, .channel-item.active .ic-passe { animation: icPulo 1.1s ease-in-out infinite; }
         @keyframes icBalanco { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
         @keyframes icPulo { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-3px) scale(1.12); } }
-        @media (prefers-reduced-motion: reduce) { .ic-radar::after, .ic-loja, .ic-passe { animation: none !important; } }
+        @media (prefers-reduced-motion: reduce) { .ic-loja, .ic-passe { animation: none !important; } }
 
         /* ---- responder mensagem (citação na mensagem + barra em cima do campo de texto) ---- */
         .msg-citacao { display: flex; align-items: center; gap: 6px; max-width: min(100%, 520px); margin: 2px 0 4px; padding: 4px 10px; border-left: 3px solid var(--brand-color); background: rgba(255,255,255,.05); border-radius: 0 8px 8px 0; font-size: 12.5px; color: var(--text-muted); cursor: pointer; overflow: hidden; }
@@ -2673,7 +2671,7 @@
             #mob-multi.losango .mob-bg { border-radius: 12px; transform: rotate(45deg) scale(.9); }
             #mob-multi.chamada .mob-bg { background: linear-gradient(135deg, #2dc770, #1b8a49); }
             #mob-multi i { position: absolute; z-index: 1; top: 3px; left: 50%; margin-left: -11px; width: 22px; text-align: center; color: #fff !important; font-size: 21px; transform: none !important; }
-            #mob-multi span.mob-rot { position: absolute; bottom: 7px; left: 0; right: 0; text-align: center; }
+            #mob-multi span.mob-rot { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; }
             #mob-multi:not(.on) .mob-bg { filter: saturate(.55) brightness(.85); }
 
             /* seletor: triângulo (Radar / Loja / Passe) ou losango (+ Call) */
@@ -14394,6 +14392,17 @@
         setInterval(atualizar, 1000);
         mq.addEventListener && mq.addEventListener('change', () => { if (!mq.matches) { fecharSel(); fecharVoce(); setPainel(null); } else atualizar(); });
         atualizar();
+
+        // Celular com o navegador em "Versão para computador": a página fica larga demais e tudo parece "zoom out".
+        (function () {
+            try {
+                const toque = matchMedia('(pointer: coarse)').matches, tela = Math.min(screen.width, screen.height);
+                if (toque && tela < 700 && innerWidth > 720 && !sessionStorage.getItem('pnt_aviso_desktop')) {
+                    sessionStorage.setItem('pnt_aviso_desktop', '1');
+                    setTimeout(() => { try { showToast('Seu navegador está em "Versão para computador". Desligue em ⋮ > Versão para computador pra usar o layout do celular.', 'warning'); } catch (e) {} }, 2500);
+                }
+            } catch (e) {}
+        })();
 
         // dica de uso, uma vez só
         if (mq.matches) {

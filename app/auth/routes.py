@@ -53,8 +53,16 @@ def login():
 
 @auth_bp.route('/callback/google')
 def callback():
-    token = oauth.google.authorize_access_token()
-    user_info = token.get('userinfo')
+    # Estado do OAuth que não bate (login começou em outro navegador/janela, sessão expirou) ou o Google recusou:
+    # antes virava "Erro interno" e o app caía. Agora volta pra tela de entrada com um aviso.
+    try:
+        token = oauth.google.authorize_access_token()
+        user_info = token.get('userinfo') or oauth.google.userinfo(token=token)
+    except Exception as e:
+        print(f"[ERRO LOGIN GOOGLE] {type(e).__name__}: {e}")
+        return redirect(url_for('main.entrar', erro='login'))
+    if not user_info or not user_info.get('email'):
+        return redirect(url_for('main.entrar', erro='login'))
 
     email = user_info.get('email')
     name = user_info.get('name')

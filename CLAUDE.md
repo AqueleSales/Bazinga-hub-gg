@@ -1715,6 +1715,17 @@ teclado/configurações, e responder). Não cria telas novas: chama o que o desk
   resumo (`resumos_de_resposta_canal/_dm` em `utils.py`) — nunca confia no texto do navegador. Gatilhos: seta ao passar o mouse, item "Responder" do menu,
   Alt+clique, triplo clique (opção em Configurações > Geral > Mensagens, `localStorage pnt_resp_triplo`), arrastar pra direita (celular). Teste:
   `python testes/fumaca_resposta.py`. **Rodar `python atualizar_banco.py` depois do deploy** (a rede de segurança do boot também cria as colunas).
+- **Instalar (`/entrar`) por plataforma**: Windows → botão que baixa o `.exe` mais novo (API do GitHub em `AqueleSales/panteao-releases`, cai no
+  `/releases/latest` se a API falhar; o instalador **não é assinado**, a página avisa do SmartScreen); Android/Chrome → botão do `beforeinstallprompt`
+  (ou passo a passo); iPhone → passo a passo do Safari; navegador embutido (Instagram...) → "Abrir no Chrome". `/entrar?instalar=1` mostra a página
+  mesmo logado (a home usa isso no "Baixar o app"). A home (`index.html`) é standalone, sem `base.html`. `bazinga_awards_url` **não existe** em nenhum
+  context processor (o link vinha vazio): sem ela o cartão vira um bloco sem link.
+- **Login que falha não vira "Erro interno"**: `auth.callback` captura erro do OAuth (estado que não bate, sessão expirada, Google recusou) e volta pra
+  `/entrar?erro=login` com aviso; existe um handler 500 próprio (HTML simples; `/api/*` devolve JSON).
+- **Largura das barras laterais**: `.left-sidebar-wrapper` é `calc(72px + var(--w-canais))`. Era `312px` fixo: arrastar a barra de DMs pra mais larga
+  vazava pra baixo do mapa e a alça (que fica na borda) sumia, sem como arrastar de volta.
+- **Celular em "Versão para computador"** (página larga, tudo "zoom out"): o chat avisa uma vez por sessão (`innerWidth > 720` com tela de toque pequena).
+- **Radar** é o alvo azul (`.ic-radar`), Loja rosa (`.ic-loja`), Passe dourado (`.ic-passe`) em todo lugar; Loja/Passe mexem no hover/ativo.
 - **Não testado ao vivo**: toque longo, arrastar pro lado, teclado e call em celular real; losango com call real.
 
 ---

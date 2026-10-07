@@ -81,6 +81,23 @@ def arquivo_grande_demais(e):
     return jsonify({'error': 'Imagem grande demais (máximo 5 MB)'}), 413
 
 
+@main_bp.app_errorhandler(500)
+def erro_interno(e):
+    """Página própria no lugar do "Internal Server Error" cru (o app instalado ficava preso nela)."""
+    print(f"[ERRO 500] {request.path}: {e}")
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Erro interno. Tente de novo.'}), 500
+    return Response(
+        '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<title>Ops</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0c10;'
+        'color:#f2f3f5;font-family:system-ui,sans-serif;text-align:center;padding:24px">'
+        '<div><h1 style="margin:0 0 8px">Algo deu errado aqui</h1>'
+        '<p style="color:#9aa0a6;margin:0 0 22px">Foi um tropeço do servidor, não é com você. Tenta de novo.</p>'
+        '<a href="/entrar" style="display:inline-block;background:#5865F2;color:#fff;text-decoration:none;'
+        'padding:12px 22px;border-radius:12px;font-weight:600">Voltar ao início</a></div>',
+        status=500, mimetype='text/html')
+
+
 @main_bp.context_processor
 def inject_user():
     # Procura pelo 'user_id' que a nossa rota do Google salvou na Sessão
@@ -127,6 +144,9 @@ def entrar():
             if usuario_da_sessao():
                 return redirect(url_for('auth.desktop_concluir'))
             return render_template("entrar.html")
+    # "Baixar o app" da home: mostra a página mesmo pra quem já está logado (senão o redirect abaixo escondia o download).
+    if request.args.get('instalar') == '1':
+        return render_template("entrar.html", erro=None)
     # Já logado (veio da home ou de uma sessão anterior): entra direto no
     # Bazingacord, sem passar por essa página de bloqueio.
     if usuario_da_sessao():
@@ -134,7 +154,7 @@ def entrar():
     # Marca que o login começou por aqui, para o callback do Google saber
     # que a pessoa deve cair direto no chat.
     session['veio_do_entrar'] = True
-    return render_template("entrar.html")
+    return render_template("entrar.html", erro=request.args.get('erro'))
 
 
 @main_bp.route("/abrir")

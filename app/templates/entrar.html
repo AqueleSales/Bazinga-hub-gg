@@ -78,19 +78,19 @@
       -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 78%);
     }
 
-    /* ---- Seta de voltar pra home ---- */
+    /* ---- Voltar pra home: pílula com texto (a setinha solta ficava colada na quina) ---- */
     .voltar {
-      position: fixed; top: 22px; left: 22px; z-index: 30;
-      width: 44px; height: 44px; border-radius: 50%;
-      display: grid; place-items: center;
-      background: rgba(20,21,26,.6);
+      position: fixed; top: max(18px, env(safe-area-inset-top)); left: 18px; z-index: 30;
+      display: inline-flex; align-items: center; gap: 8px;
+      height: 42px; padding: 0 18px 0 14px; border-radius: 999px;
+      background: rgba(20,21,26,.7);
       border: 1px solid var(--borda);
-      backdrop-filter: blur(12px);
-      color: var(--texto);
-      text-decoration: none;
-      font-size: 18px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      color: var(--texto); text-decoration: none;
+      font: 600 14px Inter, sans-serif;
       transition: transform .16s cubic-bezier(.16,.84,.44,1), background .16s;
     }
+    .voltar span { font-size: 18px; line-height: 1; }
     .voltar:hover { transform: translateX(-3px); background: rgba(255,255,255,.1); }
 
     /* ---- Cartão principal: duas colunas + divisor ---- */
@@ -201,6 +201,15 @@
     }
     .btn-instalar:hover { transform: translateY(-2px); background: #1b7d45; }
     .btn-instalar[hidden] { display: none; }
+    a.btn-instalar { text-decoration: none; }
+    .btn-instalar.leve { background: rgba(255,255,255,.07); border: 1px solid var(--borda); font-weight: 500; font-size: 13.5px; }
+    .btn-instalar.leve:hover { background: rgba(255,255,255,.12); }
+    .btn-instalar + .btn-instalar { margin-top: 10px; }
+    .nota { margin-top: 12px; font-size: 11.5px; line-height: 1.5; color: var(--texto-fraco); max-width: 290px; }
+    .nota[hidden], .passos[hidden] { display: none; }
+    .passos { margin-top: 4px; text-align: left; font-size: 13px; line-height: 1.55; color: #cfd2d6; max-width: 290px; background: rgba(255,255,255,.05); border-radius: 12px; padding: 12px 16px 12px 30px; }
+    .passos li { margin-bottom: 4px; }
+    .erro-login { background: rgba(242,63,66,.14); border: 1px solid rgba(242,63,66,.4); color: #ffb4b6; border-radius: 12px; padding: 10px 14px; font-size: 13px; line-height: 1.45; max-width: 290px; margin-bottom: 16px; }
 
     .btn-secundario {
       margin-top: 12px;
@@ -236,7 +245,8 @@
         content: ''; position: absolute; left: 12%; right: 12%; bottom: 0; height: 1px;
         background: linear-gradient(90deg, transparent, var(--borda), transparent);
       }
-      .voltar { top: 14px; left: 14px; }
+      .voltar { top: max(12px, env(safe-area-inset-top)); left: 12px; }
+      .porta { margin-top: 44px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -245,7 +255,7 @@
   </style>
 </head>
 <body>
-  <a class="voltar" href="{{ url_for('main.index') }}" title="Voltar pra {{ app_nome }}" aria-label="Voltar pra {{ app_nome }}">←</a>
+  <a class="voltar" href="{{ url_for('main.index') }}" aria-label="Voltar pra página inicial"><span>←</span> Início</a>
 
   <div class="aurora a1"></div>
   <div class="aurora a2"></div>
@@ -258,6 +268,8 @@
       </div>
       <h1>Entra no {{ app_nome }}</h1>
       <p class="sub">Chat, mapa com servidores plantados e calendário de eventos. Sem cadastro — usa a sua conta do Google.</p>
+
+      {% if erro %}<p class="erro-login">Não consegui terminar o login (a sessão expirou ou começou em outra janela). Toque em "Continuar com Google" de novo.</p>{% endif %}
 
       <a class="btn-google" href="{{ url_for('auth.login') }}">
         <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -299,16 +311,25 @@
       </svg>
     </div>
 
-    <section class="lado lado-download">
-      <div class="icone-download">📲</div>
-      <h2 class="titulo-lado">Leve o {{ app_nome }} com você</h2>
-      <p class="sub">Instale como app: sem barra de navegador, ícone na tela inicial, abre rapidinho.</p>
+    <section class="lado lado-download" id="app">
+      <div class="icone-download" id="dl-icone">📲</div>
+      <h2 class="titulo-lado" id="dl-titulo">Leve o {{ app_nome }} com você</h2>
+      <p class="sub" id="dl-sub">Instale como app: sem barra de navegador, ícone na tela inicial, abre rapidinho.</p>
 
+      <!-- Windows: instalador (.exe), pega a versão mais nova do GitHub -->
+      <a class="btn-instalar" id="btn-exe" href="https://github.com/AqueleSales/panteao-releases/releases/latest" hidden>⬇ Baixar para Windows</a>
+      <p class="nota" id="nota-exe" hidden></p>
+
+      <!-- Android/Chrome/Edge: instala pelo navegador -->
       <button class="btn-instalar" id="btn-instalar" hidden>Instalar o app</button>
 
-      <div class="alt-instalar" id="alt-instalar">
-        <p>Seu navegador ainda não liberou instalar por aqui.</p>
-        <button class="btn-secundario" id="btn-copiar-link">Copiar link pra abrir no Chrome</button>
+      <!-- Passo a passo quando o navegador não oferece o botão -->
+      <ol class="passos" id="passos" hidden></ol>
+
+      <!-- Só em navegador embutido de outro app (Instagram, Twitch...) -->
+      <div class="alt-instalar" id="alt-instalar" hidden>
+        <p>Você está dentro de outro app. Abra no Chrome pra instalar.</p>
+        <button class="btn-secundario" id="btn-copiar-link">Abrir no Chrome</button>
       </div>
 
       <div class="dica" id="dica-link"></div>
@@ -318,19 +339,70 @@
   <p class="rodape">{{ app_nome }}</p>
 
   <script>
-    // ---- Instalar como app (PWA) ----
-    // O navegador dispara 'beforeinstallprompt' só quando o site é mesmo
-    // instalável (manifesto + service worker + https). Por isso o botão nasce
-    // escondido: mostrar um "instalar" que não instala nada seria mentira.
+    // ---- Instalar: o que mostrar depende de onde a pessoa está ----
+    // O navegador só dispara 'beforeinstallprompt' quando o site é mesmo instalável;
+    // por isso o botão "Instalar" nasce escondido (nada de botão que não instala).
+    const ua = navigator.userAgent;
+    const ehIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const ehAndroid = /Android/i.test(ua);
+    const ehWindows = /Windows/i.test(ua) && !ehAndroid;
+    const ehCeluar = ehIOS || ehAndroid;
+    const embutido = /FBAN|FBAV|Instagram|Line\/|TikTok|Twitch|; wv\)|Snapchat/i.test(ua);
+    const URL_APP = "{{ url_for('main.index', _external=True) }}";
+    const $ = (id) => document.getElementById(id);
+    const btnInstalar = $('btn-instalar'), btnExe = $('btn-exe'), passos = $('passos');
     let promptInstalacao = null;
-    const btnInstalar = document.getElementById('btn-instalar');
-    const altInstalar = document.getElementById('alt-instalar');
+
+    const titulo = $('dl-titulo'), sub = $('dl-sub');
+    function mostrarPassos(lista) {
+      passos.innerHTML = lista.map((t) => '<li>' + t + '</li>').join('');
+      passos.hidden = false;
+    }
+
+    if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+      titulo.textContent = 'Você já está no app';
+      sub.textContent = 'Tudo certo por aqui. Pode entrar com o Google ao lado.';
+    } else if (embutido && ehCeluar) {
+      $('alt-instalar').hidden = false;
+      sub.textContent = 'Esta janela é de outro app e não instala nada.';
+    } else if (ehWindows) {
+      // PC com Windows: o instalador é o caminho principal; instalar pelo navegador fica como segunda opção
+      titulo.textContent = 'Baixe o app pro Windows';
+      sub.textContent = 'Janela própria, abre com o Windows e se atualiza sozinho.';
+      btnExe.hidden = false;
+      const nota = $('nota-exe'); nota.hidden = false;
+      nota.textContent = 'Instalador do Windows 10/11. Na primeira vez o Windows pode avisar "editor desconhecido": clique em "Mais informações" e depois em "Executar assim mesmo".';
+      fetch('https://api.github.com/repos/AqueleSales/panteao-releases/releases/latest')
+        .then((r) => r.json())
+        .then((d) => {
+          const a = (d.assets || []).find((x) => /\.exe$/i.test(x.name));
+          if (!a) return;
+          btnExe.href = a.browser_download_url;
+          btnExe.textContent = '⬇ Baixar para Windows (' + d.tag_name + ' · ' + Math.round(a.size / 1048576) + ' MB)';
+        })
+        .catch(() => {});
+      btnInstalar.classList.add('leve');
+      btnInstalar.textContent = 'Ou instalar pelo navegador';
+    } else if (ehIOS) {
+      sub.textContent = 'No iPhone a instalação é pelo Safari:';
+      mostrarPassos([
+        'Abra este endereço no <b>Safari</b> (Chrome não instala no iPhone).',
+        'Toque no botão <b>Compartilhar</b> (o quadrado com a seta pra cima).',
+        'Toque em <b>Adicionar à Tela de Início</b> e depois em <b>Adicionar</b>.'
+      ]);
+    } else if (ehAndroid) {
+      // enquanto o botão não aparece (ou se o navegador não oferecer), o passo a passo fica visível
+      mostrarPassos(['Toque nos três pontinhos <b>⋮</b> do navegador.', 'Toque em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>).']);
+    } else {
+      // Mac / Linux / outros: só o instalar do navegador, se existir
+      sub.textContent = 'Instale pelo navegador: sem barra de endereço e com ícone próprio.';
+    }
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       promptInstalacao = e;
       btnInstalar.hidden = false;
-      altInstalar.hidden = true;
+      passos.hidden = true;          // o botão resolve; o passo a passo some
     });
 
     btnInstalar.addEventListener('click', async () => {
@@ -341,37 +413,24 @@
       if (outcome === 'accepted') btnInstalar.hidden = true;
     });
 
-    // Já rodando instalado: não faz sentido oferecer nada disso
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      btnInstalar.hidden = true;
-      altInstalar.hidden = true;
-    }
-
-    // ---- Fallback: copiar link / abrir no Chrome no Android ----
-    const ehAndroid = /Android/i.test(navigator.userAgent);
-    const URL_APP = "{{ url_for('main.index', _external=True) }}";
-
-    document.getElementById('btn-copiar-link').addEventListener('click', async () => {
-      const dica = document.getElementById('dica-link');
-
+    // ---- Navegador embutido de outro app: abre no Chrome (Android) ou copia o link ----
+    $('btn-copiar-link').addEventListener('click', async () => {
+      const dica = $('dica-link');
       if (ehAndroid) {
         const semEsquema = URL_APP.replace(/^https?:\/\//, '');
-        window.location.href =
-          `intent://${semEsquema}#Intent;scheme=https;package=com.android.chrome;end`;
+        window.location.href = `intent://${semEsquema}#Intent;scheme=https;package=com.android.chrome;end`;
         return;
       }
-
       try {
         await navigator.clipboard.writeText(URL_APP);
-        dica.textContent = 'Link copiado! Abre o Chrome e cola na barra de endereço pra instalar de lá.';
+        dica.textContent = 'Link copiado! Cole no Safari (iPhone) ou no Chrome pra instalar de lá.';
       } catch {
-        dica.textContent = 'Copia este endereço e cola no Chrome: ' + URL_APP;
+        dica.textContent = 'Copie este endereço e abra no navegador: ' + URL_APP;
       }
       dica.classList.add('visivel');
     });
 
-    // Registra o service worker aqui já: assim, quando a pessoa entrar,
-    // o navegador já sabe que o site é instalável.
+    // Registra o service worker já aqui: quando a pessoa entrar, o navegador já sabe que o site é instalável.
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
