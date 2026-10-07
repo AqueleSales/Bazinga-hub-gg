@@ -2489,7 +2489,7 @@
         .message.swipe-ativo::before { content: '\f3e5'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; left: -46px; top: 50%; width: 32px; height: 32px; margin-top: -16px; border-radius: 50%; background: rgba(255,255,255,.1); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 14px; }
         .message.swipe-ok::before { background: var(--brand-color); color: #fff; }
 
-        #mob-nav, #mob-sel, #mob-sel-fundo, #mob-voce, #mob-dica, #ctx-rapidas, .mob-grab, #mob-previa-btn, .pf-previa-x, #mob-fab, #mob-vazio { display: none; }
+        #mob-callbar, #mob-nav, #mob-sel, #mob-sel-fundo, #mob-voce, #mob-dica, #ctx-rapidas, .mob-grab, #mob-previa-btn, .pf-previa-x, #mob-fab, #mob-vazio { display: none; }
         @media (max-width: 720px) {
             :root { --nav-h: calc(64px + env(safe-area-inset-bottom, 0px)); }
             body { overflow: hidden; }
@@ -2548,6 +2548,17 @@
             .call-janela.mini .call-btn { width: 32px; height: 32px; font-size: 13px; }
             .call-janela.mini .call-controls-bar { padding: 3px 8px; gap: 6px; }
             .cj-topo { touch-action: none; }
+            /* sem janelinha no celular: a call minimizada some da tela (continua rodando, com áudio) e vira a faixa verde no topo */
+            .call-janela.mini { visibility: hidden !important; pointer-events: none !important; width: 2px !important; height: 2px !important; min-width: 0 !important; left: 0 !important; top: 0 !important; border: 0; overflow: hidden; }
+            #mob-callbar.on { display: flex; position: fixed; top: 0; left: 0; right: 0; height: 42px; z-index: 1260; align-items: center; gap: 10px; padding: 0 8px 0 14px; background: linear-gradient(90deg, #1b8a49, #2dc770); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+            #mob-callbar .cb-ponto { width: 9px; height: 9px; border-radius: 50%; background: #fff; flex: none; animation: mobBatida 1.4s ease-in-out infinite; }
+            #mob-callbar .cb-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            #mob-callbar .cb-nome small { font-weight: 600; opacity: .85; margin-left: 6px; }
+            #mob-callbar button { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,.28); color: #fff; font-size: 14px; cursor: pointer; }
+            #mob-callbar button.cb-sair { background: #ed4245; }
+            body.mob-em-call .discord-app { margin-top: 42px; height: calc(100vh - var(--nav-h) - 42px); height: calc(100dvh - var(--nav-h) - 42px); }
+            body.mob-em-call .left-sidebar-wrapper { top: 42px; }
+            #mob-multi.losango::before { content: ''; position: absolute; top: -14px; left: 50%; margin-left: 12px; width: 11px; height: 11px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 0 3px var(--bg-tertiary); z-index: 2; animation: mobBatida 1.4s ease-in-out infinite; }
 
             /* modais e configurações: tela cheia / folha larga */
             .modal-overlay, .settings-overlay { height: 100vh; height: 100dvh; }
@@ -14137,6 +14148,12 @@
         <button class="mob-item" data-id="call" type="button"><i class="fa-solid fa-headset"></i><span>Call</span></button>
     </div>
     <div id="mob-dica">Toque ou arraste pra cima: Radar · Loja · Passe</div>
+    <div id="mob-callbar" role="button" aria-label="Voltar para a call">
+        <span class="cb-ponto"></span>
+        <span class="cb-nome">Em call<small></small></span>
+        <button type="button" class="cb-mic" aria-label="Microfone"><i class="fa-solid fa-microphone"></i></button>
+        <button type="button" class="cb-sair" aria-label="Sair da call"><i class="fa-solid fa-phone-slash"></i></button>
+    </div>
     <nav id="mob-nav" aria-label="Navegação">
         <button class="mob-slot" data-slot="1" type="button"><i class="fa-solid fa-layer-group"></i><span>Servidores</span></button>
         <button class="mob-slot" data-slot="2" type="button"><i class="fa-solid fa-comments"></i><span>Chat</span></button>
@@ -14204,6 +14221,20 @@
                 b.classList.toggle('on', b.dataset.id === ativoNoSel);
                 b.classList.toggle('viva', b.dataset.id === 'call' && emCall());
             });
+            // faixa verde "Em call" (aparece quando você está em call mas fora da tela dela)
+            const bar = $('mob-callbar');
+            const mostrar = emCall() && !cheia;
+            if (mostrar !== bar.classList.contains('on')) {
+                bar.classList.toggle('on', mostrar);
+                document.body.classList.toggle('mob-em-call', mostrar);
+                try { posicionarCall(); } catch (e) {}
+            }
+            if (mostrar) {
+                const nm = ($('connected-voice-name') || {}).textContent || '';
+                const sm = bar.querySelector('.cb-nome small'); if (sm.textContent !== nm) sm.textContent = nm;
+                const ic = document.querySelector('#btn-main-mic i'); const mi = bar.querySelector('.cb-mic i');
+                if (ic && mi && mi.className !== ic.className) mi.className = ic.className;
+            }
             // foto no slot 5
             const av = $('bottom-avatar-container');
             const alvo = $('mob-nav-av');
@@ -14268,6 +14299,13 @@
         document.querySelector('.left-sidebar-wrapper').addEventListener('click', (e) => {
             if (!mq.matches || !painel || !e.isTrusted) return;   // isTrusted: o app clica no 1º canal sozinho ao entrar no servidor; isso não deve fechar o painel
             if (e.target.closest('.channel-item.text-channel, .channel-item.voice-channel, .user-dm-item, #btn-amigos, #btn-mercado, #btn-battlepass, #btn-voltar-radar, .atalho-servidor')) setTimeout(() => setPainel(null), 0);
+        });
+
+        // ---- faixa da call ----
+        $('mob-callbar').addEventListener('click', (e) => {
+            if (e.target.closest('.cb-mic')) { const m = $('btn-main-mic'); if (m) m.click(); setTimeout(atualizar, 80); return; }
+            if (e.target.closest('.cb-sair')) { const d = $('btn-main-disconnect'); if (d) d.click(); setTimeout(atualizar, 200); return; }
+            fecharSel(); setPainel(null); if (emCall()) callMostrar('cheia'); atualizar();
         });
 
         // ---- Você ----
