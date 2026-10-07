@@ -10,7 +10,7 @@ import cloudinary
 import cloudinary.uploader
 import requests
 from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
-                      GeoNote, MapServer, Server, Invite, Reaction, Friendship, br_now, db, server_members)
+                      GeoNote, MapServer, Server, Invite, Reaction, Friendship, PushSub, br_now, db, server_members)
 from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                      localizacao_ligada, localizacao_ip_permitida, MSG_LOCALIZACAO_DESLIGADA,
@@ -79,6 +79,66 @@ def arquivo_grande_demais(e):
     """Com MAX_CONTENT_LENGTH o Flask corta o request sozinho e devolve uma
     página HTML de erro - o fetch() do upload esperava JSON e quebrava."""
     return jsonify({'error': 'Imagem grande demais (máximo 5 MB)'}), 413
+
+
+# ==========================================
+# PUSH: chave pública, inscrever e cancelar (um aparelho por vez)
+# ==========================================
+@main_bp.route("/api/push/chave")
+def push_chave():
+    if not usuario_da_sessao():
+        return jsonify({'error': 'Acesso negado'}), 401
+    from ..push import chave_publica
+    try:
+        return jsonify({'chave': chave_publica()})
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO PUSH CHAVE] {e}")
+        return jsonify({'error': 'Avisos indisponíveis agora'}), 503
+
+
+@main_bp.route("/api/push/inscrever", methods=["POST"])
+def push_inscrever():
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'error': 'Acesso negado'}), 401
+    dados = request.get_json(silent=True) or {}
+    endpoint = str(dados.get('endpoint') or '')
+    chaves = dados.get('keys') or {}
+    p256dh, auth = str(chaves.get('p256dh') or ''), str(chaves.get('auth') or '')
+    if not endpoint.startswith('https://') or len(endpoint) > 700 or not (20 < len(p256dh) <= 200) or not (8 < len(auth) <= 100):
+        return jsonify({'error': 'Inscrição inválida'}), 400
+    try:
+        def preparar():
+            sub = PushSub.query.filter_by(endpoint=endpoint).first()
+            if not sub:
+                sub = PushSub(endpoint=endpoint, p256dh=p256dh, auth=auth, person_id=usuario.id)
+                db.session.add(sub)
+            sub.person_id = usuario.id          # outra conta no mesmo aparelho: o aviso passa pra quem está logado agora
+            sub.p256dh, sub.auth = p256dh, auth
+            sub.user_agent = (request.headers.get('User-Agent') or '')[:250]
+        comitar_com_retry(preparar)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO PUSH INSCREVER] {e}")
+        return jsonify({'error': 'Não consegui salvar agora'}), 500
+    return jsonify({'ok': True})
+
+
+@main_bp.route("/api/push/cancelar", methods=["POST"])
+def push_cancelar():
+    usuario = usuario_da_sessao()
+    if not usuario:
+        return jsonify({'ok': True})
+    endpoint = str((request.get_json(silent=True) or {}).get('endpoint') or '')
+    try:
+        def preparar():
+            PushSub.query.filter_by(endpoint=endpoint, person_id=usuario.id).delete(synchronize_session=False)
+        comitar_com_retry(preparar)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO PUSH CANCELAR] {e}")
+    return jsonify({'ok': True})
 
 
 @main_bp.app_errorhandler(500)
@@ -220,6 +280,40 @@ def service_worker():
 
 _SW_TEMPLATE = r"""
 const VERSAO = '__VERSAO__';
+
+// ---- Notificações push: o servidor manda JSON {titulo, corpo, url, tag, urgente, tipo, de_id} ----
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (er) { d = { corpo: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.titulo || '__NOME__', {
+    body: d.corpo || '',
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    icon: '/static/img/icone-192.png',
+    badge: '/static/img/icone-192.png',
+    data: d,
+    requireInteraction: !!d.urgente,
+    vibrate: d.urgente ? [300, 150, 300, 150, 300] : [120]
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const d = e.notification.data || {};
+  const alvo = d.url || '/chat';
+  e.waitUntil((async () => {
+    const abas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of abas) {
+      if (new URL(c.url).origin === self.location.origin) {
+        await c.focus();
+        c.postMessage({ tipo: 'push_clique', dados: d });
+        return;
+      }
+    }
+    await self.clients.openWindow(alvo);   // a página lê ?dm=ID e abre a conversa
+  })());
+});
+
 const CACHE_ESTATICO = 'estatico-' + VERSAO;
 const CACHE_CDN = 'cdn-v1';
 const CACHEAR_ESTATICO = __CACHEAR_ESTATICO__;

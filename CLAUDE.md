@@ -1729,6 +1729,15 @@ teclado/configurações, e responder). Não cria telas novas: chama o que o desk
 - **Rumo no mapa (só celular)**: leque azul suave no avatar apontando pra onde o aparelho aponta (`deviceorientationabsolute` no Android, `webkitCompassHeading` no iPhone, que pede permissão num toque). Não testado em aparelho.
 - X das notas do mapa: 28px no desktop, 40px no celular, com área de toque maior que o desenho.
 - **Radar** é o alvo azul (`.ic-radar`), Loja rosa (`.ic-loja`), Passe dourado (`.ic-passe`) em todo lugar; Loja/Passe mexem no hover/ativo.
+- **Notificações push (Web Push, 06/10/2026)**: `app/push.py` (pywebpush). Chaves VAPID: `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY` do ambiente ou,
+  sem elas, geradas no 1º uso e guardadas na tabela `config_app` (**não precisa configurar nada no Render**; `VAPID_SUBJECT` é opcional). Tabelas novas
+  `push_sub` (um aparelho por linha, `endpoint` único: outra conta no mesmo aparelho assume a inscrição) e `config_app` nascem pelo `create_all`.
+  O cliente avisa `visibilidade` (aba visível ou não) e o servidor **só manda push se nenhuma aba da pessoa está visível** e ela não está em "Não perturbar"
+  (`push_se_ausente()` em `events.py`; `criar_notificacao()` e `chamar_amigo` chamam). DM, menção, amizade e "está te ligando" viram push; offline +
+  tentou ligar vira "Ligação perdida". Inscrição que o navegador recusa (404/410) é apagada. Sair da conta solta o aparelho (`pushSairAntes`), senão os
+  avisos da conta velha continuariam chegando. Toque na notificação abre `/chat?dm=<id>` (ou `postMessage` pra aba aberta). **iPhone**: só funciona com o
+  app instalado na Tela de Início (iOS 16.4+). O app do Windows (Electron) não usa (sem service worker; tem aviso próprio). Teste: `python testes/fumaca_push.py`
+  (envio real não é testado: `pywebpush.webpush` é trocado por um registrador).
 - **Não testado ao vivo**: toque longo, arrastar pro lado, teclado e call em celular real; losango com call real.
 
 ---

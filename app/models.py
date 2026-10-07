@@ -484,6 +484,29 @@ class Notificacao(db.Model):
     atualizada_em = db.Column(db.DateTime, default=br_now)
 
 
+# ==========================================
+# NOTIFICAÇÃO PUSH (aviso no aparelho com o app fechado)
+# ------------------------------------------------------------
+# Uma linha por navegador/aparelho inscrito. `endpoint` é único: se outra conta entrar no mesmo aparelho, a linha
+# passa pra ela (ver /api/push/inscrever). ConfigApp guarda as chaves VAPID geradas no primeiro uso.
+# ==========================================
+class PushSub(db.Model):
+    __tablename__ = 'push_sub'
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    endpoint = db.Column(db.String(700), nullable=False, unique=True)
+    p256dh = db.Column(db.String(200), nullable=False)
+    auth = db.Column(db.String(100), nullable=False)
+    user_agent = db.Column(db.String(250), nullable=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+
+class ConfigApp(db.Model):
+    __tablename__ = 'config_app'
+    chave = db.Column(db.String(60), primary_key=True)
+    valor = db.Column(db.Text, nullable=True)
+
+
 class Silenciado(db.Model):
     """Contato que a pessoa silenciou: as mensagens dele continuam chegando, mas sem som,
     toast, badge nem caixa de entrada. Mora na conta (acompanha a pessoa em qualquer aparelho)."""

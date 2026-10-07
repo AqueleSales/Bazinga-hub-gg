@@ -4428,6 +4428,19 @@
 
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0;"></div>
 
+                    <div id="push-secao">
+                        <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">Avisos no aparelho</h3>
+                        <div class="discord-toggle">
+                            <div>
+                                <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Avisar mesmo com o app fechado</h4>
+                                <p style="color: var(--text-muted); font-size: 14px;">Mensagem direta, menção, pedido de amizade e ligação aparecem na tela do aparelho. Só chega quando você <b>não</b> está com o app aberto, e não chega em "Não perturbar". Vale só neste aparelho.</p>
+                                <p id="push-estado" style="font-size: 13px; color: var(--yellow-color); margin-top: 6px;"></p>
+                            </div>
+                            <div class="toggle-switch tg-app" id="tg-push"></div>
+                        </div>
+                        <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0;"></div>
+                    </div>
+
                     <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">Mensagens</h3>
                     <div class="discord-toggle">
                         <div>
@@ -14268,6 +14281,7 @@
                 <button type="button" data-a="perfil"><i class="fa-solid fa-id-card"></i>Meu perfil</button>
                 <button type="button" data-a="inventario"><i class="fa-solid fa-box-open"></i>Inventário</button>
                 <button type="button" data-a="config"><i class="fa-solid fa-gear"></i>Configurações</button>
+                <button type="button" data-a="avisos"><i class="fa-solid fa-bell"></i>Avisos</button>
                 <button type="button" data-a="mic"><i class="fa-solid fa-microphone"></i>Microfone</button>
                 <button type="button" data-a="fone"><i class="fa-solid fa-headphones"></i>Fone</button>
                 <button type="button" data-a="sair" class="perigo"><i class="fa-solid fa-right-from-bracket"></i>Sair</button>
@@ -14451,8 +14465,9 @@
         voce.addEventListener('click', (e) => { if (e.target === voce) fecharVoce(); });
         voce.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => {
             const a = b.dataset.a;
-            if (a === 'sair') { location.href = '/auth/logout'; return; }
+            if (a === 'sair') { Promise.resolve(window.pushSairAntes && window.pushSairAntes()).finally(() => { location.href = '/auth/logout'; }); return; }
             fecharVoce();
+            if (a === 'avisos') { const cfg = $('btn-open-settings'); if (cfg) cfg.click(); setTimeout(() => { const t = document.querySelector('.set-tab[data-target="set-geral"]'); if (t) t.click(); }, 120); return; }
             const alvo = { perfil: 'btn-open-popout', inventario: 'btn-inventario', config: 'btn-open-settings', mic: 'btn-mic', fone: 'btn-deafen' }[a];
             const el = $(alvo); if (el) el.click();
         }));
@@ -14743,6 +14758,106 @@
         };
         document.addEventListener('touchend', fimSwipe, { passive: true });
         document.addEventListener('touchcancel', fimSwipe, { passive: true });
+    })();
+    </script>
+    <script>
+    // Avisos no aparelho (Web Push) + o app avisa o servidor quando está em segundo plano (só então chega push).
+    (function () {
+        const $ = (id) => document.getElementById(id);
+        const noApp = !!window.panteao;   // app do Windows (Electron) tem aviso próprio e não registra service worker
+        const suportado = !noApp && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+        const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const instalado = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+        // ---- visibilidade: o servidor só manda push se NENHUMA aba/app da pessoa está visível ----
+        function avisarVisibilidade() { try { socket.emit('visibilidade', { visivel: document.visibilityState === 'visible' }); } catch (e) {} }
+        document.addEventListener('visibilitychange', avisarVisibilidade);
+        socket.on('connect', avisarVisibilidade);
+        if (socket.connected) avisarVisibilidade();
+
+        // ---- abrir a conversa pelo toque na notificação ----
+        function abrirDoPush(d) {
+            if (!d) return;
+            if ((d.tipo === 'dm' || d.tipo === 'chamada') && d.de_id) {
+                const el = document.getElementById('dm-' + d.de_id);
+                if (el) el.click();
+            }
+        }
+        if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (ev) => { if (ev.data && ev.data.tipo === 'push_clique') abrirDoPush(ev.data.dados); });
+        try {
+            const q = new URLSearchParams(location.search).get('dm');
+            if (q) { setTimeout(() => { abrirDoPush({ tipo: 'dm', de_id: q }); history.replaceState(null, '', '/chat'); }, 2500); }
+        } catch (e) {}
+
+        // ---- ligar/desligar ----
+        const tg = $('tg-push'), est = $('push-estado');
+        if (!suportado) { const sec = $('push-secao'); if (sec && noApp) sec.style.display = 'none'; }
+        const b64 = (t) => { const p = '='.repeat((4 - t.length % 4) % 4); const r = atob((t + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map((c) => c.charCodeAt(0))); };
+        const post = (url, corpo) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+        async function inscricao() { const reg = await navigator.serviceWorker.ready; return reg.pushManager.getSubscription(); }
+
+        async function pintar() {
+            if (!tg) return;
+            if (!suportado) { tg.classList.remove('active'); est.textContent = ios && !instalado ? 'No iPhone, instale o app na Tela de Início (Safari > Compartilhar > Adicionar à Tela de Início) pra poder ativar.' : 'Este navegador não oferece avisos no aparelho.'; return; }
+            if (Notification.permission === 'denied') { tg.classList.remove('active'); est.textContent = 'O navegador bloqueou os avisos deste site. Libere em Configurações do navegador > Permissões > Notificações.'; return; }
+            let s = null; try { s = await inscricao(); } catch (e) {}
+            tg.classList.toggle('active', !!s && Notification.permission === 'granted');
+            est.textContent = '';
+        }
+
+        async function ligar() {
+            if (ios && !instalado) { est.textContent = 'No iPhone precisa instalar o app na Tela de Início primeiro.'; return; }
+            const perm = await Notification.requestPermission();
+            if (perm !== 'granted') { await pintar(); return; }
+            const r = await fetch('/api/push/chave');
+            if (!r.ok) { est.textContent = 'Não consegui ativar agora. Tente de novo em instantes.'; return; }
+            const { chave } = await r.json();
+            const reg = await navigator.serviceWorker.ready;
+            let s = await reg.pushManager.getSubscription();
+            if (!s) s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(chave) });
+            const resp = await post('/api/push/inscrever', s.toJSON());
+            if (!resp.ok) { est.textContent = 'O servidor não aceitou a inscrição. Tente de novo.'; return; }
+            try { showToast('Avisos ligados neste aparelho.', 'success'); } catch (e) {}
+        }
+
+        async function desligar() {
+            const s = await inscricao();
+            if (!s) return;
+            try { await post('/api/push/cancelar', { endpoint: s.endpoint }); } catch (e) {}
+            await s.unsubscribe();
+        }
+
+        // sair da conta: solta o aparelho antes (senão os avisos da conta antiga continuariam chegando aqui)
+        window.pushSairAntes = async () => {
+            if (!suportado) return;
+            try { await Promise.race([desligar(), new Promise((r) => setTimeout(r, 1500))]); } catch (e) {}
+        };
+        document.addEventListener('click', (e) => {
+            const a = e.target.closest && e.target.closest('a[href*="/auth/logout"]');
+            if (!a || !suportado) return;
+            e.preventDefault();
+            window.pushSairAntes().finally(() => { location.href = a.href; });
+        }, true);
+
+        if (tg) {
+            tg.addEventListener('click', async () => {
+                if (!suportado) { await pintar(); return; }
+                try { if (tg.classList.contains('active')) await desligar(); else await ligar(); }
+                catch (e) { est.textContent = 'Não deu certo: ' + (e && e.message ? e.message : e); }
+                await pintar();
+            });
+            document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.set-tab[data-target="set-geral"]')) pintar(); });
+            pintar();
+        }
+
+        // um convite único, depois de um tempo de uso (nunca no primeiro segundo)
+        if (suportado && Notification.permission === 'default') {
+            let visto = false; try { visto = localStorage.getItem('pnt_push_dica') === '1'; } catch (e) {}
+            if (!visto) setTimeout(() => {
+                try { localStorage.setItem('pnt_push_dica', '1'); } catch (e) {}
+                try { showToast('Quer receber avisos de mensagem com o app fechado? Ative em Configurações > Geral > Avisos no aparelho.', 'info'); } catch (e) {}
+            }, 45000);
+        }
     })();
     </script>
 </body>

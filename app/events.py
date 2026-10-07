@@ -201,6 +201,31 @@ def esta_online(person_id):
     return usuarios_conectados.get(person_id, 0) > 0
 
 
+# sid -> (pessoa_id, aba visível?). O cliente avisa em `visibilidade` quando a aba/app aparece ou some: só se manda
+# push pra quem NÃO está olhando o app (com ele aberto, o aviso dentro do app já basta).
+_visivel_por_sid = {}
+
+
+def tem_aba_visivel(person_id):
+    return any(uid == person_id and vis for uid, vis in list(_visivel_por_sid.values()))
+
+
+def push_se_ausente(destino_id, titulo, corpo='', tag=None, extra=None, url='/chat'):
+    """Push só se a pessoa não está com o app aberto e visível, nem em "Não perturbar". Nunca quebra quem chamou."""
+    try:
+        if tem_aba_visivel(destino_id):
+            return False
+        from .push import enviar_push
+        pessoa = Person.query.get(destino_id)
+        if not pessoa or pessoa.status == 'dnd':
+            return False
+        return enviar_push(destino_id, titulo, corpo, url=url, tag=tag, extra=extra)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO PUSH] {e}")
+        return False
+
+
 def status_visivel(p):
     """Status que OS OUTROS enxergam: 'offline' se não está conectado OU se
     escolheu Invisível (senão Invisível só mudava a bolinha de quem escolheu)."""
@@ -509,8 +534,17 @@ def handle_connect():
         print(f"[ERRO CONNECT] {e}")
 
 
+@socketio.on('visibilidade')
+def lidar_visibilidade(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    _visivel_por_sid[request.sid] = (usuario.id, bool((dados or {}).get('visivel')))
+
+
 @socketio.on('disconnect')
 def handle_disconnect():
+    _visivel_por_sid.pop(request.sid, None)
     # Queda de rede/aba fechada à força não passa por sair_call (só o
     # beforeunload do navegador manda isso, e ele nem sempre roda a tempo) -
     # sem isso, quem caiu ficava "fantasma" na prévia de participantes da
@@ -1076,6 +1110,9 @@ def chamar_amigo(dados):
 
     # Antes quem ligava ficava "chamando..." pra sempre se a outra pessoa estivesse offline.
     if not esta_online(amigo_id):
+        # Sem app aberto não dá pra tocar, mas o aviso no aparelho diz que a pessoa tentou ligar.
+        push_se_ausente(amigo_id, f'Ligação perdida de {usuario.name}', 'Tentou falar com você agora.',
+                        tag=f'chamada-{usuario.id}', extra={'tipo': 'dm', 'de_id': usuario.id}, url=f'/chat?dm={usuario.id}')
         emit('chamada_recusada', {'por_nome': 'A pessoa', 'offline': True})
         return
 
@@ -1084,6 +1121,10 @@ def chamar_amigo(dados):
     emit('chamada_recebida', {
         'de_id': usuario.id, 'de_nome': usuario.name, 'de_avatar': usuario.avatar, 'tipo': tipo
     }, to=sala_pessoal(amigo_id))
+    # App aberto mas em segundo plano (celular bloqueado): o push é o que faz o aparelho avisar.
+    push_se_ausente(amigo_id, f'{usuario.name} está te ligando', 'Toque pra atender.',
+                    tag=f'ligando-{usuario.id}', extra={'tipo': 'chamada', 'de_id': usuario.id, 'urgente': True},
+                    url=f'/chat?dm={usuario.id}')
 
 
 @socketio.on('aceitar_chamada')
@@ -3289,6 +3330,13 @@ def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None
 
         n = comitar_com_retry(preparar)
         emit('notificacao_nova', notificacao_json(n), to=sala_pessoal(destino_id))
+        # Aviso no aparelho (só se a pessoa não está olhando o app). DM abre a conversa ao tocar.
+        try:
+            extra = {'tipo': tipo, 'de_id': de_id, 'ref': ref}
+            url = f'/chat?dm={de_id}' if tipo == 'dm' and de_id else '/chat'
+            push_se_ausente(destino_id, titulo, texto or '', tag=f'{tipo}-{de_id or ref or ""}', extra=extra, url=url)
+        except Exception as e:
+            print(f"[ERRO PUSH NOTIFICACAO] {e}")
         return n
     except Exception as e:
         db.session.rollback()
