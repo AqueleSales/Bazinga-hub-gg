@@ -177,6 +177,39 @@ const Loja = (() => {
                 <g class="ar-moeda"><rect x="168" y="40" width="30" height="36" fill="#ffd23f"/><rect x="162" y="46" width="42" height="24" fill="#ffd23f"/><rect x="176" y="48" width="14" height="20" fill="#e0a800"/></g>
                 <rect class="ar-px p1" x="40" y="190" width="8" height="8" fill="#4dd0e1"/><rect class="ar-px p2" x="190" y="196" width="8" height="8" fill="#ff4fa3"/><rect class="ar-px p3" x="108" y="206" width="8" height="8" fill="#ffd23f"/></svg>`;
         },
+        gojo: () => {
+            let estrelas = '';
+            for (let k = 0; k < 16; k++) estrelas += `<circle class="go-est" cx="${(30 + ((k * 53) % 180)).toFixed(0)}" cy="${(30 + ((k * 37) % 180)).toFixed(0)}" r="${(k % 3) + 1}" style="animation-delay:-${(k * 0.37).toFixed(2)}s"/>`;
+            return `<svg class="arte arte-gojo" viewBox="0 0 240 240" aria-hidden="true"><defs><radialGradient id="goOlho"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#a8dcff"/><stop offset=".65" stop-color="#3fa0ff"/><stop offset="1" stop-color="#3fa0ff" stop-opacity="0"/></radialGradient></defs>
+                <circle cx="120" cy="120" r="102" fill="#02030a" stroke="#4aa8ff" stroke-width="3"/><g fill="#fff">${estrelas}</g>
+                <path class="go-inf" d="M120 120 C150 80 205 80 205 120 C205 160 150 160 120 120 C90 80 35 80 35 120 C35 160 90 160 120 120Z" fill="none" stroke="#9fd6ff" stroke-width="4" stroke-linecap="round"/>
+                <g class="go-olhos"><ellipse cx="84" cy="120" rx="30" ry="12" fill="url(#goOlho)"/><ellipse cx="156" cy="120" rx="30" ry="12" fill="url(#goOlho)"/></g>
+                <circle class="go-roxo" cx="120" cy="196" r="12" fill="#9b5cff"/></svg>`;
+        },
+        sukuna: () => {
+            const lente = (cx, cy, len, ang, th) => {
+                const pts = [[-1, 0], [-.8, -.6], [0, -1], [.8, -.6], [1, 0], [.8, .6], [0, 1], [-.8, .6]].map(([x, y]) => {
+                    const px = x * len / 2, py = y * th / 2, c = Math.cos(ang * Math.PI / 180), sn = Math.sin(ang * Math.PI / 180);
+                    return `${(cx + px * c - py * sn).toFixed(1)},${(cy + px * sn + py * c).toFixed(1)}`;
+                });
+                return pts.join(' ');
+            };
+            const cortes = [[96, 100, 170, -24, 8], [138, 132, 160, 18, 8], [112, 150, 140, -52, 7], [140, 90, 130, 60, 7], [120, 120, 200, -8, 9]]
+                .map(([cx, cy, len, ang, th], k) => `<polygon class="su-corte" points="${lente(cx, cy, len, ang, th)}" style="animation-delay:${(k * 0.55).toFixed(2)}s"/>`).join('');
+            const dentes = Cosm.svgDentes().replace('<svg ', '<svg x="20" y="4" width="200" height="40" ');
+            return `<svg class="arte arte-sukuna" viewBox="0 0 240 240" aria-hidden="true"><defs><radialGradient id="suLua" cx=".4" cy=".35"><stop offset="0" stop-color="#ff7b6b"/><stop offset=".6" stop-color="#b3122b"/><stop offset="1" stop-color="#4a0a12"/></radialGradient></defs>
+                <circle class="su-lua" cx="120" cy="120" r="88" fill="url(#suLua)"/>${dentes}<g transform="translate(0 240) scale(1 -1)">${dentes}</g>${cortes}</svg>`;
+        },
+        mahoraga: () => {
+            let raios = '', nos = '';
+            for (let k = 0; k < 8; k++) {
+                const a = (k * Math.PI) / 4, c = Math.cos(a), sn = Math.sin(a);
+                raios += `<line x1="${(120 + c * 22).toFixed(1)}" y1="${(120 + sn * 22).toFixed(1)}" x2="${(120 + c * 80).toFixed(1)}" y2="${(120 + sn * 80).toFixed(1)}"/>`;
+                nos += `<circle cx="${(120 + c * 104).toFixed(1)}" cy="${(120 + sn * 104).toFixed(1)}" r="15"/>`;
+            }
+            return `<svg class="arte arte-mahoraga" viewBox="0 0 240 240" aria-hidden="true"><circle class="ma-halo" cx="120" cy="120" r="112" fill="none" stroke="#e8bd3a" stroke-width="2" opacity=".5"/>
+                <g class="ma-giro" stroke="#e8bd3a" stroke-width="6" stroke-linecap="round"><circle cx="120" cy="120" r="80" fill="none"/>${raios}<g fill="#34342e" stroke-width="5">${nos}</g><circle cx="120" cy="120" r="20" fill="#e8bd3a"/></g></svg>`;
+        },
         manga: () => {
             let pts = '';
             for (let k = 0; k < 28; k++) { const a = (k / 28) * Math.PI * 2, r = k % 2 ? 80 : 108; pts += `${(120 + Math.cos(a) * r).toFixed(1)},${(120 + Math.sin(a) * r).toFixed(1)} `; }

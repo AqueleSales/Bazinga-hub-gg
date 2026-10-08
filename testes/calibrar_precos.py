@@ -73,6 +73,7 @@ def main():
     # pacote "normal" = os temas de raridade rara (4 itens); pacote "premium" = os temas épicos com efeitos (11 itens)
     pacote = max(d['preco'] for d in pacotes if d['raridade'] == 'raro')
     epico = max(d['preco'] for d in pacotes if d['raridade'] == 'epico')
+    lendario = max(d['preco'] for d in pacotes if d['raridade'] == 'lendario')
     barato = min(d['preco'] for d in avulsos) if avulsos else 250
     print(f'Itens avulsos: {sorted({d["preco"] for d in avulsos})} DRC · pacotes: {sorted({d["preco"] for d in pacotes})} DRC ({len(pacotes)} temas)\n')
 
@@ -84,7 +85,7 @@ def main():
         print(f'{nome:9}' + ''.join(f'{str(r[nome][d - 1][2]) + " / " + str(r[nome][d - 1][3]):>14}' for d in dias_mostrados))
 
     print('\nEm quantos DIAS cada perfil junta (sem gastar nada antes) o valor de:')
-    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), (f'pacote premium ({epico})', epico)]
+    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), (f'pacote premium ({epico})', epico), (f'pacote lendário ({lendario})', lendario)]
     print(f"{'':26}" + ''.join(f'{n:>10}' for n in PERFIS))
     for rot, valor in degraus:
         print(f'{rot:26}' + ''.join(f'{(dia_em_que_junta(r[n], valor) or ">90"):>10}' for n in PERFIS))
@@ -104,6 +105,8 @@ def main():
     regra(f'... nem pro intenso antes do dia 3: dia {d_int}', bool(d_int) and d_int >= 3)
     d_cas = dia_em_que_junta(r['casual'], pacote)
     regra(f'... e em até ~2 meses pra quem entra pouco: dia {d_cas or ">90"}', bool(d_cas) and d_cas <= 60)
+    d_len = dia_em_que_junta(r['regular'], lendario)
+    regra(f'pacote lendário ({lendario}) é o topo: o regular só junta no dia {d_len or ">90"} (precisa de >= 40)', d_len is None or d_len >= 40)
     d_prem = dia_em_que_junta(r['regular'], epico)
     regra(f'pacote premium ({epico}) não vira rotina: o regular só junta no dia {d_prem or ">90"} (precisa de >= 25: é o prêmio de quem já tem um bom tempo de casa)', d_prem is None or d_prem >= 25)
 

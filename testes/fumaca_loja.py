@@ -30,7 +30,7 @@ def ev(cli, nome=None):
 # ---------- 1. o catálogo da loja é coerente ----------
 vendaveis = {i: d for i, d in cos.CATALOGO.items() if d.get('preco')}
 ok(vendaveis and all(isinstance(d['preco'], int) and d['preco'] > 0 for d in vendaveis.values()), 'Todo item à venda tem preço inteiro e positivo')
-ok(all(d['tema'] in cos.TEMAS and (cos.TEMAS[d['tema']].get('loja') or d['tema'] == 'edicao') for d in vendaveis.values()), 'Todo item à venda pertence a um tema da loja (ou é edição limitada)')
+ok(all(d['tema'] in cos.TEMAS and (cos.TEMAS[d['tema']].get('loja') or cos.TEMAS[d['tema']].get('combo') or d['tema'] == 'edicao') for d in vendaveis.values()), 'Todo item à venda pertence a um tema da loja (ou é combo ou edição limitada)')
 ok(not any(d.get('preco') for i, d in cos.CATALOGO.items() if d['tema'] in ('gogeta', 'sasuke', 'fusao') or d['tipo'] == 'badge'),
    'Laboratório e insígnias NÃO estão à venda')
 for tid, t in cos.TEMAS.items():

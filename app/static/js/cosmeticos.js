@@ -600,39 +600,47 @@ const Cosm = (() => {
 
     // ---- Laboratório JJK: três efeitos de perfil "de cena" (ciclo longo, tudo com transform/opacity: nada de repintar a cada quadro).
     // Mãos e roda são SVG desenhado à mão (silhueta que só evoca); nada vem da obra.
-    const MAO_SUKUNA = '<path d="M0 74 L38 66 L46 100 L0 108Z"/><path d="M38 66 L66 52 L78 84 L46 100Z"/><path d="M62 56 L98 20 L106 26 L72 66Z"/><path d="M54 62 L84 30 L92 36 L62 70Z"/><path d="M70 66 L104 36 L110 44 L78 76Z"/><path d="M76 74 L100 52 L106 60 L82 84Z"/><path d="M48 88 L74 84 L76 94 L50 100Z"/>';
-    function dentesPoligono(baixo) {
-        const alt = [.55, .8, 1, .75, .95, .75, 1, .8, .55], n = alt.length;
-        const base = baixo ? '100%' : '0%';
-        const pts = baixo ? ['0% 100%', '100% 100%'] : ['0% 0%', '100% 0%'];
-        for (let i = n - 1; i >= 0; i--) {
-            const xt = (((i + .5) / n) * 100).toFixed(2), xe = ((i / n) * 100).toFixed(2), y = (baixo ? 100 - 100 * alt[i] : 100 * alt[i]).toFixed(1);
-            pts.push(`${xt}% ${y}%`, `${xe}% ${base}`);
+    // Dentes de caveira: 12 dentes arredondados (incisivos maiores no meio, molares menores nas pontas) numa curva de sorriso, gengiva escura com costelas em arco.
+    // A mandíbula de baixo é a mesma figura virada de cabeça pra baixo (scaleY(-1) no CSS).
+    function dentesSvg() {
+        const pesos = [12, 13, 14, 16, 18, 18, 18, 18, 16, 14, 13, 12], n = pesos.length, tot = pesos.reduce((x, y) => x + y, 0), gap = 1.4, W = 200 - gap * (n + 1);
+        let x = gap, dentes = '';
+        for (let i = 0; i < n; i++) {
+            const w = (pesos[i] / tot) * W, h = 27 - Math.abs(i - 5.5) * 2.5;
+            dentes += `<rect x="${x.toFixed(1)}" y="11" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3.2" fill="#d6c7a8" stroke="#1d070a" stroke-width="1.1"/>`;
+            dentes += `<rect x="${(x + 1).toFixed(1)}" y="11" width="${(w - 2).toFixed(1)}" height="9" fill="#5a0a16" opacity=".75"/>`;
+            x += w + gap;
         }
-        return `polygon(${pts.join(',')})`;
+        return `<svg viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="200" height="16" fill="#14030a"/>
+            <path d="M0 13 Q100 -13 200 13" fill="none" stroke="#6b1018" stroke-width="2"/><path d="M0 19 Q100 -7 200 19" fill="none" stroke="#4a0a12" stroke-width="2"/>${dentes}
+            <rect x="0" y="0" width="200" height="12" fill="#14030a"/><path d="M0 12 H200" stroke="#6b1018" stroke-width="1.2"/><rect x="0" y="0" width="200" height="44" fill="#9a0f20" opacity=".24"/></svg>`;
     }
+    // Cortes do Sukuna: lentes pretas afiladas com um brilho branco em volta que some (como no anime). Posição, ângulo e instante do ciclo
+    // são fixos (o cartão redesenha e não pode "pular"): [esquerda%, topo%, largura%, ângulo°, instante em s dentro do ciclo de 14 s].
+    const CORTES_SUKUNA = [
+        [-8, 12, 112, 18, 1.40], [-6, 34, 118, -22, 1.58], [-10, 58, 120, 9, 1.80], [4, 78, 100, -31, 1.95], [-4, 22, 108, 64, 2.20], [20, 6, 116, 74, 2.34],
+        [-12, 46, 126, -8, 2.55], [-2, 86, 104, 27, 2.78], [14, 16, 110, -58, 3.00], [-6, 66, 116, -15, 3.22], [-8, 30, 120, 36, 3.46],
+        [-10, 40, 124, -12, 5.85], [-4, 62, 112, 21, 6.10], [-6, 24, 116, -26, 7.40], [-8, 52, 120, 12, 11.7], [-2, 74, 110, -19, 12.5], [-10, 14, 118, 30, 13.1],
+    ];
     function htmlDominioSukuna() {
-        const mand = (lado) => `<div class="sk-mand ${lado}"><i class="sk-gengiva"></i><i class="sk-dentes" style="clip-path:${dentesPoligono(lado === 'baixo')}"></i></div>`;
-        return `<div class="ef-pf ef-pf-sukuna" aria-hidden="true"><i class="sk-aura a1"></i><i class="sk-aura a2"></i><i class="sk-aura a3"></i>
-            <svg class="sk-maos" viewBox="0 0 200 120"><g class="mao-e">${MAO_SUKUNA}</g><g class="mao-d" transform="matrix(-1 0 0 1 200 0)">${MAO_SUKUNA}</g></svg>
-            <i class="sk-interior"></i>${mand('cima')}${mand('baixo')}
-            <i class="sk-corte c1"></i><i class="sk-corte c2"></i><i class="sk-corte c3"></i></div>`;
+        const cortes = CORTES_SUKUNA.map(([l, t, w, a, d]) => `<i class="sk-corte" style="--l:${l}%;--t:${t}%;--w:${w}%;--a:${a}deg;--d:${d}s"></i>`).join('');
+        return `<div class="ef-pf ef-pf-sukuna" aria-hidden="true"><i class="sk-aura a1"></i><i class="sk-aura a2"></i><i class="sk-aura a3"></i><i class="sk-sombra"></i>
+            <i class="sk-interior"></i><div class="sk-mand cima">${dentesSvg()}</div><div class="sk-mand baixo">${dentesSvg()}</div>${cortes}<i class="sk-flash"></i></div>`;
     }
+    // Domínio do Gojo: aura azul, o vazio de estrelas expande, os Seis Olhos acendem no centro (e piscam), colapsa com um clarão.
     function htmlDominioGojo() {
         return `<div class="ef-pf ef-pf-gojo" aria-hidden="true"><i class="gj-aura g1"></i><i class="gj-aura g2"></i>
-            <svg class="gj-mao" viewBox="0 0 120 120"><rect class="gj-punho" x="38" y="64" width="46" height="40" rx="14"/><path class="gj-punho" d="M36 80 Q22 78 27 93 Q34 99 43 92Z"/>
-                <rect class="gj-dedo" x="46" y="22" width="12" height="54" rx="6" transform="rotate(14 52 72)"/><rect class="gj-dedo" x="62" y="20" width="12" height="56" rx="6" transform="rotate(-16 68 72)"/></svg>
-            <i class="gj-vazio"></i><i class="gj-estrias"></i><i class="gj-flash"></i></div>`;
+            <i class="gj-vazio"></i><i class="gj-estrias"></i><span class="gj-olhos"><i></i><i></i></span><i class="gj-flash"></i></div>`;
     }
     function htmlRodaMahoraga() {
         let raios = '', nos = '';
         for (let k = 0; k < 8; k++) {
             const a = (k * Math.PI) / 4, c = Math.cos(a), sn = Math.sin(a);
-            raios += `<line x1="${(60 + c * 12).toFixed(1)}" y1="${(60 + sn * 12).toFixed(1)}" x2="${(60 + c * 46).toFixed(1)}" y2="${(60 + sn * 46).toFixed(1)}"/>`;
-            nos += `<circle cx="${(60 + c * 53).toFixed(1)}" cy="${(60 + sn * 53).toFixed(1)}" r="6"/>`;
+            raios += `<line x1="${(60 + c * 11).toFixed(1)}" y1="${(60 + sn * 11).toFixed(1)}" x2="${(60 + c * 40).toFixed(1)}" y2="${(60 + sn * 40).toFixed(1)}"/>`;
+            nos += `<circle class="no" cx="${(60 + c * 52).toFixed(1)}" cy="${(60 + sn * 52).toFixed(1)}" r="8"/>`;
         }
         return `<div class="ef-pf ef-pf-mahoraga" aria-hidden="true"><i class="mh-ouro"></i><i class="mh-onda"></i>
-            <svg class="mh-roda" viewBox="0 0 120 120"><g class="mh-giro"><circle cx="60" cy="60" r="46" fill="none"/>${raios}${nos}<circle cx="60" cy="60" r="12"/></g></svg></div>`;
+            <svg class="mh-roda" viewBox="0 0 120 120"><g class="mh-giro"><circle class="aro" cx="60" cy="60" r="40" fill="none"/>${raios}${nos}<circle class="hub" cx="60" cy="60" r="11"/></g></svg></div>`;
     }
 
     // Raios do Sasuke: ao fim de cada ciclo (invisíveis), cada um sorteia onde vai cair da próxima vez.
@@ -1463,6 +1471,6 @@ const Cosm = (() => {
     }
 
     return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, svgBadge3D, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
-        renderInventario, previaItem, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
+        renderInventario, previaItem, svgDentes: dentesSvg, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
         mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, _passo: passoCanvas };
 })();

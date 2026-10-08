@@ -360,3 +360,15 @@
 .arm-hero.parado *, .arm-hero.parado *::before, .arm-hero.parado *::after,
 .arm-slide.parado *, .arm-slide.parado *::before, .arm-slide.parado *::after { animation-play-state: paused !important; }
 .arm-prat { content-visibility: auto; contain-intrinsic-size: auto 340px; padding-bottom: 12px; }
+
+/* arte do carrossel: Gojo (vazio, Seis Olhos e infinito), Sukuna (lua, dentes e cortes pretos) e Mahoraga (a roda) */
+.arte-gojo .go-est { animation: goPisca 2.8s ease-in-out infinite; } @keyframes goPisca { 50% { opacity: .25; } }
+.arte-gojo .go-inf { stroke-dasharray: 18 14; animation: goInf 3s linear infinite; } @keyframes goInf { to { stroke-dashoffset: -64; } }
+.arte-gojo .go-olhos { transform-box: fill-box; transform-origin: center; filter: drop-shadow(0 0 8px #3fa0ff); animation: goOlhos 5s ease-in-out infinite; }
+@keyframes goOlhos { 0%, 40%, 50%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.08); } 70% { transform: scale(1.06); } }
+.arte-gojo .go-roxo { filter: drop-shadow(0 0 8px #9b5cff); animation: goRoxo 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; } @keyframes goRoxo { 50% { transform: scale(1.7); opacity: .6; } }
+.arte-sukuna .su-lua { animation: suLua 3s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; } @keyframes suLua { to { transform: scale(1.04); } }
+.arte-sukuna .su-corte { fill: #000; opacity: 0; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px rgba(255, 255, 255, .85)); animation: suCorte 3.2s linear infinite; transform-box: fill-box; transform-origin: 0 50%; }
+@keyframes suCorte { 0% { opacity: 0; transform: scaleX(0); } 3% { opacity: 1; transform: scaleX(1); } 14% { opacity: 1; } 28%, 100% { opacity: 0; transform: scaleX(1); } }
+.arte-mahoraga .ma-giro { transform-box: view-box; transform-origin: 120px 120px; animation: maGira 8s steps(8, end) infinite; } @keyframes maGira { to { transform: rotate(360deg); } }
+.arte-mahoraga .ma-halo { animation: maHalo 2.4s ease-in-out infinite alternate; transform-box: view-box; transform-origin: 120px 120px; } @keyframes maHalo { to { transform: scale(1.04); opacity: .9; } }

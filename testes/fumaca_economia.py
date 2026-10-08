@@ -279,38 +279,51 @@ with app.app_context():
         ok(loja.itens_comprados(ids['duda']) == antes_pk + 4, 'Pacote conta pelos 4 itens que entrega (não conta o pacote)')
 
     # ======================================================================
-    # Laboratório JJK (Gojo, Sukuna, Mahoraga, combo): só os dois testers, nunca à venda
+    # JJK (Gojo, Sukuna, Mahoraga e o combo): itens LENDÁRIOS À VENDA no Armazém (nada de presente)
     # ======================================================================
     JJK = [i for i, d in cos.CATALOGO.items() if d['tema'] in ('gojo', 'sukuna', 'mahoraga', 'jjk')]
     ok(len(JJK) == 40, f'JJK: 3 temas x 12 itens + 3 pacotes + o combo = 40 ({len(JJK)})')
-    ok(not any(cos.CATALOGO[i].get('preco') for i in JJK), 'JJK não tem preço: nunca aparece no Armazém')
-    v = vitrine(cliente('cris'))
-    ok(not any(i['tema'] in ('gojo', 'sukuna', 'mahoraga', 'jjk') for i in v['itens']) and not any(t['id'] in ('gojo', 'sukuna', 'mahoraga', 'jjk') for t in v['temas']), 'Vitrine: nenhum item nem tema do JJK')
-    rec = comprar(cliente('cris'), 'moldura:gojo')
-    ok(recusas(rec) == ['Este item não está à venda.'], 'Comprar item do JJK é recusado')
-    for quem in ('aquele.sales', 'filippo.chiarion'):
-        ok(set(JJK) <= set(cos.LABORATORIO[quem]), f'{quem} recebe o JJK inteiro')
+    ok(all(cos.CATALOGO[i].get('preco') for i in JJK), 'JJK: todo item tem preço (é pra comprar)')
+    ok(not any(i in cos.LABORATORIO[q] for q in cos.LABORATORIO for i in JJK), 'JJK não é concedido a ninguém de graça (nem aos testers)')
     for tema in ('gojo', 'sukuna', 'mahoraga'):
+        its = {tp: cos.CATALOGO[f'{tp}:{tema}'] for tp in ('moldura', 'nome', 'placa', 'faixa')}
+        ok(all(d['raridade'] == 'lendario' for d in its.values()) and cos.CATALOGO[f'pacote:{tema}']['raridade'] == 'lendario', f'{tema}: visuais e pacote são lendários')
         ok({'moldura', 'nome', 'placa', 'faixa', 'efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota'} == set(cos.PACOTES[tema]),
            f'{tema}: o pacote equipa os 11 slots (visuais + 7 efeitos)')
         ok(f'efeito_servidor:{tema}' in cos.CATALOGO, f'{tema}: tem efeito de servidor (avulso)')
     ok(cos.PACOTES['jjk']['moldura'] == 'gojo' and cos.PACOTES['jjk']['nome'] == 'sukuna' and cos.PACOTES['jjk']['efeito_perfil'] == 'sukuna', 'Combo JJK mistura os dois lados')
     ok(all(f'{t}:{v}' in cos.CATALOGO for t, v in cos.PACOTES['jjk'].items()), 'Todo item do combo existe no catálogo')
+    soma_combo = sum(cos.CATALOGO[f'{t}:{v}']['preco'] for t, v in cos.PACOTES['jjk'].items())
+    ok(cos.CATALOGO['pacote:jjk']['preco'] == max(50, int(round(soma_combo * (1 - cos.DESCONTO_PACOTE) / 50.0)) * 50) < soma_combo, f'Combo custa a soma dos 11 itens ({soma_combo}) com 30% de desconto')
 
-    # quem tem tudo equipa o combo; quem não tem nada, não
-    dono = Person(name='Tester', email='t@x', role_id=r.id, username='tester', bazinga_coins=0)
-    db.session.add(dono); db.session.commit(); ids['tester'] = dono.id
-    for i in JJK:
-        cos.conceder_item(ids['tester'], i, 'teste')
-    db.session.commit()
-    t = cliente('tester'); t.emit('equipar_item', {'item_id': 'pacote:jjk'})
+    v = vitrine(cliente('cris'))
+    ids_tema = {t['id'] for t in v['temas']}
+    ok({'gojo', 'sukuna', 'mahoraga'} <= ids_tema and 'jjk' not in ids_tema, 'Vitrine: Gojo, Sukuna e Mahoraga são temas; o combo é só um pacote')
+    ok(any(i['id'] == 'pacote:jjk' for i in v['itens']) and all(i['grupo'] for i in v['itens'] if i['tema'] in ('gojo', 'sukuna', 'mahoraga')), 'Vitrine: o combo aparece nos pacotes')
+    ok({'gojo', 'sukuna', 'mahoraga'} <= {d['tema'] for d in v['destaques']}, 'Vitrine: os 3 têm slide no carrossel')
+
+    # comprar o combo (com abatimento de quem já tem um item) entrega os 11 misturados e equipa a mistura
+    rico = Person(name='Rico', email='r@x', role_id=r.id, username='rico', bazinga_coins=30000)
+    db.session.add(rico); db.session.commit(); ids['rico'] = rico.id
+    rc = cliente('rico')
+    ok(compra_ok(comprar(rc, 'moldura:gojo', cos.CATALOGO['moldura:gojo']['preco'])), 'Compra um item avulso do Gojo')
+    preco_combo, entregues = loja.preco_para(cos.posses_da_pessoa(ids['rico']), 'pacote:jjk')
+    ok(preco_combo < cos.CATALOGO['pacote:jjk']['preco'], f'Combo sai abatido de quem já tem a moldura Gojo ({preco_combo})')
+    ok(compra_ok(comprar(rc, 'pacote:jjk', preco_combo)), 'Compra o combo')
+    pj = cos.posses_da_pessoa(ids['rico'])
+    ok({f'{t}:{v}' for t, v in cos.PACOTES['jjk'].items()} <= pj and 'pacote:jjk' in pj, 'Combo entrega os 11 itens misturados e o pacote')
+    rc.get_received(); rc.emit('equipar_item', {'item_id': 'pacote:jjk'})
     db.session.expire_all()
-    p_t = db.session.get(Person, ids['tester'])
-    ok(p_t.moldura == 'gojo' and p_t.nome_estilo == 'sukuna' and p_t.placa == 'gojo', 'Combo equipado: moldura Gojo, nome Sukuna, placa Gojo')
-    ok(cos.equipados_da_pessoa(p_t).get('efeito_perfil') == 'sukuna' and cos.equipados_da_pessoa(p_t).get('som_call') == 'gojo', 'Combo equipado: domínio do Sukuna no cartão e som do Gojo na call')
+    p_r = db.session.get(Person, ids['rico'])
+    ok(p_r.moldura == 'gojo' and p_r.nome_estilo == 'sukuna' and p_r.placa == 'gojo', 'Combo equipado: moldura Gojo, nome Sukuna, placa Gojo')
+    ok(cos.equipados_da_pessoa(p_r).get('efeito_perfil') == 'sukuna' and cos.equipados_da_pessoa(p_r).get('som_call') == 'gojo', 'Combo equipado: domínio do Sukuna no cartão e som do Gojo na call')
     pobre2 = cliente('pobre'); pobre2.get_received(); pobre2.emit('equipar_item', {'item_id': 'efeito_perfil:sukuna'})
     db.session.expire_all()
-    ok(ev(pobre2, 'erro_bazinga') and cos.equipados_da_pessoa(db.session.get(Person, ids['pobre'])).get('efeito_perfil') is None, 'Quem não tem o efeito do JJK não equipa')
+    ok(ev(pobre2, 'erro_bazinga') and cos.equipados_da_pessoa(db.session.get(Person, ids['pobre'])).get('efeito_perfil') is None, 'Quem não comprou o efeito do JJK não equipa')
+
+    # os domínios não têm mão/dedo (ficaram feios): só aura, cortes, dentes, vazio e roda
+    ok('maoSukuna' not in JS_COSM and 'maoGojo' not in JS_COSM and 'sk-maos' not in CSS and 'gj-mao' not in CSS, 'Domínios sem mãos nem dedos (só cortes, dentes, vazio e roda)')
+    ok(len(re.findall(r'\[-?\d+, \d+, \d+, -?\d+, [\d.]+\]', JS_COSM)) >= 10, 'Sukuna: pelo menos 10 cortes no ciclo')
 
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)
