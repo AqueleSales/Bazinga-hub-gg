@@ -23,8 +23,25 @@ const Loja = (() => {
     let confetePara = null;   // item recém-comprado: o confete só sai depois que a vitrine nova redesenhou o modal
 
     const temaDe = (id) => (estado.temas || []).find((t) => t.id === id);
-    const itemDe = (id) => (estado.itens || []).find((i) => i.id === id);
-    const estiloTema = (t) => t ? `--a:${corOk(t.cores[0])};--b:${corOk(t.cores[1])};--c:${corOk(t.cor)}` : '';
+    // prêmios da coleção não estão à venda (não vêm em `itens`): viram um "item" só pra abrir no mesmo modal
+    const premioDe = (id) => {
+        const p = ((estado.colecao || {}).premios || []).find((x) => x.item.id === id);
+        return p ? { ...p.item, premio: true, meta: p.meta, faltam: p.faltam, possui: p.ganho, preco: 0, preco_final: 0 } : null;
+    };
+    const itemDe = (id) => (estado.itens || []).find((i) => i.id === id) || premioDe(id);
+    // edição limitada que já acabou (prazo ou estoque) e que a pessoa não tem: dá pra ver, não dá pra comprar
+    const indisponivel = (i) => !i.possui && !!i.limitado && (i.limitado.encerrado || i.limitado.esgotado);
+    const tempoTexto = (s) => {
+        s = Math.max(0, Math.floor(s));
+        const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+        return d ? `${d}d ${h}h` : h ? `${h}h ${m}min` : `${Math.max(m, 1)} min`;
+    };
+    const fimDe = (seg) => Date.now() + Number(seg || 0) * 1000;     // instante em que a contagem zera (a tela se atualiza sozinha)
+    // edições limitadas e prêmios de coleção não são temas da vitrine, mas têm acento próprio (o modal fica fora do #armazem: sem isto, --c não existe)
+    const ACENTOS = { edicao: { cores: ['#ffcc33', '#b8860b'], cor: '#ffcc33' }, colecao: { cores: ['#c0c8d6', '#8f9bb0'], cor: '#c0c8d6' } };
+    const ESTILO_PADRAO = '--a:var(--brand-color);--b:var(--brand-color);--c:var(--brand-color)';
+    const estiloTema = (t) => t ? `--a:${corOk(t.cores[0])};--b:${corOk(t.cores[1])};--c:${corOk(t.cor)}` : ESTILO_PADRAO;
+    const estiloDoItem = (i) => estiloTema(temaDe(i.tema) || ACENTOS[i.tema]);
     const pctx = () => ({ avatarHtml: ctx.avatarHtml(), nome: ctx.nome(), temas: Object.fromEntries((estado.temas || []).map((t) => [t.id, { cor: t.cor }])) });
     const moeda = (n) => `${Number(n || 0).toLocaleString('pt-BR')}`;
     const pctOff = (de, por) => de > 0 ? Math.round((1 - por / de) * 100) : 0;
@@ -48,8 +65,12 @@ const Loja = (() => {
         </div>`;
     }
 
-    function previa(i) {
+    function previa(i, grande = false) {
         if (i.tipo === 'pacote') return miniPerfil(i.tema);
+        // dentro do cartão (que já é um <button>) não cabe outro botão: o "Ouvir" de verdade fica no modal
+        if (i.tipo === 'som_call') return grande
+            ? `<button type="button" class="arm-btn sec" data-acao="ouvir" data-som="${esc(i.valor)}"><i class="fa-solid fa-play"></i> Ouvir</button>`
+            : '<span class="arm-som"><i class="fa-solid fa-volume-high"></i></span>';
         return Cosm.previaItem(i, pctx());
     }
 
@@ -132,25 +153,44 @@ const Loja = (() => {
     // ---------------------------------------------------------------------
     function htmlPreco(i) {
         if (i.possui) return '<span class="arm-seu"><i class="fa-solid fa-circle-check"></i> Seu</span>';
+        if (indisponivel(i)) return `<span class="arm-fora"><i class="fa-solid fa-ban"></i> ${i.limitado.esgotado ? 'Esgotado' : 'Encerrada'}</span>`;
         const curto = i.preco_final > estado.saldo;
         let extra = '';
         if (i.tipo === 'pacote') {
             const t = temaDe(i.tema);
             if (t && t.preco_soma > i.preco_final) extra = `<s>${moeda(t.preco_soma)}</s>`;
+        } else if (i.reliquia && i.preco > i.preco_final) {
+            extra = `<s>${moeda(i.preco)}</s>`;
         }
-        const off = i.tipo === 'pacote' && temaDe(i.tema) ? pctOff(temaDe(i.tema).preco_soma, i.preco_final) : 0;
+        const off = i.tipo === 'pacote' && temaDe(i.tema) ? pctOff(temaDe(i.tema).preco_soma, i.preco_final) : (i.reliquia ? pctOff(i.preco, i.preco_final) : 0);
         return `<span class="arm-preco ${curto ? 'curto' : ''}">${extra}<i class="fa-solid fa-coins"></i> ${moeda(i.preco_final)}</span>${off > 0 ? `<span class="arm-off">-${off}%</span>` : ''}`;
+    }
+
+    /** Linha de aviso das edições limitadas: quantas unidades restam e/ou quanto tempo falta. */
+    function htmlLimite(i) {
+        const l = i.limitado;
+        if (!l || i.possui) return '';
+        if (l.esgotado) return '<small class="arm-lim fim">Todas as unidades já foram vendidas</small>';
+        if (l.encerrado) return '<small class="arm-lim fim">A venda desta edição terminou</small>';
+        const partes = [];
+        if (l.restam !== null && l.restam !== undefined) partes.push(`<b class="${l.restam <= 10 ? 'ultimas' : ''}">Restam ${moeda(l.restam)} de ${moeda(l.estoque)}</b>`);
+        if (l.termina_em !== null && l.termina_em !== undefined) partes.push(`encerra em <span class="arm-tempo" data-fim="${fimDe(l.termina_em)}">${tempoTexto(l.termina_em)}</span>`);
+        return `<small class="arm-lim">${partes.join(' · ')}</small>`;
     }
 
     function htmlCard(i) {
         const t = temaDe(i.tema);
         const pacote = i.tipo === 'pacote';
-        return `<button type="button" class="arm-card ${pacote ? 'pacote' : ''}" data-item="${esc(i.id)}" style="${estiloTema(t)}" aria-label="${esc(i.nome)}">
-            ${pacote ? '<span class="arm-faixa-pack">Pacote</span>' : ''}
+        const selo = pacote ? '<span class="arm-faixa-pack">Pacote</span>'
+            : i.reliquia ? `<span class="arm-faixa-pack reliquia"><i class="fa-solid fa-gem"></i> Relíquia -${pctOff(i.preco, i.preco_final)}%</span>`
+            : i.limitado ? '<span class="arm-faixa-pack limitada"><i class="fa-solid fa-hourglass-half"></i> Limitada</span>' : '';
+        return `<button type="button" class="arm-card ${pacote ? 'pacote' : ''} ${indisponivel(i) ? 'fora' : ''} ${i.limitado ? 'limitado' : ''}" data-item="${esc(i.id)}" style="${estiloDoItem(i)}" aria-label="${esc(i.nome)}">
+            ${selo}
             <div class="arm-card-prev">${previa(i)}</div>
             <div class="arm-card-info">
                 <span class="arm-tag">${esc(i.rotulo)}${t ? ' · ' + esc(t.nome) : ''}</span>
                 <h4>${esc(i.nome)}</h4>
+                ${htmlLimite(i)}
                 <div class="arm-card-rodape">${htmlPreco(i)}</div>
             </div>
         </button>`;
@@ -212,6 +252,49 @@ const Loja = (() => {
         return [i.nome, i.desc, i.rotulo, t && t.nome].some((x) => norm(x).includes(q));
     }
 
+    // ---------------------------------------------------------------------
+    // FAIXAS ESPECIAIS DA VITRINE: relíquia da semana, edições limitadas e coleção
+    // ---------------------------------------------------------------------
+    function htmlReliquia() {
+        const r = estado.reliquia, i = r && itemDe(r.item_id);
+        if (!i) return '';
+        const t = temaDe(i.tema);
+        const acao = i.possui
+            ? '<span class="arm-seu"><i class="fa-solid fa-circle-check"></i> Você já tem esta relíquia</span>'
+            : `<button type="button" class="arm-btn" data-acao="abrir" data-item="${esc(i.id)}">Ver relíquia <i class="fa-solid fa-arrow-right"></i></button>
+               <span class="arm-hero-preco"><s>${moeda(i.preco)}</s> <b><i class="fa-solid fa-coins"></i> ${moeda(i.preco_final)}</b></span>`;
+        return `<section class="arm-reliquia" style="${estiloTema(t)}">
+            <div class="arm-rel-txt">
+                <span class="arm-selo"><i class="fa-solid fa-gem"></i> Relíquia da semana</span>
+                <h3>${esc(i.nome)}</h3>
+                <p>${esc(i.desc)}</p>
+                <div class="arm-rel-info"><span class="arm-off">-${Number(r.desconto)}%</span><span>Só até segunda-feira · troca em <b class="arm-tempo" data-fim="${fimDe(r.termina_em)}">${tempoTexto(r.termina_em)}</b></span></div>
+                <div class="arm-slide-acoes">${acao}</div>
+            </div>
+            <div class="arm-rel-prev" data-acao="abrir" data-item="${esc(i.id)}">${previa(i)}</div>
+        </section>`;
+    }
+
+    function htmlColecao() {
+        const c = estado.colecao;
+        if (!c || !(c.premios || []).length) return '';
+        const ultima = c.premios[c.premios.length - 1].meta;
+        const pct = Math.min(100, Math.round((c.comprados / ultima) * 100));
+        const prox = c.premios.find((p) => !p.ganho);
+        const premio = (p) => `<button type="button" class="arm-premio ${p.ganho ? 'ganho' : ''}" data-acao="abrir" data-item="${esc(p.item.id)}">
+            <span class="arm-premio-prev">${previa(p.item)}</span>
+            <span class="arm-premio-txt"><b>${esc(p.item.nome)}</b><small>${p.ganho ? '<i class="fa-solid fa-circle-check"></i> Conquistado' : `<i class="fa-solid fa-lock"></i> Faltam ${moeda(p.faltam)} ${p.faltam === 1 ? 'item' : 'itens'}`}</small></span>
+        </button>`;
+        return `<section class="arm-colecao">
+            <div class="arm-col-topo"><div><h3>Coleção do Armazém</h3><p>${prox
+                ? `Cada item que você compra aqui conta. Faltam <b>${moeda(prox.faltam)}</b> pra ganhar <b>${esc(prox.item.nome)}</b>.`
+                : 'Você completou a coleção inteira. Que estante!'}</p></div>
+                <div class="arm-col-num"><b>${moeda(c.comprados)}</b><small>itens comprados</small></div></div>
+            <div class="arm-col-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${ultima}" aria-valuenow="${Math.min(c.comprados, ultima)}"><i style="width:${pct}%"></i>${c.premios.map((p) => `<span class="marco ${p.ganho ? 'ganho' : ''}" style="left:${Math.round((p.meta / ultima) * 100)}%"><em>${p.meta}</em></span>`).join('')}</div>
+            <div class="arm-col-premios">${c.premios.map(premio).join('')}</div>
+        </section>`;
+    }
+
     function corpoHtml() {
         const t = filtro === 'todos' ? null : temaDe(filtro);
         const doTema = (i) => !t || i.tema === t.id;
@@ -225,10 +308,12 @@ const Loja = (() => {
         if (t) {
             const pk = t.pacote ? itemDe(t.pacote) : null;
             corpo += `<section class="arm-tema-topo"><div><h3>${esc(t.nome)}</h3><p>${esc(t.desc)}</p></div>${pk ? `<div style="max-width:268px;min-width:230px">${htmlCard(pk)}</div>` : ''}</section>`;
-            for (const p of estado.prateleiras) corpo += htmlPrateleira(p.titulo, estado.itens.filter((i) => i.tipo === p.tipo && doTema(i)));
+            for (const p of estado.prateleiras) corpo += htmlPrateleira(p.titulo, estado.itens.filter((i) => i.tipo === p.tipo && doTema(i) && !i.limitado));
         } else {
+            corpo += htmlReliquia() + htmlColecao();
+            corpo += htmlPrateleira('Edição limitada', estado.itens.filter((i) => i.limitado));
             corpo += htmlPrateleira('Pacotes', estado.itens.filter((i) => i.tipo === 'pacote'));
-            for (const p of estado.prateleiras) corpo += htmlPrateleira(p.titulo, estado.itens.filter((i) => i.tipo === p.tipo));
+            for (const p of estado.prateleiras) corpo += htmlPrateleira(p.titulo, estado.itens.filter((i) => i.tipo === p.tipo && !i.limitado));
         }
         return corpo || '<div class="arm-vazio">Nada por aqui ainda. Volte em breve!</div>';
     }
@@ -355,6 +440,12 @@ const Loja = (() => {
     }
 
     function htmlCompra(i) {
+        if (i.premio && !i.possui) {
+            return `<div class="arm-saldo-linha"><i class="fa-solid fa-lock"></i> Prêmio da coleção: não se compra. Faltam <b>${moeda(i.faltam)} ${i.faltam === 1 ? 'item' : 'itens'}</b> comprados no Armazém (meta: ${moeda(i.meta)}).</div>`;
+        }
+        if (i.possui && i.tipo === 'efeito_servidor') {      // não é um slot da pessoa: o dono aplica a um servidor dele, no Inventário
+            return `<div class="arm-sucesso"><i class="fa-solid fa-circle-check"></i> Este item é seu</div><button type="button" class="arm-btn" data-acao="inventario"><i class="fa-solid fa-server"></i> Aplicar a um servidor</button>`;
+        }
         if (i.possui) {
             const eq = estaEquipado(i);
             const rotulo = i.tipo === 'pacote' ? 'tudo' : '';
@@ -362,9 +453,17 @@ const Loja = (() => {
                 ? `<div class="arm-sucesso"><i class="fa-solid fa-circle-check"></i> Equipado no seu perfil</div><button type="button" class="arm-btn sec" data-acao="remover" data-item="${esc(i.id)}">Tirar do perfil</button>`
                 : `<div class="arm-sucesso"><i class="fa-solid fa-circle-check"></i> Este item é seu</div><button type="button" class="arm-btn" data-acao="equipar" data-item="${esc(i.id)}"><i class="fa-solid fa-wand-magic-sparkles"></i> Equipar ${rotulo}</button>`;
         }
+        if (indisponivel(i)) {
+            return `<div class="arm-fora-grande"><i class="fa-solid fa-ban"></i> ${i.limitado.esgotado ? 'Esgotado: todas as unidades foram vendidas.' : 'Encerrada: o prazo desta edição acabou.'} Quem comprou fica com o item pra sempre.</div>
+                <button type="button" class="arm-btn" disabled>${i.limitado.esgotado ? 'Esgotado' : 'Encerrada'}</button>`;
+        }
         const curto = i.preco_final > estado.saldo;
         const t = temaDe(i.tema);
         let precos = `<span class="v"><i class="fa-solid fa-coins"></i> ${moeda(i.preco_final)}</span>`;
+        if (i.reliquia && i.preco > i.preco_final) {
+            precos += `<s>${moeda(i.preco)}</s><span class="arm-off">-${pctOff(i.preco, i.preco_final)}%</span><span class="arm-saldo-linha">Relíquia da semana: o desconto acaba na segunda-feira.</span>`;
+        }
+        if (i.limitado) precos += htmlLimite(i);
         if (i.tipo === 'pacote' && t) {
             const off = pctOff(t.preco_soma, i.preco_final);
             if (off > 0) precos += `<s>${moeda(t.preco_soma)}</s><span class="arm-off">-${off}%</span>`;
@@ -390,9 +489,9 @@ const Loja = (() => {
             const pk = itemDe(t.pacote);
             if (pk) meio = `<button type="button" class="arm-parte" data-acao="abrir" data-item="${esc(pk.id)}"><i class="fa-solid fa-box-open" style="color:var(--c)"></i><span>Faz parte do <b>${esc(pk.nome)}</b>${pk.possui ? ' (você já tem)' : ` por ${moeda(pk.preco_final)} ${esc(ctx.sigla)}`}</span></button>`;
         }
-        return `<div class="arm-modal-card" style="${estiloTema(t)}" role="dialog" aria-modal="true" aria-label="${esc(i.nome)}">
+        return `<div class="arm-modal-card" style="${estiloDoItem(i)}" role="dialog" aria-modal="true" aria-label="${esc(i.nome)}">
             <button type="button" class="arm-fechar" data-acao="fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
-            <div class="arm-modal-palco"><div class="arm-palco-prev">${previa(i)}</div><span class="arm-palco-dica">${pacote ? 'Pacote completo' : 'Prévia no seu perfil'}</span></div>
+            <div class="arm-modal-palco"><div class="arm-palco-prev">${previa(i, true)}</div><span class="arm-palco-dica">${pacote ? 'Pacote completo' : i.tipo === 'som_call' ? 'Toque pra ouvir' : 'Prévia no seu perfil'}</span></div>
             <div class="arm-modal-lado">
                 <span class="arm-tag" style="color:var(--c)">${esc(i.rotulo)}${t ? ' · ' + esc(t.nome) : ''}</span>
                 <h3>${esc(i.nome)}</h3>
@@ -433,6 +532,8 @@ const Loja = (() => {
                 case 'fechar': fecharModal(); break;
                 case 'abrir': abrirItem(id); break;
                 case 'comprar': comprar(id); break;
+                case 'ouvir': if (ctx.ouvir) ctx.ouvir(b.dataset.som); break;
+                case 'inventario': fecharModal(); if (ctx.abrirInventario) ctx.abrirInventario('efeito'); break;
                 case 'equipar': ctx.emitir('equipar_item', { item_id: id }); break;
                 case 'remover': {
                     const i = itemDe(id);
@@ -503,6 +604,7 @@ const Loja = (() => {
             if (!b) return;
             switch (b.dataset.acao) {
                 case 'tema': filtro = b.dataset.tema; render(); break;
+                case 'abrir': abrirItem(b.dataset.item); break;
                 case 'extrato': ctx.emitir('listar_movimentos'); break;
                 case 'ver-tema': filtro = b.dataset.tema; render(); { const r = raiz.closest('.market-content'); if (r) r.scrollTo({ top: 0, behavior: reduzMov() ? 'auto' : 'smooth' }); } break;
                 case 'slide': irPara(Number(b.dataset.i)); break;
@@ -511,6 +613,7 @@ const Loja = (() => {
             }
         });
         raiz.addEventListener('input', (e) => { if (e.target.id === 'arm-busca') aoBuscar(e.target.value); });
+        setInterval(atualizarContagens, 30000);
         raiz.innerHTML = '<div class="arm-vazio"><i class="fa-solid fa-spinner fa-spin"></i> Abrindo o Armazém...</div>';
     }
 
@@ -533,6 +636,7 @@ const Loja = (() => {
         clearTimeout(comprandoTimer);
         if (ctx.som) ctx.som();
         ctx.toast(`"${d.nome}" é seu!`, 'success');
+        (d.premios || []).forEach((p, k) => setTimeout(() => ctx.toast(`Conquista da coleção: ${p.nome}! Está no seu inventário.`, 'success'), 700 + k * 600));
         if (estado) {
             estado.saldo = d.saldo;
             (d.entregues || []).forEach((id) => { const f = itemDe(id); if (f) f.possui = true; });   // o servidor já confirmou: sem esperar a vitrine nova
@@ -540,6 +644,14 @@ const Loja = (() => {
         }
         confetePara = d.item_id;
         setTimeout(dispararConfete, 1200);               // rede de segurança se a vitrine nova demorar
+    }
+
+    /** As contagens ("encerra em 3d 4h") andam sozinhas, sem pedir nada ao servidor. */
+    function atualizarContagens() {
+        document.querySelectorAll('.arm-tempo[data-fim]').forEach((el) => {
+            const resta = (Number(el.dataset.fim) - Date.now()) / 1000;
+            el.textContent = resta > 0 ? tempoTexto(resta) : 'agora';
+        });
     }
 
     function dispararConfete() {

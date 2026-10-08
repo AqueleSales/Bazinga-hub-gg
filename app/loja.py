@@ -13,12 +13,15 @@ Regras que não se negociam (regra 4 do CLAUDE.md, e o motivo de este arquivo ex
 O que está à venda é o catálogo de `cosmeticos.py` com campo `preco`. Tema novo da loja = itens
 com `preco` + entrada em `TEMAS` com `loja: True` + CSS dos ids (ver "Criar item novo").
 """
+import random
+from datetime import timedelta
+
 from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 
-from .cosmeticos import CATALOGO, TEMAS, PACOTES, ROTULO_TIPO, posses_da_pessoa
-from .models import db, Person, Posse, MovimentoDrc
-from .utils import comitar_com_retry
+from .cosmeticos import CATALOGO, TEMAS, PACOTES, COLECOES, ROTULO_TIPO, posses_da_pessoa
+from .models import db, br_now, Person, Posse, MovimentoDrc, LojaEstoque
+from .utils import comitar_com_retry, MISSOES
 
 # Ordem em que os tipos aparecem na vitrine e o nome da prateleira de cada um.
 PRATELEIRAS = [
@@ -51,15 +54,124 @@ def _a_venda(item_id):
     return d if d and d.get('preco') else None
 
 
+# ==========================================
+# RELÍQUIA DA SEMANA: um item de tema da loja com desconto, trocando toda segunda-feira (horário de Brasília)
+# ------------------------------------------------------------
+# Determinístico (nada é guardado): a ordem das relíquias é um embaralhamento fixo do catálogo e a semana absoluta escolhe a vez.
+# Assim ninguém repete antes de todo mundo ter passado, e o servidor e o cliente sempre concordam sem tabela nem agendador.
+# ==========================================
+DESCONTO_RELIQUIA = 0.25
+
+
+def _segunda_de(agora):
+    dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+    return dia - timedelta(days=dia.weekday())
+
+
+def _candidatas_reliquia():
+    return sorted(i for i, d in CATALOGO.items() if d.get('preco') and d['tipo'] != 'pacote' and TEMAS.get(d['tema'], {}).get('loja'))
+
+
+def reliquia_da_semana(agora=None):
+    """item_id da relíquia desta semana (None se a loja não tem item de tema)."""
+    pool = _candidatas_reliquia()
+    if not pool:
+        return None
+    agora = agora or br_now()
+    ordem = pool[:]
+    random.Random('reliquias-do-armazem').shuffle(ordem)
+    semana = (_segunda_de(agora).date() - _segunda_de(agora.replace(year=2026, month=1, day=5)).date()).days // 7
+    return ordem[semana % len(ordem)]
+
+
+def segundos_ate_trocar(agora=None):
+    agora = agora or br_now()
+    return max(int((_segunda_de(agora) + timedelta(days=7) - agora).total_seconds()), 0)
+
+
+def _preco_com_reliquia(d, agora):
+    """Preço de tabela, ou com o desconto da semana se este for o item da vez."""
+    if d['tipo'] != 'pacote' and d['id'] == reliquia_da_semana(agora):
+        return max(5, round(d['preco'] * (1 - DESCONTO_RELIQUIA) / 5) * 5)
+    return d['preco']
+
+
+# ==========================================
+# EDIÇÕES LIMITADAS: por prazo (`ate`) e/ou por estoque (tabela loja_estoque, atômica)
+# ==========================================
+def _limites(agora=None):
+    """{item_id: {...}} de tudo que é limitado, com quantas unidades já saíram (1 query)."""
+    agora = agora or br_now()
+    limitados = {i: d['limitado'] for i, d in CATALOGO.items() if d.get('limitado')}
+    vendidos = {}
+    if limitados:
+        vendidos = {r.item_id: r.vendidos for r in LojaEstoque.query.filter(LojaEstoque.item_id.in_(list(limitados))).all()}
+    saida = {}
+    for i, lim in limitados.items():
+        estoque, ate = lim.get('estoque'), lim.get('ate')
+        restam = None if estoque is None else max(estoque - vendidos.get(i, 0), 0)
+        encerrado = bool(ate and agora > ate)
+        saida[i] = {'estoque': estoque, 'restam': restam, 'termina_em': max(int((ate - agora).total_seconds()), 0) if ate and not encerrado else None,
+                    'encerrado': encerrado, 'esgotado': restam == 0}
+    return saida
+
+
+def _garantir_linha_estoque(item_id):
+    if db.session.get(LojaEstoque, item_id) is None:
+        try:
+            with db.session.begin_nested():
+                db.session.add(LojaEstoque(item_id=item_id, vendidos=0))
+        except IntegrityError:
+            pass          # outro pedido criou a linha junto: tudo bem, o UPDATE abaixo é quem decide
+
+
+def _reservar_unidade(item_id, lim, agora):
+    """Pega UMA unidade da edição limitada, ou levanta ErroLoja. Roda dentro da transação da compra: se o débito falhar
+    depois, o rollback devolve a unidade."""
+    if lim.get('ate') and agora > lim['ate']:
+        raise ErroLoja('Essa edição já foi encerrada.')
+    if lim.get('estoque') is None:
+        return
+    _garantir_linha_estoque(item_id)
+    r = db.session.execute(update(LojaEstoque).where(LojaEstoque.item_id == item_id, LojaEstoque.vendidos < lim['estoque'])
+                           .values(vendidos=LojaEstoque.vendidos + 1))
+    if r.rowcount != 1:
+        raise ErroLoja('Esgotado! Alguém levou a última unidade.')
+
+
+# ==========================================
+# COLEÇÃO: comprar itens do Armazém (os pacotes não contam, só o que eles entregam) desbloqueia prêmios que não se vendem
+# ==========================================
+def itens_comprados(person_id):
+    """Quantos itens avulsos a pessoa JÁ comprou no Armazém (origem 'loja', fora os pacotes)."""
+    return Posse.query.filter(Posse.person_id == person_id, Posse.origem == 'loja', ~Posse.item_id.like('pacote:%')).count()
+
+
+def _conceder_premios(pessoa_id, posses_apos):
+    """Dentro da transação da compra: dá os prêmios de coleção cuja meta foi batida. Devolve os item_ids novos."""
+    db.session.flush()
+    n = itens_comprados(pessoa_id)
+    novos = []
+    for c in COLECOES:
+        if n >= c['meta'] and c['item_id'] not in posses_apos:
+            try:
+                with db.session.begin_nested():
+                    db.session.add(Posse(person_id=pessoa_id, item_id=c['item_id'], origem='colecao'))
+                novos.append(c['item_id'])
+            except IntegrityError:
+                pass
+    return novos
+
+
 def itens_do_pacote(tema):
     """item_ids avulsos que o pacote do tema entrega (sem o próprio pacote)."""
     return [f'{t}:{v}' for t, v in PACOTES.get(tema, {}).items() if _a_venda(f'{t}:{v}')]
 
 
-def preco_para(posses, item_id):
+def preco_para(posses, item_id, agora=None):
     """(preço final em DRC, ids que a compra entrega agora). Levanta ErroLoja se não dá pra comprar.
 
-    Item avulso: o preço de tabela. Pacote: o preço de tabela, abatido em proporção do que a pessoa
+    Item avulso: o preço de tabela (ou o da relíquia da semana). Pacote: o preço de tabela, abatido em proporção do que a pessoa
     já tem avulso (ela não paga duas vezes pela mesma moldura). Se já tem tudo do pacote, ele sai
     de graça (só pra constar e poder "equipar tudo")."""
     d = _a_venda(item_id)
@@ -69,7 +181,7 @@ def preco_para(posses, item_id):
         raise ErroLoja('Você já tem esse item.')
 
     if d['tipo'] != 'pacote':
-        return d['preco'], [item_id]
+        return _preco_com_reliquia(d, agora or br_now()), [item_id]
 
     filhos = itens_do_pacote(d['tema'])
     total = sum(CATALOGO[i]['preco'] for i in filhos)
@@ -95,10 +207,16 @@ def comprar(pessoa, item_id, preco_esperado=None):
     resultado = {}
 
     def preparar():
+        resultado.clear()
+        agora = br_now()
         posses = posses_da_pessoa(pessoa.id)
-        preco, entregues = preco_para(posses, item_id)
+        preco, entregues = preco_para(posses, item_id, agora)
         if preco_esperado is not None and int(preco_esperado) != preco:
             raise ErroLoja(f'O preço mudou para {preco} DRC. Confira e tente de novo.')
+        for i in entregues:
+            lim = CATALOGO[i].get('limitado')
+            if lim:
+                _reservar_unidade(i, lim, agora)
 
         if preco > 0:
             if not _debitar(pessoa.id, preco):
@@ -108,7 +226,9 @@ def comprar(pessoa, item_id, preco_esperado=None):
                                         motivo='compra', ref=item_id))
         for i in entregues:
             db.session.add(Posse(person_id=pessoa.id, item_id=i, origem='loja'))
-        resultado.update(item_id=item_id, nome=CATALOGO[item_id]['nome'], preco=preco, entregues=entregues)
+        premios = _conceder_premios(pessoa.id, posses | set(entregues))
+        resultado.update(item_id=item_id, nome=CATALOGO[item_id]['nome'], preco=preco, entregues=entregues + premios,
+                         premios=[{'item_id': x, 'nome': CATALOGO[x]['nome']} for x in premios])
 
     try:
         comitar_com_retry(preparar)
@@ -126,25 +246,41 @@ def comprar(pessoa, item_id, preco_esperado=None):
 # ==========================================
 # VITRINE (o que o cliente desenha)
 # ==========================================
-def _item_json(d, posses):
+def _item_json(d, posses, limites, agora, reliquia):
     possui = d['id'] in posses
     j = {k: d[k] for k in ('id', 'tipo', 'valor', 'nome', 'desc', 'tema', 'raridade', 'preco')}
     j['possui'] = possui
     j['rotulo'] = ROTULO_TIPO.get(d['tipo'], d['tipo'])
     if d['tipo'] == 'pacote' and not possui:
         try:
-            j['preco_final'] = preco_para(posses, d['id'])[0]
+            j['preco_final'] = preco_para(posses, d['id'], agora)[0]
         except ErroLoja:
             j['preco_final'] = d['preco']
     else:
         j['preco_final'] = d['preco']
+    if d['id'] == reliquia and not possui:
+        j['preco_final'] = _preco_com_reliquia(d, agora)
+        j['reliquia'] = True
+    if d['id'] in limites:
+        j['limitado'] = limites[d['id']]
     return j
+
+
+def _premio_json(c, posses, comprados):
+    d = CATALOGO[c['item_id']]
+    item = {k: d[k] for k in ('id', 'tipo', 'valor', 'nome', 'desc', 'tema', 'raridade')}
+    item['rotulo'] = ROTULO_TIPO.get(d['tipo'], d['tipo'])
+    return {'meta': c['meta'], 'item': item, 'ganho': c['item_id'] in posses, 'faltam': max(c['meta'] - comprados, 0)}
 
 
 def vitrine_para_json(pessoa, posses=None):
     """A loja inteira, na medida de UMA pessoa (o que ela já tem, o preço do pacote pra ela)."""
     posses = posses_da_pessoa(pessoa.id) if posses is None else posses
-    itens = [_item_json(d, posses) for d in CATALOGO.values() if d.get('preco')]
+    agora = br_now()
+    reliquia = reliquia_da_semana(agora)
+    limites = _limites(agora)
+    itens = [_item_json(d, posses, limites, agora, reliquia) for d in CATALOGO.values() if d.get('preco')]
+    comprados = itens_comprados(pessoa.id)
     temas = []
     for tid, t in TEMAS.items():
         if not t.get('loja'):
@@ -162,13 +298,15 @@ def vitrine_para_json(pessoa, posses=None):
         'temas': temas, 'itens': itens,
         'prateleiras': [{'tipo': t, 'titulo': n} for t, n in PRATELEIRAS],
         'destaques': [x for x in DESTAQUES if TEMAS.get(x['tema'], {}).get('loja')],
+        'reliquia': {'item_id': reliquia, 'desconto': int(DESCONTO_RELIQUIA * 100), 'termina_em': segundos_ate_trocar(agora)} if reliquia else None,
+        'colecao': {'comprados': comprados, 'premios': [_premio_json(c, posses, comprados) for c in COLECOES]},
     }
 
 
 # ==========================================
 # EXTRATO (histórico de DRC): o livro-razão visto pela própria pessoa
 # ==========================================
-ROTULO_MOTIVO = {'compra': 'Compra', 'nivel': 'Subiu de nível', 'ajuste': 'Ajuste'}
+ROTULO_MOTIVO = {'compra': 'Compra', 'nivel': 'Subiu de nível', 'missao': 'Missão', 'ajuste': 'Ajuste'}
 
 
 def extrato(pessoa, limite=60):
@@ -182,6 +320,9 @@ def extrato(pessoa, limite=60):
         elif m.motivo == 'nivel':
             de, _, ate = (m.ref or '').partition('->')
             titulo = f'Nível {ate}' if ate.isdigit() and de.isdigit() and int(ate) - int(de) == 1 else f'Níveis {int(de) + 1 if de.isdigit() else "?"} a {ate}'
+        elif m.motivo == 'missao':
+            nomes = [MISSOES[c]['titulo'] for c in (m.ref or '').split(',') if c in MISSOES]
+            titulo = 'Missão: ' + ' + '.join(nomes) if nomes else 'Missão concluída'
         else:
             titulo = ROTULO_MOTIVO.get(m.motivo, m.motivo)
         itens.append({'delta': m.delta, 'saldo_apos': m.saldo_apos, 'motivo': m.motivo, 'rotulo': ROTULO_MOTIVO.get(m.motivo, m.motivo),

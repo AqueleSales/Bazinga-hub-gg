@@ -119,7 +119,6 @@ class Person(db.Model):
 
     # Relacionamentos
     messages = db.relationship('Message', backref='author', lazy=True)
-    products_for_sale = db.relationship('Product', backref='seller', lazy=True)
 
 
 # ==========================================
@@ -336,41 +335,6 @@ class DirectMessage(db.Model):
     receiver = db.relationship('Person', foreign_keys=[receiver_id])
 
 
-class Purchase(db.Model):
-    """Compra efetivada na loja.
-
-    Sem isso a rota de compra só descontava as Bazinga Coins e não registrava
-    nada - o usuário pagava e não recebia (nem dava pra auditar depois).
-    """
-    __tablename__ = 'purchase'
-    id = db.Column(db.Integer, primary_key=True)
-
-    buyer_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-
-    # Quanto custou no momento da compra (o preço do produto pode mudar depois)
-    price_paid_bzc = db.Column(db.Integer, nullable=True)
-    created_at = db.Column(db.DateTime, default=br_now)
-
-    buyer = db.relationship('Person', backref='purchases', foreign_keys=[buyer_id])
-    product = db.relationship('Product', backref='purchases')
-
-
-class Product(db.Model):
-    __tablename__ = 'product'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text, nullable=True)
-
-    price_bzc = db.Column(db.Integer, nullable=True)
-    price_pix = db.Column(db.Float, nullable=True)
-
-    image_url = db.Column(db.String(255), nullable=True)
-    is_official = db.Column(db.Boolean, default=False)
-    seller_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=br_now)
-
-
 # ==========================================
 # MAPA: GeoNotes e Servidores Plantados
 # ==========================================
@@ -548,9 +512,17 @@ class MovimentoDrc(db.Model):
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
     delta = db.Column(db.Integer, nullable=False)          # + ganhou, - gastou
     saldo_apos = db.Column(db.Integer, nullable=True)
-    motivo = db.Column(db.String(20), nullable=False)      # compra | nivel | ajuste
+    motivo = db.Column(db.String(20), nullable=False)      # compra | nivel | missao | ajuste
     ref = db.Column(db.String(80), nullable=True)          # item_id da compra, "3->5" do nível...
     created_at = db.Column(db.DateTime, default=br_now)
+
+
+class LojaEstoque(db.Model):
+    """Quantas unidades de uma edição limitada do Armazém já foram vendidas. Uma linha por item limitado (nasce no 1º acesso).
+    A compra é um `UPDATE ... SET vendidos = vendidos + 1 WHERE vendidos < limite`, então duas pessoas nunca levam a última unidade juntas."""
+    __tablename__ = 'loja_estoque'
+    item_id = db.Column(db.String(60), primary_key=True)
+    vendidos = db.Column(db.Integer, nullable=False, default=0)
 
 
 # ==========================================

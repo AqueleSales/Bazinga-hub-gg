@@ -8,7 +8,7 @@ import re
 import time
 from . import socketio, APP_VERSAO
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
-                     GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product,
+                     GeoNote, MapServer, Reaction, Invite, Event, Friendship,
                      Denuncia, Notificacao, Silenciado, BazarLoja, BazarProduto, server_members, channel_members)
 from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
@@ -2696,7 +2696,7 @@ def comprar_item(dados):
         posses = com_retry(lambda: posses_da_pessoa(usuario.id))
         sala = sala_pessoal(usuario.id)
         emit('compra_ok', {'item_id': r['item_id'], 'nome': r['nome'], 'preco': r['preco'], 'entregues': r['entregues'],
-                           'saldo': r['saldo']}, to=sala)
+                           'premios': r.get('premios', []), 'saldo': r['saldo']}, to=sala)
         emit('saldo_atualizado', {'saldo': r['saldo']}, to=sala)
         emit('loja', armazem.vitrine_para_json(usuario, posses), to=sala)
         emit('inventario', _estado_inventario(usuario, posses), to=sala)

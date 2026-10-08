@@ -176,6 +176,9 @@ XP_CRESCIMENTO_ALEM = 25
 NIVEL_TABELA = 1000          # até aqui há tabela; depois é um passo fixo
 NIVEIS_POR_PAGINA_TRILHA = 100   # a trilha de marcos mostra um bloco de 100 níveis por vez
 COINS_POR_NIVEL = 50         # Dracmas pagas ao subir de nível.
+# Missão concluída também paga Dracmas (além do XP). Sem isso o DRC vinha só dos níveis, e o nível custa cada vez
+# mais XP: a renda despencava depois do 1º mês (ver testes/calibrar_precos.py, cenário "missão paga DRC").
+DRC_POR_MISSAO = {'diaria': 10, 'semanal': 40}
 GANHO_XP_INTERVALO_SEGUNDOS = 30   # Sem isso, mandar mensagem vazia em loop
                                     # virava fábrica de XP infinita.
 XP_POR_MENSAGEM = 10
@@ -284,9 +287,9 @@ def estado_battlepass(usuario):
     return _estado_xp(usuario, nivel_da_pessoa(usuario.xp))
 
 
-def _somar_xp(usuario, quantidade, nivel_antes):
-    """Soma XP e paga as moedas dos níveis cruzados. Chamar DENTRO do preparar()
-    de um comitar_com_retry (precisa refazer a soma a cada tentativa)."""
+def _somar_xp(usuario, quantidade, nivel_antes, drc_missoes=0, ref_missoes=None):
+    """Soma XP e paga as moedas dos níveis cruzados (e, se vier, as Dracmas das missões concluídas).
+    Chamar DENTRO do preparar() de um comitar_com_retry (precisa refazer a soma a cada tentativa)."""
     usuario.xp = (usuario.xp or 0) + quantidade
     nivel_depois = nivel_da_pessoa(usuario.xp)
     ganho = 0
@@ -297,6 +300,10 @@ def _somar_xp(usuario, quantidade, nivel_antes):
         # livro-razão: um movimento só por pacote de níveis cruzados (ver MovimentoDrc)
         db.session.add(MovimentoDrc(person_id=usuario.id, delta=ganho, saldo_apos=usuario.bazinga_coins,
                                     motivo='nivel', ref=f'{nivel_antes}->{nivel_depois}'))
+    if drc_missoes:
+        usuario.bazinga_coins = (usuario.bazinga_coins or 0) + drc_missoes
+        db.session.add(MovimentoDrc(person_id=usuario.id, delta=drc_missoes, saldo_apos=usuario.bazinga_coins,
+                                    motivo='missao', ref=(ref_missoes or '')[:80]))
 
 
 def conceder_xp_por_mensagem(usuario):
@@ -429,7 +436,7 @@ def _missao_para_json(linha):
     return {
         'codigo': linha.codigo, 'titulo': m['titulo'], 'descricao': m['desc'], 'icone': m['icone'],
         'meta': m['meta'], 'progresso': min(linha.progresso, m['meta']), 'xp': m['xp'],
-        'concluida': bool(linha.concluida),
+        'drc': DRC_POR_MISSAO[m['periodo']], 'concluida': bool(linha.concluida),
     }
 
 
@@ -464,15 +471,19 @@ def registrar_eventos(usuario, eventos, xp_extra=0, motivo=None):
     def preparar():
         concluidas.clear()
         ganho = xp_extra
+        drc = 0
+        codigos = []
         for l in linhas:
             m = MISSOES[l.codigo]
             l.progresso = min((l.progresso or 0) + eventos[m['evento']], m['meta'])
             if l.progresso >= m['meta'] and not l.concluida:
                 l.concluida = True
                 ganho += m['xp']
-                concluidas.append({'titulo': m['titulo'], 'xp': m['xp']})
+                drc += DRC_POR_MISSAO[m['periodo']]
+                codigos.append(l.codigo)
+                concluidas.append({'titulo': m['titulo'], 'xp': m['xp'], 'drc': DRC_POR_MISSAO[m['periodo']]})
         if ganho:
-            _somar_xp(usuario, ganho, nivel_antes)
+            _somar_xp(usuario, ganho, nivel_antes, drc_missoes=drc, ref_missoes=','.join(codigos))
 
     comitar_com_retry(preparar)
 

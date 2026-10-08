@@ -9,7 +9,7 @@ import uuid
 import cloudinary
 import cloudinary.uploader
 import requests
-from ..models import (Person, Channel, Message, DirectMessage, Product, Purchase,
+from ..models import (Person, Channel, Message, DirectMessage,
                       GeoNote, MapServer, Server, Invite, Reaction, Friendship, PushSub, br_now, db, server_members)
 from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
@@ -695,75 +695,6 @@ def get_dms(target_id):
         })
 
     return jsonify(dados)
-
-
-# ==========================================
-# ROTA DO MERCADO ELITE: Buscar Produtos
-# ==========================================
-@main_bp.route("/api/produtos")
-def get_produtos():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Acesso negado'}), 401
-
-    try:
-        # só o Bazar: o catálogo oficial agora é o Armazém (app/loja.py)
-        produtos_db = Product.query.filter(Product.is_official.isnot(True)).order_by(Product.created_at.desc()).all()
-        dados = []
-        for p in produtos_db:
-            dados.append({
-                'id': p.id,
-                'name': p.name,
-                'description': p.description,
-                'price_bzc': p.price_bzc,
-                'price_pix': p.price_pix,
-                'image_url': p.image_url,
-                'is_official': p.is_official,
-                # Pega o nome do vendedor se existir, senão é a Bazinga Oficial
-                'seller': p.seller.name if p.seller else f'{APP_NOME} Oficial'
-            })
-        return jsonify(dados)
-    except Exception as e:
-        db.session.rollback()
-        print("Erro na rota de produtos:", e)
-        return jsonify([])
-
-
-# ==========================================
-# COMPRAR PRODUTO OFICIAL: SUBSTITUÍDA pelo Armazém (evento `comprar_item`, app/loja.py).
-# ------------------------------------------------------------
-# A rota antiga descontava moedas com "ler saldo, subtrair, gravar" (dois cliques gastavam o mesmo DRC
-# duas vezes) e não entregava nada: só gravava um Purchase. Fica respondendo 410 para quem ainda
-# estiver com uma aba velha aberta.
-# ==========================================
-@main_bp.route("/api/produtos/<int:produto_id>/comprar", methods=["POST"])
-def comprar_produto(produto_id):
-    return jsonify({'error': 'A loja foi refeita. Atualize a página (F5) para comprar no novo Armazém.'}), 410
-
-
-# ==========================================
-# INVENTÁRIO: o que o usuário já comprou
-# ==========================================
-@main_bp.route("/api/inventario")
-def get_inventario():
-    usuario = usuario_da_sessao()
-    if not usuario:
-        return jsonify({'error': 'Acesso negado'}), 401
-
-    try:
-        compras = com_retry(lambda: Purchase.query.filter_by(buyer_id=usuario.id)
-                            .order_by(Purchase.created_at.desc()).all())
-        return jsonify([{
-            'id': c.id,
-            'produto_id': c.product_id,
-            'nome': c.product.name if c.product else 'Item removido',
-            'image_url': c.product.image_url if c.product else None,
-            'preco_pago': c.price_paid_bzc,
-            'comprado_em': formatar_data(c.created_at)
-        } for c in compras])
-    except Exception as e:
-        db.session.rollback()
-        print(f"[ERRO INVENTARIO] (rode atualizar_banco.py se for erro de tabela): {e}")
-        return jsonify([])
 
 
 # ==========================================

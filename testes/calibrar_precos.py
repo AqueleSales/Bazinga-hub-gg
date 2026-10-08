@@ -31,7 +31,7 @@ def _cumpre(p, m, dias_na_semana=1):
 
 def missoes_do_dia(p, dias_ativos_na_semana, xp_por_missao=True, drc_diaria=0, drc_semanal=0):
     """Esperado por dia ativo: média sobre o pool (cada pessoa recebe 3 sorteadas de N), contando só as missões que o perfil CONSEGUE cumprir.
-    Devolve (xp, drc). O DRC é um "e se": hoje missão paga só XP."""
+    Devolve (xp, drc)."""
     dia = [m for m in u.MISSOES.values() if m['periodo'] == 'diaria']
     sem = [m for m in u.MISSOES.values() if m['periodo'] == 'semanal']
     k = u.QTD_POR_PERIODO
@@ -40,7 +40,10 @@ def missoes_do_dia(p, dias_ativos_na_semana, xp_por_missao=True, drc_diaria=0, d
     return xp, drc
 
 
-def simular(p, drc_missao=(0, 0)):
+def simular(p, drc_missao=None):
+    """`drc_missao` = (DRC por diária, DRC por semanal); sem ele vale o que o app paga de verdade (`DRC_POR_MISSAO`)."""
+    if drc_missao is None:
+        drc_missao = (u.DRC_POR_MISSAO['diaria'], u.DRC_POR_MISSAO['semanal'])
     xp, drc, seq, linhas = 0, float(SALDO_INICIAL), 0, []
     ativos = p['dias_semana']
     m_xp, m_drc = missoes_do_dia(p, ativos, drc_diaria=drc_missao[0], drc_semanal=drc_missao[1])
@@ -68,6 +71,8 @@ def main():
     pacotes = [d for d in cos.CATALOGO.values() if d.get('pacote_loja')]
     avulsos = [d for d in cos.CATALOGO.values() if d.get('preco') and d['tipo'] != 'pacote']
     pacote = max(d['preco'] for d in pacotes) if pacotes else 800
+    # pacote de tema "épico" (se existisse): soma dos 4 preços épicos menos o desconto do pacote, em múltiplos de 50
+    epico = int(round(sum(cos.PRECOS['epico'].values()) * (1 - cos.DESCONTO_PACOTE) / 50.0)) * 50
     barato = min(d['preco'] for d in avulsos) if avulsos else 250
     print(f'Itens avulsos: {sorted({d["preco"] for d in avulsos})} DRC · pacotes: {sorted({d["preco"] for d in pacotes})} DRC ({len(pacotes)} temas)\n')
 
@@ -79,7 +84,7 @@ def main():
         print(f'{nome:9}' + ''.join(f'{str(r[nome][d - 1][2]) + " / " + str(r[nome][d - 1][3]):>14}' for d in dias_mostrados))
 
     print('\nEm quantos DIAS cada perfil junta (sem gastar nada antes) o valor de:')
-    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), ('item premium (2500)', 2500)]
+    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), (f'pacote épico ({epico})', epico)]
     print(f"{'':26}" + ''.join(f'{n:>10}' for n in PERFIS))
     for rot, valor in degraus:
         print(f'{rot:26}' + ''.join(f'{(dia_em_que_junta(r[n], valor) or ">90"):>10}' for n in PERFIS))
@@ -99,22 +104,23 @@ def main():
     regra(f'... nem pro intenso antes do dia 3: dia {d_int}', bool(d_int) and d_int >= 3)
     d_cas = dia_em_que_junta(r['casual'], pacote)
     regra(f'... e em até ~2 meses pra quem entra pouco: dia {d_cas or ">90"}', bool(d_cas) and d_cas <= 60)
-    d_prem = dia_em_que_junta(r['regular'], 2500)
-    regra(f'premium (2500) não vira rotina: o regular só junta no dia {d_prem or ">90"}', d_prem is None or d_prem >= 30)
+    d_prem = dia_em_que_junta(r['regular'], epico)
+    regra(f'pacote épico ({epico}) não vira rotina: o regular só junta no dia {d_prem or ">90"} (precisa de >= 10)', d_prem is None or d_prem >= 10)
 
     print(f'\nColeção completa ({len(pacotes)} pacotes x {pacote} = {len(pacotes) * pacote} DRC), sem gastar em mais nada:')
     for nome in PERFIS:
         tot = r[nome][-1][3]
         print(f'  {nome:8} junta {tot} DRC em {DIAS} dias = {tot // pacote} pacote(s)')
 
-    print('\nO PROBLEMA QUE ESSA CONTA MOSTRA: o DRC vem só dos níveis, e o nível custa cada vez mais XP. Depois do 1º mês a renda cai muito')
-    print('(veja o regular: o que ele ganha do dia 30 ao 90 é uma fração do que ganhou na 1ª semana). Cenário "e se missão pagasse DRC"')
-    print('(hoje missão paga só XP; NÃO está ligado no app, é só uma conta pra decidir). DRC no dia 30 / dia 90:')
-    print(f"  {'':34}" + ''.join(f'{n:>16}' for n in PERFIS))
-    print(f"  {'como está hoje':34}" + ''.join(f'{str(r[n][29][3]) + " / " + str(r[n][89][3]):>16}' for n in PERFIS))
-    for diaria, semanal in ((10, 40), (20, 80)):
-        ls = {n: simular(p, (diaria, semanal)) for n, p in PERFIS.items()}
-        print(f"  {str(diaria) + ' DRC/diária + ' + str(semanal) + ' DRC/semanal':34}" + ''.join(f'{str(ls[n][29][3]) + " / " + str(ls[n][89][3]):>16}' for n in PERFIS))
+    print('\nO DRC vem dos níveis (que custam cada vez mais XP) E das missões (valor fixo por missão: é o que segura a renda depois do 1º mês).')
+    print('Comparativo, DRC no dia 30 / dia 90:')
+    print(f"  {'':40}" + ''.join(f'{n:>16}' for n in PERFIS))
+    sem_missao = {n: simular(p, (0, 0)) for n, p in PERFIS.items()}
+    print(f"  {'só níveis (missão não pagaria DRC)':40}" + ''.join(f'{str(sem_missao[n][29][3]) + " / " + str(sem_missao[n][89][3]):>16}' for n in PERFIS))
+    atual = f"{u.DRC_POR_MISSAO['diaria']} DRC/diária + {u.DRC_POR_MISSAO['semanal']} DRC/semanal (HOJE)"
+    print(f"  {atual:40}" + ''.join(f'{str(r[n][29][3]) + " / " + str(r[n][89][3]):>16}' for n in PERFIS))
+    ls = {n: simular(p, (20, 80)) for n, p in PERFIS.items()}
+    print(f"  {'20 DRC/diária + 80 DRC/semanal (se subir)':40}" + ''.join(f'{str(ls[n][29][3]) + " / " + str(ls[n][89][3]):>16}' for n in PERFIS))
     return all(todas)
 
 

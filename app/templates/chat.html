@@ -2306,6 +2306,8 @@
         .qs-tag { position: absolute; left: 12px; top: 12px; z-index: 1; font-size: 10px; font-weight: 900; letter-spacing: .1em; color: #fff; background: rgba(0,0,0,.35); padding: 4px 9px; border-radius: 999px; }
         .qs-xp { position: absolute; left: 12px; bottom: 12px; z-index: 1; font-size: 15px; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
         .qs-xp i { color: #ffe27a; margin-right: 4px; }
+        .qs-xp .qs-drc { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,.28); font-size: 12px; white-space: nowrap; }
+        .qs-xp .qs-drc i { margin-right: 3px; }
         .qs-selo { position: absolute; right: 12px; top: 12px; z-index: 2; width: 28px; height: 28px; border-radius: 50%; background: #23a559; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
         .qs-corpo { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; flex: 1; }
         .qs-corpo b { color: var(--text-header); font-size: 15px; }
@@ -3285,7 +3287,7 @@
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-comment-dots"></i></div><div><b>Converse: +10 XP</b><span>Em canais e DMs, no máximo 1 vez a cada 30 segundos.</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>Tempo ativo: +3 XP/min</b><span>Mexendo no app ou numa call. Vale até 60 minutos por dia (180 XP).</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico fogo"><i class="fa-solid fa-fire"></i></div><div><b>Bônus diário: +50 XP</b><span>Abra o app todo dia. Cada dia seguido soma +10 XP (até 7 dias).</span></div></div>
-                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-list-check"></i></div><div><b>Missões: até +1.800 XP</b><span>3 diárias e 3 semanais novas pra você. O XP cai assim que completar.</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-list-check"></i></div><div><b>Missões: até +1.800 XP e +40 {{ moeda_sigla }}</b><span>3 diárias (+10 {{ moeda_sigla }} cada) e 3 semanais (+40 {{ moeda_sigla }} cada) novas pra você. O prêmio cai assim que completar.</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: {{ moeda_sigla }}</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Patente nova a cada grande marco (passe o mouse no ícone).</span></div></div>
                     </div>
                 </div>
@@ -4941,7 +4943,6 @@
                 if(bazingaSidebar) bazingaSidebar.style.display = 'none';
 
                 switchMainView('market');
-                carregarMercado();
                 if (typeof Loja !== 'undefined') Loja.abrir();
                 if (typeof Bazar !== 'undefined' && document.getElementById('tab-bazar').classList.contains('active')) Bazar.abrir();
             });
@@ -5051,7 +5052,7 @@
                     <div class="qs-capa">
                         <i class="fa-solid fa-${esc(m.icone)} qs-icone"></i>
                         <span class="qs-tag">${rotuloPer}</span>
-                        <span class="qs-xp"><i class="fa-solid fa-bolt"></i> +${Number(m.xp)} XP</span>
+                        <span class="qs-xp"><i class="fa-solid fa-bolt"></i> +${Number(m.xp)} XP${m.drc ? ` <span class="qs-drc"><i class="fa-solid fa-coins"></i> +${Number(m.drc)}</span>` : ''}</span>
                         ${m.concluida ? '<span class="qs-selo"><i class="fa-solid fa-check"></i></span>' : ''}
                     </div>
                     <div class="qs-corpo">
@@ -5079,7 +5080,7 @@
             bpMissoesEm = Date.now();
             desenharMissoes();
         });
-        socket.on('missao_concluida', (m) => showToast(`Missão concluída: ${m.titulo} · +${m.xp} XP`, 'success'));
+        socket.on('missao_concluida', (m) => showToast(`Missão concluída: ${m.titulo} · +${m.xp} XP${m.drc ? ` · +${m.drc} {{ moeda_sigla }}` : ''}`, 'success'));
         setInterval(atualizarContagemReset, 30000);
 
         // ---- Tempo ativo: batimento de 1/min, só se a pessoa mexeu de verdade ----
@@ -5187,6 +5188,7 @@
             if (dados.coins !== undefined) {
                 const saldoEl = document.getElementById('meu-saldo-bzc');
                 if (saldoEl) saldoEl.textContent = dados.coins;
+                if (typeof Loja !== 'undefined' && Loja.saldo) Loja.saldo(dados.coins);
             }
 
             if ((dados.motivo === 'mensagem' || dados.motivo === 'tempo') && dados.ganho_xp) mostrarXpFlutuante(dados.ganho_xp);
@@ -6976,7 +6978,6 @@
                 if(bazingaSidebar) bazingaSidebar.style.display = 'none';
 
                 switchMainView('market');
-                carregarMercado();
                 if (typeof Loja !== 'undefined') Loja.abrir();
                 if (typeof Bazar !== 'undefined' && document.getElementById('tab-bazar').classList.contains('active')) Bazar.abrir();
             });
@@ -10423,14 +10424,16 @@
                 servidoresComEfeito: (valor) => meUserServers.filter(s => s.efeito === valor).map(s => s.name),
                 aoServidor: (valor) => abrirEscolhaDeServidor(valor),
                 aoMontanha: () => abrirMontanhaPatentes(),
-                aoOuvir: (idSom) => {
-                    const ctx = garantirAudio();
-                    if (!ctx) { showToast('O navegador bloqueou o áudio - clique na página e tente de novo.', 'warning'); return; }
-                    if (ctx.state !== 'running') ctx.resume();
-                    Cosm.somEntrada(idSom, ctx);
-                }
+                aoOuvir: ouvirSomDeEntrada
             });
             emojificar(raiz);
+        }
+
+        function ouvirSomDeEntrada(idSom) {
+            const ctx = garantirAudio();
+            if (!ctx) { showToast('O navegador bloqueou o áudio - clique na página e tente de novo.', 'warning'); return; }
+            if (ctx.state !== 'running') ctx.resume();
+            Cosm.somEntrada(idSom, ctx);
         }
 
         socket.on('inventario', (estado) => {
@@ -10449,6 +10452,8 @@
             confirmar: (titulo, texto, ok) => openConfirmModal(titulo, texto, ok),
             toast: (msg, tipo) => showToast(msg, tipo),
             som: () => { try { tocarSom('missao'); } catch (e) {} },
+            ouvir: (idSom) => ouvirSomDeEntrada(idSom),
+            abrirInventario: (aba) => abrirInventario(aba),
         });
         socket.on('loja', (v) => Loja.receber(v));
         socket.on('compra_ok', (d) => Loja.compraOk(d));
@@ -13013,7 +13018,6 @@
         // =====================================================================
         // LÓGICA DO MERCADO ELITE (Buscar no Banco e Desenhar na Tela)
         // =====================================================================
-        function carregarMercado() { /* o Armazém (Loja.js) e o Bazar (Bazar.js) pedem os próprios dados por socket */ }
 
 
         // =====================================================================

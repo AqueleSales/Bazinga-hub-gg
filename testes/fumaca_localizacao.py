@@ -9,7 +9,7 @@ c.Config.SQLALCHEMY_ENGINE_OPTIONS = {}
 from app import create_app, db, socketio
 from app import events
 from app.main import routes as rotas
-from app.models import Role, Person, Friendship, Product, Server
+from app.models import Role, Person, Friendship, Server
 
 app = create_app()
 falhas = []
@@ -38,8 +38,6 @@ with app.app_context():
         p = Person(name=n, email=f'{n}@x', role_id=r.id, username=n.lower(), bazinga_coins=5000)
         db.session.add(p); db.session.commit(); ids[n] = p.id
     db.session.add(Friendship(requester_id=ids['Ana'], addressee_id=ids['Beto'], status='accepted'))
-    prod = Product(name='Anel', price_bzc=100, is_official=True); db.session.add(prod); db.session.commit()
-    prod_id = prod.id
 
     def cliente(nome):
         fc = app.test_client()
@@ -74,9 +72,10 @@ with app.app_context():
     ok(any('localização' in m for m in erros(ana)), 'desligada: NÃO copia nota')
     ana.emit('entrar_servidor_pin', {'server_id': srv.id})
     ok(any('localização' in m for m in erros(ana)), 'desligada: NÃO entra por pino')
-    resp = fana.post(f'/api/produtos/{prod_id}/comprar')
-    ok(resp.status_code == 410, 'a rota antiga de compra foi aposentada (410): o Armazém compra pelo socket, sem exigir localização')
-    ok(db.session.get(Person, ids['Ana']).bazinga_coins == 5000, 'e nenhuma moeda foi cobrada')
+    resp = fana.post('/api/produtos/1/comprar')
+    ok(resp.status_code == 404, 'a rota antiga de compra foi removida (404)')
+    ana.emit('comprar_item', {'item_id': 'nome:dualidade'})
+    ok(ev(ana, 'compra_ok'), 'desligada: o Armazém continua vendendo (cosmético não depende de onde você está)')
 
     # radar nos dois sentidos
     ana.emit('atualizar_localizacao', {'lat': -15.8, 'lng': -47.9}); ev(ana)
@@ -90,8 +89,8 @@ with app.app_context():
     ok(ids['Ana'] in events.ultimas_posicoes, 'ligada de novo: volta pro radar')
     ana.emit('criar_geonote', {'lat': -15.8, 'lng': -47.9, 'texto': 'oi'})
     ok(not erros(ana), 'ligada de novo: cria nota')
-    resp = fana.post(f'/api/produtos/{prod_id}/comprar')
-    ok(resp.status_code == 410 and db.session.get(Person, ids['Ana']).bazinga_coins == 5000, 'rota antiga continua recusando e sem cobrar')
+    resp = fana.get('/api/inventario')
+    ok(resp.status_code == 404, 'a rota antiga de inventário também foi removida (404)')
 
     # ---- regra 6: desligar tira o pino de quem já via ----
     ev(beto)

@@ -947,6 +947,83 @@ body.mt-aberta { overflow: hidden; }
     background-size: 100% 100%, 100% 100%, 6px 6px;
     animation: bpGira 16s steps(48, end) infinite; }
 
+/* ==========================================================================
+   EDIÇÕES LIMITADAS (Pioneiro, Lote 001, Eclipse) e PRÊMIOS DE COLEÇÃO (Colecionador, Curador, Acervo)
+   Arte própria, só CSS. Mesmas convenções: moldura = ::before (+ ::after com os insets por contexto), placa também em
+   `.user-profile-bar.placa-X !important`, faixa em `.banner-anim-X`.
+   ========================================================================== */
+.moldura-curador::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; z-index: 2; }
+.pf-tile-av.moldura-curador::after { inset: -5px; }
+.message .chat-avatar.moldura-curador::after { inset: -4px; }
+.video-avatar.moldura-curador::after { inset: -6px; }
+.message .chat-avatar.moldura-pioneiro::before, .message .chat-avatar.moldura-curador::before { filter: none; }
+
+/* ---------- PIONEIRO · moldura: coroa de louros dourada, girando devagar e brilhando ---------- */
+.moldura-pioneiro::before { background: repeating-conic-gradient(from var(--bp-angulo), #b8860b 0 7deg, #ffe58a 7deg 11deg, #d9a520 11deg 17deg, transparent 17deg 21deg);
+    animation: bpGira 22s linear infinite, pioneiroBrilho 3.2s ease-in-out infinite alternate; }
+@keyframes pioneiroBrilho { from { filter: drop-shadow(0 0 1px rgba(255, 213, 74, .5)); } to { filter: drop-shadow(0 0 6px rgba(255, 213, 74, .95)); } }
+
+/* ---------- LOTE 001 · placa: chapa de metal escovado com rebites e um filete dourado; um reflexo passa de tempos em tempos ---------- */
+.placa-lote_um, .user-profile-bar.placa-lote_um {
+    background-color: #2a2e36 !important;
+    background-image:
+        radial-gradient(circle at 7px 50%, #cfd6e0 0 2px, #6d7683 2.6px, transparent 3.2px),
+        radial-gradient(circle at calc(100% - 7px) 50%, #cfd6e0 0 2px, #6d7683 2.6px, transparent 3.2px),
+        linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, .22) 50%, transparent 62%),
+        linear-gradient(#d9a520, #d9a520),
+        linear-gradient(#d9a520, #d9a520),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 3px),
+        linear-gradient(180deg, #3a404a, #23272e) !important;
+    background-size: 100% 100%, 100% 100%, 260% 100%, 100% 2px, 100% 2px, 100% 100%, 100% 100% !important;
+    background-position: 0 0, 0 0, 130% 0, 0 0, 0 100%, 0 0, 0 0 !important;
+    background-repeat: no-repeat !important;
+    animation: placaLote 6s ease-in-out infinite !important;
+}
+@keyframes placaLote { 0%, 55% { background-position: 0 0, 0 0, 130% 0, 0 0, 0 100%, 0 0, 0 0; } 90%, 100% { background-position: 0 0, 0 0, -30% 0, 0 0, 0 100%, 0 0, 0 0; } }
+
+/* ---------- ECLIPSE · faixa: um sol negro com a coroa em chamas e raios girando por trás ---------- */
+.banner-anim-eclipse { background-color: #07070f; background-repeat: no-repeat, no-repeat, no-repeat, repeat, no-repeat;
+    background-image:
+        radial-gradient(circle closest-side at 74% 50%, #020204 0 40%, transparent 41%),
+        radial-gradient(circle closest-side at 74% 50%, transparent 0 38%, #fff1c2 41%, #ff9a2e 56%, rgba(255, 90, 20, 0) 100%),
+        repeating-conic-gradient(from var(--bp-angulo) at 74% 50%, rgba(255, 190, 90, .34) 0 2.4deg, transparent 2.4deg 13deg),
+        radial-gradient(circle, rgba(255, 255, 255, .55) 0 1px, transparent 1.6px),
+        linear-gradient(90deg, #07070f, #14142a);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 41px 37px, 100% 100%;
+    animation: bpGira 36s linear infinite; }
+
+/* ---------- COLECIONADOR · placa: bronze polido com estrelinhas que piscam ---------- */
+.placa-colecionador, .user-profile-bar.placa-colecionador {
+    background-color: #6b4423 !important;
+    background-image:
+        radial-gradient(circle, rgba(255, 233, 170, .95) 0 1.1px, transparent 1.8px),
+        radial-gradient(circle, rgba(255, 233, 170, .7) 0 .9px, transparent 1.5px),
+        linear-gradient(100deg, transparent 40%, rgba(255, 236, 190, .22) 50%, transparent 60%),
+        linear-gradient(90deg, #5a3a1c, #8a5a2e 50%, #5a3a1c) !important;
+    background-size: 37px 31px, 53px 43px, 260% 100%, 100% 100% !important;
+    background-position: 6px 5px, 20px 17px, 130% 0, 0 0 !important;
+    background-repeat: repeat, repeat, no-repeat, no-repeat !important;
+    animation: placaColecionador 5s ease-in-out infinite !important;
+}
+@keyframes placaColecionador { 0%, 50% { background-position: 6px 5px, 20px 17px, 130% 0, 0 0; } 100% { background-position: 6px 5px, 20px 17px, -30% 0, 0 0; } }
+
+/* ---------- CURADOR · moldura: anel de prata com duas estrelas orbitando em sentidos opostos ---------- */
+.moldura-curador::before { background: conic-gradient(from var(--bp-angulo), #eef2f8, #8f9bb0, #ffffff, #8f9bb0, #eef2f8); animation: bpGira 12s linear infinite; }
+.moldura-curador::after { background:
+        radial-gradient(circle at 50% 3%, #fff 0 2px, rgba(255, 255, 255, .55) 2.6px 4.4px, transparent 5.2px),
+        radial-gradient(circle at 50% 97%, #fff 0 1.6px, rgba(220, 230, 255, .5) 2.2px 3.6px, transparent 4.4px);
+    animation: curadorOrbita 7s linear infinite; }
+@keyframes curadorOrbita { to { transform: rotate(360deg); } }
+
+/* ---------- ACERVO · nome: prata e ouro correndo pelas letras, como o reflexo numa vitrine de museu ---------- */
+.ne-acervo { color: transparent !important; -webkit-background-clip: text; background-clip: text; font-weight: 800; letter-spacing: .3px; -webkit-text-stroke: .4px rgba(40, 28, 0, .45);
+    background-image: linear-gradient(100deg, #cfd6e6 0 34%, #ffffff 44%, #f5c542 52%, #ffffff 60%, #cfd6e6 70% 100%); background-size: 300% auto; animation: neAcervo 4.2s linear infinite; }
+@keyframes neAcervo { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .moldura-pioneiro::before, .moldura-curador::before, .moldura-curador::after, .placa-lote_um, .placa-colecionador, .banner-anim-eclipse, .ne-acervo { animation: none !important; }
+}
+
 /* quem pede menos movimento: os temas novos ficam parados */
 @media (prefers-reduced-motion: reduce) {
     .moldura-cubos::before, .moldura-batida::before, .moldura-batida::after, .moldura-quadra::before, .moldura-quadra::after, .moldura-mira::before, .moldura-mira::after, .moldura-manga::before,

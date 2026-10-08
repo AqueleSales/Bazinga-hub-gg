@@ -30,7 +30,7 @@ def ev(cli, nome=None):
 # ---------- 1. o catálogo da loja é coerente ----------
 vendaveis = {i: d for i, d in cos.CATALOGO.items() if d.get('preco')}
 ok(vendaveis and all(isinstance(d['preco'], int) and d['preco'] > 0 for d in vendaveis.values()), 'Todo item à venda tem preço inteiro e positivo')
-ok(all(d['tema'] in cos.TEMAS and cos.TEMAS[d['tema']].get('loja') for d in vendaveis.values()), 'Todo item à venda pertence a um tema da loja')
+ok(all(d['tema'] in cos.TEMAS and (cos.TEMAS[d['tema']].get('loja') or d['tema'] == 'edicao') for d in vendaveis.values()), 'Todo item à venda pertence a um tema da loja (ou é edição limitada)')
 ok(not any(d.get('preco') for i, d in cos.CATALOGO.items() if d['tema'] in ('gogeta', 'sasuke', 'fusao') or d['tipo'] == 'badge'),
    'Laboratório e insígnias NÃO estão à venda')
 for tid, t in cos.TEMAS.items():
@@ -190,7 +190,8 @@ with app.app_context():
     ok(saldo('cris') == 5000 - PN - pc['preco_final'], 'E cobra o valor abatido')
     posses = cos.posses_da_pessoa(ids['cris'])
     ok({'pacote:dualidade', 'moldura:dualidade', 'nome:dualidade', 'placa:dualidade', 'faixa:dualidade'} <= posses, 'Entrega o pacote e os 4 itens')
-    ok(db.session.query(Posse).filter_by(person_id=ids['cris']).count() == 5, 'Sem posse duplicada (o nome já tinha)')
+    ok(db.session.query(Posse).filter_by(person_id=ids['cris']).count() == 6, 'Sem posse duplicada (o nome já tinha): 4 itens + pacote + prêmio de coleção (4 itens comprados)')
+    ok('placa:colecionador' in posses, 'Os 4 itens comprados desbloquearam o prêmio de coleção')
     cris.emit('equipar_item', {'item_id': 'pacote:dualidade'})
     pa = [m for m in ev(cris) if m['name'] == 'perfil_atualizado']
     ok(pa and pa[-1]['args'][0]['moldura'] == 'dualidade' and pa[-1]['args'][0]['placa'] == 'dualidade', 'O pacote comprado equipa o tema inteiro')
@@ -243,7 +244,7 @@ with app.app_context():
 
     # ---------- 8. a rota antiga não cobra nem entrega ----------
     resp = fana.post('/api/produtos/1/comprar')
-    ok(resp.status_code == 410, 'Rota antiga de compra responde 410')
+    ok(resp.status_code == 404, 'Rota antiga de compra não existe mais (404)')
     # sem login nada acontece
     anon = socketio.test_client(app); anon.get_received()
     anon.emit('comprar_item', {'item_id': 'moldura:dualidade'}); anon.emit('listar_loja')

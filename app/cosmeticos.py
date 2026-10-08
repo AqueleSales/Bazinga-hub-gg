@@ -12,6 +12,7 @@ Convenções:
   * Nada neste arquivo toca o banco no import (models só é importado dentro das funções).
 """
 import json
+from datetime import datetime
 
 # ==========================================
 # TEMAS DO LABORATÓRIO (só o dono e o amigo beta tester)
@@ -43,6 +44,9 @@ TEMAS = {
     'manga': {'nome': 'Mangá', 'cor': '#e63946', 'loja': True, 'cores': ['#e63946', '#f1faee'], 'icone': 'fa-pen-nib',
               'lema': 'Preto, branco e uma cor só para o clímax.',
               'desc': 'Traço de tinta que se desenha sozinho, retícula de página e linhas de velocidade.'},
+    # ---- Fora dos temas da vitrine (sem chip nem pacote): edições limitadas à venda e recompensas de coleção ----
+    'edicao': {'nome': 'Edição Limitada', 'cor': '#ffcc33', 'desc': 'Acaba por prazo ou por estoque. Quando acabar, acabou.'},
+    'colecao': {'nome': 'Coleção', 'cor': '#c0c8d6', 'desc': 'Prêmios de quem coleciona o Armazém. Não se compram: se conquistam.'},
 }
 
 # ==========================================
@@ -200,7 +204,10 @@ _item('faixa', 'fusao', 'Fusão', 'Chamas laranja e roxa se misturando na faixa.
 # o nível "épico" é o premium (meses). MUDOU o ganho de DRC (utils.py) ou um preço aqui? Rode o script de novo.
 PRECOS = {
     'raro':  {'nome': 350, 'placa': 350, 'faixa': 450, 'moldura': 550},
-    'epico': {'nome': 600, 'placa': 600, 'faixa': 750, 'moldura': 900},
+    'epico': {'nome': 600, 'placa': 600, 'faixa': 750, 'moldura': 900,
+              # temas "premium" (com efeitos): cada slot de efeito tem o seu preço
+              'efeito_avatar': 700, 'efeito_perfil': 900, 'efeito_fala': 500, 'efeito_radar': 400,
+              'efeito_chat': 500, 'som_call': 350, 'pin_nota': 400, 'efeito_servidor': 800},
 }
 DESCONTO_PACOTE = 0.30        # o pacote custa a soma dos 4 itens menos isto (arredondado pra múltiplo de 50)
 
@@ -257,6 +264,28 @@ _item_loja('nome', 'manga', 'Onomatopeia', 'Letras grossas de quadrinho, com con
 _item_loja('placa', 'manga', 'Retícula', 'Retícula de página de mangá, em pontinhos, com uma faixa vermelha.', 'manga')
 _item_loja('faixa', 'manga', 'Página de Mangá', 'Linhas de velocidade saindo de um clarão vermelho, em preto e branco.', 'manga')
 
+# ---- EDIÇÕES LIMITADAS (tema 'edicao': sem chip nem pacote; ficam numa prateleira própria) ----
+# `limitado` = {'estoque': N | None, 'ate': datetime | None}. Estoque acaba quando N pessoas compraram (tabela loja_estoque,
+# atômico); prazo acaba quando `ate` passa (horário de Brasília, como o resto do app). Item encerrado/esgotado continua
+# aparecendo (pra quem perdeu ver o que perdeu), mas ninguém compra; quem comprou fica com ele pra sempre.
+_item('moldura', 'pioneiro', 'Pioneiro', 'Uma coroa de louros dourados em volta da foto, brilhando devagar. Só quem estava aqui no começo: sai do Armazém no fim de 2026 e nunca mais volta.',
+      'edicao', 'epico', preco=1500, limitado={'estoque': None, 'ate': datetime(2026, 12, 31, 23, 59, 59)})
+_item('placa', 'lote_um', 'Lote 001', 'Chapa de metal escovado com rebites e um filete dourado. Só 100 unidades existem.',
+      'edicao', 'epico', preco=900, limitado={'estoque': 100, 'ate': None})
+_item('faixa', 'eclipse', 'Eclipse', 'Um sol negro com a coroa em chamas atravessando a faixa. Só 150 unidades existem.',
+      'edicao', 'epico', preco=1100, limitado={'estoque': 150, 'ate': None})
+
+# ---- COLEÇÃO: comprar itens do Armazém (qualquer um, fora os pacotes) desbloqueia prêmios que NÃO se compram ----
+# `meta` = quantos itens avulsos a pessoa precisa ter comprado. Um pacote entrega 4 de uma vez, então o 1º prêmio sai com o 1º pacote.
+_item('placa', 'colecionador', 'Colecionador', 'Bronze polido com estrelinhas: o prêmio de quem já tem uma estante cheia.', 'colecao', 'epico')
+_item('moldura', 'curador', 'Curador', 'Um anel de prata com estrelas orbitando devagar: quem cuida de um acervo de verdade.', 'colecao', 'epico')
+_item('nome', 'acervo', 'Acervo', 'Prata e ouro correm pelas letras, com um brilho de vitrine de museu.', 'colecao', 'epico')
+COLECOES = [
+    {'id': 'colecao4', 'meta': 4, 'item_id': 'placa:colecionador'},
+    {'id': 'colecao12', 'meta': 12, 'item_id': 'moldura:curador'},
+    {'id': 'colecao24', 'meta': 24, 'item_id': 'nome:acervo'},
+]
+
 # ---- Efeito de servidor: o DONO aplica a um servidor dele (Server.efeito); todo membro vê no ícone da barra, no
 # cabeçalho e no pino do mapa. Não entra nos pacotes (não é um slot da pessoa, é do servidor). ----
 _item('efeito_servidor', 'gogeta', 'Chamas do Servidor', 'O ícone do servidor ganha uma aura de chamas douradas (barra, cabeçalho e mapa).', 'gogeta')
@@ -297,7 +326,8 @@ def recalcular_pacotes():
     # preço do pacote da loja = soma dos itens avulsos do tema - DESCONTO_PACOTE, em múltiplos de 50
     for d in CATALOGO.values():
         if d.get('pacote_loja'):
-            soma = sum(i['preco'] for i in CATALOGO.values() if i['tema'] == d['tema'] and i['tipo'] != 'pacote' and i.get('preco'))
+            entrega = {f'{t}:{v}' for t, v in PACOTES.get(d['tema'], {}).items()}
+            soma = sum(i['preco'] for i in CATALOGO.values() if i['id'] in entrega and i.get('preco'))
             d['preco'] = max(50, int(round(soma * (1 - DESCONTO_PACOTE) / 50.0)) * 50)
 
 
