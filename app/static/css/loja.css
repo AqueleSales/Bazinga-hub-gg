@@ -355,3 +355,8 @@
     .arm-tipos { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; } .arm-tipos::-webkit-scrollbar { display: none; } .arm-tipos .arm-chip { flex: 0 0 auto; }
     .arm-filtros .arm-busca { grid-column: span 2; }
 }
+
+/* PESO: slide do carrossel fora de vista (ou hero fora da tela) não anima, e prateleira fora da tela nem é desenhada */
+.arm-hero.parado *, .arm-hero.parado *::before, .arm-hero.parado *::after,
+.arm-slide.parado *, .arm-slide.parado *::before, .arm-slide.parado *::after { animation-play-state: paused !important; }
+.arm-prat { content-visibility: auto; contain-intrinsic-size: auto 340px; padding-bottom: 12px; }

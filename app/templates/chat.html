@@ -2802,6 +2802,14 @@
             #mob-dica { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 12px); transform: translateX(-50%); z-index: 1298; background: var(--brand-color); color: #fff; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 14px; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
             #mob-dica.on { display: block; animation: mobSobe .25s ease; }
         }
+
+        /* ==========================================================================
+           ROLAGEM SUAVE: enquanto a pessoa rola, TODA animação decorativa pausa (body.rolando, ver script no fim da página).
+           Giro de anel, deslocamento de fundo e conic-gradient animado são redesenhados a cada quadro (não vão pra GPU);
+           com centenas rodando (loja, perfil, lista de amigos) a rolagem engasgava e os blocos pareciam soltos. Parada, a página
+           só "desliza" figuras já desenhadas. A animação volta ~150 ms depois que a rolagem para.
+           ========================================================================== */
+        body.rolando *, body.rolando *::before, body.rolando *::after { animation-play-state: paused !important; }
     </style>
 <!-- Cosméticos (patentes, insígnias, popover orb, inventário, laboratório): depois do <style> acima, pra ganhar por ordem -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
@@ -14974,6 +14982,18 @@
             avisouSair = Date.now();
             showToast('Aperte voltar de novo para sair.', 'info');
         });
+    })();
+    </script>
+
+    <script>
+    // ROLAGEM SUAVE (par do CSS `body.rolando`): marca o body enquanto qualquer área está rolando e solta 150 ms depois da última rolagem.
+    (function () {
+        let t = 0, ligado = false;
+        document.addEventListener('scroll', () => {
+            if (!ligado) { ligado = true; document.body.classList.add('rolando'); }
+            clearTimeout(t);
+            t = setTimeout(() => { ligado = false; document.body.classList.remove('rolando'); }, 150);
+        }, { capture: true, passive: true });
     })();
     </script>
 </body>

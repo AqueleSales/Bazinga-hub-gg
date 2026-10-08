@@ -458,6 +458,12 @@ const Loja = (() => {
         const hero = raiz.querySelector('.arm-hero');
         if (!hero) return;
         const tr = hero.querySelector('.arm-trilho-hero');
+        // Peso: o carrossel tem um mini perfil animado em CADA slide. Só anima o slide que está à vista, e nada quando o hero saiu da tela.
+        if ('IntersectionObserver' in window) {
+            new IntersectionObserver((es) => es.forEach((en) => en.target.classList.toggle('parado', !en.isIntersecting)), { threshold: 0.02 }).observe(hero);
+            const ioSlides = new IntersectionObserver((es) => es.forEach((en) => en.target.classList.toggle('parado', en.intersectionRatio < 0.5)), { root: tr, threshold: [0, 0.5, 1] });
+            tr.querySelectorAll('.arm-slide').forEach((sl) => ioSlides.observe(sl));
+        }
         let pausado = false, rolando = 0;
         tr.addEventListener('scroll', () => {            // arrastar com o dedo/trackpad também troca o ponto
             clearTimeout(rolando);
