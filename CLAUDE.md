@@ -1179,6 +1179,7 @@ python testes/fumaca_push.py       # notificações push (chaves, inscrição, q
 python testes/fumaca_insignias.py  # Beta pra todos, BAZINGA por servidor, Alpha por nome
 python testes/fumaca_bazar.py      # Bazar: Pix copia e cola, loja/produto, pedido (estados), privacidade da chave Pix, estoque, avaliação, denúncia+moderação, corrida
 python testes/fumaca_loja.py       # Armazém: compra atômica, livro-razão, pacote com abatimento, saldo velho, clique duplo, regra 6, extrato, todo tema tem CSS/arte/slide
+python testes/fumaca_economia.py   # missão paga DRC, relíquia da semana, edições limitadas, coleção, id/CSS/JS de todo item do catálogo
 python testes/calibrar_precos.py   # NÃO é teste de banco: conta quanto DRC cada perfil junta e checa as "regras de ouro" dos preços (sai com 1 se quebrar)
 ```
 Rode **todos** antes de commitar (um comando encadeado com `;`/`&&` não para na falha: confira a última linha de cada).
@@ -1988,6 +1989,24 @@ Conteúdo: temas Brawlhalla, LoL, SNK, JoJo-like, Umamusume, Rematch, Roblox-lik
 Limpeza: legado `Product`/`Purchase`/`/api/produtos`/`seed_loja.py`.
 Teste/deploy: Neon + 2 pessoas reais · `atualizar_banco.py` e `bazar_admin.py admin aquele.sales` depois do deploy · Pix copia e cola num banco de verdade · dados reais pra recalibrar · Electron/PWA.
 Bazar: modelo B (gateway/split/escrow/KYC/CNPJ/CDC/LGPD/menores), disputa, banimento, moderação de mídia, frete, loja no mapa, favoritos, reputação, anúncios com arte/datas/cliques, feed em escala.
+
+---
+
+## Rodada 14 de 08/10/2026 — DRC por missão, relíquia da semana, edições limitadas, coleção e limpeza do legado
+
+Testada com SQLite descartável + navegador da pane (solo); **nada no Neon, nada com 2 pessoas reais**. Teste novo: `python testes/fumaca_economia.py` (205 verificações).
+- **Missão paga DRC** (`DRC_POR_MISSAO` em `utils.py`: 10 diária, 40 semanal; o dono não aprovou explicitamente, apliquei a proposta conservadora da Rodada 13: dá pra mudar a constante).
+  Paga na MESMA transação do XP (`_somar_xp(..., drc_missoes, ref_missoes)`), um `MovimentoDrc` `motivo='missao'` por conclusão (ref = códigos separados por vírgula), `ROTULO_MOTIVO`/`extrato` já conhecem. O cartão da missão e o toast mostram o DRC; `xp_atualizado` também atualiza o saldo do Armazém. `calibrar_precos.py` agora usa o valor real (e compara com "só níveis" e "20/80"); a regra do "premium" passou a usar o pacote épico calculado de `PRECOS` (~2000), não um 2500 inventado.
+- **Relíquia da semana** (`loja.reliquia_da_semana`): 1 item avulso de tema da loja com **-25%**, troca toda segunda (horário de Brasília), determinística (embaralhamento fixo + semana absoluta; nada guardado, não repete antes de passar todas). O preço é do servidor (`_preco_com_reliquia`); tela com preço velho recebe "o preço mudou".
+- **Edições limitadas** (`tema 'edicao'`, campo `limitado={'estoque', 'ate'}` no catálogo): por prazo (`ate`, naive Brasília) e/ou estoque. Estoque = tabela `loja_estoque` (nasce pelo `create_all`), `UPDATE ... WHERE vendidos < estoque` dentro da transação da compra (sem DRC ou erro depois = rollback devolve a unidade). Hoje: Pioneiro (moldura, até 31/12/2026), Lote 001 (placa, 100 un., id `lote_um`), Eclipse (faixa, 150 un.). Encerrada/esgotada continua visível, não compra.
+- **Coleção** (`cosmeticos.COLECOES`): 4/12/24 itens avulsos comprados (origem `loja`, pacote não conta, os 4 que ele entrega contam) dão Colecionador (placa), Curador (moldura), Acervo (nome). Prêmio sem preço, `origem='colecao'`, concedido dentro da compra e avisado em `compra_ok.premios`.
+- **Pacote** agora soma só o que ele entrega (`PACOTES[tema]`), então `efeito_servidor` (que é do servidor, não um slot) não infla o preço. `PRECOS['epico']` já tem preço pros 8 slots de efeito (ainda sem item que use).
+- **Legado removido**: rotas `/api/produtos*` e `/api/inventario`, modelos `Product`/`Purchase`, `seed_loja.py`, `carregarMercado`. **As tabelas `product` e `purchase` continuam no Neon** (histórico; só o código saiu; pode dar `DROP` à mão quando quiser).
+- **Pegadinha**: o id de item precisa casar `^[a-z_]{1,24}$` (o cliente descarta o resto e o preview some em branco): por isso `lote_um` e não `lote001`. O `fumaca_economia.py` confere id, CSS e registro JS de **todo** item do catálogo (vai pegar tema/efeito novo esquecido).
+- UI: `loja.js` ganhou faixa da relíquia, painel da coleção, prateleira "Edição limitada", selos, contagens que andam sozinhas (`.arm-tempo[data-fim]`), modal de prêmio e botão "Aplicar a um servidor" pro efeito de servidor comprado; `previa()` do som de entrada é um `<span>` no cartão (o cartão é um `<button>`) e o "Ouvir" de verdade fica no modal.
+
+### O que NÃO foi feito (retomar daqui)
+Plano já desenhado para os **temas premium com efeitos à venda** (`boreal` = aurora boreal, `petala` = cerejeira; 4 itens base + 7 efeitos + efeito de servidor cada, `raridade='epico'`, ids só `[a-z_]`): cada efeito exige id em `EFEITOS_AVATAR`/`EFEITOS_PERFIL`/`IDS_EFEITO` (`cosmeticos.js`), ramo em `htmlEfeitoPerfil` e `somEntrada` (antes do bloco do gogeta), CSS `.ef-av-X`, `.ef-pf-X`, `.fala-X`, `.radar-X`, `.chat-ef-X`, `.ef-envio-X`, `.pin-X`, `.sv-ef-X` (+ `.pino-foto.sv-ef-X`), e `PRATELEIRAS` em `loja.py` precisa das prateleiras de efeito. `TEMAS_COSM` e `MOLDURAS_EXCLUSIVAS` no `chat.html` só valem pro laboratório. Depois: os 10 temas de jogo/anime, mecânicas do Bazar (favoritos, ordenação, anúncios com arte/cliques, disputa, banimento, reputação, frete) e as pendências do app (patente ao lado do nome, menção em DM, denunciar mensagem). Ver `BACKLOG.md`.
 
 ---
 
