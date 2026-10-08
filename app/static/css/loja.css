@@ -1,0 +1,260 @@
+/* ==========================================================================
+   ARMAZÉM (loja do app, em DRC). Desenhado por static/js/loja.js.
+   Direção visual: superfícies chapadas e foscas, borda grossa, sombra "dura" (sem desfoque), um bloco de cor por tema.
+   Sem vidro, sem brilho que vaza, sem degradê de enfeite. Cada tema troca --a/--b/--c e a vitrine inteira acompanha.
+   Só `transform`/`opacity` se movem (nada de blur): o app já travou por animação demais (ver CLAUDE.md, Rodada 6).
+   ========================================================================== */
+#armazem { --a: var(--brand-color); --b: var(--brand-color); --c: var(--brand-color);
+    display: flex; flex-direction: column; gap: 30px; max-width: 1180px; margin: 0 auto; padding-bottom: 56px; color: var(--text-normal); }
+#armazem button { font-family: inherit; }
+#armazem .arm-vazio { padding: 60px 12px; text-align: center; color: var(--text-muted); font-weight: 700; }
+
+/* ---------- HERO (carrossel) ---------- */
+.arm-hero { position: relative; border-radius: 26px; overflow: hidden; border: 2px solid color-mix(in srgb, var(--c) 55%, #000); box-shadow: 0 6px 0 color-mix(in srgb, var(--c) 38%, #000); background: var(--bg-secondary); }
+.arm-trilho-hero { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; scroll-behavior: smooth; }
+.arm-trilho-hero::-webkit-scrollbar { display: none; }
+.arm-slide { position: relative; flex: 0 0 100%; scroll-snap-align: start; min-height: 340px; display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 12px; padding: 38px 48px 52px; overflow: hidden;
+    background: color-mix(in srgb, var(--c) 24%, var(--bg-secondary)); }
+.arm-slide::before, .arm-slide::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+.arm-slide::before { width: 380px; height: 380px; right: -90px; top: -120px; background: color-mix(in srgb, var(--a) 22%, transparent); }
+.arm-slide::after { width: 240px; height: 240px; right: 190px; bottom: -130px; background: color-mix(in srgb, var(--b) 20%, transparent); }
+.arm-slide-txt { position: relative; z-index: 2; }
+.arm-selo { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: color-mix(in srgb, var(--c) 80%, #000); border: 2px solid color-mix(in srgb, var(--c) 40%, #000); }
+.arm-slide h2 { margin: 12px 0 8px; font-size: 46px; line-height: 1.02; font-weight: 800; letter-spacing: -.02em; color: var(--text-header); }
+.arm-slide p { margin: 0 0 20px; max-width: 420px; font-size: 16px; line-height: 1.45; color: var(--text-normal); }
+.arm-slide-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.arm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: 14px; border: 2px solid color-mix(in srgb, var(--c) 50%, #000); background: var(--c); color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 45%, #000); transition: transform .12s, box-shadow .12s; text-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
+.arm-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 color-mix(in srgb, var(--c) 45%, #000); }
+.arm-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--c) 45%, #000); }
+.arm-btn.sec { background: var(--bg-secondary); color: var(--text-header); text-shadow: none; border-color: var(--bg-tertiary); box-shadow: 0 4px 0 var(--bg-tertiary); }
+.arm-btn[disabled], .arm-btn.curto { background: var(--bg-tertiary); color: var(--text-muted); border-color: var(--bg-tertiary); box-shadow: none; cursor: not-allowed; transform: none; text-shadow: none; }
+.arm-hero-preco { font-size: 13px; font-weight: 800; color: var(--text-muted); }
+.arm-hero-preco b { color: var(--text-header); font-size: 18px; }
+.arm-hero-preco s { margin-right: 4px; }
+
+.arm-slide-arte { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; height: 100%; min-height: 250px; --px: 0; --py: 0; }
+.arm-hero { container-type: inline-size; }
+.arm-slide-arte .arte { position: absolute; left: 30%; top: 46%; margin: -120px 0 0 -120px; width: 240px; height: 240px; transform: translate3d(calc(var(--px) * 14px), calc(var(--py) * 10px), 0); transition: transform .25s ease-out; }
+.arm-slide-arte .arm-perfil { position: absolute; right: 0; bottom: -4px; transform: translate3d(calc(var(--px) * -10px), calc(var(--py) * -8px), 0) rotate(-3deg); transition: transform .25s ease-out; }
+.arm-hero-setas { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; z-index: 5; pointer-events: none; }
+.arm-hero-setas > * { pointer-events: auto; }
+.arm-ponto { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--text-header); background: transparent; padding: 0; cursor: pointer; opacity: .55; transition: transform .15s, opacity .15s, background-color .15s; }
+.arm-ponto.on { background: var(--text-header); opacity: 1; transform: scale(1.25); }
+.arm-seta-hero { position: absolute; bottom: 10px; z-index: 5; width: 36px; height: 36px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--c) 40%, #000); background: var(--bg-secondary); color: var(--text-header); cursor: pointer; box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 30%, #000); transition: transform .12s; }
+.arm-seta-hero:hover { transform: translateY(-2px); }
+.arm-seta-hero.ant { left: 16px; } .arm-seta-hero.prox { right: 16px; }
+
+@container (max-width: 880px) {      /* hero estreito (barras laterais abertas / janela pequena): sem o mini perfil, a arte fica no centro */
+    .arm-slide { grid-template-columns: 1fr .8fr; padding: 30px 28px 50px; }
+    .arm-slide h2 { font-size: 38px; }
+    .arm-slide-arte .arte { left: 50%; }
+    .arm-slide-arte .arm-perfil { display: none; }
+}
+/* mini perfil: "assim fica o seu perfil" (usa os mesmos .moldura-/.ne-/.placa-/.banner-anim- do app) */
+.arm-perfil { width: 232px; border-radius: 18px; overflow: visible; background: var(--bg-secondary); border: 2px solid color-mix(in srgb, var(--c) 50%, #000); box-shadow: 0 5px 0 color-mix(in srgb, var(--c) 35%, #000); }
+.arm-perfil-faixa { height: 58px; border-radius: 16px 16px 0 0; position: relative; overflow: hidden; }
+.arm-perfil-corpo { position: relative; padding: 0 14px 14px; }
+.arm-perfil .pf-tile-av { width: 58px; height: 58px; margin-top: -29px; border: 3px solid var(--bg-secondary); box-sizing: content-box; }
+.arm-perfil .cat-nome { display: block; margin: 8px 0 8px; font-size: 18px; }
+.arm-perfil .pf-placa-linha { width: 100%; }
+.arm-perfil small { display: block; margin-top: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ---------- arte do hero: Dualidade (duas esferas se encontram, viram roxo e estouram) ---------- */
+.arte-dual .o { position: absolute; left: 50%; top: 50%; width: 104px; height: 104px; margin: -52px 0 0 -52px; border-radius: 50%; }
+.arte-dual .azul { background: #2f6bff; animation: artDualAzul 7s ease-in-out infinite; }
+.arte-dual .verm { background: #ff2d55; animation: artDualVerm 7s ease-in-out infinite; }
+.arte-dual .roxa { background: #9b5cff; opacity: 0; animation: artDualRoxa 7s ease-out infinite; }
+.arte-dual .onda { position: absolute; left: 50%; top: 50%; width: 104px; height: 104px; margin: -52px 0 0 -52px; border-radius: 50%; border: 5px solid #c9a8ff; opacity: 0; animation: artDualOnda 7s ease-out infinite; }
+.arte-dual .onda.b { animation-delay: .25s; border-color: #fff; }
+@keyframes artDualAzul { 0% { transform: translateX(-120px) scale(1); opacity: 1; } 52% { transform: translateX(-8px) scale(.92); opacity: 1; } 58% { transform: translateX(0) scale(.9); opacity: 1; } 60%, 88% { transform: translateX(0) scale(.9); opacity: 0; } 100% { transform: translateX(-120px) scale(1); opacity: 1; } }
+@keyframes artDualVerm { 0% { transform: translateX(120px) scale(1); opacity: 1; } 52% { transform: translateX(8px) scale(.92); opacity: 1; } 58% { transform: translateX(0) scale(.9); opacity: 1; } 60%, 88% { transform: translateX(0) scale(.9); opacity: 0; } 100% { transform: translateX(120px) scale(1); opacity: 1; } }
+@keyframes artDualRoxa { 0%, 56% { opacity: 0; transform: scale(.6); } 60% { opacity: 1; transform: scale(1.05); } 68% { opacity: 1; transform: scale(1.7); } 78%, 100% { opacity: 0; transform: scale(2.4); } }
+@keyframes artDualOnda { 0%, 59% { opacity: 0; transform: scale(.8); } 61% { opacity: .95; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(3.1); } }
+
+/* ---------- arte do hero: Relojoaria (relógio de bolso que abre, engrenagens que giram) ---------- */
+.arte-reloj { overflow: visible; }
+.arte-reloj .engr { transform-box: view-box; animation: relojGira 24s linear infinite; }
+.arte-reloj .engr.g1 { transform-origin: 46px 168px; } .arte-reloj .engr.g2 { transform-origin: 188px 52px; animation-direction: reverse; animation-duration: 16s; }
+.arte-reloj .mao { transform-box: view-box; transform-origin: 120px 124px; }
+.arte-reloj .mao.m { animation: relojGira 24s steps(60, end) infinite; }
+.arte-reloj .mao.s { animation: relojGira 6s steps(60, end) infinite; }
+.arte-reloj .tampa { transform-box: view-box; transform-origin: 58px 124px; animation: relojTampa 9s ease-in-out infinite; }
+@keyframes relojGira { to { transform: rotate(360deg); } }
+@keyframes relojTampa { 0%, 54% { transform: scaleX(1); } 66%, 84% { transform: scaleX(.04); } 96%, 100% { transform: scaleX(1); } }
+
+/* ---------- arte do hero: Cubos, Batida, Quadra, Mira e Mangá (mesma ideia: cada tema conta a sua história, só CSS/SVG) ---------- */
+.arte-cubo .cubo-flutua { animation: cuboFlutua 3.4s steps(8, end) infinite alternate; }
+.arte-cubo .px { animation: pxSobe 3s steps(6, end) infinite; } .arte-cubo .px2 { animation-delay: -1s; } .arte-cubo .px3 { animation-delay: -2s; }
+@keyframes cuboFlutua { from { transform: translateY(0); } to { transform: translateY(-14px); } }
+@keyframes pxSobe { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-46px); opacity: 0; } }
+.arte-vinil .vinil-gira { transform-box: view-box; transform-origin: 120px 108px; animation: relojGira 5s linear infinite; }
+.arte-vinil .eq-b { transform-box: fill-box; transform-origin: 50% 100%; animation: eqBarra .7s ease-in-out infinite alternate; }
+@keyframes eqBarra { from { transform: scaleY(.25); } to { transform: scaleY(1.7); } }
+.arte-bola .bola-pula { transform-box: view-box; animation: bolaPula 1.5s linear infinite; }
+.arte-bola .bola-gira { transform-box: view-box; transform-origin: 120px 120px; animation: relojGira 3s linear infinite; }
+.arte-bola .bola-sombra { transform-box: fill-box; transform-origin: 50% 50%; animation: bolaSombra 1.5s linear infinite; }
+@keyframes bolaPula { 0%, 100% { transform: translateY(40px); animation-timing-function: cubic-bezier(.2, .7, .4, 1); } 50% { transform: translateY(-34px); animation-timing-function: cubic-bezier(.6, 0, .8, .3); } }
+@keyframes bolaSombra { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(.55); opacity: .4; } }
+.arte-mira .mira-varre { transform-box: view-box; transform-origin: 120px 120px; animation: relojGira 3.2s linear infinite; }
+.arte-mira .mira-trava { transform-box: view-box; transform-origin: 120px 120px; animation: miraArteTrava 3.4s ease-in-out infinite; }
+.arte-mira .mira-alvo { animation: miraAlvo 1.2s steps(2, end) infinite; }
+@keyframes miraArteTrava { 0% { transform: scale(1.3) rotate(0deg); opacity: .3; } 45%, 100% { transform: scale(1) rotate(45deg); opacity: 1; } }
+@keyframes miraAlvo { 50% { opacity: .15; } }
+.arte-manga .manga-gira { transform-box: view-box; transform-origin: 120px 120px; animation: relojGira 12s steps(28, end) infinite; }
+
+/* ---------- FILTRO POR TEMA ---------- */
+.arm-chips { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.arm-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-normal); font-size: 13.5px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); transition: transform .12s, box-shadow .12s; }
+.arm-chip:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--bg-tertiary); }
+.arm-chip i { color: var(--c); }
+.arm-chip.on { background: var(--c); border-color: color-mix(in srgb, var(--c) 50%, #000); color: #fff; box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 45%, #000); text-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
+.arm-chip.on i { color: #fff; }
+.arm-chips .arm-saldo-dica { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+
+.arm-busca { position: relative; margin-left: auto; }
+.arm-busca input { width: 230px; max-width: 100%; padding: 9px 14px 9px 36px; border-radius: 999px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); font-size: 13.5px; font-weight: 700; outline: none; box-shadow: 0 3px 0 var(--bg-tertiary); }
+.arm-busca input:focus { border-color: var(--c); }
+.arm-busca i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; }
+.arm-chips .arm-saldo-dica { margin-left: 0; }
+/* extrato de DRC */
+.arm-ext-card { grid-template-columns: 1fr; width: min(560px, 100%); }
+.arm-ext-corpo { display: flex; flex-direction: column; gap: 14px; padding: 26px; overflow-y: auto; max-height: min(86vh, 640px); }
+.arm-ext-corpo h3 { margin: 0; font-size: 24px; font-weight: 800; color: var(--text-header); }
+.arm-ext-resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.arm-ext-resumo > div { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 14px; background: var(--bg-secondary); border: 2px solid var(--bg-tertiary); }
+.arm-ext-resumo small { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.arm-ext-resumo b { font-size: 18px; color: var(--text-header); }
+.arm-ext-resumo b i { color: var(--yellow-color); }
+.ganho { color: var(--green-color) !important; } .gasto { color: var(--red-color) !important; }
+.arm-ext-lista { display: flex; flex-direction: column; gap: 8px; }
+.arm-ext-linha { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--bg-secondary); border: 2px solid var(--bg-tertiary); }
+.arm-ext-ico { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 36px; height: 36px; border-radius: 12px; font-size: 14px; color: #fff; background: var(--bg-tertiary); }
+.arm-ext-ico.ganho { background: var(--green-color); } .arm-ext-ico.gasto { background: var(--red-color); }
+.arm-ext-txt { flex: 1; min-width: 0; } .arm-ext-txt b { display: block; font-size: 14px; color: var(--text-header); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arm-ext-txt small { font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
+.arm-ext-val { text-align: right; font-size: 15px; font-weight: 800; } .arm-ext-val small { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.arm-ext-nota { margin: 0; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
+@media (max-width: 720px) { .arm-busca { margin-left: 0; width: 100%; } .arm-busca input { width: 100%; } .arm-ext-resumo { grid-template-columns: 1fr; } }
+
+/* ---------- CABEÇALHO DO TEMA (quando filtrado) ---------- */
+.arm-tema-topo { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 22px 26px; border-radius: 22px; border: 2px solid color-mix(in srgb, var(--c) 50%, #000); background: color-mix(in srgb, var(--c) 20%, var(--bg-secondary)); box-shadow: 0 5px 0 color-mix(in srgb, var(--c) 32%, #000); }
+.arm-tema-topo h3 { margin: 0 0 4px; font-size: 30px; font-weight: 800; color: var(--text-header); letter-spacing: -.01em; }
+.arm-tema-topo p { margin: 0; max-width: 560px; font-size: 14.5px; color: var(--text-normal); line-height: 1.45; }
+
+/* ---------- PRATELEIRAS ---------- */
+.arm-prat-topo { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.arm-prat-topo h3 { margin: 0; font-size: 21px; font-weight: 800; color: var(--text-header); letter-spacing: -.01em; }
+.arm-prat-topo .n { padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 800; color: var(--text-muted); background: var(--bg-tertiary); }
+.arm-prat-topo .setas { margin-left: auto; display: flex; gap: 8px; }
+.arm-seta { width: 34px; height: 34px; border-radius: 12px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); transition: transform .12s; }
+.arm-seta:hover { transform: translateY(-2px); }
+.arm-seta:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--bg-tertiary); }
+.arm-trilho { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x proximity; padding: 4px 4px 12px; margin: 0 -4px; scrollbar-width: thin; scrollbar-color: var(--bg-tertiary) transparent; }
+.arm-trilho > .arm-card { flex: 0 0 206px; scroll-snap-align: start; }
+.arm-trilho > .arm-card.pacote { flex-basis: 268px; }
+.arm-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(206px, 1fr)); gap: 16px; }
+
+/* ---------- CARTÃO DE ITEM ---------- */
+.arm-card { position: relative; display: flex; flex-direction: column; padding: 0; border-radius: 20px; text-align: left; cursor: pointer; overflow: hidden; background: var(--bg-secondary); color: inherit;
+    border: 2px solid color-mix(in srgb, var(--c, var(--brand-color)) 38%, var(--bg-tertiary)); box-shadow: 0 5px 0 color-mix(in srgb, var(--c, var(--brand-color)) 24%, #000); transition: transform .14s, box-shadow .14s; }
+.arm-card:hover, .arm-card:focus-visible { transform: translateY(-4px); box-shadow: 0 9px 0 color-mix(in srgb, var(--c, var(--brand-color)) 24%, #000); outline: none; }
+.arm-card:active { transform: translateY(2px); box-shadow: 0 2px 0 color-mix(in srgb, var(--c, var(--brand-color)) 24%, #000); }
+.arm-card-prev { display: flex; align-items: center; justify-content: center; min-height: 138px; padding: 18px 12px; background: color-mix(in srgb, var(--c, var(--brand-color)) 14%, var(--bg-tertiary)); }
+.arm-card.pacote .arm-card-prev { min-height: 190px; padding: 40px 14px 16px; }
+.arm-card .arm-perfil { width: 100%; max-width: 222px; box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 35%, #000); }
+.arm-card .arm-perfil small { display: none; }
+.arm-card .arm-perfil-faixa { height: 46px; }
+.arm-card .arm-perfil .pf-tile-av { width: 48px; height: 48px; margin-top: -24px; }
+.arm-card .arm-perfil .cat-nome { font-size: 15px; margin: 6px 0; }
+.arm-card-prev .pf-tile-av { width: 70px; height: 70px; }
+.arm-card-prev .pf-placa-linha { width: 100%; }
+.arm-card-prev .cat-nome { font-size: 22px; }
+.arm-card-prev .inv-nome-prev { background: transparent; padding: 0; }
+.arm-card-prev .inv-faixa { height: 70px; border-radius: 12px; }
+.arm-card-info { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px 14px; }
+.arm-tag { font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--c, var(--brand-color)); }
+.arm-card h4 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text-header); }
+.arm-card-rodape { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; font-weight: 800; }
+.arm-preco { display: inline-flex; align-items: center; gap: 6px; color: var(--yellow-color); }
+.arm-preco s { color: var(--text-muted); font-weight: 700; font-size: 12px; }
+.arm-preco.curto { color: var(--text-muted); }
+.arm-off { padding: 2px 8px; border-radius: 8px; font-size: 11.5px; font-weight: 800; color: #fff; background: var(--green-color); }
+.arm-seu { display: inline-flex; align-items: center; gap: 6px; color: var(--green-color); }
+.arm-card .arm-faixa-seu { position: absolute; top: 10px; right: 10px; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #fff; background: var(--green-color); }
+.arm-card .arm-faixa-pack { position: absolute; top: 10px; left: 10px; padding: 3px 9px; border-radius: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #fff; background: color-mix(in srgb, var(--c) 85%, #000); }
+/* animações das prévias só rodam com o mouse em cima (mesma regra do inventário: 20 molduras girando de uma vez pesam) */
+#armazem .arm-card:not(:hover):not(:focus-visible) .arm-card-prev *, #armazem .arm-card:not(:hover):not(:focus-visible) .arm-card-prev *::before, #armazem .arm-card:not(:hover):not(:focus-visible) .arm-card-prev *::after { animation-play-state: paused; }
+
+/* ---------- MODAL DO ITEM / PACOTE ---------- */
+.arm-modal { position: fixed; inset: 0; z-index: 10400; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(8, 8, 12, .78); animation: armFade .18s ease-out; }
+@keyframes armFade { from { opacity: 0; } }
+.arm-modal.sem-anim, .arm-modal.sem-anim .arm-modal-card { animation: none; }
+.arm-modal-card { position: relative; display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr); width: min(900px, 100%); max-height: min(92vh, 640px); border-radius: 26px; overflow: hidden; background: var(--bg-primary); border: 2px solid color-mix(in srgb, var(--c) 55%, #000); box-shadow: 0 8px 0 color-mix(in srgb, var(--c) 35%, #000); animation: armSobe .26s cubic-bezier(.16, .84, .44, 1); }
+@keyframes armSobe { from { opacity: 0; transform: translateY(24px) scale(.97); } }
+.arm-modal-palco { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 30px 22px; min-height: 340px; background: color-mix(in srgb, var(--c) 22%, var(--bg-secondary)); overflow: hidden; }
+.arm-modal-palco::before { content: ''; position: absolute; width: 360px; height: 360px; border-radius: 50%; left: -120px; top: -140px; background: color-mix(in srgb, var(--a) 22%, transparent); pointer-events: none; }
+.arm-modal-palco::after { content: ''; position: absolute; width: 260px; height: 260px; border-radius: 50%; right: -90px; bottom: -110px; background: color-mix(in srgb, var(--b) 20%, transparent); pointer-events: none; }
+.arm-modal-palco > * { position: relative; z-index: 1; }
+.arm-palco-prev { display: flex; align-items: center; justify-content: center; width: 100%; }
+.arm-palco-prev .pf-tile-av { width: 112px; height: 112px; }
+.arm-palco-prev .pf-placa-linha { width: 100%; max-width: 320px; }
+.arm-palco-prev .cat-nome { font-size: 34px; }
+.arm-palco-prev .inv-nome-prev { background: transparent; padding: 0; }
+.arm-palco-prev .inv-faixa { height: 112px; max-width: 340px; border-radius: 16px; }
+.arm-palco-prev .arm-perfil { width: 270px; transform: rotate(-2deg); }
+.arm-palco-dica { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.arm-modal-lado { display: flex; flex-direction: column; gap: 12px; padding: 28px 28px 24px; overflow-y: auto; }
+.arm-modal-lado h3 { margin: 4px 0 0; font-size: 30px; font-weight: 800; letter-spacing: -.01em; color: var(--text-header); }
+.arm-modal-lado .desc { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--text-normal); }
+.arm-fechar { position: absolute; top: 12px; right: 12px; z-index: 6; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); }
+.arm-fechar:hover { background: var(--red-color); color: #fff; }
+.arm-conteudo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.arm-conteudo button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; border-radius: 14px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-normal); cursor: pointer; font-size: 12px; font-weight: 800; text-align: center; transition: transform .12s; }
+.arm-conteudo button:hover { transform: translateY(-2px); }
+.arm-conteudo button.tem { border-color: color-mix(in srgb, var(--green-color) 60%, var(--bg-tertiary)); }
+.arm-conteudo button .mini { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; }
+.arm-conteudo .pf-tile-av { width: 40px; height: 40px; }
+.arm-conteudo .cat-nome { font-size: 16px; }
+.arm-conteudo .inv-nome-prev { background: transparent; padding: 0; }
+.arm-conteudo .inv-faixa { height: 40px; }
+.arm-conteudo .pf-placa-linha { width: 100%; }
+.arm-conteudo small { font-size: 10.5px; font-weight: 700; color: var(--green-color); }
+.arm-parte { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 2px dashed color-mix(in srgb, var(--c) 50%, var(--bg-tertiary)); background: transparent; color: var(--text-normal); font-size: 13px; font-weight: 700; cursor: pointer; text-align: left; }
+.arm-parte:hover { background: color-mix(in srgb, var(--c) 12%, transparent); }
+.arm-parte b { color: var(--text-header); }
+.arm-compra { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
+.arm-preco-grande { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
+.arm-preco-grande .v { display: inline-flex; align-items: center; gap: 8px; font-size: 32px; font-weight: 800; color: var(--yellow-color); }
+.arm-preco-grande s { font-size: 15px; font-weight: 700; color: var(--text-muted); }
+.arm-saldo-linha { font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+.arm-saldo-linha b { color: var(--text-header); }
+.arm-saldo-linha.curto b { color: var(--red-color); }
+.arm-compra .arm-btn { width: 100%; padding: 14px 22px; font-size: 15px; }
+.arm-sucesso { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; font-size: 14px; font-weight: 800; color: #fff; background: var(--green-color); }
+.arm-modal-card .bp-confete { z-index: 8; }
+
+/* ---------- celular ---------- */
+@media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
+    #armazem { gap: 22px; }
+    .arm-slide { grid-template-columns: 1fr; padding: 26px 20px 50px; min-height: 0; gap: 4px; }
+    .arm-slide h2 { font-size: 34px; }
+    .arm-slide-arte { order: -1; min-height: 190px; }
+    .arm-slide-arte .arte { transform: scale(.72); margin-top: -120px; }
+    .arm-slide-arte .arm-perfil { display: none; }
+    .arm-tema-topo { grid-template-columns: 1fr; padding: 18px; }
+    .arm-trilho > .arm-card { flex-basis: 168px; }
+    .arm-trilho > .arm-card.pacote { flex-basis: 232px; }
+    .arm-grade { grid-template-columns: repeat(2, 1fr); }
+    .arm-modal { padding: 0; align-items: flex-end; }
+    .arm-modal-card { grid-template-columns: 1fr; max-height: 94vh; border-radius: 24px 24px 0 0; overflow-y: auto; animation-name: armSobeCel; }
+    .arm-modal-palco { min-height: 0; padding: 40px 18px 22px; }
+    .arm-modal-lado { overflow: visible; padding: 20px 18px 24px; }
+    .arm-modal-lado h3 { font-size: 26px; }
+}
+@keyframes armSobeCel { from { transform: translateY(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .arm-trilho-hero { scroll-behavior: auto; }
+    #armazem *, #armazem *::before, #armazem *::after, .arm-modal, .arm-modal * { animation: none !important; transition: none !important; }
+}

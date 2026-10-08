@@ -706,7 +706,8 @@ def get_produtos():
         return jsonify({'error': 'Acesso negado'}), 401
 
     try:
-        produtos_db = Product.query.order_by(Product.created_at.desc()).all()
+        # só o Bazar: o catálogo oficial agora é o Armazém (app/loja.py)
+        produtos_db = Product.query.filter(Product.is_official.isnot(True)).order_by(Product.created_at.desc()).all()
         dados = []
         for p in produtos_db:
             dados.append({
@@ -728,47 +729,15 @@ def get_produtos():
 
 
 # ==========================================
-# COMPRAR PRODUTO OFICIAL (paga com Bazinga Coins)
+# COMPRAR PRODUTO OFICIAL: SUBSTITUÍDA pelo Armazém (evento `comprar_item`, app/loja.py).
+# ------------------------------------------------------------
+# A rota antiga descontava moedas com "ler saldo, subtrair, gravar" (dois cliques gastavam o mesmo DRC
+# duas vezes) e não entregava nada: só gravava um Purchase. Fica respondendo 410 para quem ainda
+# estiver com uma aba velha aberta.
 # ==========================================
 @main_bp.route("/api/produtos/<int:produto_id>/comprar", methods=["POST"])
 def comprar_produto(produto_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Acesso negado'}), 401
-
-    usuario = usuario_da_sessao()
-    if not usuario:
-        return jsonify({'error': 'Acesso negado'}), 401
-
-    # Medida de segurança: comprar (e, quando existir, vender) exige a localização ligada.
-    if not localizacao_ligada(usuario):
-        return jsonify({'error': MSG_LOCALIZACAO_DESLIGADA}), 403
-
-    try:
-        produto = com_retry(lambda: Product.query.get(produto_id))
-
-        if not produto or not produto.is_official or produto.price_bzc is None:
-            return jsonify({'error': f'Este item não pode ser comprado com {MOEDA_NOME} aqui.'}), 400
-
-        if (usuario.bazinga_coins or 0) < produto.price_bzc:
-            return jsonify({'error': f'Você não tem {MOEDA_NOME} suficientes.'}), 400
-
-        # Registra a compra: antes as moedas eram descontadas e nada era
-        # guardado, então o usuário pagava e não recebia nada.
-        def preparar():
-            usuario.bazinga_coins = (usuario.bazinga_coins or 0) - produto.price_bzc
-            db.session.add(Purchase(
-                buyer_id=usuario.id,
-                product_id=produto.id,
-                price_paid_bzc=produto.price_bzc
-            ))
-
-        comitar_com_retry(preparar)
-
-        return jsonify({'saldo': usuario.bazinga_coins, 'produto': produto.name})
-    except Exception as e:
-        db.session.rollback()
-        print("Erro ao comprar produto:", e)
-        return jsonify({'error': f'Erro ao processar a compra: {e}'}), 500
+    return jsonify({'error': 'A loja foi refeita. Atualize a página (F5) para comprar no novo Armazém.'}), 410
 
 
 # ==========================================

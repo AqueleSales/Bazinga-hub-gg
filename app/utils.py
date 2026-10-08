@@ -15,7 +15,7 @@ from bisect import bisect_right
 
 from sqlalchemy.exc import OperationalError
 
-from .models import db, Channel, Server, MissaoProgresso, Person, br_now, server_members, channel_members
+from .models import db, Channel, Server, MissaoProgresso, Person, MovimentoDrc, br_now, server_members, channel_members
 from .cosmeticos import patente_do_nivel, patente_comeca_em, ids_do_tipo, equipados_da_pessoa, efeito_servidor_valido
 
 
@@ -288,8 +288,15 @@ def _somar_xp(usuario, quantidade, nivel_antes):
     """Soma XP e paga as moedas dos níveis cruzados. Chamar DENTRO do preparar()
     de um comitar_com_retry (precisa refazer a soma a cada tentativa)."""
     usuario.xp = (usuario.xp or 0) + quantidade
-    for n in range(nivel_antes + 1, nivel_da_pessoa(usuario.xp) + 1):
-        usuario.bazinga_coins = (usuario.bazinga_coins or 0) + recompensa_do_nivel(n)['coins']
+    nivel_depois = nivel_da_pessoa(usuario.xp)
+    ganho = 0
+    for n in range(nivel_antes + 1, nivel_depois + 1):
+        ganho += recompensa_do_nivel(n)['coins']
+    if ganho:
+        usuario.bazinga_coins = (usuario.bazinga_coins or 0) + ganho
+        # livro-razão: um movimento só por pacote de níveis cruzados (ver MovimentoDrc)
+        db.session.add(MovimentoDrc(person_id=usuario.id, delta=ganho, saldo_apos=usuario.bazinga_coins,
+                                    motivo='nivel', ref=f'{nivel_antes}->{nivel_depois}'))
 
 
 def conceder_xp_por_mensagem(usuario):

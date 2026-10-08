@@ -20,6 +20,29 @@ TEMAS = {
     'gogeta': {'nome': 'Gogeta', 'cor': '#ff9d2e', 'desc': 'Fusão, aura dourada e a Punição de Alma.'},
     'sasuke': {'nome': 'Sasuke', 'cor': '#8b5cf6', 'desc': 'Chidori, Sharingan e a chama negra.'},
     'fusao': {'nome': 'Fusão', 'cor': '#e879f9', 'desc': 'Duas chamas, uma só. Só nós dois.'},
+    # ---- Temas da LOJA (à venda por DRC no Armazém). Arte original, só evoca o tema: nada de símbolo/sprite de terceiros. ----
+    # `cores` = as duas cores da vitrine do tema; `lema` = a frase do cartão; `icone` = Font Awesome.
+    'relojoaria': {'nome': 'Relojoaria', 'cor': '#d4a24c', 'loja': True, 'cores': ['#d4a24c', '#3f5f6b'], 'icone': 'fa-clock',
+                   'lema': 'Cada segundo tem o seu mecanismo.',
+                   'desc': 'Latão, engrenagens e um relógio de bolso que abre, some e volta a fechar.'},
+    'dualidade': {'nome': 'Dualidade', 'cor': '#9b5cff', 'loja': True, 'cores': ['#2f6bff', '#ff2d55'], 'icone': 'fa-circle-half-stroke',
+                  'lema': 'Azul, vermelho... e o que nasce quando se encontram.',
+                  'desc': 'Duas energias se aproximam, viram roxo e explodem.'},
+    'cubos': {'nome': 'Cubos', 'cor': '#5fa83a', 'loja': True, 'cores': ['#5fa83a', '#8b5a2b'], 'icone': 'fa-cube',
+              'lema': 'Um mundo inteiro feito de blocos.',
+              'desc': 'Grama, terra e céu em blocos: anel que avança aos pulinhos, nuvens quadradas e um chão quadriculado.'},
+    'batida': {'nome': 'Batida', 'cor': '#d946ef', 'loja': True, 'cores': ['#d946ef', '#22d3ee'], 'icone': 'fa-music',
+               'lema': 'O seu perfil também tem ritmo.',
+               'desc': 'Barras de equalizador pulsando, um vinil que gira e um nome que acompanha o refrão.'},
+    'quadra': {'nome': 'Quadra', 'cor': '#e8742c', 'loja': True, 'cores': ['#e8742c', '#2a5db0'], 'icone': 'fa-volleyball',
+               'lema': 'Bola no ar, jogo decidido no último ponto.',
+               'desc': 'Uma bola orbitando o avatar, rede esticada na placa e uma quadra inteira na faixa.'},
+    'mira': {'nome': 'Mira', 'cor': '#e8483f', 'loja': True, 'cores': ['#e8483f', '#4fd1c5'], 'icone': 'fa-crosshairs',
+             'lema': 'Travou o alvo. Agora é com você.',
+             'desc': 'Uma mira que trava no avatar, um mapa tático na placa e um radar que varre a faixa.'},
+    'manga': {'nome': 'Mangá', 'cor': '#e63946', 'loja': True, 'cores': ['#e63946', '#f1faee'], 'icone': 'fa-pen-nib',
+              'lema': 'Preto, branco e uma cor só para o clímax.',
+              'desc': 'Traço de tinta que se desenha sozinho, retícula de página e linhas de velocidade.'},
 }
 
 # ==========================================
@@ -170,6 +193,70 @@ _item('placa', 'fusao', 'Duas Chamas', 'Uma chama laranja e uma roxa disputando 
 _item('nome', 'fusao', 'Fusão', 'O nome muda do laranja pro roxo e volta.', 'fusao')
 _item('faixa', 'fusao', 'Fusão', 'Chamas laranja e roxa se misturando na faixa.', 'fusao')
 
+# ---- LOJA (Armazém) ----
+# Tabela central de preços em DRC por raridade e tipo. É a ÚNICA fonte: item da loja usa `_item_loja`, que lê daqui.
+# Calibrada com `python testes/calibrar_precos.py` (conta em cima de quanto cada perfil de uso ganha por dia). Premissas: os 500 DRC
+# iniciais pagam 1 item de nome/placa no 1º dia; o 1º pacote leva ~1 semana pra quem joga normal e ~1 mês pra quem entra pouco;
+# o nível "épico" é o premium (meses). MUDOU o ganho de DRC (utils.py) ou um preço aqui? Rode o script de novo.
+PRECOS = {
+    'raro':  {'nome': 350, 'placa': 350, 'faixa': 450, 'moldura': 550},
+    'epico': {'nome': 600, 'placa': 600, 'faixa': 750, 'moldura': 900},
+}
+DESCONTO_PACOTE = 0.30        # o pacote custa a soma dos 4 itens menos isto (arredondado pra múltiplo de 50)
+
+
+def _item_loja(tipo, id_, nome, desc, tema, raridade='raro'):
+    """Item à venda no Armazém: o preço vem de PRECOS (por raridade e tipo). Item sem `preco` nunca é vendido (laboratório, insígnias)."""
+    _item(tipo, id_, nome, desc, tema, raridade, preco=PRECOS[raridade][tipo])
+
+
+def _pacote_loja(tema, nome, desc):
+    """Pacote de tema: o preço só é calculado depois que os itens existem (`recalcular_pacotes`)."""
+    _item('pacote', tema, nome, desc, tema, 'epico', preco=None, pacote_loja=True)
+
+
+# ---- tema Relojoaria (evoca relógio de bolso e engrenagens; tudo CSS, arte própria) ----
+_item_loja('moldura', 'relojoaria', 'Relógio de Bolso', 'Um relógio de bolso de latão: a tampa abre, a borda some por um instante e tudo volta a fechar.', 'relojoaria')
+_item_loja('nome', 'relojoaria', 'Tique-Taque', 'O nome brilha em latão e avança aos "tiques", como o ponteiro dos segundos.', 'relojoaria')
+_item_loja('placa', 'relojoaria', 'Engrenagens', 'Dentes de engrenagem girando devagar atrás do seu nome.', 'relojoaria')
+_item_loja('faixa', 'relojoaria', 'Mecanismo', 'O interior de um relógio: anéis de latão e um ponteiro varrendo a faixa.', 'relojoaria')
+
+# ---- tema Dualidade (azul e vermelho se encontram, viram roxo e explodem) ----
+_item_loja('moldura', 'dualidade', 'Vazio Roxo', 'Um arco azul e um vermelho se aproximam, viram roxo e explodem.', 'dualidade')
+_item_loja('nome', 'dualidade', 'Azul e Vermelho', 'O nome vai de azul a vermelho e, no meio, clareia em roxo.', 'dualidade')
+_item_loja('placa', 'dualidade', 'Convergência', 'Uma luz azul e uma vermelha caminham até o centro da placa e se fundem.', 'dualidade')
+_item_loja('faixa', 'dualidade', 'Colapso', 'Duas esferas, azul e vermelha, se juntam na faixa e estouram em roxo.', 'dualidade')
+
+# ---- tema Cubos (mundo de blocos: evoca jogos de construção em cubos; arte própria) ----
+_item_loja('moldura', 'cubos', 'Bloco de Grama', 'Um anel de blocos de grama e terra que avança aos pulinhos, como um mundo feito de cubos.', 'cubos')
+_item_loja('nome', 'cubos', 'Pixelado', 'As letras trocam de cor em blocos: verde, musgo e terra.', 'cubos')
+_item_loja('placa', 'cubos', 'Terreno', 'Uma faixa de grama sobre terra quadriculada, andando devagar atrás do seu nome.', 'cubos')
+_item_loja('faixa', 'cubos', 'Mundo de Blocos', 'Céu azul, nuvens quadradas passando e um chão de grama e terra.', 'cubos')
+
+# ---- tema Batida (música) ----
+_item_loja('moldura', 'batida', 'Equalizador', 'Barras de equalizador em volta da foto, pulsando no ritmo, uma cor de cada vez.', 'batida')
+_item_loja('nome', 'batida', 'Refrão', 'O nome troca de cor e pulsa como o refrão de uma música.', 'batida')
+_item_loja('placa', 'batida', 'Pista de Dança', 'Colunas de equalizador subindo e descendo atrás do seu nome.', 'batida')
+_item_loja('faixa', 'batida', 'Vinil', 'Um disco de vinil na faixa, com o brilho girando sobre os sulcos.', 'batida')
+
+# ---- tema Quadra (esporte de quadra: evoca animes e jogos de vôlei, basquete e futsal) ----
+_item_loja('moldura', 'quadra', 'Bola em Jogo', 'Uma bola orbita o seu avatar sem parar, sobre uma linha de quadra.', 'quadra')
+_item_loja('nome', 'quadra', 'Saque', 'O nome pega fogo no saque: branco, laranja e um clarão de impacto.', 'quadra')
+_item_loja('placa', 'quadra', 'Rede', 'Uma rede esticada atrás do seu nome, balançando de leve.', 'quadra')
+_item_loja('faixa', 'quadra', 'Quadra Cheia', 'Piso de quadra com as linhas brancas e uma bola quicando de ponta a ponta.', 'quadra')
+
+# ---- tema Mira (jogos de tiro tático e de herói: evoca mira, radar e mapa tático) ----
+_item_loja('moldura', 'mira', 'Mira Travada', 'Uma mira fecha em volta do avatar, trava e pisca em vermelho.', 'mira')
+_item_loja('nome', 'mira', 'Tático', 'Letras de painel tático, com uma luz de varredura que passa por elas.', 'mira')
+_item_loja('placa', 'mira', 'Mapa Tático', 'Grade de mapa tático com um ponto vermelho pulsando.', 'mira')
+_item_loja('faixa', 'mira', 'Radar', 'Um radar varre a faixa, com anéis, grade e um alvo piscando.', 'mira')
+
+# ---- tema Mangá (anime genérico: página em preto e branco com um toque de vermelho) ----
+_item_loja('moldura', 'manga', 'Traço de Tinta', 'Um traço de tinta desenha o anel em volta da foto e depois se apaga.', 'manga')
+_item_loja('nome', 'manga', 'Onomatopeia', 'Letras grossas de quadrinho, com contorno e sombra vermelha que treme.', 'manga')
+_item_loja('placa', 'manga', 'Retícula', 'Retícula de página de mangá, em pontinhos, com uma faixa vermelha.', 'manga')
+_item_loja('faixa', 'manga', 'Página de Mangá', 'Linhas de velocidade saindo de um clarão vermelho, em preto e branco.', 'manga')
+
 # ---- Efeito de servidor: o DONO aplica a um servidor dele (Server.efeito); todo membro vê no ícone da barra, no
 # cabeçalho e no pino do mapa. Não entra nos pacotes (não é um slot da pessoa, é do servidor). ----
 _item('efeito_servidor', 'gogeta', 'Chamas do Servidor', 'O ícone do servidor ganha uma aura de chamas douradas (barra, cabeçalho e mapa).', 'gogeta')
@@ -180,6 +267,14 @@ _item('efeito_servidor', 'fusao', 'Fusão do Servidor', 'Laranja e roxo disputan
 _item('pacote', 'gogeta', 'Gogeta completo', 'Equipa tudo do tema Gogeta de uma vez.', 'gogeta')
 _item('pacote', 'sasuke', 'Sasuke completo', 'Equipa tudo do tema Sasuke de uma vez.', 'sasuke')
 _item('pacote', 'fusao', 'Fusão completa', 'Equipa a moldura, a placa, o nome e a faixa da Fusão.', 'fusao')
+# Pacotes da loja: o preço é calculado (soma dos itens menos DESCONTO_PACOTE), ver `recalcular_pacotes`.
+_pacote_loja('relojoaria', 'Pacote Relojoaria', 'Moldura, nome, placa e faixa da Relojoaria, equipados de uma vez.')
+_pacote_loja('dualidade', 'Pacote Dualidade', 'Moldura, nome, placa e faixa da Dualidade, equipados de uma vez.')
+_pacote_loja('cubos', 'Pacote Cubos', 'Moldura, nome, placa e faixa do mundo de Cubos, equipados de uma vez.')
+_pacote_loja('batida', 'Pacote Batida', 'Moldura, nome, placa e faixa da Batida, equipados de uma vez.')
+_pacote_loja('quadra', 'Pacote Quadra', 'Moldura, nome, placa e faixa da Quadra, equipados de uma vez.')
+_pacote_loja('mira', 'Pacote Mira', 'Moldura, nome, placa e faixa da Mira, equipados de uma vez.')
+_pacote_loja('manga', 'Pacote Mangá', 'Moldura, nome, placa e faixa do Mangá, equipados de uma vez.')
 
 
 def _pacote(tema):
@@ -199,6 +294,11 @@ PACOTES = {}
 def recalcular_pacotes():
     for tema in TEMAS:
         PACOTES[tema] = _pacote(tema)
+    # preço do pacote da loja = soma dos itens avulsos do tema - DESCONTO_PACOTE, em múltiplos de 50
+    for d in CATALOGO.values():
+        if d.get('pacote_loja'):
+            soma = sum(i['preco'] for i in CATALOGO.values() if i['tema'] == d['tema'] and i['tipo'] != 'pacote' and i.get('preco'))
+            d['preco'] = max(50, int(round(soma * (1 - DESCONTO_PACOTE) / 50.0)) * 50)
 
 
 recalcular_pacotes()

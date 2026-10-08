@@ -30,6 +30,11 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 | `app/cosmeticos.py` | Catálogo de itens exclusivos, **posse**, patentes (nível → ícone), insígnias e slots equipados (ver "Rodada 5") |
 | `app/static/js/cosmeticos.js` | Ícones SVG das patentes/insígnias, popover "orb", inventário e efeitos (objeto global `Cosm`) |
 | `app/static/css/cosmeticos.css` | Animações das patentes, inventário e o laboratório (Gogeta/Sasuke/Fusão) |
+| `app/loja.py` | **Armazém** (loja do app em DRC): preço, compra atômica, vitrine (ver Rodada 10) |
+| `app/bazar.py` / `app/bazar_events.py` | **Bazar da comunidade** (modelo A, Pix direto): lojas, produtos, pedidos, Pix copia e cola, moderação (ver Rodada 11) |
+| `app/static/js/bazar.js` / `css/bazar.css` | Interface do Bazar (objeto global `Bazar`): vitrine por porte, loja, produto, pedido, editor, moderação |
+| `bazar_admin.py` | Dá poder de moderar (`admin <@usuario>`) e define loja parceira (`porte <@usuario> grande`) |
+| `app/static/js/loja.js` / `css/loja.css` | Vitrine do Armazém (objeto global `Loja`): hero em carrossel, prateleiras, modal do item |
 | `conceder_item.py` | Dá/retira item do inventário de alguém (`python conceder_item.py <@usuario> tudo`) |
 | `app/main/routes.py` | Rotas REST (`/chat`, `/api/...`, `/convite/<code>`) |
 | `app/auth/routes.py` | Login Google OAuth |
@@ -1172,6 +1177,9 @@ python testes/fumaca_localizacao.py  # localização na conta, travas do mapa, I
 python testes/fumaca_resposta.py   # responder mensagem (canal e DM)
 python testes/fumaca_push.py       # notificações push (chaves, inscrição, quem recebe)
 python testes/fumaca_insignias.py  # Beta pra todos, BAZINGA por servidor, Alpha por nome
+python testes/fumaca_bazar.py      # Bazar: Pix copia e cola, loja/produto, pedido (estados), privacidade da chave Pix, estoque, avaliação, denúncia+moderação, corrida
+python testes/fumaca_loja.py       # Armazém: compra atômica, livro-razão, pacote com abatimento, saldo velho, clique duplo, regra 6, extrato, todo tema tem CSS/arte/slide
+python testes/calibrar_precos.py   # NÃO é teste de banco: conta quanto DRC cada perfil junta e checa as "regras de ouro" dos preços (sai com 1 se quebrar)
 ```
 Rode **todos** antes de commitar (um comando encadeado com `;`/`&&` não para na falha: confira a última linha de cada).
 
@@ -1774,6 +1782,215 @@ teclado/configurações, e responder). Não cria telas novas: chama o que o desk
 
 ---
 
+## Rodada 10 de 08/10/2026 — Armazém (loja do app em DRC) + livro-razão
+
+Decisões do dono (conversa de 08/10): **Armazém = só DRC** (cosméticos do app, pacotes por tema); **Bazar = 100% Pix, dinheiro real**,
+começando pelo **modelo A** (classificados: o app mostra loja/produto, as pessoas combinam no chat e pagam Pix direto, sem escrow) — o
+**modelo B** (checkout com gateway + split + retenção até a entrega) vem depois; **carteira virtual com dinheiro real: NÃO fazer** (guardar
+dinheiro de terceiros é atividade regulada; o caminho seguro é split do gateway). **DRC só se ganha no app**: sem comprar com dinheiro, sem
+transferir, sem sacar. Temas de jogos/animes de terceiros (TF2, JJK...) entram só como **arte original que evoca** (nada de símbolo/sprite deles).
+
+### O que existe
+- **`app/loja.py`** (sem socket; os handlers `listar_loja`/`comprar_item` moram em `events.py`). À venda = item do `CATALOGO` com campo `preco`
+  (`_item(..., preco=350)` em `cosmeticos.py`); tema da loja = `TEMAS[x]['loja'] = True` (com `cores`, `icone`, `lema`). Laboratório e
+  insígnias **não têm preço**, então nunca aparecem. `PRATELEIRAS` (ordem dos tipos) e `DESTAQUES` (slides do topo) ficam no próprio loja.py.
+- **Compra = UMA transação** (`comprar()` dentro de `comitar_com_retry`): relê a posse, calcula o preço **no servidor**, debita com
+  `UPDATE person SET bazinga_coins = coalesce(..) - :p WHERE id = :id AND coalesce(..) >= :p` (confere o saldo do **banco**, não o do objeto em memória:
+  duas abas/clique duplo nunca gastam o mesmo DRC duas vezes), escreve a `Posse` (origem `loja`) e o `MovimentoDrc`. `Posse` é única por
+  pessoa+item: se dois pedidos entregarem o mesmo item, o 2º dá `IntegrityError`, a transação inteira desfaz (inclusive o débito) e vira "você já tem".
+  O cliente manda só `item_id` (+ `preco_esperado` opcional: se o preço mudou no meio, o servidor recusa e manda a vitrine corrigida). Freio de 0,6 s por pessoa.
+- **Pacote**: `pacote:<tema>` entrega ele + os itens avulsos do tema que a pessoa ainda não tem. Preço = preço do pacote abatido **em proporção** do que
+  ela já tem avulso (`preco_para()`); se já tem tudo, sai por 0 (só pra constar e poder "equipar tudo"; não escreve movimento de 0).
+- **Livro-razão**: tabela `movimento_drc` (nasce pelo `create_all`, sem ALTER), uma linha imutável por movimento (`delta`, `saldo_apos`, `motivo`
+  `compra|nivel|ajuste`, `ref`). Hoje grava compras e o ganho por nível (`_somar_xp`). `Person.bazinga_coins` continua sendo o saldo de leitura.
+  **Todo novo jeito de ganhar/gastar DRC precisa escrever aqui** (e gastar passa pelo UPDATE condicional, nunca "ler, subtrair, gravar").
+- **Regra 6**: `compra_ok`, `saldo_atualizado`, `loja` e `inventario` vão pra `sala_pessoal` (todas as abas de quem comprou). O cliente só marca "seu" quando o servidor confirma.
+- **A rota antiga `/api/produtos/<id>/comprar` morreu (410)**: era "ler saldo, subtrair, gravar" (corrida) e só gravava um `Purchase` sem entregar nada.
+  `/api/produtos` agora lista só o **Bazar** (`is_official` falso). A trava "comprar exige localização ligada" valia pra essa rota; **o Armazém não exige**
+  (cosmético não tem nada a ver com onde a pessoa está) — quando o Bazar físico/Pix vier, a trava volta lá. `seed_loja.py` ainda cria os produtos-placebo
+  antigos (`is_official`): não aparecem mais em lugar nenhum e podem ser removidos.
+
+### Vitrine (`loja.js` + `loja.css`)
+- Desenha tudo a partir do evento `loja`; nunca calcula preço/posse/saldo. Hero em carrossel (scroll-snap nativo, autoplay de 7 s que pausa com mouse/aba
+  escondida/modal aberto, parallax por `transform`), filtro por tema (**a vitrine inteira troca `--a/--b/--c`** conforme o tema), prateleiras horizontais
+  com setas, cartão de item com prévia **na foto/nome da própria pessoa** (reusa `Cosm.previaItem`), modal do item/pacote (conteúdo do pacote, "faz parte do pacote X",
+  preço riscado + % de desconto, "faltam N DRC", comprar, equipar/tirar, confete tema-colorido ao comprar). Celular: modal vira folha, hero empilha.
+- Visual combinado com o dono: **chapado e fosco** (borda grossa, sombra "dura" sem desfoque, um bloco de cor por tema), **sem vidro/blur/brilho que vaza/degradê de enfeite**.
+  Só `transform`/`opacity` se mexem; prévias dos cartões só animam com o mouse em cima (mesma regra do inventário). A paleta geral do app **ainda não foi decidida**:
+  a loja usa as variáveis do app (`--bg-*`, `--text-*`) e o tema dá o acento, então acompanha o que o dono escolher.
+- `.arm-hero` usa **container query** (`@container (max-width: 880px)`): com as barras laterais abertas o mini-perfil some e a arte centraliza.
+- ~~Pegadinha: tema novo entra em `TEMAS_COSM` e `NOME_TEMA`~~ — **resolvido na Rodada 13**: o servidor manda `temas` (nome e cor de todo `cosmeticos.TEMAS`) no payload do inventário e o cliente usa isso; as duas tabelas do cliente ficaram só como reserva dos temas antigos (não precisa mexer nelas pra tema novo).
+
+### Temas à venda (arte original, tudo CSS, em `cosmeticos.css`, seção "LOJA")
+- **Relojoaria** (latão): moldura "Relógio de Bolso" (a caixa de latão gira o brilho; de tempos em tempos o anel "abre" pra fora, some, aparecem as 12 marcas
+  das horas e ele volta a fechar), nome "Tique-Taque" (avança aos tiques), placa "Engrenagens" (cremalheira aos tiques), faixa "Mecanismo" (ponteiro varrendo).
+- **Dualidade** (azul e vermelho): moldura "Vazio Roxo" (dois arcos se aproximam, viram roxo e explodem; usa `@property --dz/--dz-m` animáveis), nome "Azul e
+  Vermelho", placa "Convergência", faixa "Colapso". (Preços da 1ª versão eram 250–350 por item e 800 o pacote; **hoje vêm de `PRECOS`**, ver Rodada 13.)
+- **Criar tema novo da loja**: (1) `TEMAS[id]` com `loja: True`, `cores`, `icone`, `lema`; (2) `_item(...)` com `preco=` por tipo + `_item('pacote', id, ..., preco=)`;
+  (3) CSS `.moldura-<id>`, `.placa-<id>` **+ `.user-profile-bar.placa-<id>`**, `.ne-<id>`, `.banner-anim-<id>` (e `::after` da moldura com os `inset` por contexto, como no Sasuke);
+  (4) arte do hero em `ARTES` no `loja.js` (senão o tema não ganha slide, mas aparece nas prateleiras); (5) `DESTAQUES` em `loja.py`. (Passos atualizados na **Rodada 13**; os preços agora vêm de `PRECOS`, não do `preco=` solto.)
+  Temas pedidos pelo grupo e ainda **não feitos**: ver a lista "O que falta" da Rodada 13.
+
+### Calibragem e pendências da economia (**superado pela Rodada 13**: preços calibrados por conta, extrato e busca prontos; os valores abaixo são os de ANTES)
+- Preço x ganho: nível 1→2 = 100 XP; cada nível paga +50 DRC (+150 a cada 5, +300 a cada 10); todo mundo nasce com 500 DRC (1 item avulso na hora). Um pacote de 800
+  fica em volta do nível 8–10. **Ainda não calibrado com jogo real**: ajustar `preco=` olhando quanto o pessoal ganha por semana.
+- Falta: tela de histórico de DRC (o dado já está em `movimento_drc`), busca na loja, "relíquia da semana"/estoque limitado/coleção "colete N itens", item avulso de
+  tipos que ainda não têm tema (efeitos de avatar/perfil/call/radar/pin/servidor à venda), conteúdo dos outros temas, e o **Bazar modelo A** (criar loja, cadastrar produto
+  com foto/vídeo/combo, personalizar a loja — que também pode virar produto do Armazém —, avaliações, denúncia com tela de revisão).
+- Para o **Bazar com Pix real (modelo B)**: gateway com **split** (Mercado Pago/Asaas/Efí), KYC do vendedor, retenção até a entrega, webhook com assinatura validada, CNPJ/nota,
+  código do consumidor (arrependimento de 7 dias em produto físico), LGPD e **menores de idade**. Não começar sem decidir isso.
+
+---
+
+## Rodada 11 de 08/10/2026 — Bazar da comunidade, modelo A (classificados, Pix direto)
+
+Decisão do dono (ver Rodada 10): o Bazar é **100% Pix com dinheiro real** e começa no **modelo A**: o app mostra loja/produto, organiza o pedido e monta o
+"Pix copia e cola", mas **o dinheiro vai direto de uma pessoa pra outra** (sem saldo, sem escrow, sem gateway). O modelo B (gateway + split + retenção) fica pra depois.
+O aviso "O Panteão não guarda nem devolve pagamento" está na tela, no produto e no pedido: não esconda isso.
+
+### Arquivos
+`app/models.py` (`BazarLoja`, `BazarProduto`, `BazarPedido`, `BazarMensagem`, `BazarAvaliacao`; nascem pelo `create_all`, **sem ALTER**; a organização da tela mudou na **Rodada 12**, abaixo) · `app/bazar.py` (toda a regra, sem socket) ·
+`app/bazar_events.py` (handlers `bazar_*`; importado no **fim** do `events.py` porque usa `usuario_logado`/`sala_pessoal`/`criar_notificacao` de lá) ·
+`static/js/bazar.js` + `static/css/bazar.css` (objeto global `Bazar`) · `bazar_admin.py` (admin e porte) · `testes/fumaca_bazar.py` (169 verificações).
+
+### Modelo
+- **Uma loja por pessoa** (`owner_id` único). O `porte` decide a aparência: `micro` = barraca de feira (itens aglomerados na "Feira dos aldeões"), `media` = fachada com toldo/placa/vitrine,
+  `grande` = parceira (faixa larga + selo). **`grande` só um admin define** (`python bazar_admin.py porte <@usuario> grande`); o dono não consegue se promover nem perde o porte editando.
+- Personalização = **ids validados** (`CORES`, `TOLDOS` em `bazar.py`): nunca texto livre num `class`/`style`. Logo/banner só imagem do próprio app (Cloudinary/site/Giphy) **e sem aspas, parênteses,
+  espaço, `<`, `>` ou `\`** (`_RE_URL_SEGURA`): a URL do banner vai num `style="background-image:url('...')"` e sem isso dava injeção de CSS. O cliente ainda passa por `urlCss()`.
+- Produto: preço em **centavos** (R$ 1,00 a R$ 50.000,00), `tipo` físico/digital/serviço, até 5 fotos + 1 vídeo, estoque (vazio = sem limite), **combo** (até 8 itens + preço avulso só pra mostrar o desconto),
+  `entrega` **privada** (link/instrução: só o comprador de um pedido já confirmado vê). Até 40 produtos ativos por loja.
+- **Texto público não aceita link** (nome, descrição, propaganda, combo, conversa do pedido, recado, avaliação): `texto_tem_link()`. Só `entrega` pode ter link.
+- Vender/pedir/aceitar exigem a **localização ligada** (decisão do dono, trava leve; é a mesma `localizacao_ligada()` do mapa). Ver o Bazar não exige.
+
+### Pedido (máquina de estados, `TRANSICOES` em `bazar.py`)
+`aguardando → aceito → pago → confirmado → concluido`, mais `recusado`/`cancelado`. Cada ação é `(status atual, quem age, ação)`; qualquer outra combinação é recusada com "o pedido mudou de estado".
+- A troca de status é um **`UPDATE ... WHERE status = <atual>`** (duas abas, ou os dois lados agindo juntos, nunca aplicam a mesma transição duas vezes).
+- **Estoque**: reservado ao **aceitar** (`UPDATE ... WHERE estoque >= qtd`, então a corrida do último item falha com "Estoque insuficiente" e o rollback devolve o pedido a `aguardando`),
+  devolvido ao cancelar/recusar depois de aceito; `concluido` soma `vendidos`/`vendas`. Preço e nome do pedido são **copiados** na hora (editar o produto depois não muda o pedido).
+- Limites: 1 pedido aberto por produto por comprador, 10 abertos por comprador, quantidade 1–20. Bloqueado pelo vendedor (`Friendship` `blocked`) não abre pedido.
+- **Quem vê o quê** (regra 4): a chave Pix (copia e cola) só vai pro **comprador** e só com o pedido **aceito** em diante (mascarada fora do código); o vendedor nunca recebe o bloco de Pix;
+  `entrega` só pro comprador com Pix **confirmado**. Terceiro não abre o pedido nem recebe nada dele. A lista (`bazar_pedidos`) nunca carrega Pix nem conversa.
+- Conversa do pedido (`BazarMensagem`): só texto, 300 caracteres, 80 por pedido, só as duas pessoas. **Não usa a DM**: a DM exige amizade/servidor em comum e viraria "conversa rápida"/pedido de amizade com desconhecido.
+- Avaliação: só o comprador, só `concluido`, 1 por pedido (`UNIQUE`); a média é denormalizada na loja (`nota_soma`/`nota_qtd`, atualizada num UPDATE atômico).
+- **Pix**: `pix_copia_cola()` monta o BR Code estático com valor (CRC16/CCITT-FALSE, verificado com o vetor `123456789 → 29B1`); `normalizar_chave_pix()` aceita CPF (com dígito verificador), CNPJ, telefone, e-mail e chave
+  aleatória (11 números que não são CPF válido e parecem celular viram `+55`). **Nunca foi colado num banco de verdade**: segue a especificação e o vetor, mas só um banco confirma (está no BACKLOG).
+
+### Tempo real e notificações (regra 6)
+Pedido mudou → `bazar_pedido` pras **duas** salas pessoais (cada ponta no seu ponto de vista) + `bazar_pendencias` (contador de "precisa de você") + notificação `bazar` na caixa de entrada (clicar abre "Meus pedidos").
+Loja/produto mudou → `bazar_mudou` em broadcast (quem está olhando pede a vitrine de novo). O contador de pendências também sai no `connect` (**+1 query: reconexão 12 → 13**; `/chat` não mudou).
+Erro de regra volta como `bazar_erro {msg, ref}`; erro inesperado como `erro_bazinga` (regra 3).
+
+### Moderação (resolve a antiga "tela de revisão de denúncias")
+- **Admin = id em `config_app 'admin_ids'`**, definido por **id** uma vez: `python bazar_admin.py admin <@usuario>` (`--remover` tira). Trocar o @ não passa o poder. **Depois do deploy, dê admin ao dono.**
+- `denunciar` agora aceita `loja` e `produto` (além de nota/servidor/pessoa) e **só conta denúncia ainda não revisada** (`resolvida` falso): depois que um admin restaura, o alvo recomeça do zero.
+  3 pessoas diferentes escondem loja/produto (`oculta`), igual às notas do mapa.
+- Botão **Moderação** (só aparece pra admin, e o servidor confere a cada chamada) lista as denúncias não revisadas de loja, produto, nota, servidor e pessoa, com quem denunciou e o motivo.
+  **Restaurar/Dispensar** devolve o item e dispensa as denúncias; **Remover** derruba (loja: oculta+fechada; produto: apaga, ou desativa se já teve pedido; nota/servidor: apaga). **Pessoa não é banida** (só fica registrada).
+- O botão "loja" do cartão de perfil agora abre a loja do Bazar (`obter_perfil` devolve `loja_id`).
+
+### Interface
+Vitrine por porte (parceiras, lojas da vila, feira), filtro por categoria + busca (servidor, com debounce), página da loja (capa, logo, nota, propaganda, produtos, avaliações, denunciar), modal do produto
+(galeria com vídeo, combo, vendedor, quantidade, recado, "como funciona"), "Meus pedidos" (comprando/vendendo), pedido com linha do tempo, Pix + QR (qrcodejs) e conversa,
+editor "Minha loja" (loja com **prévia ao vivo da fachada**, produtos, upload de foto/vídeo, combo, entrega privada). Visual igual ao do Armazém: chapado, borda grossa, sombra dura, sem vidro.
+O toldo é CSS puro (listras + franjas com `mask`). Celular: modais viram folha.
+- **Pegadinha de nome**: o `chat.html` já tinha `.bz-radio` e outras classes `bz-*` (criação de servidor). As minhas que colidiram viraram `.bz-opcao` e `.bz-contagem`. **Antes de criar classe `bz-` nova, confira com `grep -o "\.bz-[a-z-]*" app/templates/chat.html`.**
+
+### Legado que ficou órfão
+`Product`/`Purchase`, `/api/produtos`, `/api/inventario` (compras da loja antiga) e `seed_loja.py` não aparecem mais em lugar nenhum; `carregarMercado()` virou no-op. Podem ser removidos numa limpeza (cuidado: `Purchase` é histórico de compras antigas).
+
+---
+
+## Rodada 12 de 08/10/2026 — Bazar reorganizado: carrossel de propagandas, feed misturado e "Minha lojinha" em página
+
+Pedido do dono (depois de ver o Bazar da Rodada 11): a **faixa azul** do mock é a área de **propagandas** (só retângulos, em carrossel, das empresas grandes **e** do próprio Panteão);
+as caixinhas, o quadrado de 4 divisões e o retângulo ficam **misturados num feed único**, em ordem embaralhada, "pra ninguém ter motivo de dizer que aparece mais que o outro";
+destaque e propaganda ficam separados e identificados; quem quiser algo específico usa **filtros**; e tudo da pessoa (minha loja, pedidos, personalização, moderação) vai pra uma
+**página dentro do Mercado Elite** aberta por um atalho **"Minha lojinha" ao lado das moedas** (a barra lateral do app continua).
+
+### Servidor (`app/bazar.py`, `app/bazar_events.py`)
+- **`feed(busca, categoria, tipo, seed, pagina)`** substitui a vitrine por porte. Itens: `{'t':'loja','loja':...}` (média = caixa, grande = retângulo de 2 colunas) e `{'t':'quad','produtos':[até 4]}`
+  (itens de barracas "micro" de vendedores DIFERENTES: cada passada tira 1 item de cada vendedor, em ordem embaralhada). Tudo é ordenado por `md5(seed:chave)` (`_sorteio`): a **ordem é estável com a mesma
+  seed** (atualizar a tela não reorganiza o feed) e **muda com outra** (botão "Embaralhar"; seed nova a cada F5). Paginado (`PAGINA_FEED = 14`): página 0 = evento `bazar_vitrine` (com propagandas,
+  destaques, catálogos e flags); páginas seguintes = `bazar_feed`. O servidor devolve o `tag` que o cliente mandou (seed|filtros|busca): resposta de um filtro que já não vale é ignorada.
+  Filtros: categoria, tipo (físico/digital/serviço) e busca (nome da loja, descrição ou produto; `%` e `_` não viram curinga). Loja sem produto que bata não aparece.
+- **`propagandas(seed)`** = lojas de porte **"grande"** (só admin define) com o texto/banner da PRÓPRIA propaganda da loja; rotaciona por seed. Não há tabela de anúncios: promover um parceiro = `python bazar_admin.py porte <@usuario> grande`.
+  As propagandas do **próprio Panteão** (Monte a sua loja / Pix direto / Armazém) são constantes no `bazar.js` (`PROPAGANDAS_CASA`); entram intercaladas com as parceiras.
+- **`destaques()`** = faixa "Bem avaliadas": o critério é só a nota (e nº de avaliações, vendas), à vista de todos (`MIN_AVALIACOES_DESTAQUE = 1`; suba quando houver volume).
+- `minha_loja()` agora traz `stats` (pedidos aguardando/abertos/concluídos e quanto foi concluído) pro painel.
+- **Escala**: o feed lê até 300 lojas e 600 itens de barraca a cada pedido e embaralha em Python. Serve pra comunidade pequena; com milhares de lojas, mover o sorteio pro SQL/cache (BACKLOG).
+
+### Interface (`static/js/bazar.js`, `css/bazar.css`)
+- **Vistas dentro do Mercado Elite** (`irPara`): `feed` | `loja` (página da loja, substitui o feed, com "Voltar ao Bazar" e rolagem restaurada) | `painel`. Produto e pedido continuam **modais** por cima da vista atual.
+- **Feed**: carrossel de propagandas (scroll-snap, autoplay 6,5 s que pausa com mouse/aba escondida/modal aberto), aviso "Como o Bazar funciona", "Bem avaliadas", filtros + "Embaralhar",
+  grid `auto-fill` com `grid-auto-flow: dense` (grande ocupa 2 colunas; em coluna estreita vira 1 via **container query** em `#bazar`), rolagem infinita (IntersectionObserver + botão "Ver mais lojas").
+  Mudança no Bazar enquanto a pessoa olha **não reorganiza o feed**: aparece a pílula "Há novidades na vila: atualizar".
+- **Atalho "Minha lojinha"** (`#bz-meu-chip`, ao lado das moedas, também na aba do Armazém): logo + nome da loja e o selo de pendências; clicar leva ao Bazar e abre o painel.
+- **Painel** (`.bz-painel`): nav à esquerda (vira abas horizontais em coluna estreita) + corpo. Seções: **Visão geral** (status, atalhos, números, checklist "Pix/produto/logo/propaganda", fachada ao vivo),
+  **Produtos**, **Pedidos recebidos** (os que precisam de você primeiro), **Minhas compras**, **Personalizar** (tamanho, cor, toldo, logo, banner, propaganda + prévia), **Dados e Pix**, **Moderação** (só admin).
+  Sem loja: só "Visão geral" (convite), "Personalizar", "Dados e Pix" e "Minhas compras". Salvar a 1ª vez cria a loja e leva pros produtos. Clicar numa linha de pedido abre o modal do pedido (Pix, conversa...).
+- O contador de pendências do `connect` continua sendo a única consulta nova de conexão; o atalho só mostra o **logo/nome** depois que o Bazar foi aberto pelo menos uma vez (carregamento preguiçoso, de propósito).
+- Notificação do Bazar abre o painel em "Minhas compras" e o pedido; se a pessoa é o vendedor, o painel troca sozinho pra "Pedidos recebidos".
+
+---
+
+## Rodada 13 de 08/10/2026 — Armazém: preços calibrados, +5 temas, extrato e busca
+
+Pedido do dono: seguir com o que a Rodada 10 deixou aberto (calibrar preço, mais temas), ir salvando no BACKLOG/CLAUDE.md e **manter a lista do que ainda falta**
+(a lista única está no fim da Rodada 13 do `BACKLOG.md`: leia lá antes de começar outra frente).
+
+### Preços: uma tabela só (`PRECOS` em `cosmeticos.py`)
+- `PRECOS[raridade][tipo]` (hoje `raro`: nome 350, placa 350, faixa 450, moldura 550; `epico`: 600/600/750/900). `_item_loja(tipo, id, nome, desc, tema, raridade='raro')` lê daqui;
+  `_pacote_loja(tema, nome, desc)` cria o pacote **sem preço** e `recalcular_pacotes()` calcula: soma dos 4 itens × (1 − `DESCONTO_PACOTE` = 30%), arredondado a múltiplo de 50 (**1200 DRC** pros temas "raro").
+  **Nunca escreva `preco=` solto num item da loja.** O pacote abate em proporção do que a pessoa já tem avulso (ver Rodada 10).
+- **`python testes/calibrar_precos.py`** = a conta por trás dos números (usa as constantes REAIS de `utils.py`: XP por mensagem/minuto/bônus/missão, curva de nível, DRC por nível, mais os 500 DRC iniciais).
+  Os três perfis (casual 4 dias/semana, regular 6, intenso 7) são **suposição, não medição**. Rode de novo sempre que mudar `PRECOS`, o ganho de XP/DRC ou a curva. Regras de ouro que ele confere
+  (sai com código 1 se quebrar): 1 item barato no **1º dia** pra qualquer um; 1º pacote **não** no 1º dia e em até 2 semanas pro regular, **não** antes do dia 3 pro intenso, em até ~2 meses pro casual;
+  o premium (2500) não vira rotina (regular só no dia 30+). Resultado de 08/10: pacote no dia **5** (regular), **4** (intenso), **43** (casual); premium no dia **41** (regular).
+- **O achado que a conta mostra e que o dono ainda não decidiu**: DRC só vem de **nível**, e o nível custa cada vez mais XP, então **a renda despenca depois do 1º mês** (regular: 2200 DRC no dia 30 e só 3400 no dia 90;
+  a coleção de 7 pacotes custa 8400). Proposta **não aplicada**: missão pagar DRC (10/diária + 40/semanal → regular 6910 em 90 dias; 20/80 → 10420). Se for aplicada: pagar no mesmo `_somar_xp`/transação da missão,
+  escrever `MovimentoDrc` com `motivo='missao'` **e** acrescentar o rótulo em `ROTULO_MOTIVO` (`loja.py`), e rodar o script de novo.
+- Os testes **leem os preços do catálogo** (nada de 800/350 digitado em `fumaca_loja.py`): mudar `PRECOS` não quebra a suíte, e um teste confere que cada tema tem preço = `PRECOS[raridade][tipo]` e pacote = soma −30% arredondada.
+
+### Cinco temas novos (arte original que evoca; tudo CSS/SVG em `cosmeticos.css`, seção "LOJA, rodada 2", e `loja.js`/`loja.css` pro carrossel)
+| Tema | Evoca | Moldura | Nome | Placa | Faixa |
+|---|---|---|---|---|---|
+| **Cubos** (`#5fa83a`/`#8b5a2b`) | mundo de blocos | Bloco de Grama (anel em segmentos) | Pixelado (verde-claro com contorno, **legível sobre a própria placa**) | Terreno | Mundo de Blocos (céu, nuvens quadradas, grama) |
+| **Batida** (`#d946ef`/`#22d3ee`) | música | Equalizador (barras ciano/magenta em volta) | Refrão (pulsa) | Pista de Dança | Vinil |
+| **Quadra** (`#e8742c`/`#2a5db0`) | vôlei/basquete | Bola em Jogo (bola orbitando o anel) | Saque | Rede | Quadra Cheia (linhas brancas e bola) |
+| **Mira** (`#e8483f`/`#4fd1c5`) | FPS tático | Mira Travada (retículo fecha no avatar) | Tático (mono, espaçado) | Mapa Tático (grade) | Radar (varredura) |
+| **Mangá** (`#e63946`/`#f1faee`) | quadrinho P&B + 1 cor | Traço de Tinta | Onomatopeia | Retícula (pontos de trama) | Página de Mangá (linhas de velocidade e sol vermelho) |
+
+- Cada tema tem moldura, nome, placa, faixa e pacote, **arte própria no carrossel do Armazém** (`ARTES` em `loja.js`: cubo flutuando, vinil + equalizador, bola quicando com sombra, mira travando, explosão de mangá) e **slide próprio** em `DESTAQUES`
+  (`loja.py`). Verificados no cartão de perfil, na barra do usuário e na loja (navegador da pane).
+- **Criar tema novo agora** (substitui a lista da Rodada 10): (1) `TEMAS[id]` com `loja: True`, `cores`, `icone`, `lema`; (2) 4× `_item_loja(...)` + `_pacote_loja(...)` (o preço é automático); (3) CSS `.moldura-<id>::before`,
+  `.ne-<id>`, `.placa-<id>` **+ `.user-profile-bar.placa-<id>`**, `.banner-anim-<id>`; (4) `ARTES[<id>]` em `loja.js` (+ CSS da arte em `loja.css`); (5) slide em `DESTAQUES`. **Não** precisa mais mexer em `TEMAS_COSM`/`NOME_TEMA`
+  (o servidor manda os temas no payload do inventário). O `fumaca_loja.py` falha se faltar CSS, `ARTES` ou slide de algum tema da loja.
+- **Pegadinha de contraste (Cubos)**: o nome tinha quase a cor da própria placa e sumia. Nome e placa do **mesmo tema** vão aparecer juntos na lista de membros/barra do usuário: confira o par, não cada um sozinho
+  (a correção foi paleta mais clara + `-webkit-text-stroke` escuro).
+- Pegadinhas de CSS que se repetiram: `@property` pra animar variável (`--dz`, `--mg`, `--bp-angulo`); disco que não depende do tamanho do banner = `radial-gradient(circle closest-side ...)`; moldura e placa com
+  `!important` na barra do usuário (já estava na Rodada 5).
+
+### Extrato (histórico de DRC) e busca
+- `loja.extrato(pessoa, limite=60)` lê o `MovimentoDrc` **só da própria pessoa** (nunca recebe id de outra) e devolve `saldo`, `ganho_total`, `gasto_total` e os últimos movimentos (título = nome do item comprado ou "Nível N" / "Níveis a a b").
+  Evento `listar_movimentos` → `movimentos` (`events.py`; sem login não responde). Botão **Extrato** no Armazém abre o modal (`Loja.extrato`).
+- Busca do Armazém (`#arm-busca`, 40 caracteres): filtra item/tema **no cliente** em cima do que a vitrine já mandou (sem ida ao servidor).
+
+### Estado do teste (08/10/2026)
+Toda a suíte passou: `fumaca_loja` (164 verificações), `fumaca_bazar` (169), `fumaca_cosmeticos`, `fumaca_social`, `fumaca_servidor`, `fumaca_conversa_rapida`, `fumaca_rodada3`, `fumaca_call`, `fumaca_localizacao`,
+`fumaca_resposta`, `fumaca_push`, `fumaca_insignias`, `fumaca_desktop`; e `calibrar_precos.py` com as 5 regras OK. **Rode com o Python do venv (`.venv\Scripts\python.exe`)**: o `python` do PATH não tem o Flask.
+**Não testado**: Neon, 2 pessoas reais, celular real, Electron/PWA, nada visto no monitor do dono (só na pane: ~800 px e 375 px).
+**Nada desta rodada foi commitado** (nem as Rodadas 10–12): `git status` mostra tudo como modificado/novo.
+
+### O que ainda falta (resumo; a lista completa e atualizada fica no `BACKLOG.md`)
+Decisão do dono: DRC por missão (renda cai depois do mês 1) · paleta geral do app · trocar sons/arte de DBZ/Naruto antes da loja pública.
+Conteúdo: temas Brawlhalla, LoL, SNK, JoJo-like, Umamusume, Rematch, Roblox-like, Marvel Rivals-like, Blue Lock-like, TF2-like · efeitos avulsos à venda (avatar/perfil/fala/radar/pin/servidor/som) · relíquia da semana, estoque limitado, "colete N".
+Limpeza: legado `Product`/`Purchase`/`/api/produtos`/`seed_loja.py`.
+Teste/deploy: Neon + 2 pessoas reais · `atualizar_banco.py` e `bazar_admin.py admin aquele.sales` depois do deploy · Pix copia e cola num banco de verdade · dados reais pra recalibrar · Electron/PWA.
+Bazar: modelo B (gateway/split/escrow/KYC/CNPJ/CDC/LGPD/menores), disputa, banimento, moderação de mídia, frete, loja no mapa, favoritos, reputação, anúncios com arte/datas/cliques, feed em escala.
+
+---
+
 # Convenções
 
 - Nomes de eventos de socket, funções e variáveis em **português**
@@ -1957,8 +2174,7 @@ produção.
 - **Canais globais** (`server_id=NULL`) continuam liberados para qualquer
   logado em `pode_ver_canal()`, por compatibilidade. Não há UI que leve até
   eles. Se forem removidos de vez, dá para apertar essa checagem.
-- **Revisão de denúncias**: `Denuncia` grava e 3 denúncias escondem o alvo, mas não há tela
-  nem rota pra um humano revisar, restaurar ou apagar. Por enquanto só via banco.
+- **Revisão de denúncias**: resolvida na Rodada 11 (botão Moderação do Bazar, só admin; ver `bazar_admin.py`). Falta banir pessoa e o admin ler a conversa de um pedido em disputa.
 - **Mercado/loja/bazar e Battle Pass** (economia, inventário, itens): refazer — o dono
   deixou de lado nesta rodada. A compra continua com os problemas de antes (ver "Inventário").
 - **Vídeo como foto/faixa**: resolvido sem ffmpeg (ver "Vídeo (mp4/webm/mov) como foto..."). Limites: só os 6 s iniciais, sem áudio, sem escolher o trecho.

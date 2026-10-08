@@ -9,7 +9,7 @@ import time
 from . import socketio, APP_VERSAO
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, MapServer, Reaction, Invite, Event, Friendship, Product,
-                     Denuncia, Notificacao, Silenciado, server_members, channel_members)
+                     Denuncia, Notificacao, Silenciado, BazarLoja, BazarProduto, server_members, channel_members)
 from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
@@ -20,7 +20,9 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     distancia_m, coordenada_valida, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, dados_do_mapa_perto, nota_para_json,
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
-from .cosmeticos import (CATALOGO, PACOTES, TIPOS_COLUNA, TIPOS_JSON, TIPOS_EQUIPAVEIS, item_exclusivo, efeito_servidor_valido,
+from . import loja as armazem
+from .bazar import contar_pendencias as bazar_pendencias
+from .cosmeticos import (CATALOGO, PACOTES, TEMAS, TIPOS_COLUNA, TIPOS_JSON, TIPOS_EQUIPAVEIS, item_exclusivo, efeito_servidor_valido,
                          posses_da_pessoa, equipados_da_pessoa, definir_slot, badges_do_conjunto,
                          catalogo_para_json, patentes_para_json, patente_do_nivel, valor_atual_do_slot)
 
@@ -502,6 +504,7 @@ def handle_connect():
             emit('amizades', snap_amizades)
             emit('dms_nao_lidas', contagem_dms_nao_lidas(usuario))
             enviar_notificacoes(usuario)
+            emit('bazar_pendencias', {'n': bazar_pendencias(usuario.id)})
         except Exception as e:
             db.session.rollback()
             print(f"[ERRO CONNECT SOCIAL] {e}")
@@ -2193,7 +2196,7 @@ def denunciar(dados):
 
     tipo = (dados or {}).get('tipo')
     motivo = (dados or {}).get('motivo')
-    if tipo not in ('nota', 'servidor', 'usuario') or motivo not in MOTIVOS_DENUNCIA:
+    if tipo not in ('nota', 'servidor', 'usuario', 'loja', 'produto') or motivo not in MOTIVOS_DENUNCIA:
         emit('erro_bazinga', {'msg': 'Denúncia inválida.'})
         return
     try:
@@ -2202,12 +2205,19 @@ def denunciar(dados):
         return
 
     try:
-        modelo = {'nota': GeoNote, 'servidor': MapServer, 'usuario': Person}[tipo]
+        modelo = {'nota': GeoNote, 'servidor': MapServer, 'usuario': Person, 'loja': BazarLoja, 'produto': BazarProduto}[tipo]
         alvo = com_retry(lambda: modelo.query.get(alvo_id))
         if not alvo:
             emit('erro_bazinga', {'msg': 'Isso já não existe mais.'})
             return
-        dono_id = alvo.id if tipo == 'usuario' else (alvo.author_id if tipo == 'nota' else alvo.owner_id)
+        if tipo == 'usuario':
+            dono_id = alvo.id
+        elif tipo == 'nota':
+            dono_id = alvo.author_id
+        elif tipo == 'produto':
+            dono_id = alvo.loja.owner_id
+        else:                      # servidor plantado e loja têm owner_id
+            dono_id = alvo.owner_id
         if dono_id == usuario.id:
             emit('erro_bazinga', {'msg': 'Você não pode denunciar o seu próprio conteúdo.'})
             return
@@ -2221,7 +2231,8 @@ def denunciar(dados):
         def preparar():
             db.session.add(Denuncia(denunciante_id=usuario.id, tipo=tipo, alvo_id=alvo_id, motivo=motivo, detalhe=detalhe))
             db.session.flush()
-            total = Denuncia.query.filter_by(tipo=tipo, alvo_id=alvo_id).count()
+            # só conta denúncia ainda não revisada: depois que um admin restaura, o alvo recomeça do zero
+            total = Denuncia.query.filter(Denuncia.tipo == tipo, Denuncia.alvo_id == alvo_id, Denuncia.resolvida.isnot(True)).count()
             # Pessoa denunciada não "some": a denúncia fica registrada pra revisão humana.
             if tipo != 'usuario' and total >= DENUNCIAS_PARA_OCULTAR and not alvo.oculta:
                 alvo.oculta = True
@@ -2230,8 +2241,10 @@ def denunciar(dados):
         comitar_com_retry(preparar)
         emit('denuncia_registrada', {'tipo': tipo, 'id': alvo_id})
         if escondeu['v']:
-            evento = 'geonote_apagada' if tipo == 'nota' else 'servidor_mapa_apagado'
-            emit(evento, {'id': alvo_id}, broadcast=True)
+            if tipo in ('loja', 'produto'):
+                emit('bazar_mudou', {'loja_id': alvo_id if tipo == 'loja' else None}, broadcast=True)
+            else:
+                emit('geonote_apagada' if tipo == 'nota' else 'servidor_mapa_apagado', {'id': alvo_id}, broadcast=True)
         print(f"[DENUNCIA] {usuario.name} denunciou {tipo} #{alvo_id} ({motivo})")
     except Exception as e:
         db.session.rollback()
@@ -2532,7 +2545,8 @@ def _estado_inventario(usuario, posses):
     equipados = {t: valor_atual_do_slot(usuario, t) for t in TIPOS_EQUIPAVEIS}
     return {'posses': sorted(posses), 'catalogo': catalogo_para_json(posses),
             'equipados': {t: v for t, v in equipados.items() if v},
-            'patentes': patentes_para_json(), 'nivel': nivel_da_pessoa(usuario.xp)}
+            'patentes': patentes_para_json(), 'nivel': nivel_da_pessoa(usuario.xp),
+            'temas': {k: {'nome': t['nome'], 'cor': t['cor']} for k, t in TEMAS.items()}}
 
 
 @socketio.on('listar_inventario')
@@ -2605,6 +2619,91 @@ def desequipar_item(dados):
         db.session.rollback()
         print(f"[ERRO DESEQUIPAR ITEM] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível desequipar: {e}'})
+
+
+# ==========================================
+# ARMAZÉM (loja do app, paga em DRC) - a lógica de preço/compra mora em loja.py
+# ------------------------------------------------------------
+# Regra 6: comprar muda o saldo e o inventário da pessoa em TODAS as abas dela (`sala_pessoal`),
+# não só na que clicou. O preço e a posse são do servidor; o cliente só manda "qual item".
+# ==========================================
+_ultima_compra = {}          # person_id -> instante da última tentativa (freio contra clique repetido)
+INTERVALO_COMPRA_S = 0.6
+
+
+@socketio.on('listar_loja')
+def listar_loja(dados=None):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        posses = com_retry(lambda: posses_da_pessoa(usuario.id))
+        emit('loja', armazem.vitrine_para_json(usuario, posses))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO LISTAR LOJA] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível abrir a loja: {e}'})
+
+
+@socketio.on('listar_movimentos')
+def listar_movimentos(dados=None):
+    """Extrato de DRC da própria pessoa (livro-razão). Nunca aceita id de outra pessoa."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        emit('movimentos', com_retry(lambda: armazem.extrato(usuario)))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO EXTRATO] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível abrir o extrato: {e}'})
+
+
+@socketio.on('comprar_item')
+def comprar_item(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    dados = dados or {}
+    item_id = str(dados.get('item_id') or '')[:60]
+    esperado = dados.get('preco_esperado')
+    esperado = esperado if isinstance(esperado, int) and not isinstance(esperado, bool) else None
+
+    agora = time.monotonic()
+    if agora - _ultima_compra.get(usuario.id, 0) < INTERVALO_COMPRA_S:
+        emit('compra_recusada', {'item_id': item_id, 'msg': 'Calma, um clique de cada vez.'})
+        return
+    _ultima_compra[usuario.id] = agora
+
+    try:
+        r = armazem.comprar(usuario, item_id, esperado)
+    except armazem.ErroLoja as e:
+        db.session.rollback()
+        emit('compra_recusada', {'item_id': item_id, 'msg': str(e)})
+        # foto fresca: se o erro foi "preço mudou"/"já tem", a tela precisa se corrigir sozinha
+        try:
+            emit('loja', armazem.vitrine_para_json(usuario, com_retry(lambda: posses_da_pessoa(usuario.id))))
+        except Exception:
+            db.session.rollback()
+        return
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO COMPRAR ITEM] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível concluir a compra: {e}'})
+        return
+
+    try:
+        posses = com_retry(lambda: posses_da_pessoa(usuario.id))
+        sala = sala_pessoal(usuario.id)
+        emit('compra_ok', {'item_id': r['item_id'], 'nome': r['nome'], 'preco': r['preco'], 'entregues': r['entregues'],
+                           'saldo': r['saldo']}, to=sala)
+        emit('saldo_atualizado', {'saldo': r['saldo']}, to=sala)
+        emit('loja', armazem.vitrine_para_json(usuario, posses), to=sala)
+        emit('inventario', _estado_inventario(usuario, posses), to=sala)
+    except Exception as e:
+        # A compra JÁ foi feita e comitada; só a atualização da tela falhou (o próximo listar_loja corrige).
+        db.session.rollback()
+        print(f"[ERRO COMPRAR ITEM: avisar abas] {e}")
 
 
 @socketio.on('alternar_fantasma')
@@ -2767,6 +2866,8 @@ def obter_perfil(dados):
 
         nivel = nivel_da_pessoa(alvo.xp)
         badges = badges_do_conjunto(com_retry(lambda: posses_da_pessoa(alvo.id)))
+        _loja = BazarLoja.query.filter(BazarLoja.owner_id == alvo.id, BazarLoja.oculta.isnot(True), BazarLoja.aberta.isnot(False)).with_entities(BazarLoja.id).first()
+        loja_publica_id = _loja[0] if _loja else None
         emit('perfil_publico', {
             'id': alvo.id, 'nome': alvo.name, 'avatar': alvo.avatar, 'restrito': False,
             'bio': alvo.bio, 'custom_status': alvo.custom_status, 'pronomes': alvo.pronomes,
@@ -2781,7 +2882,7 @@ def obter_perfil(dados):
             'nivel': nivel, 'titulo': titulo_do_nivel(nivel), 'patente': patente_do_nivel(nivel),
             'badges': badges, 'equipados': equipados_da_pessoa(alvo),
             'eh_amigo': amigo, 'pedido_pendente': pendente, 'sou_eu': sou_eu,
-            'tem_loja': Product.query.filter_by(seller_id=alvo.id).count() > 0
+            'tem_loja': loja_publica_id is not None, 'loja_id': loja_publica_id
         })
     except Exception as e:
         db.session.rollback()
@@ -3901,3 +4002,7 @@ def apagar_evento(dados):
         print(f"[ERRO APAGAR EVENTO] {e}")
         emit('erro_bazinga', {'msg': f'Não foi possível apagar o evento: {e}'})
 
+
+# Bazar da comunidade: handlers em outro arquivo. Fica no FIM de propósito (ele importa daqui usuario_logado, sala_pessoal e
+# criar_notificacao, que precisam já existir).
+from . import bazar_events  # noqa: E402,F401

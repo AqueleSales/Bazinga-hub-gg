@@ -733,7 +733,7 @@ const Cosm = (() => {
         efeito_perfil: 'Efeito de perfil', efeito_fala: 'Efeito de fala', efeito_radar: 'Efeito do radar', efeito_chat: 'Efeito do chat',
         som_call: 'Som de entrada', pin_nota: 'Pin de nota', efeito_servidor: 'Efeito de servidor', pacote: 'Pacote de tema' };
     const ICONE_TIPO = { efeito_fala: 'fa-microphone-lines', efeito_radar: 'fa-satellite-dish', efeito_chat: 'fa-keyboard', som_call: 'fa-volume-high', pin_nota: 'fa-location-dot', pacote: 'fa-box-open' };
-    const NOME_TEMA = { gogeta: 'Gogeta', sasuke: 'Sasuke', fusao: 'Fusão' };
+    const NOME_TEMA = { gogeta: 'Gogeta', sasuke: 'Sasuke', fusao: 'Fusão', relojoaria: 'Relojoaria', dualidade: 'Dualidade' };
 
     function previaItem(it, ctx) {
         const v = it.valor;
@@ -763,7 +763,7 @@ const Cosm = (() => {
 
     function tileItem(it, ctx) {
         const eq = ctx.equipados[it.tipo] === it.valor;
-        const sub = ROTULO_TIPO[it.tipo] + (it.tema ? ' · ' + (NOME_TEMA[it.tema] || '') : '');
+        const sub = ROTULO_TIPO[it.tipo] + (it.tema ? ' · ' + (((ctx.temas || {})[it.tema] || {}).nome || NOME_TEMA[it.tema] || '') : '');
         const emUso = it.tipo === 'efeito_servidor' && ctx.servidoresComEfeito ? ctx.servidoresComEfeito(it.valor) : [];
         const acao = it.tipo === 'badge'
             ? '<span class="inv-fixo"><i class="fa-solid fa-circle-check"></i> Sempre visível</span>'
@@ -1314,6 +1314,6 @@ const Cosm = (() => {
     }
 
     return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, svgBadge3D, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
-        renderInventario, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
+        renderInventario, previaItem, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
         mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, _passo: passoCanvas };
 })();

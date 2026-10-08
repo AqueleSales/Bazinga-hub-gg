@@ -1998,7 +1998,7 @@
         .ib-item.nao-lida { background: color-mix(in srgb, var(--brand-color) 12%, transparent); }
         .ib-item.nao-lida::after { content: ''; position: absolute; right: 12px; top: 50%; width: 9px; height: 9px; border-radius: 50%; background: var(--brand-color); transform: translateY(-50%); }
         .ib-ico { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; color: #fff; }
-        .ib-ico.dm { background: #5865F2; } .ib-ico.amizade { background: var(--green-color); } .ib-ico.mencao { background: #eb459e; } .ib-ico.sistema { background: #4e5058; }
+        .ib-ico.dm { background: #5865F2; } .ib-ico.amizade { background: var(--green-color); } .ib-ico.mencao { background: #eb459e; } .ib-ico.bazar { background: #d9822b; } .ib-ico.sistema { background: #4e5058; }
         .ib-txt { flex: 1; min-width: 0; padding-right: 16px; }
         .ib-tit { color: var(--text-header); font-weight: 700; font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
         .ib-tit .ib-qtd { background: var(--red-color); color: #fff; font-size: 10.5px; font-weight: 800; padding: 1px 6px; border-radius: 8px; }
@@ -2803,6 +2803,8 @@
     </style>
 <!-- Cosméticos (patentes, insígnias, popover orb, inventário, laboratório): depois do <style> acima, pra ganhar por ordem -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/loja.css') }}?v={{ loja_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 </head>
 <body>
     <div class="discord-app">
@@ -3199,45 +3201,26 @@
                         <i class="fa-solid fa-store ic-loja"></i> Mercado Elite
                     </h2>
                     <div style="display: flex; gap: 24px; height: 100%;">
-                        <div class="market-tab active" data-tab="tab-loja">Loja {{ app_nome }}</div>
+                        <div class="market-tab active" data-tab="tab-loja">Armazém</div>
                         <div class="market-tab" data-tab="tab-bazar">Bazar da Comunidade</div>
                     </div>
                     <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+                        <button type="button" id="bz-meu-chip" class="bz-meu-chip" title="Minha lojinha: produtos, pedidos, personalização"></button>
                         <!-- DINÂMICO: PUXANDO DO BANCO DE DADOS -->
                         <div class="price-bzc" title="Suas {{ moeda_nome }}"><i class="fa-solid fa-coins" style="color: #ffd76a;"></i> <span id="meu-saldo-bzc">{{ usuario_atual.bazinga_coins }}</span></div>
                     </div>
                 </header>
 
-                <!-- ABA 1: LOJA OFICIAL (Cosméticos com {{ moeda_sigla }}) -->
+                <!-- ABA 1: ARMAZÉM (cosméticos do app, pagos em {{ moeda_sigla }}) -->
                 <div class="market-content active" id="tab-loja">
 
-                    <div class="market-section-title">Em Destaque</div>
-                    <div class="mkt-destaque cartao-anel">
-                        <div style="position: absolute; right: -20px; bottom: -40px; font-size: 200px; color: rgba(255,255,255,0.1); transform: rotate(-15deg);"><i class="fa-solid fa-bolt"></i></div>
-                        <span style="background: rgba(0,0,0,0.5); color: white; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; width: fit-content; text-transform: uppercase; margin-bottom: 12px;">Novo Lançamento</span>
-                        <h1 style="color: white; font-size: 32px; font-weight: 800; margin-bottom: 8px;">Pacote Cyberpunk</h1>
-                        <p style="color: rgba(255,255,255,0.8); max-width: 400px; font-size: 14px;">Domine o radar com um pino de nave neon e uma borda de avatar hacker. Exclusivo por tempo limitado.</p>
-                        <button class="btn btn-primary" style="width: fit-content; margin-top: 16px; background: white; color: black;"><i class="fa-solid fa-cart-shopping"></i> Comprar por 800 {{ moeda_sigla }}</button>
-                    </div>
-
-                    <div class="market-section-title">Catálogo Oficial</div>
-                    <!-- AQUI O JAVASCRIPT INJETA OS ITENS DE {{ moeda_sigla }} -->
-                    <div class="market-grid" id="loja-grid-container"></div>
+                    <!-- O Armazém inteiro é desenhado por static/js/loja.js a partir do evento 'loja' (preço, posse e saldo vêm do servidor) -->
+                    <div id="armazem"></div>
                 </div>
 
-                <!-- ABA 2: BAZAR DA COMUNIDADE (PIX) -->
+                <!-- ABA 2: BAZAR DA COMUNIDADE (classificados; Pix direto entre as pessoas). Desenhado por static/js/bazar.js -->
                 <div class="market-content" id="tab-bazar">
-
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
-                        <div>
-                            <div class="market-section-title" style="border: none; padding: 0; margin: 0;">Bazar da Comunidade</div>
-                            <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Apoie criadores independentes. Pagamento direto via PIX, sem taxas.</p>
-                        </div>
-                        <button class="btn btn-primary" style="background-color: #fff; color: #000;"><i class="fa-solid fa-plus"></i> Vender no Bazar</button>
-                    </div>
-
-                    <!-- AQUI O JAVASCRIPT INJETA OS ITENS DA COMUNIDADE (PIX) -->
-                    <div class="market-grid" id="bazar-grid-container"></div>
+                    <div id="bazar"></div>
                 </div>
 
             </div>
@@ -4679,6 +4662,8 @@
     <div id="dm-contato-menu" class="dm-contato-menu" style="display:none;"></div>
 
     <script src="{{ url_for('static', filename='js/cosmeticos.js') }}?v={{ cosm_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/loja.js') }}?v={{ loja_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script>
         // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
         const rawChannelId = "{{ default_channel.id if default_channel else 1 }}";
@@ -4957,6 +4942,8 @@
 
                 switchMainView('market');
                 carregarMercado();
+                if (typeof Loja !== 'undefined') Loja.abrir();
+                if (typeof Bazar !== 'undefined' && document.getElementById('tab-bazar').classList.contains('active')) Bazar.abrir();
             });
         }
 
@@ -6990,6 +6977,8 @@
 
                 switchMainView('market');
                 carregarMercado();
+                if (typeof Loja !== 'undefined') Loja.abrir();
+                if (typeof Bazar !== 'undefined' && document.getElementById('tab-bazar').classList.contains('active')) Bazar.abrir();
             });
         }
 
@@ -9853,6 +9842,7 @@
                 fecharCartao();
                 document.getElementById('btn-mercado').click();
                 document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click();
+                Bazar.abrirLojaDe(d.loja_id);
             } else if (acao === 'add-amigo') {
                 socket.emit('enviar_pedido_amizade', { usuario_id: d.id });
                 d.pedido_pendente = true;
@@ -10395,7 +10385,7 @@
         // ==========================================
         let inventario = {{ inventario_inicial|tojson }};
         let invAba = 'tudo';
-        const TEMAS_COSM = { gogeta: { cor: '#ff9d2e' }, sasuke: { cor: '#8b5cf6' }, fusao: { cor: '#e879f9' } };
+        const TEMAS_COSM = { gogeta: { cor: '#ff9d2e' }, sasuke: { cor: '#8b5cf6' }, fusao: { cor: '#e879f9' }, relojoaria: { cor: '#d4a24c' }, dualidade: { cor: '#9b5cff' } };
 
         function livresDoInventario() {
             const l = [];
@@ -10420,7 +10410,7 @@
             const raiz = document.getElementById('inv-raiz');
             if (!raiz) return;
             Cosm.renderInventario(raiz, inventario, {
-                livres: livresDoInventario(), nome: perfilMeu.nome, avatarHtml: avatarMini(), aba: invAba, temas: TEMAS_COSM,
+                livres: livresDoInventario(), nome: perfilMeu.nome, avatarHtml: avatarMini(), aba: invAba, temas: { ...TEMAS_COSM, ...((inventario && inventario.temas) || {}) },
                 aoAba: (aba) => { invAba = aba; desenharInventario(); },
                 aoEquipar: (id) => {
                     if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
@@ -10448,7 +10438,67 @@
             perfilMeu.badges = Object.keys(Cosm.BADGES).filter(id => (estado.posses || []).includes('badge:' + id));
             desenharInventario();
             pintarPrevia();
+            if (typeof Loja !== 'undefined') Loja.inventarioMudou();
         });
+
+        // ARMAZÉM (loja do app em {{ moeda_sigla }}): static/js/loja.js só desenha; preço, posse e saldo vêm do servidor.
+        Loja.iniciar({
+            avatarHtml: () => avatarMini(), nome: () => perfilMeu.nome, sigla: '{{ moeda_sigla }}',
+            equipados: () => (inventario && inventario.equipados) || {},
+            emitir: (nome, dados) => socket.emit(nome, dados),
+            confirmar: (titulo, texto, ok) => openConfirmModal(titulo, texto, ok),
+            toast: (msg, tipo) => showToast(msg, tipo),
+            som: () => { try { tocarSom('missao'); } catch (e) {} },
+        });
+        socket.on('loja', (v) => Loja.receber(v));
+        socket.on('compra_ok', (d) => Loja.compraOk(d));
+        socket.on('compra_recusada', (d) => Loja.compraRecusada(d));
+        socket.on('movimentos', (d) => Loja.extrato(d));
+        socket.on('saldo_atualizado', (d) => {
+            const el = document.getElementById('meu-saldo-bzc');
+            if (el) el.textContent = d.saldo;
+            Loja.saldo(d.saldo);
+        });
+
+        // BAZAR (classificados, Pix direto): static/js/bazar.js só desenha; regra, estoque e quem vê a chave Pix são do servidor.
+        function marcarPendenciasBazar(n) {
+            [document.querySelector('.market-tab[data-tab="tab-bazar"]'), document.getElementById('btn-mercado')].forEach((el) => {
+                if (!el) return;
+                let b = el.querySelector(':scope > .bz-contagem');
+                if (!n) { if (b) b.remove(); return; }
+                if (!b) { b = document.createElement('span'); b.className = 'bz-contagem'; el.appendChild(b); }
+                b.textContent = n;
+            });
+        }
+        Bazar.iniciar({
+            emitir: (nome, dados) => socket.emit(nome, dados),
+            confirmar: (titulo, texto, ok) => openConfirmModal(titulo, texto, ok),
+            toast: (msg, tipo) => showToast(msg, tipo),
+            upload: (arquivo) => uploadMidiaCompleto(arquivo),
+            qr: (el, texto) => carregarLib(URL_QRCODE).then(() => { el.innerHTML = ''; new QRCode(el, { text: texto, width: 156, height: 156, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M }); })
+                .catch(() => { el.innerHTML = '<span style="color:#666;font-size:11px">QR indisponível: use o código</span>'; }),
+            denunciar: (tipo, id, nome) => abrirDenuncia(tipo, id, nome),
+            exigirLocalizacao: () => exigirLocalizacao(),
+            nome: () => perfilMeu.nome, meuId: () => currentUserId,
+            aoPendencias: marcarPendenciasBazar,
+            // o atalho "Minha lojinha" fica no cabeçalho do Mercado Elite (visível também na aba do Armazém): garante Mercado + aba Bazar
+            irParaBazar: () => {
+                if (vistaAtual !== 'market') document.getElementById('btn-mercado').click();
+                document.querySelector('.market-tab[data-tab="tab-bazar"]').click();
+            },
+        });
+        socket.on('bazar_vitrine', (d) => Bazar.vitrine(d));
+        socket.on('bazar_feed', (d) => Bazar.feedMais(d));
+        socket.on('bazar_loja', (d) => Bazar.loja(d));
+        socket.on('bazar_minha', (d) => Bazar.minhaLoja(d));
+        socket.on('bazar_pedido', (d) => Bazar.pedido(d));
+        socket.on('bazar_pedido_aberto', (d) => Bazar.pedidoAberto(d));
+        socket.on('bazar_pedidos', (d) => Bazar.listaPedidos(d));
+        socket.on('bazar_pendencias', (d) => Bazar.pendencias(d.n));
+        socket.on('bazar_mudou', () => Bazar.mudou());
+        socket.on('bazar_erro', (d) => Bazar.erro(d));
+        socket.on('bazar_moderacao', (d) => Bazar.moderacaoFila(d));
+        document.querySelector('.market-tab[data-tab="tab-bazar"]').addEventListener('click', () => Bazar.abrir());
 
         // Efeitos que só mexem na MINHA tela: onda do radar, barra de mensagem e meu card na call
         function aplicarEfeitosPessoais() {
@@ -12963,111 +13013,7 @@
         // =====================================================================
         // LÓGICA DO MERCADO ELITE (Buscar no Banco e Desenhar na Tela)
         // =====================================================================
-        async function carregarMercado() {
-            try {
-                const resp = await fetch('/api/produtos');
-                const produtos = await resp.json();
-
-                const bazarContainer = document.getElementById('bazar-grid-container');
-                const lojaContainer = document.getElementById('loja-grid-container');
-
-                if (bazarContainer) bazarContainer.innerHTML = '';
-                if (lojaContainer) lojaContainer.innerHTML = '';
-
-                produtos.forEach(prod => {
-                    const card = document.createElement('div');
-                    card.className = 'product-card';
-
-                    if (!prod.is_official) {
-                        // BAZAR DA COMUNIDADE (Via PIX)
-                        card.innerHTML = `
-                            <img src="${escUrl(prod.image_url) || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600'}" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&q=80'">
-                            <div class="product-info">
-                                <div class="product-title">${esc(prod.name)}</div>
-                                <div class="product-author"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(prod.seller || '?')}&background=random" style="width: 16px; height: 16px; border-radius: 50%;"> Por ${esc(prod.seller)}</div>
-                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${esc(prod.description)}</p>
-                                <div class="product-footer">
-                                    <div class="price-pix"><i class="fa-brands fa-pix"></i> R$ ${Number(prod.price_pix || 0).toFixed(2).replace('.', ',')}</div>
-                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; background-color: var(--green-color);" onclick="abrirModalCompra(${Number(prod.id)}, ${escJs(prod.name)}, ${Number(prod.price_pix || 0)}, 'PIX')">Comprar</button>
-                                </div>
-                            </div>
-                        `;
-                        if(bazarContainer) bazarContainer.appendChild(card);
-                    } else {
-                        // LOJA BAZINGA OFICIAL (Via {{ moeda_sigla }})
-                        let imgHtml = '';
-
-                        // O JAVASCRIPT INTELIGENTE: Restaura os efeitos visuais Premium baseados no nome!
-                        if (prod.name.includes("Anel de Ouro")) {
-                            imgHtml = `
-                            <div class="product-img" style="background: #111214; display: flex; justify-content: center; align-items: center; position: relative;">
-                                <img src="https://ui-avatars.com/api/?name=BU&background=5865F2&color=fff" style="width: 64px; height: 64px; border-radius: 50%;">
-                                <div style="position: absolute; width: 80px; height: 80px; border: 4px solid #f0b232; border-radius: 50%; box-shadow: 0 0 15px #f0b232;"></div>
-                            </div>`;
-                        } else if (prod.name.includes("Radar Hacker")) {
-                            imgHtml = `
-                            <div class="product-img" style="background: #111214; display: flex; justify-content: center; align-items: center; position: relative;">
-                                <img src="https://ui-avatars.com/api/?name=BU&background=5865F2&color=fff" style="width: 64px; height: 64px; border-radius: 50%;">
-                                <div style="position: absolute; width: 76px; height: 76px; border: 2px dashed #00ff00; border-radius: 50%; animation: bg-spin 4s linear infinite;"></div>
-                            </div>`;
-                        } else if (prod.name.includes("Foguete") || prod.name.includes("Pino")) {
-                            imgHtml = `
-                            <div class="product-img" style="background: #1e1f22; display: flex; justify-content: center; align-items: center; font-size: 48px; color: #da373c;">
-                                <i class="fa-solid fa-rocket"></i>
-                            </div>`;
-                        } else if (escUrl(prod.image_url)) {
-                            imgHtml = `<img src="${escUrl(prod.image_url)}" class="product-img">`;
-                        } else {
-                            imgHtml = `<div class="product-img" style="background: #111214; display: flex; justify-content: center; align-items: center;"><i class="fa-solid fa-gem" style="font-size: 48px; color: var(--brand-color);"></i></div>`;
-                        }
-
-                        card.innerHTML = `
-                            ${imgHtml}
-                            <div class="product-info">
-                                <div class="product-title">${esc(prod.name)}</div>
-                                <div class="product-author"><i class="fa-solid fa-check-circle" style="color: var(--brand-color);"></i> Oficial {{ app_nome }}</div>
-                                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; flex-grow: 1;">${esc(prod.description)}</p>
-                                <div class="product-footer">
-                                    <div class="price-bzc">${Number(prod.price_bzc || 0)} {{ moeda_sigla }}</div>
-                                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px;" onclick="abrirModalCompra(${Number(prod.id)}, ${escJs(prod.name)}, ${Number(prod.price_bzc || 0)}, '{{ moeda_sigla }}')">Comprar</button>
-                                </div>
-                            </div>
-                        `;
-                        if(lojaContainer) lojaContainer.appendChild(card);
-                    }
-                });
-            } catch (err) {
-                console.error("Erro ao carregar o mercado:", err);
-            }
-        }
-
-        // Função do Caixa (O Botão de Comprar)
-        async function abrirModalCompra(id, nome, preco, moeda) {
-            if(moeda === 'PIX') {
-                showToast(`Pagamentos via PIX ainda não estão disponíveis. Em breve!`, 'info');
-                return;
-            }
-
-            if (!exigirLocalizacao()) return;   // o servidor também recusa (403), isso só poupa o clique
-            openConfirmModal(
-                "Confirmar Compra",
-                `Comprar "${nome}" por ${preco} {{ moeda_sigla }}?`,
-                async () => {
-                    try {
-                        const resp = await fetch(`/api/produtos/${id}/comprar`, { method: 'POST' });
-                        const data = await resp.json();
-                        if (!resp.ok) {
-                            showToast(data.error || "Não foi possível concluir a compra.", "error");
-                            return;
-                        }
-                        document.getElementById('meu-saldo-bzc').innerText = data.saldo;
-                        showToast(`"${nome}" comprado com sucesso!`, "success");
-                    } catch (e) {
-                        showToast("Erro ao processar a compra.", "error");
-                    }
-                }
-            );
-        }
+        function carregarMercado() { /* o Armazém (Loja.js) e o Bazar (Bazar.js) pedem os próprios dados por socket */ }
 
 
         // =====================================================================
@@ -13982,7 +13928,7 @@
             recontarNotifs();
         });
 
-        const ICONE_NOTIF = { dm: 'fa-message', amizade: 'fa-user-plus', mencao: 'fa-at', sistema: 'fa-bell' };
+        const ICONE_NOTIF = { dm: 'fa-message', amizade: 'fa-user-plus', mencao: 'fa-at', bazar: 'fa-store', sistema: 'fa-bell' };
         function renderInbox() {
             const lista = document.getElementById('ib-lista');
             if (!notifs.itens.length) { lista.innerHTML = '<div class="ib-vazio"><i class="fa-regular fa-bell-slash"></i>Tudo em dia! Mensagens, pedidos de amizade e menções aparecem aqui.</div>'; }
@@ -14039,6 +13985,11 @@
             else if (n.tipo === 'mencao' && n.ref) {
                 const [srv, canal] = n.ref.split(':').map(Number);
                 if (srv) { entrarNoServidor(srv); setTimeout(() => document.querySelector(`.text-channel[data-id="${canal}"]`)?.click(), 120); }
+            }
+            else if (n.tipo === 'bazar') {
+                document.getElementById('btn-mercado').click();
+                document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click();
+                Bazar.abrirPedidos(n.ref);
             }
         });
         // pede permissão do navegador (avisos com a aba em segundo plano) no primeiro clique no sino
@@ -14148,7 +14099,7 @@
         let _denunciaAlvo = null;
         function abrirDenuncia(tipo, id, nome) {
             _denunciaAlvo = { tipo, id };
-            document.getElementById('denuncia-titulo').textContent = tipo === 'nota' ? 'Denunciar nota' : (tipo === 'usuario' ? 'Denunciar pessoa' : 'Denunciar servidor');
+            document.getElementById('denuncia-titulo').textContent = { nota: 'Denunciar nota', usuario: 'Denunciar pessoa', loja: 'Denunciar loja', produto: 'Denunciar produto' }[tipo] || 'Denunciar servidor';
             document.getElementById('denuncia-sub').textContent = nome ? `"${String(nome).slice(0, 60)}" — conta pra gente o que tem de errado.` : 'Conta pra gente o que tem de errado.';
             document.getElementById('denuncia-detalhe').value = '';
             document.querySelector('input[name="dn-motivo"][value="+18"]').checked = true;
@@ -14166,7 +14117,7 @@
         socket.on('denuncia_registrada', (d) => {
             showToast(d.repetida ? 'Você já denunciou isso.' : 'Obrigado! A denúncia foi registrada.', d.repetida ? 'info' : 'success');
             // some do SEU mapa na hora
-            if (d.tipo !== 'usuario' && typeof removerDoMapa === 'function') removerDoMapa(d.tipo === 'nota' ? 'nota' : 'servidor', d.id);
+            if ((d.tipo === 'nota' || d.tipo === 'servidor') && typeof removerDoMapa === 'function') removerDoMapa(d.tipo, d.id);
         });
 
         // ---------- toques e efeitos sonoros extras ----------

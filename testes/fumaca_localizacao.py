@@ -75,7 +75,7 @@ with app.app_context():
     ana.emit('entrar_servidor_pin', {'server_id': srv.id})
     ok(any('localização' in m for m in erros(ana)), 'desligada: NÃO entra por pino')
     resp = fana.post(f'/api/produtos/{prod_id}/comprar')
-    ok(resp.status_code == 403 and 'localização' in resp.get_json()['error'], 'desligada: NÃO compra (403)')
+    ok(resp.status_code == 410, 'a rota antiga de compra foi aposentada (410): o Armazém compra pelo socket, sem exigir localização')
     ok(db.session.get(Person, ids['Ana']).bazinga_coins == 5000, 'e nenhuma moeda foi cobrada')
 
     # radar nos dois sentidos
@@ -91,7 +91,7 @@ with app.app_context():
     ana.emit('criar_geonote', {'lat': -15.8, 'lng': -47.9, 'texto': 'oi'})
     ok(not erros(ana), 'ligada de novo: cria nota')
     resp = fana.post(f'/api/produtos/{prod_id}/comprar')
-    ok(resp.status_code == 200, 'ligada de novo: compra')
+    ok(resp.status_code == 410 and db.session.get(Person, ids['Ana']).bazinga_coins == 5000, 'rota antiga continua recusando e sem cobrar')
 
     # ---- regra 6: desligar tira o pino de quem já via ----
     ev(beto)

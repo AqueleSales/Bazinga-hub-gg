@@ -532,3 +532,132 @@ class Posse(db.Model):
     item_id = db.Column(db.String(60), nullable=False)
     origem = db.Column(db.String(20), default='sistema')   # laboratorio | loja | battlepass | sistema
     created_at = db.Column(db.DateTime, default=br_now)
+
+
+# ==========================================
+# LIVRO-RAZÃO DE DRC
+# ------------------------------------------------------------
+# Uma linha por movimento de moeda (ganho ou gasto), imutável: nunca se edita nem se apaga.
+# `Person.bazinga_coins` continua sendo o saldo de leitura rápida, e `saldo_apos` guarda o
+# que sobrou depois de cada movimento. Serve para auditar ("de onde veio esse saldo?"),
+# resolver disputa de compra e, no futuro, detectar fraude. A tabela nasce pelo create_all.
+# ==========================================
+class MovimentoDrc(db.Model):
+    __tablename__ = 'movimento_drc'
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    delta = db.Column(db.Integer, nullable=False)          # + ganhou, - gastou
+    saldo_apos = db.Column(db.Integer, nullable=True)
+    motivo = db.Column(db.String(20), nullable=False)      # compra | nivel | ajuste
+    ref = db.Column(db.String(80), nullable=True)          # item_id da compra, "3->5" do nível...
+    created_at = db.Column(db.DateTime, default=br_now)
+
+
+# ==========================================
+# BAZAR DA COMUNIDADE (modelo A: classificados)
+# ------------------------------------------------------------
+# O app mostra loja e produto e organiza o pedido; o PAGAMENTO é Pix direto entre as duas pessoas, sem
+# intermediário (o app só monta o "copia e cola" com a chave do vendedor). Não existe saldo nem escrow aqui.
+# Quem vende tem UMA loja (`BazarLoja`); o `porte` decide como ela aparece: 'micro' = barraca de feira (os itens
+# ficam aglomerados), 'media' = loja com fachada, 'grande' = parceira (só um admin define).
+# Todas as tabelas nascem pelo create_all (sem ALTER).
+# ==========================================
+class BazarLoja(db.Model):
+    __tablename__ = 'bazar_loja'
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, unique=True)
+    nome = db.Column(db.String(40), nullable=False)
+    descricao = db.Column(db.String(300), nullable=True)
+    categoria = db.Column(db.String(20), default='outros')
+    porte = db.Column(db.String(8), default='micro')            # micro | media | grande (grande só por admin)
+    regiao = db.Column(db.String(40), nullable=True)
+    # Personalização: só ids conhecidos (bazar.py CORES/TOLDOS); o servidor nunca guarda texto livre que vire class/style.
+    cor = db.Column(db.String(16), default='ambar')
+    toldo = db.Column(db.String(16), default='vermelho')
+    logo_url = db.Column(db.String(255), nullable=True)
+    banner_url = db.Column(db.String(255), nullable=True)
+    anuncio_titulo = db.Column(db.String(60), nullable=True)     # a "propaganda" da loja
+    anuncio_texto = db.Column(db.String(160), nullable=True)
+    # Pix do vendedor: só aparece pra quem tem um pedido aceito com ele.
+    pix_chave = db.Column(db.String(80), nullable=True)
+    pix_nome = db.Column(db.String(25), nullable=True)
+    pix_cidade = db.Column(db.String(15), nullable=True)
+    aberta = db.Column(db.Boolean, default=True)
+    oculta = db.Column(db.Boolean, default=False)               # denúncias suficientes / moderação
+    nota_soma = db.Column(db.Integer, default=0)
+    nota_qtd = db.Column(db.Integer, default=0)
+    vendas = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    owner = db.relationship('Person', foreign_keys=[owner_id])
+
+
+class BazarProduto(db.Model):
+    __tablename__ = 'bazar_produto'
+    id = db.Column(db.Integer, primary_key=True)
+    loja_id = db.Column(db.Integer, db.ForeignKey('bazar_loja.id'), nullable=False, index=True)
+    nome = db.Column(db.String(80), nullable=False)
+    descricao = db.Column(db.String(600), nullable=True)
+    preco_cent = db.Column(db.Integer, nullable=False)           # centavos de real (nunca float)
+    tipo = db.Column(db.String(8), default='fisico')             # fisico | digital | servico
+    imagens = db.Column(db.Text, nullable=True)                  # JSON: até 5 URLs (a 1ª é a capa)
+    video_url = db.Column(db.String(255), nullable=True)
+    estoque = db.Column(db.Integer, nullable=True)               # NULL = sem limite
+    combo_itens = db.Column(db.Text, nullable=True)              # JSON: o que vem no combo (até 8 linhas)
+    preco_avulso_cent = db.Column(db.Integer, nullable=True)     # soma dos itens avulsos (só pra mostrar o desconto do combo)
+    entrega = db.Column(db.String(500), nullable=True)           # PRIVADO: link/instrução, o comprador só vê depois que o vendedor confirma o Pix
+    ativo = db.Column(db.Boolean, default=True)
+    oculta = db.Column(db.Boolean, default=False)
+    vendidos = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    loja = db.relationship('BazarLoja', backref='produtos')
+
+
+class BazarPedido(db.Model):
+    """Um pedido = a intenção de compra + o combinado. Preço e nome são COPIADOS na hora (o produto pode mudar depois)."""
+    __tablename__ = 'bazar_pedido'
+    id = db.Column(db.Integer, primary_key=True)
+    produto_id = db.Column(db.Integer, db.ForeignKey('bazar_produto.id'), nullable=False)
+    loja_id = db.Column(db.Integer, db.ForeignKey('bazar_loja.id'), nullable=False, index=True)
+    comprador_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    vendedor_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    produto_nome = db.Column(db.String(80), nullable=False)
+    quantidade = db.Column(db.Integer, default=1)
+    preco_unit_cent = db.Column(db.Integer, nullable=False)
+    total_cent = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(12), default='aguardando', index=True)   # aguardando|aceito|pago|confirmado|concluido|recusado|cancelado
+    estoque_reservado = db.Column(db.Boolean, default=False)
+    nota = db.Column(db.String(200), nullable=True)                       # recado do comprador na hora do pedido
+    created_at = db.Column(db.DateTime, default=br_now)
+    atualizado_em = db.Column(db.DateTime, default=br_now)
+
+    produto = db.relationship('BazarProduto')
+    loja = db.relationship('BazarLoja')
+    comprador = db.relationship('Person', foreign_keys=[comprador_id])
+    vendedor = db.relationship('Person', foreign_keys=[vendedor_id])
+
+
+class BazarMensagem(db.Model):
+    """Conversa do pedido (só texto, sem link). Só as duas pessoas do pedido leem."""
+    __tablename__ = 'bazar_mensagem'
+    id = db.Column(db.Integer, primary_key=True)
+    pedido_id = db.Column(db.Integer, db.ForeignKey('bazar_pedido.id'), nullable=False, index=True)
+    autor_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    texto = db.Column(db.String(300), nullable=False)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+
+class BazarAvaliacao(db.Model):
+    """Uma avaliação por pedido concluído, só do comprador."""
+    __tablename__ = 'bazar_avaliacao'
+    __table_args__ = (db.UniqueConstraint('pedido_id', name='uq_bazar_avaliacao_pedido'),)
+    id = db.Column(db.Integer, primary_key=True)
+    pedido_id = db.Column(db.Integer, db.ForeignKey('bazar_pedido.id'), nullable=False)
+    loja_id = db.Column(db.Integer, db.ForeignKey('bazar_loja.id'), nullable=False, index=True)
+    avaliador_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    nota = db.Column(db.Integer, nullable=False)                          # 1 a 5
+    texto = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    avaliador = db.relationship('Person', foreign_keys=[avaliador_id])
