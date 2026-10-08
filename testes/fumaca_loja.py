@@ -34,7 +34,7 @@ ok(all(d['tema'] in cos.TEMAS and (cos.TEMAS[d['tema']].get('loja') or d['tema']
 ok(not any(d.get('preco') for i, d in cos.CATALOGO.items() if d['tema'] in ('gogeta', 'sasuke', 'fusao') or d['tipo'] == 'badge'),
    'Laboratório e insígnias NÃO estão à venda')
 for tid, t in cos.TEMAS.items():
-    if not t.get('loja'):
+    if not t.get('loja') or t.get('sem_pacote'):
         continue
     avulsos = loja.itens_do_pacote(tid)
     soma = sum(cos.CATALOGO[i]['preco'] for i in avulsos)
@@ -54,16 +54,25 @@ TEMAS_LOJA = [t for t, d in cos.TEMAS.items() if d.get('loja')]
 ok(len(TEMAS_LOJA) >= 7, f'Há {len(TEMAS_LOJA)} temas à venda')
 CSS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'static', 'css', 'cosmeticos.css'), encoding='utf-8').read()
 JS_LOJA = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'static', 'js', 'loja.js'), encoding='utf-8').read()
+BASICOS = [t for t in TEMAS_LOJA if cos.TEMAS[t].get('sem_pacote')]
 for t in TEMAS_LOJA:
+    if t in BASICOS:
+        itens_b = [d for d in vendaveis.values() if d['tema'] == t]
+        ok(itens_b and all(d['raridade'] == 'comum' and d['animado'] is False and d['preco'] == cos.PRECOS['comum'][d['tipo']] for d in itens_b), f'Tema {t}: só itens comuns, sem animação, com preço da tabela')
+        continue
     its = {tp: C.get(f'{tp}:{t}') for tp in ('moldura', 'nome', 'placa', 'faixa')}
     ok(all(its.values()), f'Tema {t}: tem moldura, nome, placa e faixa')
-    ok(all(d['preco'] == cos.PRECOS[d['raridade']][d['tipo']] for d in its.values() if d), f'Tema {t}: cada preço vem da tabela PRECOS (raridade x tipo)')
-    soma = sum(d['preco'] for d in its.values() if d)
+    ok(all(d['preco'] == cos.PRECOS[d['raridade']][d['tipo']] for d in vendaveis.values() if d['tema'] == t and d['tipo'] != 'pacote'), f'Tema {t}: cada preço vem da tabela PRECOS (raridade x tipo)')
+    entregues = {f'{tp}:{v}' for tp, v in cos.PACOTES[t].items()}
+    soma = sum(C[i]['preco'] for i in entregues)
     esperado = max(50, int(round(soma * (1 - cos.DESCONTO_PACOTE) / 50.0)) * 50)
     ok(C[f'pacote:{t}']['preco'] == esperado and esperado < soma, f'Tema {t}: pacote = soma ({soma}) com {int(cos.DESCONTO_PACOTE * 100)}% de desconto, arredondado ({esperado})')
-    ok(set(cos.PACOTES[t]) == {'moldura', 'nome', 'placa', 'faixa'}, f'Tema {t}: o pacote equipa os 4 itens')
+    ok({'moldura', 'nome', 'placa', 'faixa'} <= set(cos.PACOTES[t]), f'Tema {t}: o pacote equipa pelo menos os 4 visuais')
+    ok(C[f'pacote:{t}']['raridade'] == max((its[tp]['raridade'] for tp in its), key=lambda r: cos.ORDEM_RARIDADE[r]), f'Tema {t}: o pacote tem a raridade dos visuais')
     for classe in (f'.moldura-{t}::before', f'.ne-{t}', f'.placa-{t}', f'.user-profile-bar.placa-{t}', f'.banner-anim-{t}'):
         ok(classe in CSS, f'Tema {t}: o CSS tem {classe} (item sem CSS aparece "vazio" pra quem compra)')
+    if cos.TEMAS[t].get('sem_hero'):
+        continue
     ok(re.search(rf"^\s+{t}: \(\) =>", JS_LOJA, re.M) is not None, f'Tema {t}: tem arte do carrossel em loja.js (ARTES)')
     ok(t in {x['tema'] for x in loja.DESTAQUES}, f'Tema {t}: tem slide em loja.DESTAQUES')
 ok(all(isinstance(t['cores'], list) and len(t['cores']) == 2 and all(re.match(r'^#[0-9a-fA-F]{6}$', c) for c in t['cores'] + [t['cor']]) for t in (cos.TEMAS[x] for x in TEMAS_LOJA)),

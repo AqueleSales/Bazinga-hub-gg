@@ -44,6 +44,18 @@ TEMAS = {
     'manga': {'nome': 'Mangá', 'cor': '#e63946', 'loja': True, 'cores': ['#e63946', '#f1faee'], 'icone': 'fa-pen-nib',
               'lema': 'Preto, branco e uma cor só para o clímax.',
               'desc': 'Traço de tinta que se desenha sozinho, retícula de página e linhas de velocidade.'},
+    # ---- Rodada 15: coleção "Básicos" (comum, sem animação) e 3 temas premium com efeitos (arte original que só evoca o estilo) ----
+    'basicos': {'nome': 'Básicos', 'cor': '#9aa3b2', 'loja': True, 'sem_hero': True, 'sem_pacote': True, 'cores': ['#9aa3b2', '#5b6475'], 'icone': 'fa-circle',
+                'lema': 'Cor lisa, sem firula.', 'desc': 'O essencial: molduras, nomes, placas e faixas de cor lisa, sem animação. Os mais baratos do Armazém.'},
+    'cyber': {'nome': 'Cyber Neon', 'cor': '#22e4ff', 'loja': True, 'cores': ['#22e4ff', '#ff2d95'], 'icone': 'fa-microchip', 'premium': True,
+              'lema': 'A cidade nunca dorme. O neon também não.',
+              'desc': 'Ciano e rosa-choque: scanlines, letreiro holográfico, chuva de dados, estática de rádio e um "sistema online" ao entrar na call.'},
+    'eldoria': {'nome': 'Eldoria', 'cor': '#d9a520', 'loja': True, 'cores': ['#d9a520', '#2f9e6a'], 'icone': 'fa-wand-sparkles', 'premium': True,
+                'lema': 'Todo reino começa com uma runa.',
+                'desc': 'Fantasia medieval: coroa de carvalho, pergaminho com runas, poeira mágica, anel rúnico e um cristal no mapa.'},
+    'arcade': {'nome': 'Arcade 8-bit', 'cor': '#ffd23f', 'loja': True, 'cores': ['#ff4fa3', '#ffd23f'], 'icone': 'fa-gamepad', 'premium': True,
+               'lema': 'Insira uma moeda para continuar.',
+               'desc': 'Pixels, corações de vida, moedas girando, chuva de pixels e o som de uma moeda coletada.'},
     # ---- Fora dos temas da vitrine (sem chip nem pacote): edições limitadas à venda e recompensas de coleção ----
     'edicao': {'nome': 'Edição Limitada', 'cor': '#ffcc33', 'desc': 'Acaba por prazo ou por estoque. Quando acabar, acabou.'},
     'colecao': {'nome': 'Coleção', 'cor': '#c0c8d6', 'desc': 'Prêmios de quem coleciona o Armazém. Não se compram: se conquistam.'},
@@ -202,19 +214,30 @@ _item('faixa', 'fusao', 'Fusão', 'Chamas laranja e roxa se misturando na faixa.
 # Calibrada com `python testes/calibrar_precos.py` (conta em cima de quanto cada perfil de uso ganha por dia). Premissas: os 500 DRC
 # iniciais pagam 1 item de nome/placa no 1º dia; o 1º pacote leva ~1 semana pra quem joga normal e ~1 mês pra quem entra pouco;
 # o nível "épico" é o premium (meses). MUDOU o ganho de DRC (utils.py) ou um preço aqui? Rode o script de novo.
+# Raridades (da mais comum à mais rara). `ordem` serve pra ordenar e pra decidir a raridade de um pacote.
+RARIDADES = [
+    {'id': 'comum', 'nome': 'Comum', 'cor': '#9aa3b2'},       # cor lisa, sem animação
+    {'id': 'raro', 'nome': 'Raro', 'cor': '#4a90e2'},         # efeito sutil / animação leve
+    {'id': 'epico', 'nome': 'Épico', 'cor': '#a855f7'},       # animação complexa, temas com efeitos
+    {'id': 'lendario', 'nome': 'Lendário', 'cor': '#f5b82e'},  # efeito em tela cheia e edições limitadas
+]
+ORDEM_RARIDADE = {r['id']: i for i, r in enumerate(RARIDADES)}
 PRECOS = {
+    'comum': {'nome': 120, 'placa': 120, 'faixa': 150, 'moldura': 180},
     'raro':  {'nome': 350, 'placa': 350, 'faixa': 450, 'moldura': 550},
     'epico': {'nome': 600, 'placa': 600, 'faixa': 750, 'moldura': 900,
               # temas "premium" (com efeitos): cada slot de efeito tem o seu preço
-              'efeito_avatar': 700, 'efeito_perfil': 900, 'efeito_fala': 500, 'efeito_radar': 400,
-              'efeito_chat': 500, 'som_call': 350, 'pin_nota': 400, 'efeito_servidor': 800},
+              'efeito_avatar': 450, 'efeito_perfil': 700, 'efeito_fala': 300, 'efeito_radar': 250,
+              'efeito_chat': 300, 'som_call': 200, 'pin_nota': 250, 'efeito_servidor': 500},
+    'lendario': {'efeito_perfil': 900, 'efeito_avatar': 800},
 }
 DESCONTO_PACOTE = 0.30        # o pacote custa a soma dos 4 itens menos isto (arredondado pra múltiplo de 50)
 
 
-def _item_loja(tipo, id_, nome, desc, tema, raridade='raro'):
-    """Item à venda no Armazém: o preço vem de PRECOS (por raridade e tipo). Item sem `preco` nunca é vendido (laboratório, insígnias)."""
-    _item(tipo, id_, nome, desc, tema, raridade, preco=PRECOS[raridade][tipo])
+def _item_loja(tipo, id_, nome, desc, tema, raridade='raro', animado=True):
+    """Item à venda no Armazém: o preço vem de PRECOS (por raridade e tipo). Item sem `preco` nunca é vendido (laboratório, insígnias).
+    `animado=False` = estático (aparece no filtro "Sem animação")."""
+    _item(tipo, id_, nome, desc, tema, raridade, preco=PRECOS[raridade][tipo], animado=animado)
 
 
 def _pacote_loja(tema, nome, desc):
@@ -264,16 +287,73 @@ _item_loja('nome', 'manga', 'Onomatopeia', 'Letras grossas de quadrinho, com con
 _item_loja('placa', 'manga', 'Retícula', 'Retícula de página de mangá, em pontinhos, com uma faixa vermelha.', 'manga')
 _item_loja('faixa', 'manga', 'Página de Mangá', 'Linhas de velocidade saindo de um clarão vermelho, em preto e branco.', 'manga')
 
+# ---- tema Básicos (comum: cor lisa, sem animação; sem pacote nem slide no carrossel) ----
+for _tipo, _id, _nome, _desc in (
+        ('moldura', 'liso_azul', 'Anel Azul', 'Um anel azul liso em volta da foto.'), ('moldura', 'liso_rosa', 'Anel Rosa', 'Um anel rosa liso em volta da foto.'),
+        ('nome', 'tinta_verde', 'Tinta Verde', 'O nome em verde liso.'), ('nome', 'tinta_rosa', 'Tinta Rosa', 'O nome em rosa liso.'),
+        ('placa', 'chapa_cinza', 'Chapa Cinza', 'Uma barra cinza lisa atrás do nome.'), ('placa', 'chapa_azul', 'Chapa Azul', 'Uma barra azul lisa atrás do nome.'),
+        ('faixa', 'degrade_mar', 'Degradê Mar', 'Um degradê parado do azul ao verde-água.'), ('faixa', 'degrade_por', 'Degradê Pôr do Sol', 'Um degradê parado do laranja ao roxo.')):
+    _item_loja(_tipo, _id, _nome, _desc, 'basicos', 'comum', animado=False)
+
+# ---- temas PREMIUM (épicos, com um item de cada slot de efeito; o de perfil é lendário). Cada um: 4 visuais + 7 efeitos + efeito de servidor. ----
+def _tema_premium(tema, itens):
+    for tipo, nome, desc, *resto in itens:
+        _item_loja(tipo, tema, nome, desc, tema, resto[0] if resto else 'epico')
+
+
+_tema_premium('cyber', [
+    ('moldura', 'Anel Cibernético', 'Scanlines ciano e rosa giram em volta da foto e o anel falha de vez em quando.'),
+    ('nome', 'Glitch Neon', 'Letras de terminal em ciano e rosa, com um tremor de sinal perdido.'),
+    ('placa', 'Letreiro Holográfico', 'Um letreiro de neon escuro com uma luz de varredura passando.'),
+    ('faixa', 'Skyline Noturna', 'Prédios com janelas acesas, chuva fina e neon rosa no horizonte.'),
+    ('efeito_avatar', 'Energia Estática', 'Faíscas elétricas ciano e rosa estalam em volta da foto.'),
+    ('efeito_perfil', 'Chuva de Dados', 'Colunas de dados caem pelo cartão inteiro, em ciano e rosa.', 'lendario'),
+    ('efeito_fala', 'Estática de Rádio', 'Quando você fala na call, o card chia em ciano e rosa como um rádio mal sintonizado.'),
+    ('efeito_radar', 'Pulso Digital', 'As ondas do seu radar viram pulsos tracejados de ciano.'),
+    ('efeito_chat', 'Terminal', 'A barra de mensagem acende em ciano ao digitar e solta bits ao enviar.'),
+    ('som_call', 'Sistema Online', 'Dois bipes subindo e uma varredura: "sistema online" ao entrar na call.'),
+    ('pin_nota', 'Holograma', 'Suas notas no mapa viram um holograma ciano com linhas de varredura.'),
+    ('efeito_servidor', 'Servidor Neon', 'O ícone do servidor alterna entre ciano e rosa (barra, cabeçalho e mapa).'),
+])
+_tema_premium('eldoria', [
+    ('moldura', 'Coroa de Carvalho', 'Folhas de carvalho e fios de ouro numa coroa que gira devagar em volta da foto.'),
+    ('nome', 'Serifa Dourada', 'Letras serifadas com um brilho de ouro que passa devagar.'),
+    ('placa', 'Pergaminho', 'Pergaminho escuro de bordas queimadas, com runas que brilham e apagam.'),
+    ('faixa', 'Floresta Encantada', 'Árvores na noite, uma lua rúnica e vaga-lumes à deriva.'),
+    ('efeito_avatar', 'Aura Élfica', 'Um halo dourado e verde, com vaga-lumes orbitando a foto.'),
+    ('efeito_perfil', 'Poeira Mágica', 'Partículas de ouro e esmeralda sobem pelo cartão inteiro.', 'lendario'),
+    ('efeito_fala', 'Anel Rúnico', 'Quando você fala na call, anéis dourados se expandem em volta do avatar.'),
+    ('efeito_radar', 'Ondas Rúnicas', 'As ondas do seu radar viram anéis rúnicos dourados com brilho esmeralda.'),
+    ('efeito_chat', 'Escrita Mágica', 'A barra de mensagem brilha em dourado e solta partículas ao enviar.'),
+    ('som_call', 'Chamado do Cristal', 'Uma harpa e um brilho de cristal ao entrar na call.'),
+    ('pin_nota', 'Cristal Mágico', 'Suas notas no mapa viram um cristal esmeralda.'),
+    ('efeito_servidor', 'Servidor Encantado', 'O ícone do servidor pulsa em ouro e esmeralda (barra, cabeçalho e mapa).'),
+])
+_tema_premium('arcade', [
+    ('moldura', 'Corações de Vida', 'Blocos vermelhos de barra de vida piscam em volta da foto.'),
+    ('nome', 'Pixel Arco-Íris', 'Letras pixeladas que passam por 8 cores, uma de cada vez.'),
+    ('placa', 'Fita de Fliperama', 'Uma fita roxa de fliperama com pastilhas amarelas correndo.'),
+    ('faixa', 'Fase 1', 'Céu roxo de pixels, tijolos no chão e moedas flutuando.'),
+    ('efeito_avatar', 'Moedas Girando', 'Moedas de pixel giram em volta da foto, em passos.'),
+    ('efeito_perfil', 'Chuva de Pixels', 'Pixels coloridos caem pelo cartão inteiro, em passos.', 'lendario'),
+    ('efeito_fala', 'Barra de Energia', 'Quando você fala na call, o card pisca em cores de fliperama.'),
+    ('efeito_radar', 'Varredura em Pixels', 'As ondas do seu radar viram anéis pontilhados em verde, em passos.'),
+    ('efeito_chat', 'Coração Digitando', 'A barra de mensagem pisca em rosa ao digitar e solta corações de pixel ao enviar.'),
+    ('som_call', 'Moeda', 'O "plim" de uma moeda coletada ao entrar na call.'),
+    ('pin_nota', 'Pixel Pin', 'Suas notas no mapa viram um bloco amarelo de pixel piscando.'),
+    ('efeito_servidor', 'Servidor Arcade', 'O ícone do servidor pisca em cores de fliperama (barra, cabeçalho e mapa).'),
+])
+
 # ---- EDIÇÕES LIMITADAS (tema 'edicao': sem chip nem pacote; ficam numa prateleira própria) ----
 # `limitado` = {'estoque': N | None, 'ate': datetime | None}. Estoque acaba quando N pessoas compraram (tabela loja_estoque,
 # atômico); prazo acaba quando `ate` passa (horário de Brasília, como o resto do app). Item encerrado/esgotado continua
 # aparecendo (pra quem perdeu ver o que perdeu), mas ninguém compra; quem comprou fica com ele pra sempre.
 _item('moldura', 'pioneiro', 'Pioneiro', 'Uma coroa de louros dourados em volta da foto, brilhando devagar. Só quem estava aqui no começo: sai do Armazém no fim de 2026 e nunca mais volta.',
-      'edicao', 'epico', preco=1500, limitado={'estoque': None, 'ate': datetime(2026, 12, 31, 23, 59, 59)})
+      'edicao', 'lendario', preco=1500, limitado={'estoque': None, 'ate': datetime(2026, 12, 31, 23, 59, 59)})
 _item('placa', 'lote_um', 'Lote 001', 'Chapa de metal escovado com rebites e um filete dourado. Só 100 unidades existem.',
-      'edicao', 'epico', preco=900, limitado={'estoque': 100, 'ate': None})
+      'edicao', 'lendario', preco=900, limitado={'estoque': 100, 'ate': None})
 _item('faixa', 'eclipse', 'Eclipse', 'Um sol negro com a coroa em chamas atravessando a faixa. Só 150 unidades existem.',
-      'edicao', 'epico', preco=1100, limitado={'estoque': 150, 'ate': None})
+      'edicao', 'lendario', preco=1100, limitado={'estoque': 150, 'ate': None})
 
 # ---- COLEÇÃO: comprar itens do Armazém (qualquer um, fora os pacotes) desbloqueia prêmios que NÃO se compram ----
 # `meta` = quantos itens avulsos a pessoa precisa ter comprado. Um pacote entrega 4 de uma vez, então o 1º prêmio sai com o 1º pacote.
@@ -304,6 +384,9 @@ _pacote_loja('batida', 'Pacote Batida', 'Moldura, nome, placa e faixa da Batida,
 _pacote_loja('quadra', 'Pacote Quadra', 'Moldura, nome, placa e faixa da Quadra, equipados de uma vez.')
 _pacote_loja('mira', 'Pacote Mira', 'Moldura, nome, placa e faixa da Mira, equipados de uma vez.')
 _pacote_loja('manga', 'Pacote Mangá', 'Moldura, nome, placa e faixa do Mangá, equipados de uma vez.')
+_pacote_loja('cyber', 'Pacote Cyber Neon', 'O tema Cyber Neon completo: 4 visuais e 7 efeitos (avatar, perfil, fala, radar, chat, som e pin), equipados de uma vez.')
+_pacote_loja('eldoria', 'Pacote Eldoria', 'O tema Eldoria completo: 4 visuais e 7 efeitos (avatar, perfil, fala, radar, chat, som e pin), equipados de uma vez.')
+_pacote_loja('arcade', 'Pacote Arcade 8-bit', 'O tema Arcade 8-bit completo: 4 visuais e 7 efeitos (avatar, perfil, fala, radar, chat, som e pin), equipados de uma vez.')
 
 
 def _pacote(tema):
@@ -329,6 +412,9 @@ def recalcular_pacotes():
             entrega = {f'{t}:{v}' for t, v in PACOTES.get(d['tema'], {}).items()}
             soma = sum(i['preco'] for i in CATALOGO.values() if i['id'] in entrega and i.get('preco'))
             d['preco'] = max(50, int(round(soma * (1 - DESCONTO_PACOTE) / 50.0)) * 50)
+            base = [CATALOGO[f'{t}:{PACOTES[d["tema"]][t]}'] for t in ('moldura', 'nome', 'placa', 'faixa') if t in PACOTES.get(d['tema'], {})]
+            if base:
+                d['raridade'] = max((i['raridade'] for i in base), key=lambda r: ORDEM_RARIDADE.get(r, 0))
 
 
 recalcular_pacotes()

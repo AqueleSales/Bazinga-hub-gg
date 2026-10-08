@@ -304,3 +304,54 @@
     .arm-trilho-hero { scroll-behavior: auto; }
     #armazem *, #armazem *::before, #armazem *::after, .arm-modal, .arm-modal * { animation: none !important; transition: none !important; }
 }
+
+/* ==========================================================================
+   RODADA 15: barra de filtros (tipo em chips; tema/raridade/animação/ordem em listas), selo de raridade e arte dos temas premium
+   ========================================================================== */
+.arm-barra { display: flex; flex-direction: column; gap: 14px; }
+.arm-tipos { display: flex; flex-wrap: wrap; gap: 8px; }
+.arm-tipos .arm-chip { padding: 8px 14px; }
+.arm-tipos .arm-chip em { margin-left: 2px; padding: 1px 7px; border-radius: 999px; font-style: normal; font-size: 11px; font-weight: 800; color: var(--text-muted); background: var(--bg-tertiary); }
+.arm-tipos .arm-chip.on { --c: var(--brand-color); }
+.arm-tipos .arm-chip.on em { color: #fff; background: rgba(0, 0, 0, .25); }
+.arm-filtros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; align-items: end; }
+.arm-sel { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.arm-sel > span { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.arm-sel select { width: 100%; appearance: none; -webkit-appearance: none; padding: 10px 34px 10px 12px; border-radius: 12px; border: 2px solid var(--bg-tertiary); color: var(--text-header); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; outline: none; box-shadow: 0 3px 0 var(--bg-tertiary);
+    background: var(--bg-secondary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%239aa3b2' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center; }
+.arm-sel select:focus { border-color: var(--brand-color); }
+.arm-sel select option { background: var(--bg-secondary); color: var(--text-header); }
+.arm-filtros .arm-busca { grid-column: span 2; margin-left: 0; display: block; }
+.arm-filtros .arm-busca input { width: 100%; padding-top: 11px; padding-bottom: 11px; }
+.arm-limpar, .arm-extrato { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 14px; border-radius: 12px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-normal); font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); transition: transform .12s; white-space: nowrap; }
+.arm-limpar:hover, .arm-extrato:hover { transform: translateY(-2px); }
+.arm-limpar { color: var(--red-color); } .arm-limpar[hidden] { display: none; }
+.arm-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.arm-rar { padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--rar); border: 1.5px solid var(--rar); background: color-mix(in srgb, var(--rar) 12%, transparent); white-space: nowrap; }
+.arm-modal-lado .arm-meta { margin-bottom: -2px; }
+.arm-tema-pack { max-width: 268px; min-width: 230px; }
+.arm-card-info { min-width: 0; } .arm-card h4 { overflow-wrap: anywhere; }
+
+/* arte do carrossel: Cyber Neon, Eldoria, Arcade 8-bit */
+.arte-cyber .cy-nucleo { transform-box: fill-box; transform-origin: center; animation: cyPulsa 1.4s ease-in-out infinite; }
+@keyframes cyPulsa { 50% { transform: scale(1.6); opacity: .55; } }
+.arte-cyber .cy-varre { animation: cyVarre 2.4s linear infinite; }
+@keyframes cyVarre { 0% { transform: translateY(0); opacity: 0; } 10%, 90% { opacity: .9; } 100% { transform: translateY(100px); opacity: 0; } }
+.arte-cyber .cy-trilha { stroke-dasharray: 6 8; animation: cyTrilha 1s linear infinite; }
+@keyframes cyTrilha { to { stroke-dashoffset: -28; } }
+.arte-eldoria .el-runas { transform-box: view-box; transform-origin: 120px 120px; animation: relojGira 40s linear infinite; }
+.arte-eldoria .el-cristal { animation: elFlutua 3.6s ease-in-out infinite alternate; }
+@keyframes elFlutua { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+.arte-eldoria .el-fa { animation: elPisca 2.2s ease-in-out infinite; } .arte-eldoria .f2 { animation-delay: -.7s; } .arte-eldoria .f3 { animation-delay: -1.4s; }
+@keyframes elPisca { 50% { opacity: .15; transform: translateY(-8px); } }
+.arte-arcade .ar-coracao { transform-box: fill-box; transform-origin: center; animation: arPulsa 1s steps(2, end) infinite; }
+@keyframes arPulsa { 50% { transform: scale(1.08); } }
+.arte-arcade .ar-moeda { transform-box: fill-box; transform-origin: center; animation: arMoeda 1.2s steps(6, end) infinite; }
+@keyframes arMoeda { 50% { transform: scaleX(.15); } }
+.arte-arcade .ar-px { animation: pxSobe 2s steps(5, end) infinite; } .arte-arcade .p2 { animation-delay: -.7s; } .arte-arcade .p3 { animation-delay: -1.3s; }
+
+@media (max-width: 900px) { .arm-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
+    .arm-tipos { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; } .arm-tipos::-webkit-scrollbar { display: none; } .arm-tipos .arm-chip { flex: 0 0 auto; }
+    .arm-filtros .arm-busca { grid-column: span 2; }
+}

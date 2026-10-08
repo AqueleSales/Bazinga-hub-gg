@@ -534,8 +534,8 @@ const Cosm = (() => {
     // EFEITOS (avatar / cartão): só ids do catálogo viram classe; o desenho é CSS.
     // ---------------------------------------------------------------------
     const idOk = (v) => /^[a-z_]{1,24}$/.test(String(v || ''));
-    const EFEITOS_AVATAR = ['gogeta', 'sasuke'];
-    const EFEITOS_PERFIL = ['gogeta', 'sasuke'];
+    const EFEITOS_AVATAR = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'];
+    const EFEITOS_PERFIL = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'];
 
     function htmlEfeitoAvatar(id) {
         if (!EFEITOS_AVATAR.includes(id)) return '';
@@ -559,6 +559,31 @@ const Cosm = (() => {
                 return `<svg class="ef-raio" data-aleatorio="efRaioPisca" style="left:${x}%;height:${h}%;width:${w}px;--t:${t}s;--d:${d}s" viewBox="0 0 24 100" preserveAspectRatio="none"><path pathLength="100" d="${c}" fill="none" stroke="#8b5cf6" stroke-width="6" opacity=".45" stroke-linejoin="round" stroke-linecap="round"/><path pathLength="100" d="${c}" fill="none" stroke="#f5f3ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
             }).join('');
             return `<div class="ef-pf ef-pf-sasuke" aria-hidden="true"><i class="ef-pf-clarao"></i><canvas class="ef-cv" data-ef="amaterasu"></canvas>${bolts}</div>`;
+        }
+        if (id === 'cyber') {          // colunas de dados caindo
+            let cols = '';
+            for (let i = 0; i < 16; i++) {
+                const x = (i * 29 + 5) % 97, d = -(((i * 37) % 50) / 10), t = 2.6 + ((i * 17) % 30) / 10, h = 50 + (i * 23) % 70;
+                cols += `<i style="--x:${x}%;--d:${d}s;--t:${t}s;--h:${h}px;--c:${i % 2 ? '#ff2d95' : '#22e4ff'}"></i>`;
+            }
+            return `<div class="ef-pf ef-pf-cyber" aria-hidden="true">${cols}</div>`;
+        }
+        if (id === 'arcade') {         // pixels coloridos caindo, em passos
+            const cores = ['#ff3b5c', '#ffd23f', '#4dd0e1', '#7ed957', '#ff4fa3', '#a855f7'];
+            let px = '';
+            for (let i = 0; i < 24; i++) {
+                const x = (i * 41 + 7) % 97, d = -(((i * 31) % 40) / 10), t = 3 + ((i * 13) % 25) / 10, s = 4 + (i * 5) % 5;
+                px += `<i style="--x:${x}%;--d:${d}s;--t:${t}s;--s:${s}px;--c:${cores[i % cores.length]}"></i>`;
+            }
+            return `<div class="ef-pf ef-pf-arcade" aria-hidden="true">${px}</div>`;
+        }
+        if (id === 'eldoria') {        // poeira mágica subindo (sem canvas)
+            let ps = '';
+            for (let i = 0; i < 22; i++) {
+                const x = (i * 37 + 11) % 100, atraso = ((i * 53) % 40) / 10, dur = 3.2 + ((i * 29) % 30) / 10, tam = 2 + (i * 7) % 4;
+                ps += `<i style="--x:${x}%;--d:-${atraso}s;--t:${dur}s;--s:${tam}px"></i>`;
+            }
+            return `<div class="ef-pf ef-pf-eldoria" aria-hidden="true">${ps}</div>`;
         }
         const n = 22;
         let ps = '';
@@ -585,8 +610,8 @@ const Cosm = (() => {
     // Só ids conhecidos viram classe; o desenho é CSS (e Web Audio sintetizado pro som: nada de arquivo).
     // ---------------------------------------------------------------------
     const IDS_EFEITO = {
-        fala: ['gogeta', 'sasuke'], radar: ['gogeta', 'sasuke'], chat: ['gogeta', 'sasuke'],
-        som: ['gogeta', 'sasuke'], pin: ['gogeta', 'sasuke'], servidor: ['gogeta', 'sasuke', 'fusao'],
+        fala: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], radar: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], chat: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'],
+        som: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], pin: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], servidor: ['gogeta', 'sasuke', 'fusao', 'cyber', 'eldoria', 'arcade'],
     };
     const classeDe = (pref, tipo, id) => (IDS_EFEITO[tipo] || []).includes(id) ? `${pref}-${id}` : '';
     const classeFala = (id) => classeDe('fala', 'fala', id);
@@ -621,6 +646,42 @@ const Cosm = (() => {
             g.gain.setValueAtTime(topo, t0 + segura);
             g.gain.exponentialRampToValueAtTime(0.0001, t0 + fim);
         };
+        if (id === 'cyber') {          // "sistema online": dois bipes subindo e uma varredura
+            const bip = (f, ini, dur) => {
+                const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = f;
+                g.gain.setValueAtTime(0.0001, t0 + ini); g.gain.exponentialRampToValueAtTime(.45, t0 + ini + .01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + dur);
+                o.connect(g); g.connect(mestre); o.start(t0 + ini); o.stop(t0 + ini + dur + .02);
+            };
+            bip(660, 0, .09); bip(990, .12, .09);
+            const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; f.type = 'lowpass'; f.Q.value = 6;
+            o.frequency.setValueAtTime(220, t0 + .26); o.frequency.exponentialRampToValueAtTime(1760, t0 + .62);
+            f.frequency.setValueAtTime(400, t0 + .26); f.frequency.exponentialRampToValueAtTime(6000, t0 + .62);
+            g.gain.setValueAtTime(0.0001, t0 + .26); g.gain.exponentialRampToValueAtTime(.5, t0 + .32); g.gain.exponentialRampToValueAtTime(0.0001, t0 + .72);
+            o.connect(f); f.connect(g); g.connect(mestre); o.start(t0 + .26); o.stop(t0 + .75);
+            return .8;
+        }
+        if (id === 'eldoria') {        // harpa em arpejo e um brilho de cristal
+            [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((fr, i) => {
+                const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = fr;
+                const ini = t0 + i * .09;
+                g.gain.setValueAtTime(0.0001, ini); g.gain.exponentialRampToValueAtTime(.6, ini + .015); g.gain.exponentialRampToValueAtTime(0.0001, ini + .9);
+                o.connect(g); g.connect(mestre); o.start(ini); o.stop(ini + .95);
+            });
+            [2093, 2637].forEach((fr, i) => {
+                const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = fr;
+                const ini = t0 + .5 + i * .06;
+                g.gain.setValueAtTime(0.0001, ini); g.gain.exponentialRampToValueAtTime(.25, ini + .02); g.gain.exponentialRampToValueAtTime(0.0001, ini + .7);
+                o.connect(g); g.connect(mestre); o.start(ini); o.stop(ini + .75);
+            });
+            return 1.3;
+        }
+        if (id === 'arcade') {         // o "plim" de uma moeda: duas notas quadradas, a segunda mais longa
+            const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square';
+            o.frequency.setValueAtTime(987.77, t0); o.frequency.setValueAtTime(1318.5, t0 + .08);
+            g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(.5, t0 + .01); g.gain.setValueAtTime(.5, t0 + .1); g.gain.exponentialRampToValueAtTime(0.0001, t0 + .6);
+            o.connect(g); g.connect(mestre); o.start(t0); o.stop(t0 + .65);
+            return .65;
+        }
         if (id === 'gogeta') {
             // Power Up: dente-de-serra subindo com o filtro abrindo, e um brilho no fim
             const o = ctx.createOscillator(); o.type = 'sawtooth';

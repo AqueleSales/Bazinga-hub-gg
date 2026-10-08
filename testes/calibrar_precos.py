@@ -70,9 +70,9 @@ def dia_em_que_junta(linhas, valor):
 def main():
     pacotes = [d for d in cos.CATALOGO.values() if d.get('pacote_loja')]
     avulsos = [d for d in cos.CATALOGO.values() if d.get('preco') and d['tipo'] != 'pacote']
-    pacote = max(d['preco'] for d in pacotes) if pacotes else 800
-    # pacote de tema "épico" (se existisse): soma dos 4 preços épicos menos o desconto do pacote, em múltiplos de 50
-    epico = int(round(sum(cos.PRECOS['epico'].values()) * (1 - cos.DESCONTO_PACOTE) / 50.0)) * 50
+    # pacote "normal" = os temas de raridade rara (4 itens); pacote "premium" = os temas épicos com efeitos (11 itens)
+    pacote = max(d['preco'] for d in pacotes if d['raridade'] == 'raro')
+    epico = max(d['preco'] for d in pacotes if d['raridade'] == 'epico')
     barato = min(d['preco'] for d in avulsos) if avulsos else 250
     print(f'Itens avulsos: {sorted({d["preco"] for d in avulsos})} DRC · pacotes: {sorted({d["preco"] for d in pacotes})} DRC ({len(pacotes)} temas)\n')
 
@@ -84,7 +84,7 @@ def main():
         print(f'{nome:9}' + ''.join(f'{str(r[nome][d - 1][2]) + " / " + str(r[nome][d - 1][3]):>14}' for d in dias_mostrados))
 
     print('\nEm quantos DIAS cada perfil junta (sem gastar nada antes) o valor de:')
-    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), (f'pacote épico ({epico})', epico)]
+    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), (f'pacote premium ({epico})', epico)]
     print(f"{'':26}" + ''.join(f'{n:>10}' for n in PERFIS))
     for rot, valor in degraus:
         print(f'{rot:26}' + ''.join(f'{(dia_em_que_junta(r[n], valor) or ">90"):>10}' for n in PERFIS))
@@ -105,7 +105,7 @@ def main():
     d_cas = dia_em_que_junta(r['casual'], pacote)
     regra(f'... e em até ~2 meses pra quem entra pouco: dia {d_cas or ">90"}', bool(d_cas) and d_cas <= 60)
     d_prem = dia_em_que_junta(r['regular'], epico)
-    regra(f'pacote épico ({epico}) não vira rotina: o regular só junta no dia {d_prem or ">90"} (precisa de >= 10)', d_prem is None or d_prem >= 10)
+    regra(f'pacote premium ({epico}) não vira rotina: o regular só junta no dia {d_prem or ">90"} (precisa de >= 25: é o prêmio de quem já tem um bom tempo de casa)', d_prem is None or d_prem >= 25)
 
     print(f'\nColeção completa ({len(pacotes)} pacotes x {pacote} = {len(pacotes) * pacote} DRC), sem gastar em mais nada:')
     for nome in PERFIS:

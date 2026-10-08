@@ -13,7 +13,11 @@ const Loja = (() => {
     let ctx = null;           // { avatarHtml(), nome(), equipados(), emitir(ev, dados), confirmar(t, msg, ok), toast(msg, tipo), som(), sigla }
     let estado = null;        // último payload 'loja'
     let raiz = null;
-    let filtro = 'todos';
+    let filtro = 'todos';         // tema ('todos' = qualquer)
+    let ftipo = 'todos', frar = 'todos', fanim = 'todos', ordem = 'padrao';   // tipo (grupo), raridade, animação, ordem
+    const CHAVE_FILTROS = 'pnt_arm_filtros';
+    try { const f = JSON.parse(localStorage.getItem(CHAVE_FILTROS) || '{}'); ftipo = f.tipo || 'todos'; frar = f.rar || 'todos'; fanim = f.anim || 'todos'; ordem = f.ordem || 'padrao'; } catch (e) {}
+    const salvarFiltros = () => { try { localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ tipo: ftipo, rar: frar, anim: fanim, ordem })); } catch (e) {} };
     let heroIdx = 0, heroTimer = null;
     let aberto = null;        // id do item no modal
     let comprando = null, comprandoTimer = null;
@@ -138,6 +142,41 @@ const Loja = (() => {
             <g class="mira-trava"><g stroke="#e8483f" stroke-width="5" stroke-linecap="round"><path d="M120 8 L120 54 M120 186 L120 232 M8 120 L54 120 M186 120 L232 120"/></g>
                 <circle cx="120" cy="120" r="70" fill="none" stroke="#e8483f" stroke-width="3" stroke-dasharray="26 18"/><circle cx="120" cy="120" r="6" fill="#e8483f"/></g>
             <circle class="mira-alvo" cx="164" cy="82" r="7" fill="#e8483f"/></svg>`,
+        cyber: () => {
+            let pinos = '';
+            for (let k = 0; k < 5; k++) {
+                const p = 78 + k * 21;
+                pinos += `<rect x="${p - 3}" y="44" width="6" height="16" fill="#22e4ff"/><rect x="${p - 3}" y="180" width="6" height="16" fill="#22e4ff"/><rect x="44" y="${p - 3}" width="16" height="6" fill="#ff2d95"/><rect x="180" y="${p - 3}" width="16" height="6" fill="#ff2d95"/>`;
+            }
+            return `<svg class="arte arte-cyber" viewBox="0 0 240 240" aria-hidden="true">${pinos}
+                <rect x="60" y="60" width="120" height="120" rx="14" fill="#0a0a18" stroke="#22e4ff" stroke-width="5"/>
+                <path class="cy-trilha" d="M76 96 H104 V76 M164 96 H136 V76 M76 144 H104 V164 M164 144 H136 V164" fill="none" stroke="#ff2d95" stroke-width="3" stroke-linecap="round"/>
+                <rect x="92" y="92" width="56" height="56" rx="8" fill="#12082a" stroke="#ff2d95" stroke-width="4"/>
+                <circle class="cy-nucleo" cx="120" cy="120" r="12" fill="#22e4ff"/>
+                <line class="cy-varre" x1="60" y1="70" x2="180" y2="70" stroke="#22e4ff" stroke-width="3" opacity=".8"/></svg>`;
+        },
+        eldoria: () => {
+            let runas = '';
+            for (let k = 0; k < 12; k++) {
+                const a = (k / 12) * Math.PI * 2;
+                runas += `<rect x="${(120 + Math.cos(a) * 98 - 3).toFixed(1)}" y="${(120 + Math.sin(a) * 98 - 8).toFixed(1)}" width="6" height="16" rx="2" fill="#d9a520" transform="rotate(${(a * 180 / Math.PI + 90).toFixed(1)} ${(120 + Math.cos(a) * 98).toFixed(1)} ${(120 + Math.sin(a) * 98).toFixed(1)})"/>`;
+            }
+            return `<svg class="arte arte-eldoria" viewBox="0 0 240 240" aria-hidden="true">
+                <g class="el-runas">${runas}<circle cx="120" cy="120" r="98" fill="none" stroke="#d9a520" stroke-width="2" opacity=".6"/></g>
+                <g class="el-cristal"><polygon points="120,40 168,100 120,200 72,100" fill="#2f9e6a" stroke="#0f4a30" stroke-width="5" stroke-linejoin="round"/>
+                    <polygon points="120,40 168,100 120,100" fill="#8bf0b8" opacity=".75"/><polygon points="120,40 72,100 120,100" fill="#5fd49a" opacity=".8"/><polygon points="120,100 168,100 120,200" fill="#1f7a50" opacity=".9"/>
+                    <path d="M120 40 L120 200" stroke="#0f4a30" stroke-width="2" opacity=".5"/></g>
+                <circle class="el-fa f1" cx="52" cy="70" r="4" fill="#fff3b8"/><circle class="el-fa f2" cx="196" cy="168" r="3.5" fill="#b9f5c8"/><circle class="el-fa f3" cx="186" cy="62" r="3" fill="#fff3b8"/></svg>`;
+        },
+        arcade: () => {
+            const coracao = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
+            let px = '';
+            coracao.forEach((lin, y) => [...lin].forEach((v, x) => { if (v === '1') px += `<rect x="${56 + x * 18}" y="${70 + y * 18}" width="18" height="18" fill="${y < 2 && x < 3 ? '#ff8aa0' : '#ff3b5c'}"/>`; }));
+            return `<svg class="arte arte-arcade" viewBox="0 0 240 240" aria-hidden="true" shape-rendering="crispEdges">
+                <g class="ar-coracao">${px}</g>
+                <g class="ar-moeda"><rect x="168" y="40" width="30" height="36" fill="#ffd23f"/><rect x="162" y="46" width="42" height="24" fill="#ffd23f"/><rect x="176" y="48" width="14" height="20" fill="#e0a800"/></g>
+                <rect class="ar-px p1" x="40" y="190" width="8" height="8" fill="#4dd0e1"/><rect class="ar-px p2" x="190" y="196" width="8" height="8" fill="#ff4fa3"/><rect class="ar-px p3" x="108" y="206" width="8" height="8" fill="#ffd23f"/></svg>`;
+        },
         manga: () => {
             let pts = '';
             for (let k = 0; k < 28; k++) { const a = (k / 28) * Math.PI * 2, r = k % 2 ? 80 : 108; pts += `${(120 + Math.cos(a) * r).toFixed(1)},${(120 + Math.sin(a) * r).toFixed(1)} `; }
@@ -178,6 +217,11 @@ const Loja = (() => {
         return `<small class="arm-lim">${partes.join(' · ')}</small>`;
     }
 
+    function htmlRar(i) {
+        const r = raridadeDe(i.raridade);
+        return r ? `<span class="arm-rar" style="--rar:${corOk(r.cor, '#9aa3b2')}" title="${esc(r.nome)}${i.animado ? '' : ' · sem animação'}">${esc(r.nome)}</span>` : '';
+    }
+
     function htmlCard(i) {
         const t = temaDe(i.tema);
         const pacote = i.tipo === 'pacote';
@@ -188,7 +232,7 @@ const Loja = (() => {
             ${selo}
             <div class="arm-card-prev">${previa(i)}</div>
             <div class="arm-card-info">
-                <span class="arm-tag">${esc(i.rotulo)}${t ? ' · ' + esc(t.nome) : ''}</span>
+                <div class="arm-meta"><span class="arm-tag">${esc(i.rotulo)}${t ? ' · ' + esc(t.nome) : ''}</span>${htmlRar(i)}</div>
                 <h4>${esc(i.nome)}</h4>
                 ${htmlLimite(i)}
                 <div class="arm-card-rodape">${htmlPreco(i)}</div>
@@ -235,12 +279,26 @@ const Loja = (() => {
         </section>`;
     }
 
+    const ORDENS = [['padrao', 'Padrão'], ['menor', 'Menor preço'], ['maior', 'Maior preço'], ['raridade', 'Mais raros']];
+    const ANIMS = [['todos', 'Todos'], ['sim', 'Animados'], ['nao', 'Sem animação']];
+    const raridadeDe = (id) => (estado.raridades || []).find((r) => r.id === id);
+    const filtrando = () => filtro !== 'todos' || ftipo !== 'todos' || frar !== 'todos' || fanim !== 'todos' || ordem !== 'padrao' || !!norm(busca).trim();
+
     function htmlChips() {
-        const chip = (id, nome, icone) => `<button type="button" class="arm-chip ${filtro === id ? 'on' : ''}" data-acao="tema" data-tema="${esc(id)}" style="${id === 'todos' ? '' : estiloTema(temaDe(id))}"><i class="fa-solid ${esc(icone)}"></i> ${esc(nome)}</button>`;
-        return `<div class="arm-chips">${chip('todos', 'Tudo', 'fa-border-all')}${(estado.temas || []).map((t) => chip(t.id, t.nome, t.icone)).join('')}
-            <label class="arm-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="arm-busca" maxlength="40" placeholder="Buscar item ou tema..." value="${esc(busca)}"></label>
-            <button type="button" class="arm-chip" data-acao="extrato" title="Tudo que você ganhou e gastou"><i class="fa-solid fa-receipt"></i> Extrato de ${esc(ctx.sigla)}</button></div>
-            <div class="arm-saldo-dica" style="margin-top:-18px">Ganhe ${esc(ctx.sigla)} subindo de nível e cumprindo missões.</div>`;
+        const contagem = (g) => estado.itens.filter((i) => i.grupo === g).length;
+        const chip = (id, nome) => `<button type="button" class="arm-chip ${ftipo === id ? 'on' : ''}" data-acao="tipo" data-tipo="${esc(id)}">${esc(nome)}${id === 'todos' ? '' : `<em>${contagem(id)}</em>`}</button>`;
+        const sel = (rotulo, chave, opcoes, atual) => `<label class="arm-sel"><span>${rotulo}</span><select data-filtro="${chave}">${opcoes.map(([v, n]) => `<option value="${esc(v)}" ${v === atual ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
+        const temas = [['todos', 'Todos os temas']].concat((estado.temas || []).map((t) => [t.id, t.nome + (t.premium ? ' ★' : '')]));
+        const raridades = [['todos', 'Todas']].concat((estado.raridades || []).map((r) => [r.id, r.nome]));
+        return `<div class="arm-barra">
+            <div class="arm-tipos">${chip('todos', 'Tudo')}${(estado.grupos || []).map((g) => chip(g.id, g.titulo)).join('')}</div>
+            <div class="arm-filtros">
+                ${sel('Tema', 'tema', temas, filtro)}${sel('Raridade', 'rar', raridades, frar)}${sel('Animação', 'anim', ANIMS, fanim)}${sel('Ordenar', 'ordem', ORDENS, ordem)}
+                <label class="arm-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="arm-busca" maxlength="40" placeholder="Buscar item ou tema..." value="${esc(busca)}"></label>
+                <button type="button" class="arm-limpar" data-acao="limpar" ${filtrando() ? '' : 'hidden'}><i class="fa-solid fa-xmark"></i> Limpar filtros</button>
+                <button type="button" class="arm-extrato" data-acao="extrato" title="Tudo que você ganhou e gastou. ${esc(ctx.sigla)} só se ganha subindo de nível e cumprindo missões."><i class="fa-solid fa-receipt"></i> Extrato de ${esc(ctx.sigla)}</button>
+            </div>
+        </div>`;
     }
 
     // ---------------------------------------------------------------------
@@ -295,26 +353,25 @@ const Loja = (() => {
         </section>`;
     }
 
+    const pesoRar = (i) => (estado.raridades || []).findIndex((r) => r.id === i.raridade);
     function corpoHtml() {
         const t = filtro === 'todos' ? null : temaDe(filtro);
-        const doTema = (i) => !t || i.tema === t.id;
         const q = norm(busca).trim();
-        if (q) {
-            const achados = estado.itens.filter((i) => doTema(i) && bate(i, q));
-            return `<section class="arm-prat"><div class="arm-prat-topo"><h3>Resultados da busca</h3><span class="n">${achados.length}</span></div>${achados.length
-                ? `<div class="arm-grade">${achados.map(htmlCard).join('')}</div>` : '<div class="arm-vazio">Nada encontrado. Tente outra palavra (um tema, um tipo, um nome...).</div>'}</section>`;
+        if (filtrando()) {
+            let achados = estado.itens.filter((i) => (!t || i.tema === t.id) && (ftipo === 'todos' || i.grupo === ftipo) && (frar === 'todos' || i.raridade === frar)
+                && (fanim === 'todos' || (fanim === 'sim') === !!i.animado) && (!q || bate(i, q)));
+            if (ordem === 'menor') achados.sort((a, b) => a.preco_final - b.preco_final);
+            else if (ordem === 'maior') achados.sort((a, b) => b.preco_final - a.preco_final);
+            else if (ordem === 'raridade') achados.sort((a, b) => pesoRar(b) - pesoRar(a) || b.preco_final - a.preco_final);
+            const pk = t && t.pacote ? itemDe(t.pacote) : null;
+            const topo = t ? `<section class="arm-tema-topo"><div><h3>${esc(t.nome)}</h3><p>${esc(t.desc)}</p></div>${pk ? `<div class="arm-tema-pack">${htmlCard(pk)}</div>` : ''}</section>` : '';
+            const aviso = ftipo === 'pacote' && !achados.length ? 'Nenhum pacote com esses filtros.' : 'Nada com esses filtros. Tente outra raridade ou limpe os filtros.';
+            return topo + `<section class="arm-prat"><div class="arm-prat-topo"><h3>${t ? 'Itens' : 'Resultados'}</h3><span class="n">${achados.length}</span></div>${achados.length
+                ? `<div class="arm-grade">${achados.map(htmlCard).join('')}</div>` : `<div class="arm-vazio">${aviso}</div>`}</section>`;
         }
-        let corpo = '';
-        if (t) {
-            const pk = t.pacote ? itemDe(t.pacote) : null;
-            corpo += `<section class="arm-tema-topo"><div><h3>${esc(t.nome)}</h3><p>${esc(t.desc)}</p></div>${pk ? `<div style="max-width:268px;min-width:230px">${htmlCard(pk)}</div>` : ''}</section>`;
-            for (const p of estado.prateleiras) corpo += htmlPrateleira(p.titulo, estado.itens.filter((i) => i.tipo === p.tipo && doTema(i) && !i.limitado));
-        } else {
-            corpo += htmlReliquia() + htmlColecao();
-            corpo += htmlPrateleira('Edição limitada', estado.itens.filter((i) => i.limitado));
-            corpo += htmlPrateleira('Pacotes', estado.itens.filter((i) => i.tipo === 'pacote'));
-            for (const p of estado.prateleiras) corpo += htmlPrateleira(p.titulo, estado.itens.filter((i) => i.tipo === p.tipo && !i.limitado));
-        }
+        let corpo = htmlReliquia() + htmlColecao();
+        corpo += htmlPrateleira('Edição limitada', estado.itens.filter((i) => i.limitado));
+        for (const g of (estado.grupos || [])) corpo += htmlPrateleira(g.id === 'pacote' ? 'Pacotes' : g.titulo, estado.itens.filter((i) => i.grupo === g.id && !i.limitado));
         return corpo || '<div class="arm-vazio">Nada por aqui ainda. Volte em breve!</div>';
     }
 
@@ -325,7 +382,7 @@ const Loja = (() => {
         const t = filtro === 'todos' ? null : temaDe(filtro);
         if (filtro !== 'todos' && !t) filtro = 'todos';
         raiz.setAttribute('style', t ? estiloTema(t) : '');
-        raiz.innerHTML = (t || busca ? '' : htmlHero()) + htmlChips() + `<div id="arm-corpo">${corpoHtml()}</div>`;
+        raiz.innerHTML = (filtrando() ? '' : htmlHero()) + htmlChips() + `<div id="arm-corpo">${corpoHtml()}</div>`;
         if (rolagem) rolagem.scrollTop = topo;
         const tr = raiz.querySelector('.arm-trilho-hero');
         if (tr) { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = heroIdx * tr.clientWidth; tr.style.scrollBehavior = ''; }
@@ -336,10 +393,11 @@ const Loja = (() => {
     function aoBuscar(valor) {
         const tinhaHero = !busca;
         busca = valor;
+        if (!tinhaHero && !busca && !filtrando()) { render(); return; }
         clearTimeout(buscaTimer);
         buscaTimer = setTimeout(() => {
             if (!raiz || !estado) return;
-            if (tinhaHero !== !busca && filtro === 'todos') {            // entrou/saiu do modo busca: o hero some/volta, então redesenha tudo e devolve o foco
+            if (tinhaHero !== !busca) {            // entrou/saiu do modo busca: o hero some/volta, então redesenha tudo e devolve o foco
                 render();
                 const i = raiz.querySelector('#arm-busca');
                 if (i) { i.focus(); i.setSelectionRange(busca.length, busca.length); }
@@ -493,7 +551,7 @@ const Loja = (() => {
             <button type="button" class="arm-fechar" data-acao="fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
             <div class="arm-modal-palco"><div class="arm-palco-prev">${previa(i, true)}</div><span class="arm-palco-dica">${pacote ? 'Pacote completo' : i.tipo === 'som_call' ? 'Toque pra ouvir' : 'Prévia no seu perfil'}</span></div>
             <div class="arm-modal-lado">
-                <span class="arm-tag" style="color:var(--c)">${esc(i.rotulo)}${t ? ' · ' + esc(t.nome) : ''}</span>
+                <div class="arm-meta"><span class="arm-tag" style="color:var(--c)">${esc(i.rotulo)}${t ? ' · ' + esc(t.nome) : ''}</span>${htmlRar(i)}${i.animado ? '' : '<span class="arm-rar" style="--rar:#9aa3b2">Sem animação</span>'}</div>
                 <h3>${esc(i.nome)}</h3>
                 <p class="desc">${esc(i.desc)}</p>
                 ${meio}
@@ -604,15 +662,23 @@ const Loja = (() => {
             if (!b) return;
             switch (b.dataset.acao) {
                 case 'tema': filtro = b.dataset.tema; render(); break;
+                case 'tipo': ftipo = b.dataset.tipo; salvarFiltros(); render(); break;
+                case 'limpar': filtro = 'todos'; ftipo = 'todos'; frar = 'todos'; fanim = 'todos'; ordem = 'padrao'; busca = ''; salvarFiltros(); render(); break;
                 case 'abrir': abrirItem(b.dataset.item); break;
                 case 'extrato': ctx.emitir('listar_movimentos'); break;
-                case 'ver-tema': filtro = b.dataset.tema; render(); { const r = raiz.closest('.market-content'); if (r) r.scrollTo({ top: 0, behavior: reduzMov() ? 'auto' : 'smooth' }); } break;
+                case 'ver-tema': filtro = b.dataset.tema; ftipo = 'todos'; frar = 'todos'; fanim = 'todos'; render(); { const r = raiz.closest('.market-content'); if (r) r.scrollTo({ top: 0, behavior: reduzMov() ? 'auto' : 'smooth' }); } break;
                 case 'slide': irPara(Number(b.dataset.i)); break;
                 case 'hero-seta': irPara(heroIdx + Number(b.dataset.dir)); break;
                 case 'rolar': { const tr = b.closest('.arm-prat').querySelector('.arm-trilho'); tr.scrollBy({ left: Number(b.dataset.dir) * tr.clientWidth * 0.85, behavior: 'smooth' }); break; }
             }
         });
         raiz.addEventListener('input', (e) => { if (e.target.id === 'arm-busca') aoBuscar(e.target.value); });
+        raiz.addEventListener('change', (e) => {
+            const f = e.target.dataset && e.target.dataset.filtro;
+            if (!f) return;
+            if (f === 'tema') filtro = e.target.value; else if (f === 'rar') frar = e.target.value; else if (f === 'anim') fanim = e.target.value; else if (f === 'ordem') ordem = e.target.value;
+            salvarFiltros(); render();
+        });
         setInterval(atualizarContagens, 30000);
         raiz.innerHTML = '<div class="arm-vazio"><i class="fa-solid fa-spinner fa-spin"></i> Abrindo o Armazém...</div>';
     }

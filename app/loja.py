@@ -19,7 +19,7 @@ from datetime import timedelta
 from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 
-from .cosmeticos import CATALOGO, TEMAS, PACOTES, COLECOES, ROTULO_TIPO, posses_da_pessoa
+from .cosmeticos import CATALOGO, TEMAS, PACOTES, COLECOES, ROTULO_TIPO, RARIDADES, posses_da_pessoa
 from .models import db, br_now, Person, Posse, MovimentoDrc, LojaEstoque
 from .utils import comitar_com_retry, MISSOES
 
@@ -31,8 +31,23 @@ PRATELEIRAS = [
     ('faixa', 'Faixas de perfil'),
 ]
 
+# Grupos do filtro "tipo" da vitrine: (id, título, tipos do catálogo que entram). A ordem é a dos chips.
+GRUPOS = [
+    ('moldura', 'Molduras', ('moldura',)),
+    ('nome', 'Nomes', ('nome',)),
+    ('placa', 'Placas', ('placa',)),
+    ('faixa', 'Faixas', ('faixa',)),
+    ('efeito', 'Efeitos', ('efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'pin_nota', 'efeito_servidor')),
+    ('som', 'Sons', ('som_call',)),
+    ('pacote', 'Pacotes', ('pacote',)),
+]
+GRUPO_DO_TIPO = {t: g for g, _, tipos in GRUPOS for t in tipos}
+
 # Faixas grandes do topo da loja (carrossel). `tema` precisa existir em TEMAS com loja=True.
 DESTAQUES = [
+    {'tema': 'cyber', 'selo': 'Premium', 'titulo': 'Cyber Neon', 'sub': 'Scanlines, letreiro holográfico, chuva de dados e um "sistema online" ao entrar na call. 12 itens.'},
+    {'tema': 'eldoria', 'selo': 'Premium', 'titulo': 'Eldoria', 'sub': 'Coroa de carvalho, pergaminho de runas, poeira mágica e um cristal no mapa. 12 itens.'},
+    {'tema': 'arcade', 'selo': 'Premium', 'titulo': 'Arcade 8-bit', 'sub': 'Corações de vida, moedas girando, chuva de pixels e o som de uma moeda. 12 itens.'},
     {'tema': 'manga', 'selo': 'Novo', 'titulo': 'Mangá', 'sub': 'Preto, branco e uma cor só para o clímax: traço de tinta e linhas de velocidade.'},
     {'tema': 'mira', 'selo': 'Novo', 'titulo': 'Mira', 'sub': 'Travou o alvo: uma mira que fecha no seu avatar e um radar na faixa.'},
     {'tema': 'quadra', 'selo': 'Novo', 'titulo': 'Quadra', 'sub': 'Uma bola orbitando o avatar, rede na placa e a quadra inteira na faixa.'},
@@ -69,7 +84,7 @@ def _segunda_de(agora):
 
 
 def _candidatas_reliquia():
-    return sorted(i for i, d in CATALOGO.items() if d.get('preco') and d['tipo'] != 'pacote' and TEMAS.get(d['tema'], {}).get('loja'))
+    return sorted(i for i, d in CATALOGO.items() if d.get('preco') and d['tipo'] != 'pacote' and d['raridade'] != 'comum' and TEMAS.get(d['tema'], {}).get('loja'))
 
 
 def reliquia_da_semana(agora=None):
@@ -251,6 +266,8 @@ def _item_json(d, posses, limites, agora, reliquia):
     j = {k: d[k] for k in ('id', 'tipo', 'valor', 'nome', 'desc', 'tema', 'raridade', 'preco')}
     j['possui'] = possui
     j['rotulo'] = ROTULO_TIPO.get(d['tipo'], d['tipo'])
+    j['grupo'] = GRUPO_DO_TIPO.get(d['tipo'], d['tipo'])
+    j['animado'] = d.get('animado', True)
     if d['tipo'] == 'pacote' and not possui:
         try:
             j['preco_final'] = preco_para(posses, d['id'], agora)[0]
@@ -290,6 +307,7 @@ def vitrine_para_json(pessoa, posses=None):
         pacote_id = f'pacote:{tid}'
         temas.append({
             'id': tid, 'nome': t['nome'], 'cor': t['cor'], 'cores': t['cores'], 'icone': t['icone'], 'lema': t['lema'],
+            'premium': bool(t.get('premium')), 'sem_hero': bool(t.get('sem_hero')),
             'desc': t['desc'], 'pacote': pacote_id if _a_venda(pacote_id) else None, 'itens': avulsos,
             'preco_soma': total, 'preco_pacote': (CATALOGO.get(pacote_id) or {}).get('preco'),
         })
@@ -297,6 +315,8 @@ def vitrine_para_json(pessoa, posses=None):
         'saldo': pessoa.bazinga_coins or 0,
         'temas': temas, 'itens': itens,
         'prateleiras': [{'tipo': t, 'titulo': n} for t, n in PRATELEIRAS],
+        'grupos': [{'id': g, 'titulo': n} for g, n, _ in GRUPOS],
+        'raridades': RARIDADES,
         'destaques': [x for x in DESTAQUES if TEMAS.get(x['tema'], {}).get('loja')],
         'reliquia': {'item_id': reliquia, 'desconto': int(DESCONTO_RELIQUIA * 100), 'termina_em': segundos_ate_trocar(agora)} if reliquia else None,
         'colecao': {'comprados': comprados, 'premios': [_premio_json(c, posses, comprados) for c in COLECOES]},

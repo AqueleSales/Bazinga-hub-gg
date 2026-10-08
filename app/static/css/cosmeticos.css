@@ -1031,3 +1031,208 @@ body.mt-aberta { overflow: hidden; }
     .banner-anim-cubos, .banner-anim-batida, .banner-anim-quadra, .banner-anim-quadra::before, .banner-anim-mira, .banner-anim-manga { animation: none !important; }
     .moldura-manga::before { --mg: 100; }
 }
+
+/* ==========================================================================
+   RODADA 15: BÁSICOS (comum, sem animação) · CYBER NEON · ELDORIA · ARCADE 8-BIT (temas premium: 4 visuais + 7 efeitos + servidor)
+   Arte própria, só CSS (nada de símbolo/sprite de terceiros). Mesmas convenções dos temas anteriores.
+   ========================================================================== */
+
+/* ---------- BÁSICOS: tudo parado, cor lisa ---------- */
+.moldura-liso_azul::before { background: #3b82f6; animation: none; }
+.moldura-liso_rosa::before { background: #ec4899; animation: none; }
+.ne-tinta_verde { color: #4ade80 !important; font-weight: 700; }
+.ne-tinta_rosa { color: #f472b6 !important; font-weight: 700; }
+.placa-chapa_cinza, .user-profile-bar.placa-chapa_cinza { background: #3a3f4a !important; animation: none !important; }
+.placa-chapa_azul, .user-profile-bar.placa-chapa_azul { background: #2b4a8a !important; animation: none !important; }
+.banner-anim-degrade_mar { background: linear-gradient(120deg, #0ea5e9, #14b8a6); background-size: 100% 100%; animation: none; }
+.banner-anim-degrade_por { background: linear-gradient(120deg, #fb923c, #a855f7); background-size: 100% 100%; animation: none; }
+
+/* partículas de envio (efeito do chat) dos três temas premium: mesmo esqueleto do Gogeta, cada um com a sua cor */
+.ef-envio-cyber i, .ef-envio-eldoria i, .ef-envio-arcade i { position: absolute; bottom: 4px; opacity: 0; animation: envioSobe var(--t) ease-out forwards; }
+
+/* ==================== CYBER NEON ==================== */
+.moldura-cyber::before { background: repeating-conic-gradient(from var(--bp-angulo), #22e4ff 0 9deg, transparent 9deg 12deg, #ff2d95 12deg 15deg, transparent 15deg 18deg);
+    animation: bpGira 5s linear infinite, cyberFalha 4s steps(1, end) infinite; }
+@keyframes cyberFalha { 0%, 86%, 100% { opacity: 1; transform: none; } 88% { opacity: .35; transform: translateX(2px); } 91% { opacity: 1; transform: translateX(-2px); } 94% { opacity: .5; transform: none; } }
+.ne-cyber { font-family: ui-monospace, 'Courier New', monospace; font-weight: 800; letter-spacing: .5px; color: transparent !important; -webkit-background-clip: text; background-clip: text;
+    background-image: linear-gradient(90deg, #22e4ff, #e6fdff 40%, #ff2d95 60%, #22e4ff); background-size: 200% auto; animation: neCyberCor 3s linear infinite, neCyberGlitch 3.4s steps(1, end) infinite; }
+@keyframes neCyberCor { to { background-position: 200% 0; } }
+@keyframes neCyberGlitch { 0%, 90%, 100% { filter: none; } 92% { filter: drop-shadow(2px 0 #ff2d95) drop-shadow(-2px 0 #22e4ff); } 95% { filter: drop-shadow(-3px 0 #ff2d95) drop-shadow(3px 0 #22e4ff); } }
+.placa-cyber, .user-profile-bar.placa-cyber {
+    background-color: #0a0a18 !important;
+    background-image:
+        linear-gradient(100deg, transparent 40%, rgba(34, 228, 255, .35) 50%, transparent 60%),
+        linear-gradient(#22e4ff, #22e4ff), linear-gradient(#ff2d95, #ff2d95),
+        repeating-linear-gradient(0deg, rgba(34, 228, 255, .07) 0 1px, transparent 1px 3px),
+        linear-gradient(90deg, rgba(34, 228, 255, .12), rgba(255, 45, 149, .14)) !important;
+    background-size: 260% 100%, 100% 2px, 100% 2px, 100% 100%, 100% 100% !important;
+    background-position: 130% 0, 0 0, 0 100%, 0 0, 0 0 !important;
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat, no-repeat !important;
+    animation: placaCyber 3.6s linear infinite !important;
+}
+@keyframes placaCyber { from { background-position: 130% 0, 0 0, 0 100%, 0 0, 0 0; } to { background-position: -30% 0, 0 0, 0 100%, 0 0, 0 0; } }
+.banner-anim-cyber { background-color: #070714; background-repeat: repeat, no-repeat, repeat, repeat-x, repeat-x, repeat-x, no-repeat;
+    background-image:
+        linear-gradient(135deg, transparent 0 46%, rgba(170, 235, 255, .32) 47% 53%, transparent 54% 100%),
+        linear-gradient(0deg, rgba(255, 45, 149, .5), transparent 42%),
+        radial-gradient(circle, rgba(255, 226, 122, .85) 0 1px, transparent 1.7px),
+        repeating-linear-gradient(90deg, #0c0c20 0 20px, transparent 20px 44px),
+        repeating-linear-gradient(90deg, transparent 0 14px, #12122c 14px 40px, transparent 40px 53px),
+        repeating-linear-gradient(90deg, #171738 0 28px, transparent 28px 61px),
+        linear-gradient(180deg, #060612, #12082a);
+    background-size: 36px 36px, 100% 100%, 19px 14px, 100% 45%, 100% 62%, 100% 78%, 100% 100%;
+    background-position: 0 0, 0 0, 0 0, 0 100%, 0 100%, 0 100%, 0 0;
+    animation: faixaCyber 1.2s linear infinite; }
+@keyframes faixaCyber { from { background-position: 0 0, 0 0, 0 0, 0 100%, 0 100%, 0 100%, 0 0; } to { background-position: 0 36px, 0 0, 0 0, 0 100%, 0 100%, 0 100%, 0 0; } }
+.ef-av-cyber { filter: drop-shadow(0 0 4px rgba(34, 228, 255, .8)); }
+.ef-av-cyber b:nth-child(1) { background: repeating-conic-gradient(from 0deg, #22e4ff 0 6deg, transparent 6deg 24deg); -webkit-mask: radial-gradient(closest-side, transparent 66%, #000 68%, #000 80%, transparent 82%); mask: radial-gradient(closest-side, transparent 66%, #000 68%, #000 80%, transparent 82%); animation: cyberGira 6s linear infinite, cyberFalha 3.1s steps(1, end) infinite; }
+.ef-av-cyber b:nth-child(2) { background: repeating-conic-gradient(from 12deg, #ff2d95 0 5deg, transparent 5deg 30deg); -webkit-mask: radial-gradient(closest-side, transparent 72%, #000 74%, #000 84%, transparent 86%); mask: radial-gradient(closest-side, transparent 72%, #000 74%, #000 84%, transparent 86%); animation: cyberGira 9s linear infinite reverse; }
+@keyframes cyberGira { to { transform: rotate(360deg); } }
+.message .ef-av-cyber b:nth-child(1) { -webkit-mask: radial-gradient(closest-side, transparent 72%, #000 74%, #000 86%, transparent 88%); mask: radial-gradient(closest-side, transparent 72%, #000 74%, #000 86%, transparent 88%); }
+.message .ef-av-cyber b:nth-child(2) { display: none; }
+.ef-pf-cyber i { position: absolute; top: 0; bottom: 0; left: var(--x); width: 2px; background-image: linear-gradient(180deg, transparent, var(--c) 82%, #fff); background-size: 100% var(--h); background-repeat: no-repeat; background-position: 0 -120px; opacity: .85; animation: cyberChove var(--t) linear var(--d) infinite; }
+@keyframes cyberChove { from { background-position: 0 -120px; } to { background-position: 0 720px; } }
+.video-card.fala-cyber.is-speaking { box-shadow: 0 0 0 3px #22e4ff, 0 0 22px 4px rgba(255, 45, 149, .6) !important; animation: falaCyber .5s steps(1, end) infinite; }
+.video-card.fala-cyber.is-speaking .video-avatar, .inv-fala.fala-cyber .inv-av-img { box-shadow: 0 0 0 3px #22e4ff, 0 0 20px 6px rgba(34, 228, 255, .8); animation: falaCyberAv .5s steps(1, end) infinite; }
+@keyframes falaCyber { 0% { filter: none; } 30% { filter: brightness(1.3) hue-rotate(-10deg); } 55% { filter: brightness(.9); } 80% { filter: brightness(1.4) hue-rotate(10deg); } }
+@keyframes falaCyberAv { 0% { box-shadow: 0 0 0 3px #22e4ff, 0 0 20px 6px rgba(34, 228, 255, .8); } 50% { box-shadow: 0 0 0 3px #ff2d95, 0 0 24px 8px rgba(255, 45, 149, .85); } }
+.raio-onda.radar-cyber i { border: 2px dashed rgba(34, 228, 255, .95); background: radial-gradient(circle, rgba(34, 228, 255, 0) 50%, rgba(255, 45, 149, .18) 100%); box-shadow: 0 0 18px rgba(34, 228, 255, .6), inset 0 0 18px rgba(255, 45, 149, .3); }
+.inv-radar.radar-cyber i { border: 2px dashed rgba(34, 228, 255, .95); box-shadow: 0 0 12px rgba(34, 228, 255, .6); }
+.chat-input-container.chat-ef-cyber.digitando, .inv-chat.chat-ef-cyber { border-color: #22e4ff !important; box-shadow: 0 0 0 1px rgba(34, 228, 255, .8), 0 0 18px rgba(34, 228, 255, .5) !important; animation: chatCyber .6s steps(1, end) infinite; }
+@keyframes chatCyber { 0% { box-shadow: 0 0 0 1px rgba(34, 228, 255, .8), 0 0 18px rgba(34, 228, 255, .5); } 50% { box-shadow: 0 0 0 1px rgba(255, 45, 149, .8), 0 0 18px rgba(255, 45, 149, .5); } }
+.ef-envio-cyber i { border-radius: 0; background: #22e4ff; box-shadow: 0 0 6px #22e4ff; }
+.ef-envio-cyber i:nth-child(even) { background: #ff2d95; box-shadow: 0 0 6px #ff2d95; }
+.geo-note-bubble.pin-cyber.minimized { background: repeating-linear-gradient(0deg, rgba(34, 228, 255, .3) 0 2px, rgba(34, 228, 255, .06) 2px 4px), radial-gradient(circle, #0a2a3a, #06121c) !important; border: 2px solid #22e4ff !important; border-radius: 50% !important; overflow: hidden;
+    box-shadow: 0 0 12px 3px rgba(34, 228, 255, .7) !important; opacity: 1 !important; animation: pinCyber 2s steps(1, end) infinite; }
+.geo-note-bubble.pin-cyber.minimized > .note-emoji { position: relative; z-index: 1; font-size: 12px !important; }
+@keyframes pinCyber { 0% { filter: none; } 70% { filter: brightness(1.4); } 80% { filter: hue-rotate(40deg); } }
+.geo-note-bubble.pin-cyber:not(.minimized) { box-shadow: 0 0 16px rgba(34, 228, 255, .6), 0 8px 24px rgba(0, 0, 0, .7); }
+.sv-ef-cyber { box-shadow: 0 0 0 2px #22e4ff, 0 0 10px 3px rgba(34, 228, 255, .8) !important; animation: svCyber 1.6s steps(1, end) infinite; }
+@keyframes svCyber { 50% { box-shadow: 0 0 0 2px #ff2d95, 0 0 10px 3px rgba(255, 45, 149, .8); } }
+.pino-foto.sv-ef-cyber { border-color: #bff6ff; }
+
+/* ==================== ELDORIA ==================== */
+.moldura-eldoria::before { background: repeating-conic-gradient(from var(--bp-angulo), #2f7d4f 0 9deg, #7bc67e 9deg 13deg, #b8860b 13deg 15deg, transparent 15deg 22deg); animation: bpGira 20s linear infinite; }
+.ne-eldoria { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; letter-spacing: .4px; color: transparent !important; -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: .3px rgba(40, 25, 0, .5);
+    background-image: linear-gradient(100deg, #b8860b 0 35%, #fff3b8 47%, #e0b43a 53%, #b8860b 65% 100%); background-size: 300% auto; animation: neEldoria 5s linear infinite; }
+@keyframes neEldoria { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.placa-eldoria, .user-profile-bar.placa-eldoria {
+    background-color: #3b2a17 !important;
+    background-image:
+        radial-gradient(circle closest-side, rgba(255, 214, 102, .95) 0 22%, transparent 100%),
+        radial-gradient(circle closest-side, rgba(120, 235, 170, .95) 0 22%, transparent 100%),
+        linear-gradient(90deg, rgba(0, 0, 0, .55), transparent 14% 86%, rgba(0, 0, 0, .55)),
+        linear-gradient(180deg, rgba(0, 0, 0, .4), transparent 22% 78%, rgba(0, 0, 0, .4)),
+        repeating-linear-gradient(8deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 7px),
+        linear-gradient(90deg, #4a3720, #5b4527 50%, #4a3720) !important;
+    background-size: 14px 14px, 14px 14px, 100% 100%, 100% 100%, 100% 100%, 100% 100% !important;
+    background-position: 10% 50%, 90% 50%, 0 0, 0 0, 0 0, 0 0 !important;
+    background-repeat: no-repeat !important;
+    animation: placaEldoria 3.2s ease-in-out infinite alternate !important;
+}
+@keyframes placaEldoria { from { background-size: 12px 12px, 28px 28px, 100% 100%, 100% 100%, 100% 100%, 100% 100%; } to { background-size: 28px 28px, 12px 12px, 100% 100%, 100% 100%, 100% 100%, 100% 100%; } }
+.banner-anim-eldoria { background-color: #07140f; background-repeat: no-repeat, repeat, repeat, repeat-x, repeat-x, repeat-x, repeat-x, no-repeat;
+    background-image:
+        radial-gradient(circle closest-side at 80% 36%, transparent 0 62%, rgba(255, 240, 170, .55) 64% 68%, transparent 70%),
+        radial-gradient(circle, rgba(255, 226, 120, .95) 0 1.2px, transparent 2px),
+        radial-gradient(circle, rgba(150, 255, 190, .8) 0 1px, transparent 1.8px),
+        linear-gradient(to top right, #0b2318 49%, transparent 50%),
+        linear-gradient(to top left, #0b2318 49%, transparent 50%),
+        linear-gradient(to top right, #123624 49%, transparent 50%),
+        linear-gradient(to top left, #123624 49%, transparent 50%),
+        linear-gradient(180deg, #07140f, #0e2a1f);
+    background-size: 100% 100%, 71px 47px, 53px 61px, 20px 55%, 20px 55%, 30px 78%, 30px 78%, 100% 100%;
+    background-position: 0 0, 0 0, 0 0, 0 100%, 20px 100%, 0 100%, 30px 100%, 0 0;
+    animation: faixaEldoria 14s linear infinite; }
+@keyframes faixaEldoria { from { background-position: 0 0, 0 0, 0 0, 0 100%, 20px 100%, 0 100%, 30px 100%, 0 0; } to { background-position: 0 0, 71px -47px, -53px -61px, 0 100%, 20px 100%, 0 100%, 30px 100%, 0 0; } }
+.ef-av-eldoria { filter: drop-shadow(0 0 4px rgba(224, 180, 58, .6)); }
+.ef-av-eldoria b:nth-child(1) { background: radial-gradient(circle closest-side, rgba(255, 214, 102, 0) 55%, rgba(255, 214, 102, .55) 68%, rgba(47, 158, 106, 0) 85%); animation: eldoriaHalo 3s ease-in-out infinite alternate; }
+@keyframes eldoriaHalo { from { transform: scale(.94); opacity: .7; } to { transform: scale(1.06); opacity: 1; } }
+.ef-av-eldoria b:nth-child(2) { background:
+        radial-gradient(circle at 50% 4%, #fff3b8 0 2px, rgba(255, 214, 102, .6) 3px 5px, transparent 6px),
+        radial-gradient(circle at 50% 96%, #b9f5c8 0 1.6px, rgba(120, 235, 170, .5) 2.4px 4px, transparent 5px),
+        radial-gradient(circle at 6% 50%, #fff3b8 0 1.6px, rgba(255, 214, 102, .5) 2.4px 4px, transparent 5px),
+        radial-gradient(circle at 94% 50%, #b9f5c8 0 2px, rgba(120, 235, 170, .6) 3px 5px, transparent 6px); animation: cyberGira 9s linear infinite; }
+.ef-pf-eldoria i { position: absolute; bottom: -8px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%; background: radial-gradient(circle, #fff7c2, #e0b43a 55%, rgba(224, 180, 58, 0)); box-shadow: 0 0 7px 1px rgba(224, 180, 58, .8); opacity: 0; animation: efSobe var(--t) linear var(--d) infinite; }
+.ef-pf-eldoria i:nth-child(3n) { background: radial-gradient(circle, #e6fff0, #3fcf8e 55%, rgba(63, 207, 142, 0)); box-shadow: 0 0 7px 1px rgba(63, 207, 142, .8); }
+.inv-perfil-ef .ef-pf-eldoria i { bottom: -6px; animation-name: efSobeMini; }
+.video-card.fala-eldoria.is-speaking { box-shadow: 0 0 0 3px #d9a520, 0 0 22px 4px rgba(47, 158, 106, .55) !important; }
+.video-card.fala-eldoria.is-speaking .video-avatar, .inv-fala.fala-eldoria .inv-av-img { animation: falaRuna 1.3s ease-out infinite; }
+@keyframes falaRuna { 0% { box-shadow: 0 0 0 3px #f0c24a, 0 0 0 3px rgba(47, 158, 106, .85); } 100% { box-shadow: 0 0 0 3px #f0c24a, 0 0 0 22px rgba(47, 158, 106, 0); } }
+.raio-onda.radar-eldoria i { border: 4px double rgba(240, 194, 74, .95); background: radial-gradient(circle, rgba(240, 194, 74, 0) 50%, rgba(47, 158, 106, .2) 100%); box-shadow: 0 0 20px rgba(47, 158, 106, .55), inset 0 0 20px rgba(240, 194, 74, .25); }
+.inv-radar.radar-eldoria i { border: 3px double rgba(240, 194, 74, .95); box-shadow: 0 0 12px rgba(47, 158, 106, .6); }
+.chat-input-container.chat-ef-eldoria.digitando, .inv-chat.chat-ef-eldoria { border-color: #e0b43a !important; box-shadow: 0 0 0 1px rgba(224, 180, 58, .8), 0 0 18px rgba(47, 158, 106, .5) !important; animation: chatEldoria 1.2s ease-in-out infinite alternate; }
+@keyframes chatEldoria { from { box-shadow: 0 0 0 1px rgba(224, 180, 58, .6), 0 0 10px rgba(47, 158, 106, .35); } to { box-shadow: 0 0 0 1px rgba(255, 224, 120, .95), 0 0 24px rgba(47, 158, 106, .7); } }
+.ef-envio-eldoria i { border-radius: 50%; background: radial-gradient(circle, #fff7c2, #e0b43a 55%, rgba(224, 180, 58, 0)); box-shadow: 0 0 8px 1px rgba(224, 180, 58, .85); }
+.ef-envio-eldoria i:nth-child(3n) { background: radial-gradient(circle, #e6fff0, #3fcf8e 55%, rgba(63, 207, 142, 0)); box-shadow: 0 0 8px 1px rgba(63, 207, 142, .85); }
+.geo-note-bubble.pin-eldoria.minimized { background: radial-gradient(circle at 35% 30%, #b9f5c8, #2f9e6a 55%, #0f4a30) !important; border: 2px solid #f0e2a0 !important; border-radius: 50% !important; overflow: hidden;
+    box-shadow: 0 0 12px 3px rgba(47, 158, 106, .75) !important; opacity: 1 !important; animation: pinCristal 2.2s ease-in-out infinite alternate; }
+.geo-note-bubble.pin-eldoria.minimized::before { content: ''; position: absolute; inset: 3px 8px; clip-path: polygon(50% 0, 100% 40%, 50% 100%, 0 40%); background: linear-gradient(180deg, rgba(255, 255, 255, .7), rgba(255, 255, 255, .05)); }
+.geo-note-bubble.pin-eldoria.minimized > .note-emoji { position: relative; z-index: 1; font-size: 12px !important; }
+@keyframes pinCristal { from { filter: brightness(1); } to { filter: brightness(1.25); } }
+.geo-note-bubble.pin-eldoria:not(.minimized) { box-shadow: 0 0 16px rgba(47, 158, 106, .6), 0 8px 24px rgba(0, 0, 0, .7); }
+.sv-ef-eldoria { box-shadow: 0 0 0 2px #e0b43a, 0 0 10px 3px rgba(224, 180, 58, .8) !important; animation: svEldoria 2.4s ease-in-out infinite alternate; }
+@keyframes svEldoria { to { box-shadow: 0 0 0 2px #3fcf8e, 0 0 10px 3px rgba(63, 207, 142, .8); } }
+.pino-foto.sv-ef-eldoria { border-color: #f0e2a0; }
+
+/* ==================== ARCADE 8-BIT (tudo em passos, como quadros de um jogo antigo) ==================== */
+.moldura-arcade::before { background: repeating-conic-gradient(from var(--bp-angulo), #ff3b5c 0 14deg, transparent 14deg 22.5deg, #ffd23f 22.5deg 36deg, transparent 36deg 45deg); animation: bpGira 8s steps(8, end) infinite; }
+.ne-arcade { font-family: ui-monospace, 'Courier New', monospace; font-weight: 900; color: transparent !important; -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: .5px rgba(20, 10, 40, .7);
+    background-image: linear-gradient(90deg, #ff3b5c 0 12.5%, #ff9f1c 12.5% 25%, #ffd23f 25% 37.5%, #7ed957 37.5% 50%, #22d3ee 50% 62.5%, #4f7cff 62.5% 75%, #a855f7 75% 87.5%, #ff4fa3 87.5% 100%); background-size: 200% auto; animation: neArcade 1.6s steps(8, end) infinite; }
+@keyframes neArcade { to { background-position: 200% 0; } }
+.placa-arcade, .user-profile-bar.placa-arcade {
+    background-color: #2a1550 !important;
+    background-image:
+        radial-gradient(circle at 50% 50%, #ffd23f 0 3px, transparent 3.5px),
+        linear-gradient(90deg, #ff4fa3 50%, #4dd0e1 50%), linear-gradient(90deg, #ff4fa3 50%, #4dd0e1 50%) !important;
+    background-size: 20px 100%, 12px 3px, 12px 3px !important;
+    background-position: 0 0, 0 0, 0 100% !important;
+    background-repeat: repeat-x !important;
+    animation: placaArcade 1s steps(5, end) infinite !important;
+}
+@keyframes placaArcade { from { background-position: 0 0, 0 0, 0 100%; } to { background-position: 20px 0, 12px 0, 12px 100%; } }
+.banner-anim-arcade { background-color: #1b0f3d; background-repeat: repeat, repeat, repeat-x, repeat-x, repeat-x, no-repeat;
+    background-image:
+        linear-gradient(#fff, #fff), linear-gradient(#ffd23f, #ffd23f),
+        linear-gradient(#ff4fa3, #ff4fa3),
+        linear-gradient(0deg, #7c2d12 0 2px, transparent 2px),
+        repeating-linear-gradient(90deg, #c2410c 0 22px, #7c2d12 22px 24px),
+        linear-gradient(180deg, #1b0f3d, #3b1c7a);
+    background-size: 3px 3px, 8px 12px, 100% 4px, 24px 12px, 100% 22%, 100% 100%;
+    background-position: 20px 12px, 40px 30px, 0 78%, 0 100%, 0 100%, 0 0;
+    animation: faixaArcade 3s steps(12, end) infinite; }
+@keyframes faixaArcade { from { background-position: 20px 12px, 40px 30px, 0 78%, 0 100%, 0 100%, 0 0; } to { background-position: -47px 12px, -80px 30px, 0 78%, -24px 100%, -24px 100%, 0 0; } }
+.ef-av-arcade b:nth-child(1) { background:
+        linear-gradient(#ffd23f, #ffd23f) 50% 2% / 9px 9px no-repeat, linear-gradient(#ffd23f, #ffd23f) 50% 98% / 9px 9px no-repeat,
+        linear-gradient(#ffd23f, #ffd23f) 2% 50% / 9px 9px no-repeat, linear-gradient(#ffd23f, #ffd23f) 98% 50% / 9px 9px no-repeat; animation: cyberGira 3s steps(8, end) infinite; }
+.ef-av-arcade b:nth-child(2) { background:
+        linear-gradient(#ff4fa3, #ff4fa3) 15% 15% / 7px 7px no-repeat, linear-gradient(#ff4fa3, #ff4fa3) 85% 85% / 7px 7px no-repeat,
+        linear-gradient(#4dd0e1, #4dd0e1) 85% 15% / 7px 7px no-repeat, linear-gradient(#4dd0e1, #4dd0e1) 15% 85% / 7px 7px no-repeat; animation: cyberGira 4s steps(8, end) infinite reverse; }
+.ef-pf-arcade i { position: absolute; top: -10px; left: var(--x); width: var(--s); height: var(--s); background: var(--c); opacity: 0; animation: arcadeQueda var(--t) steps(14, end) var(--d) infinite; }
+@keyframes arcadeQueda { 0% { transform: translateY(0); opacity: 1; } 92% { opacity: 1; } 100% { transform: translateY(560px); opacity: 0; } }
+.inv-perfil-ef .ef-pf-arcade i { animation-name: arcadeQuedaMini; }
+@keyframes arcadeQuedaMini { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(110px); opacity: 0; } }
+.video-card.fala-arcade.is-speaking { box-shadow: 0 0 0 4px #ffd23f, 0 0 0 8px #ff4fa3 !important; animation: falaArcade .6s steps(1, end) infinite; }
+.video-card.fala-arcade.is-speaking .video-avatar, .inv-fala.fala-arcade .inv-av-img { box-shadow: 0 0 0 3px #ffd23f, 0 0 0 6px #ff4fa3; animation: falaArcadeAv .6s steps(1, end) infinite; }
+@keyframes falaArcade { 0% { box-shadow: 0 0 0 4px #ffd23f, 0 0 0 8px #ff4fa3; } 33% { box-shadow: 0 0 0 4px #4dd0e1, 0 0 0 8px #ffd23f; } 66% { box-shadow: 0 0 0 4px #ff4fa3, 0 0 0 8px #4dd0e1; } }
+@keyframes falaArcadeAv { 0% { box-shadow: 0 0 0 3px #ffd23f, 0 0 0 6px #ff4fa3; } 33% { box-shadow: 0 0 0 3px #4dd0e1, 0 0 0 6px #ffd23f; } 66% { box-shadow: 0 0 0 3px #ff4fa3, 0 0 0 6px #4dd0e1; } }
+.raio-onda.radar-arcade i { border: 3px dotted #39ff14; background: none; box-shadow: 0 0 0 1px rgba(57, 255, 20, .35); animation-timing-function: steps(10, end); }
+.inv-radar.radar-arcade i { border: 3px dotted #39ff14; }
+.chat-input-container.chat-ef-arcade.digitando, .inv-chat.chat-ef-arcade { border-color: #ff4fa3 !important; box-shadow: 0 0 0 3px #ff4fa3 !important; animation: chatArcade .5s steps(1, end) infinite; }
+@keyframes chatArcade { 0% { box-shadow: 0 0 0 3px #ff4fa3; border-color: #ff4fa3; } 50% { box-shadow: 0 0 0 3px #ffd23f; border-color: #ffd23f; } }
+.ef-envio-arcade i { min-width: 9px; min-height: 9px; background: #ff4f6d; clip-path: polygon(20% 0, 40% 0, 50% 15%, 60% 0, 80% 0, 100% 20%, 100% 45%, 50% 100%, 0 45%, 0 20%); }
+.ef-envio-arcade i:nth-child(even) { background: #ffd23f; }
+.geo-note-bubble.pin-arcade.minimized { background: #ffd23f !important; border: 3px solid #1a1030 !important; border-radius: 4px !important; box-shadow: 3px 3px 0 #ff4fa3 !important; opacity: 1 !important; animation: pinArcade .8s steps(1, end) infinite; }
+.geo-note-bubble.pin-arcade.minimized > .note-emoji { position: relative; z-index: 1; font-size: 12px !important; }
+@keyframes pinArcade { 0% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.geo-note-bubble.pin-arcade:not(.minimized) { box-shadow: 4px 4px 0 #ff4fa3, 0 8px 24px rgba(0, 0, 0, .7); }
+.sv-ef-arcade { box-shadow: 0 0 0 3px #ffd23f, 3px 3px 0 3px #ff4fa3 !important; animation: svArcade 1s steps(1, end) infinite; }
+@keyframes svArcade { 50% { box-shadow: 0 0 0 3px #4dd0e1, 3px 3px 0 3px #ffd23f; } }
+.pino-foto.sv-ef-arcade { border-color: #fff3b0; }
+
+/* quem pede menos movimento: os temas premium ficam parados */
+@media (prefers-reduced-motion: reduce) {
+    .moldura-cyber::before, .moldura-eldoria::before, .moldura-arcade::before, .ne-cyber, .ne-eldoria, .ne-arcade, .placa-cyber, .placa-eldoria, .placa-arcade,
+    .banner-anim-cyber, .banner-anim-eldoria, .banner-anim-arcade, .ef-av-cyber b, .ef-av-eldoria b, .ef-av-arcade b, .ef-pf-cyber i, .ef-pf-eldoria i, .ef-pf-arcade i { animation: none !important; }
+    .ef-pf-eldoria i, .ef-pf-arcade i { display: none; }
+}
