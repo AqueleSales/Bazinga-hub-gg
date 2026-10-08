@@ -534,8 +534,8 @@ const Cosm = (() => {
     // EFEITOS (avatar / cartão): só ids do catálogo viram classe; o desenho é CSS.
     // ---------------------------------------------------------------------
     const idOk = (v) => /^[a-z_]{1,24}$/.test(String(v || ''));
-    const EFEITOS_AVATAR = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'];
-    const EFEITOS_PERFIL = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'];
+    const EFEITOS_AVATAR = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'];
+    const EFEITOS_PERFIL = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'];
 
     function htmlEfeitoAvatar(id) {
         if (!EFEITOS_AVATAR.includes(id)) return '';
@@ -560,6 +560,9 @@ const Cosm = (() => {
             }).join('');
             return `<div class="ef-pf ef-pf-sasuke" aria-hidden="true"><i class="ef-pf-clarao"></i><canvas class="ef-cv" data-ef="amaterasu"></canvas>${bolts}</div>`;
         }
+        if (id === 'sukuna') return htmlDominioSukuna();
+        if (id === 'gojo') return htmlDominioGojo();
+        if (id === 'mahoraga') return htmlRodaMahoraga();
         if (id === 'cyber') {          // colunas de dados caindo
             let cols = '';
             for (let i = 0; i < 16; i++) {
@@ -595,6 +598,43 @@ const Cosm = (() => {
         return `<div class="ef-pf ef-pf-${id}" aria-hidden="true">${ps}<canvas class="ef-cv" data-ef="punicao"></canvas></div>`;
     }
 
+    // ---- Laboratório JJK: três efeitos de perfil "de cena" (ciclo longo, tudo com transform/opacity: nada de repintar a cada quadro).
+    // Mãos e roda são SVG desenhado à mão (silhueta que só evoca); nada vem da obra.
+    const MAO_SUKUNA = '<path d="M0 74 L38 66 L46 100 L0 108Z"/><path d="M38 66 L66 52 L78 84 L46 100Z"/><path d="M62 56 L98 20 L106 26 L72 66Z"/><path d="M54 62 L84 30 L92 36 L62 70Z"/><path d="M70 66 L104 36 L110 44 L78 76Z"/><path d="M76 74 L100 52 L106 60 L82 84Z"/><path d="M48 88 L74 84 L76 94 L50 100Z"/>';
+    function dentesPoligono(baixo) {
+        const alt = [.55, .8, 1, .75, .95, .75, 1, .8, .55], n = alt.length;
+        const base = baixo ? '100%' : '0%';
+        const pts = baixo ? ['0% 100%', '100% 100%'] : ['0% 0%', '100% 0%'];
+        for (let i = n - 1; i >= 0; i--) {
+            const xt = (((i + .5) / n) * 100).toFixed(2), xe = ((i / n) * 100).toFixed(2), y = (baixo ? 100 - 100 * alt[i] : 100 * alt[i]).toFixed(1);
+            pts.push(`${xt}% ${y}%`, `${xe}% ${base}`);
+        }
+        return `polygon(${pts.join(',')})`;
+    }
+    function htmlDominioSukuna() {
+        const mand = (lado) => `<div class="sk-mand ${lado}"><i class="sk-gengiva"></i><i class="sk-dentes" style="clip-path:${dentesPoligono(lado === 'baixo')}"></i></div>`;
+        return `<div class="ef-pf ef-pf-sukuna" aria-hidden="true"><i class="sk-aura a1"></i><i class="sk-aura a2"></i><i class="sk-aura a3"></i>
+            <svg class="sk-maos" viewBox="0 0 200 120"><g class="mao-e">${MAO_SUKUNA}</g><g class="mao-d" transform="matrix(-1 0 0 1 200 0)">${MAO_SUKUNA}</g></svg>
+            <i class="sk-interior"></i>${mand('cima')}${mand('baixo')}
+            <i class="sk-corte c1"></i><i class="sk-corte c2"></i><i class="sk-corte c3"></i></div>`;
+    }
+    function htmlDominioGojo() {
+        return `<div class="ef-pf ef-pf-gojo" aria-hidden="true"><i class="gj-aura g1"></i><i class="gj-aura g2"></i>
+            <svg class="gj-mao" viewBox="0 0 120 120"><rect class="gj-punho" x="38" y="64" width="46" height="40" rx="14"/><path class="gj-punho" d="M36 80 Q22 78 27 93 Q34 99 43 92Z"/>
+                <rect class="gj-dedo" x="46" y="22" width="12" height="54" rx="6" transform="rotate(14 52 72)"/><rect class="gj-dedo" x="62" y="20" width="12" height="56" rx="6" transform="rotate(-16 68 72)"/></svg>
+            <i class="gj-vazio"></i><i class="gj-estrias"></i><i class="gj-flash"></i></div>`;
+    }
+    function htmlRodaMahoraga() {
+        let raios = '', nos = '';
+        for (let k = 0; k < 8; k++) {
+            const a = (k * Math.PI) / 4, c = Math.cos(a), sn = Math.sin(a);
+            raios += `<line x1="${(60 + c * 12).toFixed(1)}" y1="${(60 + sn * 12).toFixed(1)}" x2="${(60 + c * 46).toFixed(1)}" y2="${(60 + sn * 46).toFixed(1)}"/>`;
+            nos += `<circle cx="${(60 + c * 53).toFixed(1)}" cy="${(60 + sn * 53).toFixed(1)}" r="6"/>`;
+        }
+        return `<div class="ef-pf ef-pf-mahoraga" aria-hidden="true"><i class="mh-ouro"></i><i class="mh-onda"></i>
+            <svg class="mh-roda" viewBox="0 0 120 120"><g class="mh-giro"><circle cx="60" cy="60" r="46" fill="none"/>${raios}${nos}<circle cx="60" cy="60" r="12"/></g></svg></div>`;
+    }
+
     // Raios do Sasuke: ao fim de cada ciclo (invisíveis), cada um sorteia onde vai cair da próxima vez.
     function sortearPosicao(e) {
         const t = e.target;
@@ -610,8 +650,8 @@ const Cosm = (() => {
     // Só ids conhecidos viram classe; o desenho é CSS (e Web Audio sintetizado pro som: nada de arquivo).
     // ---------------------------------------------------------------------
     const IDS_EFEITO = {
-        fala: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], radar: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], chat: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'],
-        som: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], pin: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade'], servidor: ['gogeta', 'sasuke', 'fusao', 'cyber', 'eldoria', 'arcade'],
+        fala: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'], radar: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'], chat: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'],
+        som: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'], pin: ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'], servidor: ['gogeta', 'sasuke', 'fusao', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'],
     };
     const classeDe = (pref, tipo, id) => (IDS_EFEITO[tipo] || []).includes(id) ? `${pref}-${id}` : '';
     const classeFala = (id) => classeDe('fala', 'fala', id);
@@ -646,6 +686,52 @@ const Cosm = (() => {
             g.gain.setValueAtTime(topo, t0 + segura);
             g.gain.exponentialRampToValueAtTime(0.0001, t0 + fim);
         };
+        if (id === 'gojo') {           // estalo de mãos, grave que cresce e um brilho que varre
+            const estalo = ctx.createBufferSource(), bf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .12), ctx.sampleRate), d = bf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+            estalo.buffer = bf; const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+            const ge = ctx.createGain(); ge.gain.value = .9; estalo.connect(hp); hp.connect(ge); ge.connect(mestre); estalo.start(t0);
+            const sub = ctx.createOscillator(), gs = ctx.createGain(); sub.type = 'sine'; sub.frequency.setValueAtTime(55, t0 + .1); sub.frequency.exponentialRampToValueAtTime(110, t0 + 1.1);
+            gs.gain.setValueAtTime(0.0001, t0 + .1); gs.gain.exponentialRampToValueAtTime(.9, t0 + .7); gs.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.3);
+            sub.connect(gs); gs.connect(mestre); sub.start(t0 + .1); sub.stop(t0 + 1.35);
+            [1318.5, 1760, 2349.3, 3135.9].forEach((fr, i) => {
+                const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = fr; const ini = t0 + .5 + i * .09;
+                g.gain.setValueAtTime(0.0001, ini); g.gain.exponentialRampToValueAtTime(.3, ini + .02); g.gain.exponentialRampToValueAtTime(0.0001, ini + .6);
+                o.connect(g); g.connect(mestre); o.start(ini); o.stop(ini + .65);
+            });
+            return 1.4;
+        }
+        if (id === 'sukuna') {         // dois tambores graves, um rosnado e um corte de ar
+            [0, .34].forEach((ini) => {
+                const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
+                o.frequency.setValueAtTime(130, t0 + ini); o.frequency.exponentialRampToValueAtTime(42, t0 + ini + .3);
+                g.gain.setValueAtTime(0.0001, t0 + ini); g.gain.exponentialRampToValueAtTime(1, t0 + ini + .01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + .45);
+                o.connect(g); g.connect(mestre); o.start(t0 + ini); o.stop(t0 + ini + .5);
+            });
+            const r = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), lp = ctx.createBiquadFilter(), gr = ctx.createGain();
+            r.type = 'sawtooth'; r.frequency.value = 62; lfo.frequency.value = 23; lg.gain.value = 22; lfo.connect(lg); lg.connect(r.frequency);
+            lp.type = 'lowpass'; lp.frequency.value = 380; gr.gain.setValueAtTime(0.0001, t0 + .5); gr.gain.exponentialRampToValueAtTime(.6, t0 + .62); gr.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
+            r.connect(lp); lp.connect(gr); gr.connect(mestre); r.start(t0 + .5); r.stop(t0 + 1.25); lfo.start(t0 + .5); lfo.stop(t0 + 1.25);
+            const corte = ctx.createBufferSource(), bf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .35), ctx.sampleRate), d = bf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            corte.buffer = bf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2; bp.frequency.setValueAtTime(900, t0 + .8); bp.frequency.exponentialRampToValueAtTime(7000, t0 + 1.15);
+            const gc = ctx.createGain(); gc.gain.setValueAtTime(0.0001, t0 + .8); gc.gain.exponentialRampToValueAtTime(.7, t0 + .9); gc.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.15);
+            corte.connect(bp); bp.connect(gc); gc.connect(mestre); corte.start(t0 + .8);
+            return 1.3;
+        }
+        if (id === 'mahoraga') {       // sino de templo (parciais inarmônicos) e oito cliques da roda
+            [[196, 1], [313.6, .6], [532, .5], [879, .35], [1330, .2]].forEach(([fr, v]) => {
+                const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = fr;
+                g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(.7 * v, t0 + .01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2);
+                o.connect(g); g.connect(mestre); o.start(t0); o.stop(t0 + 2.05);
+            });
+            for (let k = 0; k < 8; k++) {
+                const ini = t0 + .25 + k * (.2 - k * .012), o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = 1100 + k * 40;
+                g.gain.setValueAtTime(0.0001, ini); g.gain.exponentialRampToValueAtTime(.25, ini + .004); g.gain.exponentialRampToValueAtTime(0.0001, ini + .04);
+                o.connect(g); g.connect(mestre); o.start(ini); o.stop(ini + .05);
+            }
+            return 2.0;
+        }
         if (id === 'cyber') {          // "sistema online": dois bipes subindo e uma varredura
             const bip = (f, ini, dur) => {
                 const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = f;
@@ -731,7 +817,9 @@ const Cosm = (() => {
         const box = document.createElement('div');
         box.className = `ef-envio ef-envio-${id}`;
         box.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
-        if (id === 'sasuke') {
+        if (id === 'sukuna') {
+            box.innerHTML = '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="0" y1="88" x2="100" y2="12" stroke="#e63946" stroke-width="7" opacity=".6" vector-effect="non-scaling-stroke" stroke-linecap="round"/><line x1="0" y1="88" x2="100" y2="12" stroke="#fff" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>';
+        } else if (id === 'sasuke') {
             const pts = []; const n = 14;
             for (let i = 0; i <= n; i++) pts.push(`${(i / n * 100).toFixed(1)},${(i % 2 ? 22 : 78) + ((i * 37) % 13) - 6}`);
             box.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts.join(' ')}" fill="none" stroke="#8b5cf6" stroke-width="5" opacity=".55" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><polyline points="${pts.join(' ')}" fill="none" stroke="#f5f3ff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg><i class="ef-envio-clarao"></i>`;

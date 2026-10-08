@@ -189,3 +189,9 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [ ] **Olhar no seu monitor** os efeitos novos (fala na call, radar no mapa, chat ao enviar, som de entrada, pin, efeito de servidor): só vi as prévias dos cartões na pane.
 - [ ] Faltam os 10 temas de jogo/anime; Bazar (favoritos, ordenação, anúncios, disputa, banimento, reputação, frete); app (patente ao lado do nome, menção em DM, denunciar mensagem).
 - [ ] Desktop **0.3.0** (traz a ponte de localização pelo navegador que o 0.2.1 não tem: por isso o mapa não achava a posição no 0.2.1).
+
+## Rodada 16 (08/10/2026) - Laboratório JJK e Efeitos de perfil nas Configurações - feito; só prévias vistas no navegador do painel
+- [x] Gojo, Sukuna, Mahoraga (12 itens cada, todos os slots) + Combo JJK, só no laboratório (nada à venda); "Efeitos de perfil" das Configurações liberado.
+- [ ] **Depois do deploy**: `python conceder_item.py aquele.sales tudo` e `... filippo.chiarion tudo` (o JJK não vem sozinho).
+- [ ] **Ver no seu monitor**: domínios (cartão), fala na call, radar, som de entrada, pin de nota e efeito de servidor dos 3.
+- [ ] Antes de abrir o laboratório pra loja pública: trocar nomes/referências do JJK (e de DBZ/Naruto) por criações originais.

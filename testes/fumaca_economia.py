@@ -278,6 +278,40 @@ with app.app_context():
         comprar(duda, pk, loja.preco_para(cos.posses_da_pessoa(ids['duda']), pk)[0])
         ok(loja.itens_comprados(ids['duda']) == antes_pk + 4, 'Pacote conta pelos 4 itens que entrega (não conta o pacote)')
 
+    # ======================================================================
+    # Laboratório JJK (Gojo, Sukuna, Mahoraga, combo): só os dois testers, nunca à venda
+    # ======================================================================
+    JJK = [i for i, d in cos.CATALOGO.items() if d['tema'] in ('gojo', 'sukuna', 'mahoraga', 'jjk')]
+    ok(len(JJK) == 40, f'JJK: 3 temas x 12 itens + 3 pacotes + o combo = 40 ({len(JJK)})')
+    ok(not any(cos.CATALOGO[i].get('preco') for i in JJK), 'JJK não tem preço: nunca aparece no Armazém')
+    v = vitrine(cliente('cris'))
+    ok(not any(i['tema'] in ('gojo', 'sukuna', 'mahoraga', 'jjk') for i in v['itens']) and not any(t['id'] in ('gojo', 'sukuna', 'mahoraga', 'jjk') for t in v['temas']), 'Vitrine: nenhum item nem tema do JJK')
+    rec = comprar(cliente('cris'), 'moldura:gojo')
+    ok(recusas(rec) == ['Este item não está à venda.'], 'Comprar item do JJK é recusado')
+    for quem in ('aquele.sales', 'filippo.chiarion'):
+        ok(set(JJK) <= set(cos.LABORATORIO[quem]), f'{quem} recebe o JJK inteiro')
+    for tema in ('gojo', 'sukuna', 'mahoraga'):
+        ok({'moldura', 'nome', 'placa', 'faixa', 'efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota'} == set(cos.PACOTES[tema]),
+           f'{tema}: o pacote equipa os 11 slots (visuais + 7 efeitos)')
+        ok(f'efeito_servidor:{tema}' in cos.CATALOGO, f'{tema}: tem efeito de servidor (avulso)')
+    ok(cos.PACOTES['jjk']['moldura'] == 'gojo' and cos.PACOTES['jjk']['nome'] == 'sukuna' and cos.PACOTES['jjk']['efeito_perfil'] == 'sukuna', 'Combo JJK mistura os dois lados')
+    ok(all(f'{t}:{v}' in cos.CATALOGO for t, v in cos.PACOTES['jjk'].items()), 'Todo item do combo existe no catálogo')
+
+    # quem tem tudo equipa o combo; quem não tem nada, não
+    dono = Person(name='Tester', email='t@x', role_id=r.id, username='tester', bazinga_coins=0)
+    db.session.add(dono); db.session.commit(); ids['tester'] = dono.id
+    for i in JJK:
+        cos.conceder_item(ids['tester'], i, 'teste')
+    db.session.commit()
+    t = cliente('tester'); t.emit('equipar_item', {'item_id': 'pacote:jjk'})
+    db.session.expire_all()
+    p_t = db.session.get(Person, ids['tester'])
+    ok(p_t.moldura == 'gojo' and p_t.nome_estilo == 'sukuna' and p_t.placa == 'gojo', 'Combo equipado: moldura Gojo, nome Sukuna, placa Gojo')
+    ok(cos.equipados_da_pessoa(p_t).get('efeito_perfil') == 'sukuna' and cos.equipados_da_pessoa(p_t).get('som_call') == 'gojo', 'Combo equipado: domínio do Sukuna no cartão e som do Gojo na call')
+    pobre2 = cliente('pobre'); pobre2.get_received(); pobre2.emit('equipar_item', {'item_id': 'efeito_perfil:sukuna'})
+    db.session.expire_all()
+    ok(ev(pobre2, 'erro_bazinga') and cos.equipados_da_pessoa(db.session.get(Person, ids['pobre'])).get('efeito_perfil') is None, 'Quem não tem o efeito do JJK não equipa')
+
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)
 sys.exit(1 if falhas else 0)

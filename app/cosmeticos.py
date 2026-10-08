@@ -21,6 +21,12 @@ TEMAS = {
     'gogeta': {'nome': 'Gogeta', 'cor': '#ff9d2e', 'desc': 'Fusão, aura dourada e a Punição de Alma.'},
     'sasuke': {'nome': 'Sasuke', 'cor': '#8b5cf6', 'desc': 'Chidori, Sharingan e a chama negra.'},
     'fusao': {'nome': 'Fusão', 'cor': '#e879f9', 'desc': 'Duas chamas, uma só. Só nós dois.'},
+    # ---- Laboratório JJK (Rodada 16): só os dois testers, FORA da loja. Arte desenhada em CSS/SVG e som sintetizado (nada copiado da obra);
+    # antes de qualquer venda pública, trocar nomes e referências por criações originais (ver CLAUDE.md, Rodada 16). ----
+    'gojo': {'nome': 'Gojo', 'cor': '#4aa8ff', 'desc': 'Infinito, Seis Olhos, o azul e o vermelho que viram roxo e a Expansão de Domínio: Vazio Ilimitado.'},
+    'sukuna': {'nome': 'Sukuna', 'cor': '#e63946', 'desc': 'Aura maldita, flecha em chamas, cortes e a Expansão de Domínio: Santuário Malevolente, com dentes.'},
+    'mahoraga': {'nome': 'Mahoraga', 'cor': '#d9a520', 'desc': 'A roda dourada que gira um encaixe de cada vez, e se adapta.'},
+    'jjk': {'nome': 'Combo JJK', 'cor': '#9b5cff', 'desc': 'Gojo contra Sukuna no mesmo perfil.'},
     # ---- Temas da LOJA (à venda por DRC no Armazém). Arte original, só evoca o tema: nada de símbolo/sprite de terceiros. ----
     # `cores` = as duas cores da vitrine do tema; `lema` = a frase do cartão; `icone` = Font Awesome.
     'relojoaria': {'nome': 'Relojoaria', 'cor': '#d4a24c', 'loja': True, 'cores': ['#d4a24c', '#3f5f6b'], 'icone': 'fa-clock',
@@ -209,6 +215,46 @@ _item('placa', 'fusao', 'Duas Chamas', 'Uma chama laranja e uma roxa disputando 
 _item('nome', 'fusao', 'Fusão', 'O nome muda do laranja pro roxo e volta.', 'fusao')
 _item('faixa', 'fusao', 'Fusão', 'Chamas laranja e roxa se misturando na faixa.', 'fusao')
 
+# ---- Laboratório JJK: Gojo (azul/branco/roxo), Sukuna (vermelho/osso/fogo), Mahoraga (ouro/pedra) e o combo. 12 itens cada. ----
+_item('moldura', 'gojo', 'Infinito', 'Um anel de luz e, por fora, uma onda azul que se aproxima do avatar e nunca encosta.', 'gojo')
+_item('nome', 'gojo', 'Seis Olhos', 'Branco e azul com um brilho que corre pelas letras.', 'gojo')
+_item('placa', 'gojo', 'Venda', 'Uma faixa preta de tecido, com um brilho azul passando por trás.', 'gojo')
+_item('faixa', 'gojo', 'Vazio Ilimitado', 'Um céu preto de estrelas e linhas de luz que convergem para um centro roxo.', 'gojo')
+_item('efeito_avatar', 'gojo', 'Azul e Vermelho', 'Dois orbes, um azul e um vermelho, giram em volta da foto e, quando se cruzam, estoura um clarão roxo.', 'gojo')
+_item('efeito_perfil', 'gojo', 'Expansão de Domínio: Vazio Ilimitado', 'Uma aura azul se expande, os dedos se cruzam, e o cartão inteiro vira um vazio de estrelas e linhas de luz. Some, espera uns 4 segundos e recomeça.', 'gojo')
+_item('efeito_fala', 'gojo', 'Infinito ao Falar', 'Quando você fala na call, ondas azuis se afastam do avatar sem nunca encostar nele.', 'gojo')
+_item('efeito_radar', 'gojo', 'Ondas do Infinito', 'As ondas do seu radar viram anéis de luz azul e branca.', 'gojo')
+_item('efeito_chat', 'gojo', 'Azul', 'A barra de mensagem brilha em azul ao digitar e solta um orbe ao enviar.', 'gojo')
+_item('som_call', 'gojo', 'Expansão de Domínio', 'Um estalo de mãos, um grave que cresce e um brilho que varre ao entrar na call.', 'gojo')
+_item('pin_nota', 'gojo', 'Roxo Oco', 'Suas notas no mapa viram um orbe roxo girando.', 'gojo')
+_item('efeito_servidor', 'gojo', 'Servidor Infinito', 'O ícone do servidor ganha um brilho azul e branco que respira (barra, cabeçalho e mapa).', 'gojo')
+
+_item('moldura', 'sukuna', 'Aura Maldita', 'Um anel vermelho e, por fora, uma aura que se expande sem parar.', 'sukuna')
+_item('nome', 'sukuna', 'Flecha em Chamas', 'De tempos em tempos uma flecha cai sobre o seu nome e ele pega fogo.', 'sukuna')
+_item('placa', 'sukuna', 'Cortes', 'Uma barra escura riscada por cortes brancos que aparecem de repente.', 'sukuna')
+_item('faixa', 'sukuna', 'Santuário Malevolente', 'Um santuário de silhueta preta sob uma lua vermelha, com cinzas e cortes.', 'sukuna')
+_item('efeito_avatar', 'sukuna', 'Marcas Malditas', 'Brasas e um anel vermelho pulsando em volta da foto.', 'sukuna')
+_item('efeito_perfil', 'sukuna', 'Expansão de Domínio: Santuário Malevolente', 'A aura vermelha se expande, as mãos fazem o selo, os dentes se fecham em volta do cartão e abrem, com cortes por cima. Some, espera uns 4 segundos e recomeça.', 'sukuna')
+_item('efeito_fala', 'sukuna', 'Aura ao Falar', 'Quando você fala na call, a aura vermelha se expande em volta do avatar.', 'sukuna')
+_item('efeito_radar', 'sukuna', 'Ondas Malditas', 'As ondas do seu radar viram anéis vermelhos tracejados.', 'sukuna')
+_item('efeito_chat', 'sukuna', 'Corte', 'A barra de mensagem pulsa em vermelho ao digitar e leva um corte ao enviar.', 'sukuna')
+_item('som_call', 'sukuna', 'Santuário', 'Dois tambores graves, um rosnado e um corte de ar ao entrar na call.', 'sukuna')
+_item('pin_nota', 'sukuna', 'Dedo Maldito', 'Suas notas no mapa viram um orbe vermelho rachado.', 'sukuna')
+_item('efeito_servidor', 'sukuna', 'Servidor Malevolente', 'O ícone do servidor pulsa em vermelho (barra, cabeçalho e mapa).', 'sukuna')
+
+_item('moldura', 'mahoraga', 'Roda Divina', 'Uma roda de oito encaixes dourados que gira um encaixe por vez.', 'mahoraga')
+_item('nome', 'mahoraga', 'General Divino', 'Ouro e branco que piscam a cada encaixe da roda.', 'mahoraga')
+_item('placa', 'mahoraga', 'Adaptação', 'Pedra escura com uma régua de encaixes dourados andando aos passos.', 'mahoraga')
+_item('faixa', 'mahoraga', 'A Roda Gira', 'Uma roda gigante dourada que gira um encaixe por vez sobre um fundo de pedra.', 'mahoraga')
+_item('efeito_avatar', 'mahoraga', 'Halo da Roda', 'Uma roda de oito raios gira aos passos em volta da foto.', 'mahoraga')
+_item('efeito_perfil', 'mahoraga', 'Adaptação', 'A roda aparece no topo do cartão, gira um encaixe de cada vez e, no fim, o cartão pulsa em dourado: adaptou.', 'mahoraga')
+_item('efeito_fala', 'mahoraga', 'Adaptando', 'Quando você fala na call, a moldura pisca em ouro, aos passos.', 'mahoraga')
+_item('efeito_radar', 'mahoraga', 'Ondas Divinas', 'As ondas do seu radar viram anéis dourados pontilhados, que avançam aos passos.', 'mahoraga')
+_item('efeito_chat', 'mahoraga', 'Encaixe', 'A barra de mensagem brilha em ouro ao digitar e solta losangos dourados ao enviar.', 'mahoraga')
+_item('som_call', 'mahoraga', 'Sino do Templo', 'Um sino grave e oito cliques da roda ao entrar na call.', 'mahoraga')
+_item('pin_nota', 'mahoraga', 'Roda', 'Suas notas no mapa viram uma roda dourada.', 'mahoraga')
+_item('efeito_servidor', 'mahoraga', 'Servidor Divino', 'O ícone do servidor pisca em ouro, aos passos (barra, cabeçalho e mapa).', 'mahoraga')
+
 # ---- LOJA (Armazém) ----
 # Tabela central de preços em DRC por raridade e tipo. É a ÚNICA fonte: item da loja usa `_item_loja`, que lê daqui.
 # Calibrada com `python testes/calibrar_precos.py` (conta em cima de quanto cada perfil de uso ganha por dia). Premissas: os 500 DRC
@@ -376,6 +422,10 @@ _item('efeito_servidor', 'fusao', 'Fusão do Servidor', 'Laranja e roxo disputan
 _item('pacote', 'gogeta', 'Gogeta completo', 'Equipa tudo do tema Gogeta de uma vez.', 'gogeta')
 _item('pacote', 'sasuke', 'Sasuke completo', 'Equipa tudo do tema Sasuke de uma vez.', 'sasuke')
 _item('pacote', 'fusao', 'Fusão completa', 'Equipa a moldura, a placa, o nome e a faixa da Fusão.', 'fusao')
+_item('pacote', 'gojo', 'Gojo completo', 'Equipa tudo do tema Gojo de uma vez.', 'gojo')
+_item('pacote', 'sukuna', 'Sukuna completo', 'Equipa tudo do tema Sukuna de uma vez.', 'sukuna')
+_item('pacote', 'mahoraga', 'Mahoraga completo', 'Equipa tudo do tema Mahoraga de uma vez.', 'mahoraga')
+_item('pacote', 'jjk', 'Combo JJK: Gojo × Sukuna', 'O melhor dos dois lados no mesmo perfil: o Infinito do Gojo e a aura do Sukuna, o domínio dele no cartão e o seu som na call.', 'jjk')
 # Pacotes da loja: o preço é calculado (soma dos itens menos DESCONTO_PACOTE), ver `recalcular_pacotes`.
 _pacote_loja('relojoaria', 'Pacote Relojoaria', 'Moldura, nome, placa e faixa da Relojoaria, equipados de uma vez.')
 _pacote_loja('dualidade', 'Pacote Dualidade', 'Moldura, nome, placa e faixa da Dualidade, equipados de uma vez.')
@@ -419,6 +469,13 @@ def recalcular_pacotes():
 
 recalcular_pacotes()
 
+# Combo JJK: uma mistura escolhida a dedo (o pacote normal pega o 1º item de cada tipo de UM tema; este mistura dois lados).
+PACOTES['jjk'] = {
+    'moldura': 'gojo', 'nome': 'sukuna', 'placa': 'gojo', 'faixa': 'sukuna',
+    'efeito_avatar': 'gojo', 'efeito_perfil': 'sukuna', 'efeito_fala': 'sukuna', 'efeito_radar': 'gojo',
+    'efeito_chat': 'sukuna', 'som_call': 'gojo', 'pin_nota': 'sukuna',
+}
+
 
 def ids_do_tipo(tipo):
     """Ids (sem o prefixo do tipo) dos itens EXCLUSIVOS desse tipo."""
@@ -450,11 +507,12 @@ def _itens_do_tema(tema):
     return [i for i, d in CATALOGO.items() if d['tema'] == tema and d['tipo'] != 'badge']
 
 
+_JJK = [i for t in ('gojo', 'sukuna', 'mahoraga', 'jjk') for i in _itens_do_tema(t)]
 LABORATORIO = {
     'aquele.sales': (['badge:criador', 'badge:alpha_tester', 'badge:beta_tester', 'badge:coder', 'badge:so_nos']
-                     + _itens_do_tema('gogeta') + _itens_do_tema('fusao')),
+                     + _itens_do_tema('gogeta') + _itens_do_tema('fusao') + _JJK),
     'filippo.chiarion': (['badge:criador', 'badge:alpha_tester', 'badge:beta_tester', 'badge:coder', 'badge:so_nos']
-                         + _itens_do_tema('sasuke') + _itens_do_tema('fusao')),
+                         + _itens_do_tema('sasuke') + _itens_do_tema('fusao') + _JJK),
 }
 
 

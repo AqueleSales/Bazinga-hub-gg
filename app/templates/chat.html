@@ -1749,6 +1749,11 @@
         .pf-efeito b { font-size: 13px; color: var(--text-header); }
         .pf-efeito small { font-size: 11px; color: var(--text-muted); font-weight: 700; }
         .pf-efeito.bloqueado { opacity: .6; }
+        button.pf-efeito { cursor: pointer; text-align: left; font: inherit; color: inherit; transition: transform .12s, border-color .12s, background-color .12s; }
+        button.pf-efeito:hover { transform: translateY(-2px); border-color: var(--brand-color); }
+        .pf-efeito.ativo { border-color: var(--brand-color); background: rgba(88,101,242,.14); }
+        .pf-efeito.ativo i { color: var(--green-color); }
+        .pf-efeito.vazio { grid-column: 1 / -1; opacity: .85; }
 
         .pf-presenca button.larga { grid-column: 1 / -1; }
         .pf-presenca button small { margin-left: auto; font-size: 11px; color: var(--text-muted); font-weight: 600; }
@@ -4329,12 +4334,8 @@
                                 </div>
                                 <div class="pf-grupo">
                                     <span class="control-label">Efeitos de perfil</span>
-                                    <div class="pf-efeitos">
-                                        <div class="pf-efeito bloqueado"><i class="fa-solid fa-lock"></i><b>Faíscas</b><small>Em breve</small></div>
-                                        <div class="pf-efeito bloqueado"><i class="fa-solid fa-lock"></i><b>Aurora</b><small>Em breve</small></div>
-                                        <div class="pf-efeito bloqueado"><i class="fa-solid fa-lock"></i><b>Chuva de estrelas</b><small>Em breve</small></div>
-                                    </div>
-                                    <span class="pf-dica">Animações que rodam por cima do cartão. Vão ser desbloqueadas pelo Battle Pass e pela loja.</span>
+                                    <div class="pf-efeitos" id="pf-efeitos-lista"></div>
+                                    <span class="pf-dica">Animações que rodam por cima do cartão e em volta da sua foto. Clique num efeito que você tem pra equipar (de novo pra tirar). Os outros estão no Armazém.</span>
                                 </div>
                             </div>
 
@@ -10415,8 +10416,32 @@
             return eq;
         }
 
+        // Configurações > Meu Perfil > Efeitos de perfil: os efeitos de cartão e de foto que a pessoa TEM (a posse é do servidor; clicar só pede pra equipar/tirar)
+        function desenharEfeitosDoEditor() {
+            const el = document.getElementById('pf-efeitos-lista');
+            if (!el) return;
+            const eq = (inventario && inventario.equipados) || {};
+            const meus = ((inventario && inventario.catalogo) || []).filter(d => d.tipo === 'efeito_perfil' || d.tipo === 'efeito_avatar');
+            if (!meus.length) {
+                el.innerHTML = '<div class="pf-efeito vazio"><b>Você ainda não tem efeitos de perfil</b><small>Os temas premium do Armazém trazem um por tema.</small></div>';
+                return;
+            }
+            el.innerHTML = meus.map(d => {
+                const on = eq[d.tipo] === d.valor;
+                return `<button type="button" class="pf-efeito ${on ? 'ativo' : ''}" data-id="${esc(d.id)}" data-tipo="${esc(d.tipo)}"><i class="fa-solid ${on ? 'fa-circle-check' : 'fa-wand-sparkles'}"></i><b>${esc(d.nome)}</b><small>${d.tipo === 'efeito_perfil' ? 'Cartão' : 'Foto'}${on ? ' · equipado' : ''}</small></button>`;
+            }).join('');
+        }
+        document.getElementById('pf-efeitos-lista')?.addEventListener('click', (e) => {
+            const b = e.target.closest('button.pf-efeito');
+            if (!b) return;
+            if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
+            if (b.classList.contains('ativo')) socket.emit('desequipar_item', { tipo: b.dataset.tipo });
+            else socket.emit('equipar_item', { item_id: b.dataset.id });
+        });
+
         function desenharInventario() {
             const raiz = document.getElementById('inv-raiz');
+            desenharEfeitosDoEditor();
             if (!raiz) return;
             Cosm.renderInventario(raiz, inventario, {
                 livres: livresDoInventario(), nome: perfilMeu.nome, avatarHtml: avatarMini(), aba: invAba, temas: { ...TEMAS_COSM, ...((inventario && inventario.temas) || {}) },
@@ -10580,6 +10605,7 @@
             if (socket.connected) socket.emit('listar_inventario');   // foto fresca (posse pode ter mudado em outro aparelho)
         });
         document.getElementById('btn-inventario').addEventListener('click', () => abrirInventario());
+        setTimeout(desenharEfeitosDoEditor, 0);   // 1ª pintura dos efeitos do editor (o inventário já veio no HTML)
 
         preencherCamposDoRascunho();
         pintarPrevia();
