@@ -27,7 +27,7 @@ TEMAS = {
              'desc': 'Infinito, Seis Olhos, o azul e o vermelho que viram roxo e a Expansão de Domínio: Vazio Ilimitado, com os dedos cruzados.'},
     'sukuna': {'nome': 'Sukuna', 'cor': '#e63946', 'loja': True, 'premium': True, 'cores': ['#e63946', '#f3e9d2'], 'icone': 'fa-skull',
                'lema': 'Aqui é o meu santuário.',
-               'desc': 'Aura maldita, flecha em chamas, cortes e a Expansão de Domínio: Santuário Malevolente, com o selo das mãos e os dentes.'},
+               'desc': 'Aura maldita, nome em brasa, cortes e a Expansão de Domínio: Santuário Malevolente, com as marcas do rosto e montes de cortes pretos.'},
     'mahoraga': {'nome': 'Mahoraga', 'cor': '#d9a520', 'loja': True, 'premium': True, 'cores': ['#d9a520', '#2b2d2a'], 'icone': 'fa-dharmachakra',
                  'lema': 'Tudo se adapta.', 'desc': 'A roda dourada que gira um encaixe de cada vez, e se adapta.'},
     'jjk': {'nome': 'Combo JJK', 'cor': '#9b5cff', 'combo': True, 'desc': 'Gojo contra Sukuna no mesmo perfil.'},
@@ -373,7 +373,7 @@ _tema_premium('gojo', [
 ], 'lendario')
 _tema_premium('sukuna', [
     ('moldura', 'Aura Maldita', 'Um anel vermelho e, por fora, uma aura que se expande sem parar.'),
-    ('nome', 'Flecha em Chamas', 'De tempos em tempos uma flecha de fogo (o Fuga) cai sobre o seu nome e ele pega fogo.'),
+    ('nome', 'Nome em Brasa', 'O seu nome pega fogo: chamas sobem uma vez por baixo das letras e o nome fica vermelho e amarelo por 8 segundos, de tempos em tempos.'),
     ('placa', 'Cortes', 'Uma barra escura riscada por cortes brancos que aparecem de repente.'),
     ('faixa', 'Santuário Malevolente', 'Um santuário de silhueta preta sob uma lua vermelha, com cinzas e cortes.'),
     ('efeito_avatar', 'Marcas Malditas', 'Brasas e um anel vermelho pulsando em volta da foto.'),

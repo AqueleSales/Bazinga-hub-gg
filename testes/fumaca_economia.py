@@ -333,8 +333,8 @@ with app.app_context():
     ok(all(re.fullmatch(r'[MLQZ0-9 .\-]+', marcas[k]) for k in ('testa', 'nariz', 'face')), 'Marcas: só comandos de caminho SVG (nada de texto solto que vire HTML)')
     ok('class="sk-marcas"' in JS_COSM or "marcasSukunaSvg('sk-marcas')" in JS_COSM, 'Sukuna: o domínio mostra as marcas')
     ok('.sk-marcas' in CSS and '.sk-borda' in CSS and '.sk-chama' in CSS, 'Sukuna: aura vermelha (borda/chama) e marcas no CSS')
-    # nome do Sukuna: flecha de fogo caindo + chamas
-    ok('@keyframes sukunaFlecha' in CSS and '.ne-sukuna::before' in CSS and '.ne-sukuna::after' in CSS and '@keyframes sukunaChamas' in CSS, 'Nome do Sukuna: flecha de fogo (::after) e chamas (::before)')
+    # nome do Sukuna: sem flecha; chamas aparecem uma vez e a cor de fogo dura 8 s
+    ok('sukunaFlecha' not in CSS and '.ne-sukuna::before' in CSS and '.ne-sukuna::after' in CSS and '@keyframes sukunaChama' in CSS and 'animation: neSukuna 20s' in CSS, 'Nome do Sukuna: sem flecha, fogo que sobe uma vez (::before/::after) e a cor em brasa num ciclo de 20 s')
     # Gojo: vazio que enche o cartão inteiro, seis olhos humanos, orbes de verdade no avatar
     ok(re.search(r'\.gj-vazio \{ position: absolute; inset: 0;', CSS) is not None, 'Gojo: o vazio enche o cartão inteiro (inset 0, nada de bolha)')
     m_olhos = re.search(r'const olhos = (\[\[.*?\]\])\.map', JS_COSM)
