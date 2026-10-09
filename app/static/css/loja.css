@@ -190,7 +190,7 @@
 .arm-modal { position: fixed; inset: 0; z-index: 10400; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(8, 8, 12, .78); animation: armFade .18s ease-out; }
 @keyframes armFade { from { opacity: 0; } }
 .arm-modal.sem-anim, .arm-modal.sem-anim .arm-modal-card { animation: none; }
-.arm-modal-card { position: relative; display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr); width: min(900px, 100%); max-height: min(92vh, 640px); border-radius: 26px; overflow: hidden; background: var(--bg-primary); border: 2px solid color-mix(in srgb, var(--c) 55%, #000); box-shadow: 0 8px 0 color-mix(in srgb, var(--c) 35%, #000); animation: armSobe .26s cubic-bezier(.16, .84, .44, 1); }
+.arm-modal-card { position: relative; display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr); grid-template-rows: minmax(0, 1fr); width: min(900px, 100%); max-height: min(92vh, 640px); border-radius: 26px; overflow: hidden; background: var(--bg-primary); border: 2px solid color-mix(in srgb, var(--c) 55%, #000); box-shadow: 0 8px 0 color-mix(in srgb, var(--c) 35%, #000); animation: armSobe .26s cubic-bezier(.16, .84, .44, 1); }
 @keyframes armSobe { from { opacity: 0; transform: translateY(24px) scale(.97); } }
 .arm-modal-palco { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 30px 22px; min-height: 340px; background: color-mix(in srgb, var(--c) 22%, var(--bg-secondary)); overflow: hidden; }
 .arm-modal-palco::before { content: ''; position: absolute; width: 360px; height: 360px; border-radius: 50%; left: -120px; top: -140px; background: color-mix(in srgb, var(--a) 22%, transparent); pointer-events: none; }
@@ -204,7 +204,7 @@
 .arm-palco-prev .inv-faixa { height: 112px; max-width: 340px; border-radius: 16px; }
 .arm-palco-prev .arm-perfil { width: 270px; transform: rotate(-2deg); }
 .arm-palco-dica { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
-.arm-modal-lado { display: flex; flex-direction: column; gap: 12px; padding: 28px 28px 24px; overflow-y: auto; }
+.arm-modal-lado { display: flex; flex-direction: column; gap: 12px; padding: 28px 28px 0; overflow-y: auto; }
 .arm-modal-lado h3 { margin: 4px 0 0; font-size: 30px; font-weight: 800; letter-spacing: -.01em; color: var(--text-header); }
 .arm-modal-lado .desc { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--text-normal); }
 .arm-fechar { position: absolute; top: 12px; right: 12px; z-index: 6; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); }
@@ -215,6 +215,10 @@
 .arm-conteudo button.tem { border-color: color-mix(in srgb, var(--green-color) 60%, var(--bg-tertiary)); }
 .arm-conteudo button .mini { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; }
 .arm-conteudo .pf-tile-av { width: 40px; height: 40px; }
+/* avatares com efeito (orbes, brilho de fala) saem do círculo: encolhe e dá espaço, senão passam por cima do nome do item */
+.arm-conteudo .inv-av-ef { width: 36px; height: 36px; margin: 14px 0; }
+.arm-conteudo .mini { overflow: hidden; }
+.arm-conteudo .inv-fala .inv-av-img { animation: none !important; }
 .arm-conteudo .cat-nome { font-size: 16px; }
 .arm-conteudo .inv-nome-prev { background: transparent; padding: 0; }
 .arm-conteudo .inv-faixa { height: 40px; }
@@ -224,6 +228,8 @@
 .arm-parte:hover { background: color-mix(in srgb, var(--c) 12%, transparent); }
 .arm-parte b { color: var(--text-header); }
 .arm-compra { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
+/* a coluna da direita ROLA (a grade do cartão tem altura máxima); preço e botão de comprar ficam grudados embaixo, sempre à vista, mesmo com 11 itens no pacote */
+.arm-modal-lado .arm-compra { position: sticky; bottom: 0; z-index: 3; padding: 14px 0 24px; background: var(--bg-primary); box-shadow: 0 -16px 14px -6px var(--bg-primary); }
 .arm-preco-grande { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
 .arm-preco-grande .v { display: inline-flex; align-items: center; gap: 8px; font-size: 32px; font-weight: 800; color: var(--yellow-color); }
 .arm-preco-grande s { font-size: 15px; font-weight: 700; color: var(--text-muted); }
@@ -293,9 +299,9 @@
     .arm-trilho > .arm-card.pacote { flex-basis: 232px; }
     .arm-grade { grid-template-columns: repeat(2, 1fr); }
     .arm-modal { padding: 0; align-items: flex-end; }
-    .arm-modal-card { grid-template-columns: 1fr; max-height: 94vh; border-radius: 24px 24px 0 0; overflow-y: auto; animation-name: armSobeCel; }
+    .arm-modal-card { grid-template-columns: 1fr; grid-template-rows: auto; max-height: 94vh; border-radius: 24px 24px 0 0; overflow-y: auto; animation-name: armSobeCel; }
     .arm-modal-palco { min-height: 0; padding: 40px 18px 22px; }
-    .arm-modal-lado { overflow: visible; padding: 20px 18px 24px; }
+    .arm-modal-lado { overflow: visible; padding: 20px 18px 0; }
     .arm-modal-lado h3 { font-size: 26px; }
 }
 @keyframes armSobeCel { from { transform: translateY(100%); } }

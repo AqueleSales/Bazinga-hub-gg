@@ -372,6 +372,13 @@ with app.app_context():
     ok(BAZAR_JS.count('class="bz-fgrupo"') == 2 and 'bz-frotulo' in BAZAR_JS and '.bz-fgrupo + .bz-fgrupo' in BAZAR_CSS and '#bz-v-feed { display: flex; flex-direction: column; gap:' in BAZAR_CSS,
        'Bazar: os filtros são dois blocos rotulados e o feed tem espaçamento entre as partes')
 
+    # ---- Armazém: modal de pacote com muitos itens ROLA e o botão de comprar fica à vista (a grade do cartão tem altura máxima) ----
+    LOJA_CSS = open(os.path.join(RAIZ, 'css', 'loja.css'), encoding='utf-8').read()
+    m_card = re.search(r'^\.arm-modal-card \{[^}]*\}', LOJA_CSS, re.M)
+    ok(m_card is not None and 'grid-template-rows: minmax(0, 1fr)' in m_card.group(0) and 'max-height' in m_card.group(0),
+       'Modal do Armazém: a linha da grade é limitada pela altura máxima (sem isso a coluna da direita não rolava e cortava o botão de comprar)')
+    ok(re.search(r'\.arm-modal-lado \.arm-compra \{[^}]*position: sticky[^}]*bottom: 0', LOJA_CSS) is not None, 'Modal do Armazém: preço e botão de comprar ficam grudados embaixo, à vista')
+
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)
 sys.exit(1 if falhas else 0)
