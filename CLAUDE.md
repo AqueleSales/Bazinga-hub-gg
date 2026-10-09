@@ -43,7 +43,18 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 | `desktop/` | Casca Electron do app desktop (`main.js`, `preload.js`, `login.html`, `seletor.html`; ver Rodada 7) |
 | `app/templates/abrir.html` | Tela pós-login "continuar/instalar" — hoje órfã (ver seção) |
 | `atualizar_banco.py` | Migração manual — **rodar sempre que mexer em `models.py`** |
-| `seed.py` / `seed_loja.py` | Popula cargos/canais/produtos padrão |
+| `seed.py` | Popula cargos/canais padrão (`seed_loja.py` foi removido na Rodada 14) |
+
+---
+
+# ONDE RETOMAR (leia isto primeiro numa conversa nova)
+
+Estado em 08/10/2026 (tudo commitado e enviado ao `main`; a suíte inteira passa; `.venv\Scripts\python.exe`, não o `python` do PATH):
+- **Últimas rodadas** (cada uma tem seção própria abaixo, procure por "Rodada 10" ... "Rodada 16" e "Rolagem pesada"): 10 Armazém · 11/12 Bazar · 13 preços/temas · 14 DRC por missão, relíquia, edições limitadas, coleção · 15 filtros do Armazém, raridades, Cyber Neon/Eldoria/Arcade · 16 JJK à venda e Efeitos de perfil nas Configurações · rolagem pesada (animações pausam ao rolar).
+- **Desktop 0.3.0** já publicado em `AqueleSales/panteao-releases` (traz a localização pelo navegador; o 0.2.1 não tinha, por isso o mapa não achava a posição). Mudança só no site não exige instalador novo.
+- **Ações só do dono** (nenhuma foi feita): trocar as credenciais do `.env` que foram pro histórico (commit `e7e2a27`: Neon, Google, SECRET_KEY) · depois de cada deploy `python atualizar_banco.py` · `python bazar_admin.py admin aquele.sales` · testar no Neon e com 2 pessoas reais (celular + PC) · colar o Pix copia e cola num banco · ver tudo no monitor dele (só vi na pane do navegador) · decidir a paleta geral · se a loja virar comercial, trocar nomes de JJK/DBZ/Naruto por criações originais.
+- **O que falta fazer** (lista completa no `BACKLOG.md`, seção final "O QUE FALTA"): os 10 temas de jogo/anime (Brawlhalla, LoL, SNK, JoJo-like, Umamusume, Rematch, Roblox-like, Marvel Rivals-like, Blue Lock-like, TF2-like); Bazar (favoritos, ordenação, anúncios com arte/cliques, disputa, banimento, reputação, frete, loja no mapa, feed em escala, modelo B com gateway); app (patente ao lado do nome, menção em DM, denunciar mensagem, escolher o trecho do vídeo).
+- **Lições que custaram caro** (não repita): (1) ~240 animações de repaint travaram a rolagem: prefira `transform`/`opacity` e respeite o `body.rolando`; (2) id de item só `[a-z_]` (números fazem o preview sumir); (3) **não desenhe mão em SVG** (duas tentativas ruins); (4) heredoc com `'''` e barras duplas quebra a ferramenta de shell: escreva scripts de patch com a ferramenta de escrita de arquivo; (5) teste de UI: servidor local descartável fora do repo (ver "Testando sem tocar no banco de produção"), e linha do tempo congelada com `document.getAnimations()`.
 
 ---
 
@@ -238,7 +249,7 @@ mesmo quem estava no mapa ou numa DM.
 ## Modelos
 
 `Role` · `Person` · `Server` · `Channel` · `Message` · `Reaction` ·
-`Invite` · `Event` · `DirectMessage` · `Friendship` · `Product` · `Purchase` ·
+`Invite` · `Event` · `DirectMessage` · `Friendship` · `LojaEstoque` (os antigos `Product`/`Purchase` saíram do código na Rodada 14; as tabelas seguem no Neon) ·
 `GeoNote` · `MapServer`
 
 Tabelas de associação: `server_members` (quem está no servidor) e
@@ -313,7 +324,6 @@ sua própria versão do servidor.
 `/` · `/entrar` · `/abrir` · `/chat` · `/convite/<code>` ·
 `/manifest.webmanifest` · `/sw.js` ·
 `/api/mensagens/<id>` · `/api/dms/<id>` · `/api/mapa/dados` ·
-`/api/produtos` · `/api/produtos/<id>/comprar` · `/api/inventario` ·
 `/api/upload` · `/api/gifs?q=<busca>` · `/api/localizacao/ip` · `/api/convite/<code>/previa`
 
 ---
@@ -1806,7 +1816,7 @@ transferir, sem sacar. Temas de jogos/animes de terceiros (TF2, JJK...) entram s
   `compra|nivel|ajuste`, `ref`). Hoje grava compras e o ganho por nível (`_somar_xp`). `Person.bazinga_coins` continua sendo o saldo de leitura.
   **Todo novo jeito de ganhar/gastar DRC precisa escrever aqui** (e gastar passa pelo UPDATE condicional, nunca "ler, subtrair, gravar").
 - **Regra 6**: `compra_ok`, `saldo_atualizado`, `loja` e `inventario` vão pra `sala_pessoal` (todas as abas de quem comprou). O cliente só marca "seu" quando o servidor confirma.
-- **A rota antiga `/api/produtos/<id>/comprar` morreu (410)**: era "ler saldo, subtrair, gravar" (corrida) e só gravava um `Purchase` sem entregar nada.
+- **(REMOVIDA na Rodada 14: hoje dá 404)** A rota antiga `/api/produtos/<id>/comprar` morreu (410): era "ler saldo, subtrair, gravar" (corrida) e só gravava um `Purchase` sem entregar nada.
   `/api/produtos` agora lista só o **Bazar** (`is_official` falso). A trava "comprar exige localização ligada" valia pra essa rota; **o Armazém não exige**
   (cosmético não tem nada a ver com onde a pessoa está) — quando o Bazar físico/Pix vier, a trava volta lá. `seed_loja.py` ainda cria os produtos-placebo
   antigos (`is_official`): não aparecem mais em lugar nenhum e podem ser removidos.
@@ -1898,7 +1908,7 @@ O toldo é CSS puro (listras + franjas com `mask`). Celular: modais viram folha.
 - **Pegadinha de nome**: o `chat.html` já tinha `.bz-radio` e outras classes `bz-*` (criação de servidor). As minhas que colidiram viraram `.bz-opcao` e `.bz-contagem`. **Antes de criar classe `bz-` nova, confira com `grep -o "\.bz-[a-z-]*" app/templates/chat.html`.**
 
 ### Legado que ficou órfão
-`Product`/`Purchase`, `/api/produtos`, `/api/inventario` (compras da loja antiga) e `seed_loja.py` não aparecem mais em lugar nenhum; `carregarMercado()` virou no-op. Podem ser removidos numa limpeza (cuidado: `Purchase` é histórico de compras antigas).
+**(REMOVIDO na Rodada 14)** `Product`/`Purchase`, `/api/produtos`, `/api/inventario` (compras da loja antiga) e `seed_loja.py` não aparecem mais em lugar nenhum; `carregarMercado()` virou no-op. Podem ser removidos numa limpeza (cuidado: `Purchase` é histórico de compras antigas).
 
 ---
 

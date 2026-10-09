@@ -194,3 +194,23 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [x] Gojo, Sukuna, Mahoraga (lendários, 12 itens cada, todos os slots, pacote 5050 DRC) + Combo JJK; domínios só com cortes pretos/dentes/vazio/roda (mãos e dedos removidos a pedido); "Efeitos de perfil" das Configurações liberado.
 - [ ] **Ver no seu monitor**: domínios no cartão, fala na call, radar, som de entrada, pin de nota e efeito de servidor dos 3.
 - [ ] Se a loja virar comercial (Pix): trocar nomes/referências de JJK, DBZ e Naruto por criações originais.
+
+---
+
+## O QUE FALTA (lista única e atualizada em 08/10/2026; as listas das rodadas acima são histórico)
+**Decisões/ações do dono (eu não consigo fazer)**
+- [ ] **Trocar as credenciais do `.env`** que foram pro histórico do git (commit `e7e2a27`: Neon, Google OAuth, `SECRET_KEY`). É a mais urgente.
+- [ ] Depois de cada deploy: `python atualizar_banco.py` (e uma vez `python bazar_admin.py admin aquele.sales`). As tabelas `loja_estoque`, `bazar_*`, `movimento_drc` nascem sozinhas.
+- [ ] Testar no Neon e **com 2 pessoas reais** (celular + PC): comprar numa aba e ver saldo/inventário na outra, duas abas comprando junto, pedido do Bazar de ponta a ponta, call, mapa.
+- [ ] Colar o **Pix copia e cola** no app de um banco de verdade (nome do recebedor, valor).
+- [ ] **Ver no monitor dele** tudo que só vi na pane (800 px e 375 px): efeitos de fala/radar/chat/som/pin/servidor dos temas premium e do JJK, e a rolagem depois do conserto.
+- [ ] Decidir a **paleta geral** do app; trocar sons/arte de **DBZ, Naruto e JJK** por criações originais antes de qualquer loja comercial; assinatura de código do instalador; Electron e PWA sem teste ao vivo.
+**Loja / conteúdo**
+- [ ] 10 temas de jogo/anime (arte original que evoca): Brawlhalla, LoL, SNK, JoJo-like, Umamusume, Rematch, Roblox-like, Marvel Rivals-like, Blue Lock-like, TF2-like.
+- [ ] Recalibrar `PRECOS` com **dados reais** de uso (`calibrar_precos.py` usa perfis supostos).
+- [ ] Desconto de lojas parceiras (só se houver parceria); títulos de temporada e Battle Pass 1–100 próprio (separado do nível).
+**Bazar (modelo A em aberto)**
+- [ ] Favoritos/seguir loja, ordenação (mais vendidos/mais baratos), anúncios com arte/datas/cliques (hoje `PROPAGANDAS_CASA` fixas no `bazar.js`), disputa (tela), banimento de pessoa, reputação mais forte (conta nova com limite), frete/endereço, loja no mapa, moderação de imagem/vídeo, "Bem avaliadas" com mínimo maior, feed em escala, selo do Bazar na barra do celular, **modelo B** (gateway/split/escrow/KYC/CNPJ/CDC/LGPD/menores).
+**App**
+- [ ] Patente/insígnia ao lado do nome nas mensagens e listas; menção (@) em DM; denunciar mensagem; escolher o trecho do vídeo como foto; gadget do mapa (música; pedido ambíguo); remover HTML morto (`#status-picker-menu`, `quality-modal-overlay`, CSS `.popout-*`); redimensionar o chat da call; TURN próprio se a call não conectar (`TURN_URLS`...).
+**Limpeza feita**: legado `Product`/`Purchase`/`/api/produtos`/`seed_loja.py` (as tabelas `product` e `purchase` seguem no Neon: dá pra `DROP` à mão).
