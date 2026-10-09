@@ -29,8 +29,17 @@
 .bz-aviso summary { cursor: pointer; font-weight: 800; color: var(--text-header); }
 .bz-aviso ul { margin: 8px 0 2px 18px; padding: 0; }
 
-/* ---------- filtros ---------- */
-.bz-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+/* ---------- filtros: um cartão com dois blocos separados e rotulados (categoria | tipo + busca) ---------- */
+#bz-v-feed { display: flex; flex-direction: column; gap: 32px; }
+#bz-v-feed > :empty { display: none; }
+.bz-filtros { display: flex; flex-direction: column; gap: 22px; padding: 22px 24px 24px; border-radius: 22px; background: var(--bg-secondary); border: 2px solid var(--bg-tertiary); box-shadow: 0 5px 0 var(--bg-tertiary); }
+.bz-fgrupo { display: flex; flex-direction: column; gap: 14px; }
+.bz-fgrupo + .bz-fgrupo { padding-top: 22px; border-top: 2px dashed var(--bg-tertiary); }
+.bz-frotulo { font-size: 11.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
+.bz-fchips { display: flex; flex-wrap: wrap; gap: 12px; }
+.bz-fbarra { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.bz-fbarra .bz-busca { flex: 1 1 260px; margin-left: 0; }
+.bz-fbarra .bz-busca input { width: 100%; }
 .bz-chip { padding: 8px 15px; border-radius: 999px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-normal); font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); transition: transform .12s; }
 .bz-chip:hover { transform: translateY(-2px); }
 .bz-chip.on { background: var(--brand-color); border-color: color-mix(in srgb, var(--brand-color) 50%, #000); color: #fff; box-shadow: 0 3px 0 color-mix(in srgb, var(--brand-color) 45%, #000); }
@@ -251,8 +260,7 @@
 .bz-dest-item .bz-logo { width: 38px; height: 38px; font-size: 16px; }
 .bz-dest-item b { display: block; font-size: 13.5px; color: var(--text-header); }
 
-/* ---------- filtros ---------- */
-.bz-filtros-lado { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+/* ---------- seletor de tipo ---------- */
 #bz-tipo { padding: 9px 12px; border-radius: 999px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); font-size: 13px; font-weight: 700; outline: none; cursor: pointer; font-family: inherit; }
 .bz-novidade { display: flex; justify-content: center; }
 .bz-fim { padding: 18px; text-align: center; font-size: 13px; font-weight: 700; color: var(--text-muted); }
@@ -342,7 +350,9 @@
     .bz-feed { grid-template-columns: 1fr; gap: 20px; }
     .bz-feed > .bz-loja.grande { grid-column: auto; }
     .bz-loja.grande .bz-topo-grande { grid-template-columns: 1fr; }
-    .bz-filtros-lado { margin-left: 0; width: 100%; }
+    .bz-filtros { padding: 18px 16px 20px; }
+    .bz-fbarra .bz-busca { flex-basis: 100%; }
+    #bz-v-feed { gap: 26px; }
     .bz-ad { grid-template-columns: 1fr; min-height: 0; }
     .bz-ad-arte, .bz-ad-arte.sem { display: none; }
     .bz-ad-txt { padding: 22px 20px 54px; }

@@ -178,13 +178,19 @@ const Loja = (() => {
                 <rect class="ar-px p1" x="40" y="190" width="8" height="8" fill="#4dd0e1"/><rect class="ar-px p2" x="190" y="196" width="8" height="8" fill="#ff4fa3"/><rect class="ar-px p3" x="108" y="206" width="8" height="8" fill="#ffd23f"/></svg>`;
         },
         gojo: () => {
-            let estrelas = '';
+            // o Vazio Ilimitado: um espaço de estrelas, o anel aceso no centro e seis olhos humanos em volta (as peças vêm do Cosm, as mesmas do domínio do perfil)
+            let estrelas = '', luz = '';
             for (let k = 0; k < 16; k++) estrelas += `<circle class="go-est" cx="${(30 + ((k * 53) % 180)).toFixed(0)}" cy="${(30 + ((k * 37) % 180)).toFixed(0)}" r="${(k % 3) + 1}" style="animation-delay:-${(k * 0.37).toFixed(2)}s"/>`;
-            return `<svg class="arte arte-gojo" viewBox="0 0 240 240" aria-hidden="true"><defs><radialGradient id="goOlho"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#a8dcff"/><stop offset=".65" stop-color="#3fa0ff"/><stop offset="1" stop-color="#3fa0ff" stop-opacity="0"/></radialGradient></defs>
-                <circle cx="120" cy="120" r="102" fill="#02030a" stroke="#4aa8ff" stroke-width="3"/><g fill="#fff">${estrelas}</g>
-                <path class="go-inf" d="M120 120 C150 80 205 80 205 120 C205 160 150 160 120 120 C90 80 35 80 35 120 C35 160 90 160 120 120Z" fill="none" stroke="#9fd6ff" stroke-width="4" stroke-linecap="round"/>
-                <g class="go-olhos"><ellipse cx="84" cy="120" rx="30" ry="12" fill="url(#goOlho)"/><ellipse cx="156" cy="120" rx="30" ry="12" fill="url(#goOlho)"/></g>
-                <circle class="go-roxo" cx="120" cy="196" r="12" fill="#9b5cff"/></svg>`;
+            for (let k = 0; k < 14; k++) {
+                const a = (k * 360) / 14 + 6, c = Math.cos(a * Math.PI / 180), sn = Math.sin(a * Math.PI / 180);
+                luz += `<line class="go-est" x1="${(120 + c * 36).toFixed(1)}" y1="${(120 + sn * 36).toFixed(1)}" x2="${(120 + c * (70 + (k % 3) * 12)).toFixed(1)}" y2="${(120 + sn * (70 + (k % 3) * 12)).toFixed(1)}" stroke="#bfe0ff" stroke-width="1.4" stroke-linecap="round" style="animation-delay:-${(k * 0.23).toFixed(2)}s"/>`;
+            }
+            const olhos = [[80, 60], [160, 60], [46, 120], [194, 120], [80, 180], [160, 180]].map(([x, y], k) =>
+                `<g class="go-olho" style="animation-delay:-${(k * 0.45).toFixed(2)}s">${Cosm.svgOlho().replace('<svg ', `<svg x="${x - 21}" y="${y - 12.6}" width="42" height="25.2" `)}</g>`).join('');
+            return `<svg class="arte arte-gojo" viewBox="0 0 240 240" aria-hidden="true">
+                <circle cx="120" cy="120" r="102" fill="#05061c" stroke="#4aa8ff" stroke-width="3"/><circle cx="120" cy="120" r="100" fill="#2a1c78" opacity=".35"/><g fill="#fff">${estrelas}</g>${luz}
+                <circle cx="120" cy="120" r="31" fill="#02030c" fill-opacity=".8"/><circle cx="120" cy="120" r="32.5" fill="none" stroke="#f0b840" stroke-width="1.4"/><circle cx="120" cy="120" r="30" fill="none" stroke="#fff" stroke-width="4"/>
+                ${olhos}</svg>`;
         },
         sukuna: () => {
             const lente = (cx, cy, len, ang, th) => {
@@ -194,21 +200,17 @@ const Loja = (() => {
                 });
                 return pts.join(' ');
             };
-            const cortes = [[96, 100, 170, -24, 8], [138, 132, 160, 18, 8], [112, 150, 140, -52, 7], [140, 90, 130, 60, 7], [120, 120, 200, -8, 9]]
-                .map(([cx, cy, len, ang, th], k) => `<polygon class="su-corte" points="${lente(cx, cy, len, ang, th)}" style="animation-delay:${(k * 0.55).toFixed(2)}s"/>`).join('');
-            const dentes = Cosm.svgDentes().replace('<svg ', '<svg x="20" y="4" width="200" height="40" ');
+            const cortes = [[96, 100, 170, -24, 8], [138, 132, 160, 18, 8], [112, 150, 140, -52, 7], [140, 90, 130, 60, 7], [120, 120, 200, -8, 9], [100, 70, 150, 34, 6], [150, 168, 140, -36, 6], [90, 176, 130, 12, 6]]
+                .map(([cx, cy, len, ang, th], k) => `<polygon class="su-corte" points="${lente(cx, cy, len, ang, th)}" style="animation-delay:${(k * 0.4).toFixed(2)}s"/>`).join('');
+            // a lua vermelha com as marcas do rosto (decalcadas da referência) aparecendo e sumindo por baixo dos cortes
+            const marcas = Cosm.svgMarcasSukuna('su-marcas').replace('<svg ', '<svg x="62" y="38" width="116" height="141" ');
             return `<svg class="arte arte-sukuna" viewBox="0 0 240 240" aria-hidden="true"><defs><radialGradient id="suLua" cx=".4" cy=".35"><stop offset="0" stop-color="#ff7b6b"/><stop offset=".6" stop-color="#b3122b"/><stop offset="1" stop-color="#4a0a12"/></radialGradient></defs>
-                <circle class="su-lua" cx="120" cy="120" r="88" fill="url(#suLua)"/>${dentes}<g transform="translate(0 240) scale(1 -1)">${dentes}</g>${cortes}</svg>`;
+                <circle class="su-lua" cx="120" cy="120" r="88" fill="url(#suLua)"/>${marcas}${cortes}</svg>`;
         },
         mahoraga: () => {
-            let raios = '', nos = '';
-            for (let k = 0; k < 8; k++) {
-                const a = (k * Math.PI) / 4, c = Math.cos(a), sn = Math.sin(a);
-                raios += `<line x1="${(120 + c * 22).toFixed(1)}" y1="${(120 + sn * 22).toFixed(1)}" x2="${(120 + c * 80).toFixed(1)}" y2="${(120 + sn * 80).toFixed(1)}"/>`;
-                nos += `<circle cx="${(120 + c * 104).toFixed(1)}" cy="${(120 + sn * 104).toFixed(1)}" r="15"/>`;
-            }
+            // o timão da Roda Divina (o mesmo desenho do perfil), girando 45° de uma vez e parando duro
             return `<svg class="arte arte-mahoraga" viewBox="0 0 240 240" aria-hidden="true"><circle class="ma-halo" cx="120" cy="120" r="112" fill="none" stroke="#e8bd3a" stroke-width="2" opacity=".5"/>
-                <g class="ma-giro" stroke="#e8bd3a" stroke-width="6" stroke-linecap="round"><circle cx="120" cy="120" r="80" fill="none"/>${raios}<g fill="#34342e" stroke-width="5">${nos}</g><circle cx="120" cy="120" r="20" fill="#e8bd3a"/></g></svg>`;
+                <svg x="20" y="20" width="200" height="200" viewBox="0 0 200 200"><g class="ma-giro">${Cosm.svgTimao()}</g></svg></svg>`;
         },
         manga: () => {
             let pts = '';

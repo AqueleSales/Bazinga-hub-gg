@@ -321,9 +321,56 @@ with app.app_context():
     db.session.expire_all()
     ok(ev(pobre2, 'erro_bazinga') and cos.equipados_da_pessoa(db.session.get(Person, ids['pobre'])).get('efeito_perfil') is None, 'Quem não comprou o efeito do JJK não equipa')
 
-    # os domínios não têm mão/dedo (ficaram feios): só aura, cortes, dentes, vazio e roda
-    ok('maoSukuna' not in JS_COSM and 'maoGojo' not in JS_COSM and 'sk-maos' not in CSS and 'gj-mao' not in CSS, 'Domínios sem mãos nem dedos (só cortes, dentes, vazio e roda)')
-    ok(len(re.findall(r'\[-?\d+, \d+, \d+, -?\d+, [\d.]+\]', JS_COSM)) >= 10, 'Sukuna: pelo menos 10 cortes no ciclo')
+    # os domínios não têm mão/dedo (ficaram feios) e a boca/dentes do Sukuna saiu (Rodada 17): só aura, marcas, cortes, vazio, olhos e timão
+    ok('maoSukuna' not in JS_COSM and 'maoGojo' not in JS_COSM and 'sk-maos' not in CSS and 'gj-mao' not in CSS, 'Domínios sem mãos nem dedos')
+    ok('dentesSvg' not in JS_COSM and 'sk-mand' not in CSS and 'svgDentes' not in open(os.path.join(RAIZ, 'js', 'loja.js'), encoding='utf-8').read(), 'Sukuna sem a boca/dentes fechando (nem no cartão, nem no carrossel)')
+    m_raj = re.search(r'const RAJADAS_SUKUNA = (\[\[.*?\]\]);', JS_COSM)
+    n_cortes = sum(int(q) for _, q in re.findall(r'\[([\d.]+), (\d+)\]', m_raj.group(1))) if m_raj else 0
+    ok(n_cortes >= 40, f'Sukuna: montes de cortes pretos no ciclo ({n_cortes} em rajadas)')
+    m_marcas = re.search(r'const MARCAS_SUKUNA = (\{.*?\});', JS_COSM)
+    marcas = __import__('json').loads(m_marcas.group(1)) if m_marcas else {}
+    ok(all(len(marcas.get(k, '')) > 150 for k in ('testa', 'nariz', 'face')) and marcas.get('vb', '').startswith('0 0 '), 'Sukuna: as marcas do rosto (testa, nariz, bochechas) estão desenhadas')
+    ok(all(re.fullmatch(r'[MLQZ0-9 .\-]+', marcas[k]) for k in ('testa', 'nariz', 'face')), 'Marcas: só comandos de caminho SVG (nada de texto solto que vire HTML)')
+    ok('class="sk-marcas"' in JS_COSM or "marcasSukunaSvg('sk-marcas')" in JS_COSM, 'Sukuna: o domínio mostra as marcas')
+    ok('.sk-marcas' in CSS and '.sk-borda' in CSS and '.sk-chama' in CSS, 'Sukuna: aura vermelha (borda/chama) e marcas no CSS')
+    # nome do Sukuna: flecha de fogo caindo + chamas
+    ok('@keyframes sukunaFlecha' in CSS and '.ne-sukuna::before' in CSS and '.ne-sukuna::after' in CSS and '@keyframes sukunaChamas' in CSS, 'Nome do Sukuna: flecha de fogo (::after) e chamas (::before)')
+    # Gojo: vazio que enche o cartão inteiro, seis olhos humanos, orbes de verdade no avatar
+    ok(re.search(r'\.gj-vazio \{ position: absolute; inset: 0;', CSS) is not None, 'Gojo: o vazio enche o cartão inteiro (inset 0, nada de bolha)')
+    m_olhos = re.search(r'const olhos = (\[\[.*?\]\])\.map', JS_COSM)
+    ok(m_olhos is not None and len(re.findall(r'\[\d+, \d+\]', m_olhos.group(1))) == 6, 'Gojo: seis olhos em volta do anel')
+    ok('function olhoHumanoSvg' in JS_COSM and 'gj-iris' in JS_COSM and 'gj-olhos' not in CSS, 'Gojo: olhos humanos (esclera, íris, pupila, cílios), sem o brilho azul antigo')
+    ok('gj-azul' in JS_COSM and 'gj-verm' in JS_COSM and 'gj-roxo' in JS_COSM and '@keyframes gjVai' in CSS, 'Gojo: avatar com orbe azul, vermelho que vem ao encontro e o roxo da fusão')
+    # Mahoraga: timão (leme) no perfil e na faixa, girando em degraus duros
+    ok('function timaoSvg' in JS_COSM and 'class="mh-giro"' in JS_COSM and 'mhFaixaGira' in CSS, 'Mahoraga: timão no cartão e na faixa')
+    ok(re.search(r'\.banner-anim-mahoraga::before \{[^}]*data:image/svg\+xml', CSS) is not None, 'Mahoraga: a faixa desenha o timão (imagem), não só um disco preto')
+    ok(len(re.findall(r'rotate\(\d+deg\)', CSS[CSS.index('@keyframes mhGiro'):CSS.index('@keyframes mhGiro') + 3600])) >= 24, 'Mahoraga: 8 estalos de 45° (gira, assenta e para)')
+    # sons de entrada: os três arquivos que o dono mandou, curtos, ligados ao id certo
+    AUDIO = os.path.join(RAIZ, 'audio')
+    for id_som, arq in (('gojo', 'dominio_gojo.mp3'), ('sukuna', 'dominio_sukuna.mp3'), ('mahoraga', 'roda_mahoraga.mp3')):
+        caminho = os.path.join(AUDIO, arq)
+        ok(os.path.isfile(caminho) and 5_000 < os.path.getsize(caminho) < 400_000, f'Som de entrada {id_som}: {arq} existe e é um arquivo leve')
+        ok(f"{id_som}: ['/static/audio/{arq}'" in JS_COSM, f'Som de entrada {id_som}: ligado ao arquivo em ARQ_SOM')
+
+    # ---- script do dono: dar DRC (livro-razão 'ajuste', saldo nunca negativo) ----
+    import conceder_drc
+    ana_id = ids['ana']
+    antes_saldo = db.session.get(Person, ana_id).bazinga_coins or 0
+    novo = conceder_drc.ajustar(ana_id, 40000)
+    ok(novo == antes_saldo + 40000, f'conceder_drc: +40.000 DRC ({antes_saldo} -> {novo})')
+    mov = MovimentoDrc.query.filter_by(person_id=ana_id, motivo='ajuste').order_by(MovimentoDrc.id.desc()).first()
+    ok(mov is not None and mov.delta == 40000 and mov.saldo_apos == novo, 'conceder_drc: o movimento "ajuste" guarda o delta e o saldo que ficou')
+    ok(loja.extrato(db.session.get(Person, ana_id))['itens'][0]['rotulo'] == 'Ajuste', 'conceder_drc: aparece no extrato como "Ajuste"')
+    n_antes = MovimentoDrc.query.filter_by(person_id=ana_id).count()
+    ok(conceder_drc.ajustar(ana_id, -(novo + 1)) is None and MovimentoDrc.query.filter_by(person_id=ana_id).count() == n_antes
+       and db.session.get(Person, ana_id).bazinga_coins == novo, 'conceder_drc: tirar mais do que a pessoa tem não grava nada')
+    ok(conceder_drc.ajustar(ana_id, -1000) == novo - 1000, 'conceder_drc: valor negativo tira DRC')
+
+    # ---- Bazar: filtros em dois blocos separados ----
+    BAZAR_JS = open(os.path.join(RAIZ, 'js', 'bazar.js'), encoding='utf-8').read()
+    BAZAR_CSS = open(os.path.join(RAIZ, 'css', 'bazar.css'), encoding='utf-8').read()
+    ok(BAZAR_JS.count('class="bz-fgrupo"') == 2 and 'bz-frotulo' in BAZAR_JS and '.bz-fgrupo + .bz-fgrupo' in BAZAR_CSS and '#bz-v-feed { display: flex; flex-direction: column; gap:' in BAZAR_CSS,
+       'Bazar: os filtros são dois blocos rotulados e o feed tem espaçamento entre as partes')
 
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)

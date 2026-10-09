@@ -265,10 +265,12 @@ const Bazar = (() => {
         const antes = alvo.querySelector('#bz-busca');
         const foco = antes && document.activeElement === antes, valor = antes ? antes.value : busca;
         const chips = [{ id: 'todas', nome: 'Tudo' }].concat(cat.categorias);
-        alvo.innerHTML = chips.map((c) => `<button type="button" class="bz-chip ${filtro === c.id ? 'on' : ''}" data-a="cat" data-id="${esc(c.id)}">${esc(c.nome)}</button>`).join('')
-            + `<div class="bz-filtros-lado"><select id="bz-tipo" aria-label="Tipo de produto"><option value="">Todos os tipos</option><option value="fisico" ${tipoFiltro === 'fisico' ? 'selected' : ''}>Físico</option><option value="digital" ${tipoFiltro === 'digital' ? 'selected' : ''}>Digital</option><option value="servico" ${tipoFiltro === 'servico' ? 'selected' : ''}>Serviço</option></select>
+        // dois blocos separados e rotulados: de que é a loja (categoria) e o que você procura (tipo, texto, ordem)
+        alvo.innerHTML = `<div class="bz-fgrupo"><span class="bz-frotulo">Categoria</span><div class="bz-fchips">`
+            + chips.map((c) => `<button type="button" class="bz-chip ${filtro === c.id ? 'on' : ''}" data-a="cat" data-id="${esc(c.id)}">${esc(c.nome)}</button>`).join('')
+            + `</div></div><div class="bz-fgrupo"><span class="bz-frotulo">Tipo e busca</span><div class="bz-fbarra"><select id="bz-tipo" aria-label="Tipo de produto"><option value="">Todos os tipos</option><option value="fisico" ${tipoFiltro === 'fisico' ? 'selected' : ''}>Físico</option><option value="digital" ${tipoFiltro === 'digital' ? 'selected' : ''}>Digital</option><option value="servico" ${tipoFiltro === 'servico' ? 'selected' : ''}>Serviço</option></select>
                <label class="bz-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="bz-busca" maxlength="40" placeholder="Buscar loja ou produto..." value="${esc(valor)}"></label>
-               <button type="button" class="bz-btn sec pq" data-a="embaralhar" title="Mostra o feed em outra ordem"><i class="fa-solid fa-shuffle"></i> Embaralhar</button></div>`;
+               <button type="button" class="bz-btn sec pq" data-a="embaralhar" title="Mostra o feed em outra ordem"><i class="fa-solid fa-shuffle"></i> Embaralhar</button></div></div>`;
         if (foco) { const i = alvo.querySelector('#bz-busca'); i.focus(); i.setSelectionRange(valor.length, valor.length); }
     }
 

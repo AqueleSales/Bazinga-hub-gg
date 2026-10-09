@@ -540,6 +540,7 @@ const Cosm = (() => {
     function htmlEfeitoAvatar(id) {
         if (!EFEITOS_AVATAR.includes(id)) return '';
         if (id === 'sasuke') return '<i class="ef-av ef-av-sasuke" aria-hidden="true"></i>';   // olho brilhante: só CSS (anel que acende em vermelho)
+        if (id === 'gojo') return '<i class="ef-av ef-av-gojo" aria-hidden="true"><b class="gj-g"><i class="gj-azul"></i><b class="gj-v"><i class="gj-verm"></i></b><i class="gj-roxo"></i></b></i>';
         return `<i class="ef-av ef-av-${id}" aria-hidden="true"><b></b><b></b></i>`;
     }
 
@@ -599,48 +600,79 @@ const Cosm = (() => {
     }
 
     // ---- Laboratório JJK: três efeitos de perfil "de cena" (ciclo longo, tudo com transform/opacity: nada de repintar a cada quadro).
-    // Mãos e roda são SVG desenhado à mão (silhueta que só evoca); nada vem da obra.
-    // Dentes de caveira: 12 dentes arredondados (incisivos maiores no meio, molares menores nas pontas) numa curva de sorriso, gengiva escura com costelas em arco.
-    // A mandíbula de baixo é a mesma figura virada de cabeça pra baixo (scaleY(-1) no CSS).
-    function dentesSvg() {
-        const pesos = [12, 13, 14, 16, 18, 18, 18, 18, 16, 14, 13, 12], n = pesos.length, tot = pesos.reduce((x, y) => x + y, 0), gap = 1.4, W = 200 - gap * (n + 1);
-        let x = gap, dentes = '';
-        for (let i = 0; i < n; i++) {
-            const w = (pesos[i] / tot) * W, h = 27 - Math.abs(i - 5.5) * 2.5;
-            dentes += `<rect x="${x.toFixed(1)}" y="11" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3.2" fill="#d6c7a8" stroke="#1d070a" stroke-width="1.1"/>`;
-            dentes += `<rect x="${(x + 1).toFixed(1)}" y="11" width="${(w - 2).toFixed(1)}" height="9" fill="#5a0a16" opacity=".75"/>`;
-            x += w + gap;
-        }
-        return `<svg viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="200" height="16" fill="#14030a"/>
-            <path d="M0 13 Q100 -13 200 13" fill="none" stroke="#6b1018" stroke-width="2"/><path d="M0 19 Q100 -7 200 19" fill="none" stroke="#4a0a12" stroke-width="2"/>${dentes}
-            <rect x="0" y="0" width="200" height="12" fill="#14030a"/><path d="M0 12 H200" stroke="#6b1018" stroke-width="1.2"/><rect x="0" y="0" width="200" height="44" fill="#9a0f20" opacity=".24"/></svg>`;
+    // Arte desenhada só com formas e cores (SVG/CSS). Mão não existe (duas tentativas ficaram feias) e a boca do Sukuna saiu na Rodada 17.
+
+    // Marcas do rosto do Sukuna: DECALCADAS das imagens de referência do dono (testa, nariz, linhas das bochechas com os olhinhos e as pontas do
+    // queixo), simétricas. Três caminhos SVG (evenodd) na mesma caixa `vb`. Contorno branco por baixo = o halo dos cortes.
+    const MARCAS_SUKUNA = {"vb": "0 0 176 214", "testa": "M78.0 1.2L78.0 1.2L76.4 3.9Q74.9 6.7 73.9 9.0Q73.0 11.3 70.4 19.3Q67.9 27.3 67.2 32.3Q66.5 37.3 66.5 39.3Q66.4 41.4 66.3 42.1Q66.1 42.9 66.2 44.9Q66.2 46.8 66.4 47.3L66.5 47.8L66.8 46.0Q67.2 44.3 67.6 43.3Q68.0 42.4 69.6 40.7Q71.3 39.0 73.1 38.1Q75.0 37.1 75.7 37.1Q76.4 37.1 77.0 37.4Q77.6 37.8 78.0 38.4Q78.4 39.0 78.8 39.9Q79.1 40.9 79.8 44.0Q80.4 47.1 80.9 52.4Q81.4 57.8 81.7 59.4L82.0 61.1L82.2 60.5Q82.3 60.0 82.5 55.5Q82.7 51.0 82.6 44.8Q82.5 38.5 82.6 36.7Q82.7 35.0 82.4 32.7Q82.1 30.4 80.8 24.3Q79.4 18.3 79.2 18.0L79.0 17.7L79.0 17.9Q78.9 18.2 78.5 22.2Q78.1 26.3 77.8 27.8Q77.4 29.3 76.4 30.2Q75.4 31.1 73.9 31.6L72.3 32.2L71.9 32.0Q71.5 31.7 71.3 30.9Q71.1 30.1 71.3 28.5Q71.5 26.9 72.7 21.4Q73.9 16.0 74.8 12.1Q75.8 8.3 76.9 4.7ZM97.4 1.2L97.4 1.2L99.0 3.9Q100.5 6.7 101.5 9.0Q102.4 11.3 105.0 19.3Q107.5 27.3 108.2 32.3Q108.9 37.3 108.9 39.3Q109.0 41.4 109.1 42.1Q109.3 42.9 109.2 44.9Q109.2 46.8 109.0 47.3L108.9 47.8L108.6 46.0Q108.2 44.3 107.8 43.3Q107.4 42.4 105.8 40.7Q104.1 39.0 102.3 38.1Q100.4 37.1 99.7 37.1Q99.0 37.1 98.4 37.4Q97.8 37.8 97.4 38.4Q97.0 39.0 96.6 39.9Q96.3 40.9 95.6 44.0Q95.0 47.1 94.5 52.4Q94.0 57.8 93.7 59.4L93.4 61.1L93.2 60.5Q93.1 60.0 92.9 55.5Q92.7 51.0 92.8 44.8Q92.9 38.5 92.8 36.7Q92.7 35.0 93.0 32.7Q93.3 30.4 94.6 24.3Q96.0 18.3 96.2 18.0L96.4 17.7L96.4 17.9Q96.5 18.2 96.9 22.2Q97.3 26.3 97.6 27.8Q98.0 29.3 99.0 30.2Q100.0 31.1 101.5 31.6L103.1 32.2L103.5 32.0Q103.9 31.7 104.1 30.9Q104.3 30.1 104.1 28.5Q103.9 26.9 102.7 21.4Q101.5 16.0 100.6 12.1Q99.6 8.3 98.5 4.7ZM88.9 7.0Q88.2 6.8 87.4 7.1Q86.7 7.4 86.1 8.2Q85.5 8.9 85.2 9.6Q84.9 10.3 84.7 11.4Q84.6 12.4 84.8 13.7Q85.0 15.0 85.2 15.8Q85.5 16.7 87.1 20.3L88.6 23.9L88.8 23.8Q88.9 23.7 89.7 21.4Q90.5 19.2 91.0 17.1Q91.5 15.0 91.6 13.8Q91.7 12.5 91.6 11.7Q91.6 11.0 91.2 9.9Q90.8 8.8 90.3 8.1Q89.7 7.3 88.9 7.0Z", "nariz": "M84.0 93.2Q80.5 92.8 79.4 93.6Q78.3 94.4 76.5 97.6Q74.7 100.8 73.2 102.7Q71.6 104.5 62.3 107.4L53.0 110.3L73.6 110.7L77.4 105.4Q81.3 100.2 84.0 99.8Q86.7 99.5 90.1 99.7L93.6 99.9L101.4 110.7L122.3 110.3L115.4 108.4Q108.6 106.5 105.9 105.4Q103.3 104.4 101.7 102.3Q100.2 100.3 98.5 97.2Q96.7 94.1 96.0 93.5Q95.3 92.9 91.4 93.2Q87.4 93.5 84.0 93.2Z", "face": "M7.9 93.9L7.9 93.9L8.2 96.9L9.3 97.6L10.4 96.1ZM14.7 100.0L14.7 100.0L13.3 101.8Q11.9 103.5 11.9 103.9Q12.0 104.3 13.7 105.8Q15.3 107.3 17.1 107.7L18.8 108.1L20.8 103.3ZM-0.0 100.8L-0.0 100.8L0.0 101.5Q0.1 102.2 1.9 104.9Q3.7 107.5 3.8 111.3Q3.8 115.1 4.4 116.2L5.0 117.4L4.0 119.2Q3.0 121.1 3.1 122.1Q3.1 123.1 5.9 129.4Q8.6 135.6 11.6 143.9Q14.6 152.1 15.9 158.8Q17.2 165.5 37.2 182.0Q57.3 198.5 58.2 198.6Q59.1 198.6 61.7 196.7Q64.3 194.8 65.0 194.8L65.7 194.8L69.2 199.6Q72.6 204.5 74.6 208.6L76.5 212.7L76.7 211.0Q76.8 209.2 76.2 207.2Q75.7 205.1 72.8 199.1Q70.0 193.0 69.3 189.6L68.5 186.2L67.9 186.3Q67.3 186.4 62.2 189.1L57.2 191.9L54.9 189.9Q52.6 187.8 44.8 182.2Q37.0 176.5 31.0 170.9Q25.0 165.3 21.0 156.0Q17.1 146.6 13.1 134.7L9.1 122.7L10.4 120.9L14.4 123.2L17.0 121.6Q19.6 120.0 24.8 121.5L30.1 123.0L28.8 122.0Q27.4 120.9 23.4 118.9Q19.4 116.9 17.1 117.8Q14.7 118.7 13.8 118.6Q12.8 118.5 10.0 116.3Q7.2 114.1 6.9 110.1Q6.5 106.0 3.3 103.4ZM6.2 100.7L6.2 100.7L6.1 101.2Q6.0 101.6 6.9 103.4Q7.8 105.3 9.0 110.2L10.3 115.0L13.9 113.9Q17.6 112.8 21.0 113.7Q24.5 114.6 25.8 114.6L27.1 114.6L26.9 114.2Q26.7 113.8 21.6 111.7Q16.6 109.6 14.2 110.1L11.8 110.5L10.8 107.7Q9.8 104.8 8.0 102.8ZM23.9 104.9L23.9 104.9L23.2 107.3L27.4 106.1L26.5 105.6Q25.5 105.0 24.7 105.0ZM73.2 189.7L73.2 189.7L73.1 190.3Q73.0 190.8 77.0 200.4Q81.1 210.1 81.8 211.1L82.5 212.1L82.7 210.9Q82.8 209.7 81.9 204.7Q81.0 199.6 80.8 195.8Q80.6 192.0 80.1 191.4Q79.5 190.8 77.8 190.3Q76.1 189.8 74.6 189.8ZM167.5 93.9L167.5 93.9L167.2 96.9L166.1 97.6L165.0 96.1ZM160.7 100.0L160.7 100.0L162.1 101.8Q163.5 103.5 163.5 103.9Q163.4 104.3 161.7 105.8Q160.1 107.3 158.3 107.7L156.6 108.1L154.7 103.3ZM175.4 100.8L175.4 100.8L175.4 101.5Q175.3 102.2 173.5 104.9Q171.7 107.5 171.6 111.3Q171.6 115.1 171.0 116.2L170.4 117.4L171.4 119.2Q172.4 121.1 172.3 122.1Q172.3 123.1 169.5 129.4Q166.8 135.6 163.8 143.9Q160.8 152.1 159.5 158.8Q158.2 165.5 138.2 182.0Q118.1 198.5 117.2 198.6Q116.3 198.6 113.7 196.7Q111.1 194.8 110.4 194.8L109.7 194.8L106.2 199.6Q102.8 204.5 100.8 208.6L98.9 212.7L98.7 211.0Q98.6 209.2 99.2 207.2Q99.7 205.1 102.6 199.1Q105.4 193.0 106.1 189.6L106.9 186.2L107.5 186.3Q108.1 186.4 113.2 189.1L118.2 191.9L120.5 189.9Q122.8 187.8 130.6 182.2Q138.4 176.5 144.4 170.9Q150.4 165.3 154.4 156.0Q158.3 146.6 162.3 134.7L166.3 122.7L165.0 120.9L161.0 123.2L158.4 121.6Q155.8 120.0 150.6 121.5L145.3 123.0L146.6 122.0Q148.0 120.9 152.0 118.9Q156.0 116.9 158.3 117.8Q160.7 118.7 161.6 118.6Q162.6 118.5 165.4 116.3Q168.2 114.1 168.5 110.1Q168.9 106.0 172.1 103.4ZM169.2 100.7L169.2 100.7L169.3 101.2Q169.4 101.6 168.5 103.4Q167.6 105.3 166.4 110.2L165.1 115.0L161.5 113.9Q157.8 112.8 154.4 113.7Q150.9 114.6 149.6 114.6L148.3 114.6L148.5 114.2Q148.7 113.8 153.8 111.7Q158.8 109.6 161.2 110.1L163.6 110.5L164.6 107.7Q165.6 104.8 167.4 102.8ZM151.5 104.9L151.5 104.9L152.2 107.3L148.0 106.1L148.9 105.6Q149.9 105.0 150.7 105.0ZM102.2 189.7L102.2 189.7L102.3 190.3Q102.4 190.8 98.4 200.4Q94.3 210.1 93.6 211.1L92.9 212.1L92.7 210.9Q92.6 209.7 93.5 204.7Q94.4 199.6 94.6 195.8Q94.8 192.0 95.3 191.4Q95.9 190.8 97.6 190.3Q99.3 189.8 100.8 189.8Z"};
+    function marcasSukunaSvg(classe) {
+        const p = (d) => `<path d="${d}" fill="#050102" stroke="#fff" stroke-width="3.6" stroke-linejoin="round" paint-order="stroke fill" fill-rule="evenodd"/>`;
+        return `<svg class="${classe}" viewBox="${MARCAS_SUKUNA.vb}" aria-hidden="true">${p(MARCAS_SUKUNA.testa)}${p(MARCAS_SUKUNA.nariz)}${p(MARCAS_SUKUNA.face)}</svg>`;
     }
-    // Cortes do Sukuna: lentes pretas afiladas com um brilho branco em volta que some (como no anime). Posição, ângulo e instante do ciclo
-    // são fixos (o cartão redesenha e não pode "pular"): [esquerda%, topo%, largura%, ângulo°, instante em s dentro do ciclo de 14 s].
-    const CORTES_SUKUNA = [
-        [-8, 12, 112, 18, 1.40], [-6, 34, 118, -22, 1.58], [-10, 58, 120, 9, 1.80], [4, 78, 100, -31, 1.95], [-4, 22, 108, 64, 2.20], [20, 6, 116, 74, 2.34],
-        [-12, 46, 126, -8, 2.55], [-2, 86, 104, 27, 2.78], [14, 16, 110, -58, 3.00], [-6, 66, 116, -15, 3.22], [-8, 30, 120, 36, 3.46],
-        [-10, 40, 124, -12, 5.85], [-4, 62, 112, 21, 6.10], [-6, 24, 116, -26, 7.40], [-8, 52, 120, 12, 11.7], [-2, 74, 110, -19, 12.5], [-10, 14, 118, 30, 13.1],
-    ];
+
+    // Cortes do Sukuna: lentes pretas afiladas com borda branca (como no anime), aos MONTES e em rajadas. Tudo fixo (o cartão redesenha a cada
+    // mudança e não pode "pular"): gerador com semente -> [esquerda%, topo%, largura%, ângulo°, instante em s no ciclo de 12 s, espessura%].
+    const RAJADAS_SUKUNA = [[1.9, 12], [2.9, 12], [3.9, 12], [4.9, 10], [6.3, 10]];
+    function cortesSukuna() {
+        let s = 1008;
+        const r = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+        const out = [];
+        RAJADAS_SUKUNA.forEach(([ini, qtd]) => {
+            for (let k = 0; k < qtd; k++) {
+                out.push([(-16 + r() * 78).toFixed(1), (r() * 104 - 2).toFixed(1), (62 + r() * 80).toFixed(0), ((r() - .5) * 150).toFixed(0),
+                          (ini + k * .05 + r() * .14).toFixed(2), (.7 + r() * 1.1).toFixed(2)]);
+            }
+        });
+        return out;
+    }
     function htmlDominioSukuna() {
-        const cortes = CORTES_SUKUNA.map(([l, t, w, a, d]) => `<i class="sk-corte" style="--l:${l}%;--t:${t}%;--w:${w}%;--a:${a}deg;--d:${d}s"></i>`).join('');
-        return `<div class="ef-pf ef-pf-sukuna" aria-hidden="true"><i class="sk-aura a1"></i><i class="sk-aura a2"></i><i class="sk-aura a3"></i><i class="sk-sombra"></i>
-            <i class="sk-interior"></i><div class="sk-mand cima">${dentesSvg()}</div><div class="sk-mand baixo">${dentesSvg()}</div>${cortes}<i class="sk-flash"></i></div>`;
+        const cortes = cortesSukuna().map(([l, t, w, a, d, k]) => `<i class="sk-corte" style="--l:${l}%;--t:${t}%;--w:${w}%;--a:${a}deg;--d:${d}s;--k:${k}%"></i>`).join('');
+        return `<div class="ef-pf ef-pf-sukuna" aria-hidden="true"><i class="sk-aura a1"></i><i class="sk-aura a2"></i><i class="sk-aura a3"></i><i class="sk-sombra"></i><i class="sk-chama"></i><i class="sk-borda"></i>
+            ${marcasSukunaSvg('sk-marcas')}${cortes}<i class="sk-flash"></i></div>`;
     }
-    // Domínio do Gojo: aura azul, o vazio de estrelas expande, os Seis Olhos acendem no centro (e piscam), colapsa com um clarão.
+
+    // Olho humano (esclera, íris clara, pupila, pálpebras e cílios brancos) pro Vazio Ilimitado: seis deles em volta do anel.
+    function olhoHumanoSvg() {
+        return `<svg viewBox="0 0 100 60" aria-hidden="true"><path d="M3 32 Q50 -6 97 32 Q50 66 3 32Z" fill="#f2f6ff"/>
+            <g class="gj-iris"><circle cx="50" cy="31" r="15.5" fill="#d3ecff"/><circle cx="50" cy="31" r="15.5" fill="none" stroke="#7cb4ea" stroke-width="2.2"/><circle cx="50" cy="31" r="6.6" fill="#05060f"/><circle cx="55.5" cy="25.5" r="3" fill="#fff"/></g>
+            <path d="M3 32 Q50 -6 97 32 Q50 14 3 32Z" fill="#0a0d1f" opacity=".55"/>
+            <path d="M3 32 Q50 -6 97 32" fill="none" stroke="#eef5ff" stroke-width="3.4" stroke-linecap="round"/><path d="M8 35 Q50 62 92 35" fill="none" stroke="#93aacb" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M17 22 L11 11M31 16 L26 4M50 13 L50 1.5M69 16 L74 4M83 22 L89 11" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+    }
+    // Domínio do Gojo (Vazio Ilimitado): o cartão INTEIRO vira um espaço de nebulosas e estrelas, linhas de luz voam do centro, o anel acende
+    // e seis olhos humanos abrem em volta dele (e piscam). Colapsa num clarão.
     function htmlDominioGojo() {
+        let fluxo = '';
+        for (let k = 0; k < 30; k++) {
+            const a = k * 12 + ((k * 7) % 5) - 2, t = .9 + ((k * 13) % 8) / 10, d = -(((k * 29) % 19) / 10), w = 26 + (k * 11) % 28;
+            fluxo += `<i style="--a:${a}deg;--t:${t.toFixed(2)}s;--d:${d.toFixed(1)}s;--w:${w}%;--c:${k % 6 === 0 ? '#c8a6ff' : (k % 3 === 0 ? '#9fd6ff' : '#ffffff')}"></i>`;
+        }
+        const olhos = [[26, 22], [74, 22], [12, 50], [88, 50], [26, 78], [74, 78]].map(([x, y], i) => `<span class="gj-olho" style="left:${x}%;top:${y}%;--i:${i}">${olhoHumanoSvg()}</span>`).join('');
         return `<div class="ef-pf ef-pf-gojo" aria-hidden="true"><i class="gj-aura g1"></i><i class="gj-aura g2"></i>
-            <i class="gj-vazio"></i><i class="gj-estrias"></i><span class="gj-olhos"><i></i><i></i></span><i class="gj-flash"></i></div>`;
+            <i class="gj-vazio"></i><i class="gj-nebulosa"></i><i class="gj-estrelas"></i><div class="gj-fluxo">${fluxo}</div><i class="gj-feixe"></i>
+            <svg class="gj-anel" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#02030c" fill-opacity=".72"/><circle cx="50" cy="50" r="47.6" fill="none" stroke="#f0b840" stroke-width="1.6"/>
+                <circle cx="50" cy="50" r="44" fill="none" stroke="#fff" stroke-width="5"/><circle cx="50" cy="50" r="40.5" fill="none" stroke="#c9d6ee" stroke-width="1.4"/>
+                <circle cx="50" cy="50" r="36" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".8" stroke-dasharray="3 3"/></svg>${olhos}<i class="gj-flash"></i></div>`;
+    }
+
+    // Timão da Roda Divina do Mahoraga: aro grosso, anéis finos, cubo e 8 raios que passam do aro e terminam em manoplas (como o leme de um navio).
+    // Simétrico de 8 em 8 (45°): girar 45° deixa a MESMA figura, então a animação gira 45° e recomeça sem salto. (A faixa do perfil usa este
+    // mesmo desenho como imagem em loja/cosmeticos.css: mudou aqui, refaça lá.)
+    function timaoSvg() {
+        let raios = '', anilhas = '';
+        for (let k = 0; k < 8; k++) {
+            raios += `<g transform="rotate(${k * 45} 100 100)"><rect x="96" y="26" width="8" height="62" rx="2" fill="#c8961a"/><rect x="96" y="26" width="2.6" height="62" fill="#f5d36a"/>
+                <path d="M94.5 31 L95.5 11 Q100 4 104.5 11 L105.5 31Z" fill="#e8bd3a" stroke="#8a6a14" stroke-width="1.6" stroke-linejoin="round"/><circle cx="100" cy="8" r="6.5" fill="#f5d36a" stroke="#8a6a14" stroke-width="1.6"/></g>`;
+            anilhas += `<rect x="92.5" y="43" width="15" height="7" rx="2" fill="#8a6a14" transform="rotate(${k * 45} 100 100)"/>`;
+        }
+        return `<circle cx="100" cy="100" r="58" fill="none" stroke="#8a6a14" stroke-width="2"/>${raios}
+            <circle cx="100" cy="100" r="50.5" fill="none" stroke="#d9a520" stroke-width="10"/><circle cx="100" cy="100" r="47" fill="none" stroke="#f5d36a" stroke-width="2" opacity=".85"/>
+            <circle cx="100" cy="100" r="44" fill="none" stroke="#8a6a14" stroke-width="2"/>${anilhas}
+            <circle cx="100" cy="100" r="17" fill="#d9a520" stroke="#8a6a14" stroke-width="3"/><circle cx="100" cy="100" r="10" fill="#2a2c27" stroke="#f5d36a" stroke-width="2"/><circle cx="100" cy="100" r="3.5" fill="#f5d36a"/>`;
     }
     function htmlRodaMahoraga() {
-        let raios = '', nos = '';
-        for (let k = 0; k < 8; k++) {
-            const a = (k * Math.PI) / 4, c = Math.cos(a), sn = Math.sin(a);
-            raios += `<line x1="${(60 + c * 11).toFixed(1)}" y1="${(60 + sn * 11).toFixed(1)}" x2="${(60 + c * 40).toFixed(1)}" y2="${(60 + sn * 40).toFixed(1)}"/>`;
-            nos += `<circle class="no" cx="${(60 + c * 52).toFixed(1)}" cy="${(60 + sn * 52).toFixed(1)}" r="8"/>`;
-        }
-        return `<div class="ef-pf ef-pf-mahoraga" aria-hidden="true"><i class="mh-ouro"></i><i class="mh-onda"></i>
-            <svg class="mh-roda" viewBox="0 0 120 120"><g class="mh-giro"><circle class="aro" cx="60" cy="60" r="40" fill="none"/>${raios}${nos}<circle class="hub" cx="60" cy="60" r="11"/></g></svg></div>`;
+        return `<div class="ef-pf ef-pf-mahoraga" aria-hidden="true"><i class="mh-ouro"></i><i class="mh-halo"></i><i class="mh-onda"></i>
+            <svg class="mh-roda" viewBox="0 0 200 200"><g class="mh-giro">${timaoSvg()}</g></svg></div>`;
     }
 
     // Raios do Sasuke: ao fim de cada ciclo (invisíveis), cada um sorteia onde vai cair da próxima vez.
@@ -670,7 +702,10 @@ const Cosm = (() => {
 
     // --- som de entrada na call (sintetizado; ctx = AudioContext ou OfflineAudioContext) ---
     // Sons de entrada que vêm de arquivo (static/audio). Se o arquivo falhar, cai no som sintetizado abaixo.
-    const ARQ_SOM = { gogeta: ['/static/audio/teleporte.mp3', .8], sasuke: ['/static/audio/sharingan.mp3', .8] };
+    const ARQ_SOM = {
+        gogeta: ['/static/audio/teleporte.mp3', .8], sasuke: ['/static/audio/sharingan.mp3', .8],
+        gojo: ['/static/audio/dominio_gojo.mp3', .9], sukuna: ['/static/audio/dominio_sukuna.mp3', .9], mahoraga: ['/static/audio/roda_mahoraga.mp3', .9],
+    };
     const _cacheSom = {};
     function tocarArquivoSom(id) {
         try {
@@ -1471,6 +1506,6 @@ const Cosm = (() => {
     }
 
     return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, svgBadge3D, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
-        renderInventario, previaItem, svgDentes: dentesSvg, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
+        renderInventario, previaItem, svgOlho: olhoHumanoSvg, svgMarcasSukuna: marcasSukunaSvg, svgTimao: timaoSvg, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
         mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, _passo: passoCanvas };
 })();

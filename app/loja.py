@@ -45,9 +45,9 @@ GRUPO_DO_TIPO = {t: g for g, _, tipos in GRUPOS for t in tipos}
 
 # Faixas grandes do topo da loja (carrossel). `tema` precisa existir em TEMAS com loja=True.
 DESTAQUES = [
-    {'tema': 'gojo', 'selo': 'Lendário', 'titulo': 'Gojo', 'sub': 'Infinito, Seis Olhos e a Expansão de Domínio: Vazio Ilimitado, com orbes azul e vermelho que viram roxo. 12 itens.'},
-    {'tema': 'sukuna', 'selo': 'Lendário', 'titulo': 'Sukuna', 'sub': 'Aura maldita, flecha em chamas, cortes pretos e os dentes do Santuário Malevolente. 12 itens.'},
-    {'tema': 'mahoraga', 'selo': 'Lendário', 'titulo': 'Mahoraga', 'sub': 'A roda dourada que gira um encaixe de cada vez, e se adapta. 12 itens.'},
+    {'tema': 'gojo', 'selo': 'Lendário', 'titulo': 'Gojo', 'sub': 'Infinito, Seis Olhos e a Expansão de Domínio: o Vazio Ilimitado que enche o cartão, e o Azul e o Vermelho que viram Roxo. 12 itens.'},
+    {'tema': 'sukuna', 'selo': 'Lendário', 'titulo': 'Sukuna', 'sub': 'Aura maldita, a flecha de fogo que incendeia o seu nome, as marcas do rosto e montes de cortes pretos. 12 itens.'},
+    {'tema': 'mahoraga', 'selo': 'Lendário', 'titulo': 'Mahoraga', 'sub': 'O timão dourado da Roda Divina: brilha, gira um pouco e para duro, e se adapta. 12 itens.'},
     {'tema': 'cyber', 'selo': 'Premium', 'titulo': 'Cyber Neon', 'sub': 'Scanlines, letreiro holográfico, chuva de dados e um "sistema online" ao entrar na call. 12 itens.'},
     {'tema': 'eldoria', 'selo': 'Premium', 'titulo': 'Eldoria', 'sub': 'Coroa de carvalho, pergaminho de runas, poeira mágica e um cristal no mapa. 12 itens.'},
     {'tema': 'arcade', 'selo': 'Premium', 'titulo': 'Arcade 8-bit', 'sub': 'Corações de vida, moedas girando, chuva de pixels e o som de uma moeda. 12 itens.'},

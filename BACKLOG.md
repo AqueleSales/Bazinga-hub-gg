@@ -195,6 +195,13 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [ ] **Ver no seu monitor**: domínios no cartão, fala na call, radar, som de entrada, pin de nota e efeito de servidor dos 3.
 - [ ] Se a loja virar comercial (Pix): trocar nomes/referências de JJK, DBZ e Naruto por criações originais.
 
+## Rodada 17 (08/10/2026) - JJK refeito, sons dos domínios, script de DRC e Bazar arejado - feito; só prévias vistas no navegador do painel
+- [x] Sukuna: domínio sem boca (aura vermelha, marcas do rosto decalcadas da referência aparecendo e sumindo, 56 cortes pretos em rajadas); nome com a **flecha de fogo (Fuga)** caindo e o nome pegando fogo.
+- [x] Gojo: Azul e Vermelho (avatar) sem corte, juntando no roxo; domínio que **enche o cartão**, com anel e **6 olhos humanos**. Mahoraga: **timão** que brilha, gira 45° e para duro, no cartão e na faixa (a faixa estava só um disco preto).
+- [x] Sons de entrada dos 3 = os mp3 que o dono baixou (`static/audio/`). `conceder_drc.py` (40k de DRC: `python conceder_drc.py aquele.sales 40000`). Bazar: filtros em dois blocos rotulados e feed com espaço entre as partes.
+- [ ] **Ver no seu monitor**: os 3 domínios no cartão, o nome do Sukuna pequeno (listas/barra), som de entrada numa call de verdade. O selo de **mãos do Sukuna** (imagem 2) ficou de fora: dá pra decalcar como as marcas se você pedir.
+- [ ] Trocar os 3 mp3 (e os de DBZ/Naruto) por áudio próprio antes de qualquer loja comercial.
+
 ---
 
 ## O QUE FALTA (lista única e atualizada em 08/10/2026; as listas das rodadas acima são histórico)
