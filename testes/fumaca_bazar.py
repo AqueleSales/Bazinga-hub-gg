@@ -9,8 +9,9 @@ c.Config.SQLALCHEMY_ENGINE_OPTIONS = {}
 from app import create_app, db, socketio
 from app import bazar, bazar_events
 from app.bazar import ErroBazar
+from datetime import timedelta
 from app.models import (Role, Person, Friendship, GeoNote, Notificacao, BazarLoja, BazarProduto, BazarPedido, BazarMensagem,
-                        BazarAvaliacao, Denuncia)
+                        BazarAvaliacao, Denuncia, br_now)
 
 app = create_app()
 falhas = []
@@ -70,7 +71,8 @@ with app.app_context():
     r = Role(name="MEMBROS", color="#fff"); db.session.add(r); db.session.commit()
     ids = {}
     for nome in ('Ana', 'Beto', 'Cris', 'Duda', 'Eva', 'Fabio', 'Gil', 'Hugo'):
-        p = Person(name=nome, email=f'{nome.lower()}@x', role_id=r.id, username=nome.lower())
+        # contas com 30 dias (conta recém-criada não abre loja: regra da Rodada 18, testada mais abaixo com a 'Novata')
+        p = Person(name=nome, email=f'{nome.lower()}@x', role_id=r.id, username=nome.lower(), created_at=br_now() - timedelta(days=30))
         db.session.add(p); db.session.commit(); ids[nome.lower()] = p.id
     db.session.add(Friendship(requester_id=ids['hugo'], addressee_id=ids['ana'], status='blocked')); db.session.commit()
 
@@ -328,7 +330,11 @@ with app.app_context():
     ok('já avaliou' in (erro(rec) or '') and db.session.query(BazarLoja).filter_by(owner_id=ids['ana']).one().nota_qtd == 1, 'Só uma avaliação por pedido (e a média não muda)')
 
     v, _ = varrer(beto)
-    ok([d['nome'] for d in v['destaques']] == ['Ateliê da Ana'] and v['destaques'][0]['nota'] == 4.0, 'Destaque "bem avaliadas": entra por nota de verdade (e mostra a nota)')
+    ok(v['destaques'] == [], 'Destaque "bem avaliadas": UMA avaliação só não basta (mínimo de 3: uma nota 5 sozinha não vira destaque)')
+    la.nota_qtd, la.nota_soma = 3, 12; db.session.commit()
+    v, _ = varrer(beto)
+    ok([d['nome'] for d in v['destaques']] == ['Ateliê da Ana'] and v['destaques'][0]['nota'] == 4.0, 'Destaque "bem avaliadas": com 3 avaliações entra por nota de verdade (e mostra a nota)')
+    la.nota_qtd, la.nota_soma = 1, 4; db.session.commit()    # volta ao que era pro resto do teste
     st = next(x for x in emitir(ana, 'bazar_minha_loja') if x['name'] == 'bazar_minha')['args'][0]['loja']['stats']
     ok(st['concluidos'] == 1 and st['receita_cent'] == 10000 and st['abertos'] == 0, 'Painel do vendedor: 1 concluído, R$ 100,00 concluídos, nada aberto')
 

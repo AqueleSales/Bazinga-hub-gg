@@ -610,17 +610,22 @@ const Cosm = (() => {
         return `<svg class="${classe}" viewBox="${MARCAS_SUKUNA.vb}" aria-hidden="true">${p(MARCAS_SUKUNA.testa)}${p(MARCAS_SUKUNA.nariz)}${p(MARCAS_SUKUNA.face)}</svg>`;
     }
 
-    // Cortes do Sukuna: lentes pretas afiladas com borda branca (como no anime), aos MONTES e em rajadas. Tudo fixo (o cartão redesenha a cada
-    // mudança e não pode "pular"): gerador com semente -> [esquerda%, topo%, largura%, ângulo°, instante em s no ciclo de 12 s, espessura%].
-    const RAJADAS_SUKUNA = [[1.9, 12], [2.9, 12], [3.9, 12], [4.9, 10], [6.3, 10]];
+    // Cortes do Sukuna: lâminas pretas afiladas com borda branca (como no anime), LONGAS: começam fora do cartão e o atravessam de ponta a ponta,
+    // em 4 ondas (devagar, sem poluir). Tudo fixo (o cartão redesenha a cada mudança e não pode "pular"): gerador com semente ->
+    // [esquerda%, topo%, largura% do cartão, ângulo°, instante em s no ciclo de 20 s, espessura%].
+    const RAJADAS_SUKUNA = [[3.4, 7], [5.0, 7], [6.6, 7], [8.2, 7]];
     function cortesSukuna() {
         let s = 1008;
         const r = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
         const out = [];
         RAJADAS_SUKUNA.forEach(([ini, qtd]) => {
             for (let k = 0; k < qtd; k++) {
-                out.push([(-16 + r() * 78).toFixed(1), (r() * 104 - 2).toFixed(1), (62 + r() * 80).toFixed(0), ((r() - .5) * 150).toFixed(0),
-                          (ini + k * .05 + r() * .14).toFixed(2), (.7 + r() * 1.1).toFixed(2)]);
+                const volta = r() < .5;                                   // vem da esquerda ou da direita
+                const a = (volta ? 180 : 0) + (r() - .5) * 120;
+                const desce = Math.sin(a * Math.PI / 180) > 0;
+                const l = volta ? 95 + r() * 40 : -35 + r() * 40;
+                const t = desce ? -5 + r() * 65 : 40 + r() * 65;         // quem desce sai do alto; quem sobe sai de baixo: sempre cruza o cartão
+                out.push([l.toFixed(1), t.toFixed(1), (220 + r() * 90).toFixed(0), a.toFixed(0), (ini + k * .07 + r() * .1).toFixed(2), (.8 + r() * 1.2).toFixed(2)]);
             }
         });
         return out;
@@ -861,7 +866,16 @@ const Cosm = (() => {
         box.className = `ef-envio ef-envio-${id}`;
         box.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
         if (id === 'sukuna') {
-            box.innerHTML = '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="0" y1="88" x2="100" y2="12" stroke="#e63946" stroke-width="7" opacity=".6" vector-effect="non-scaling-stroke" stroke-linecap="round"/><line x1="0" y1="88" x2="100" y2="12" stroke="#fff" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>';
+            // 1 a 3 cortes pretos (borda branca) que atravessam a barra de ponta a ponta; posição e ângulo mudam a cada envio
+            const n = 1 + (Math.random() < .55 ? 1 : 0) + (Math.random() < .2 ? 1 : 0);
+            let h = '';
+            for (let i = 0; i < n; i++) {
+                const x0 = r.width * (-.04 + Math.random() * .3), x1 = r.width * (.74 + Math.random() * .3);
+                const y0 = r.height * (-1.2 + Math.random() * 3.4), y1 = r.height * (-1.2 + Math.random() * 3.4);
+                const len = Math.hypot(x1 - x0, y1 - y0), ang = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI;
+                h += `<i class="ef-corte" style="left:${x0.toFixed(0)}px;top:${y0.toFixed(0)}px;width:${len.toFixed(0)}px;--a:${ang.toFixed(1)}deg;--k:${(5 + Math.random() * 4).toFixed(1)}px;--d:${(i * .09).toFixed(2)}s"></i>`;
+            }
+            box.innerHTML = h;
         } else if (id === 'sasuke') {
             const pts = []; const n = 14;
             for (let i = 0; i <= n; i++) pts.push(`${(i / n * 100).toFixed(1)},${(i % 2 ? 22 : 78) + ((i * 37) % 13) - 6}`);
@@ -875,7 +889,7 @@ const Cosm = (() => {
             box.innerHTML = h;
         }
         document.body.appendChild(box);
-        setTimeout(() => box.remove(), 1000);
+        setTimeout(() => box.remove(), 1500);
     }
 
     // --- efeito do chat: brilho enquanto digita (classe no container) + efeito ao enviar (Enter / botão) ---

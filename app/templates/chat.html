@@ -10500,7 +10500,7 @@
 
         // BAZAR (classificados, Pix direto): static/js/bazar.js só desenha; regra, estoque e quem vê a chave Pix são do servidor.
         function marcarPendenciasBazar(n) {
-            [document.querySelector('.market-tab[data-tab="tab-bazar"]'), document.getElementById('btn-mercado')].forEach((el) => {
+            [document.querySelector('.market-tab[data-tab="tab-bazar"]'), document.getElementById('btn-mercado'), document.getElementById('mob-multi')].forEach((el) => {
                 if (!el) return;
                 let b = el.querySelector(':scope > .bz-contagem');
                 if (!n) { if (b) b.remove(); return; }
@@ -10536,6 +10536,12 @@
         socket.on('bazar_mudou', () => Bazar.mudou());
         socket.on('bazar_erro', (d) => Bazar.erro(d));
         socket.on('bazar_moderacao', (d) => Bazar.moderacaoFila(d));
+        socket.on('bazar_favoritos', (d) => Bazar.favoritos(d.ids));
+        socket.on('bazar_anuncios', (d) => Bazar.anuncios(d));
+        socket.on('bazar_disputas', (d) => Bazar.disputas(d));
+        socket.on('bazar_banidos', (d) => Bazar.banidos(d));
+        socket.on('bazar_vitrine_banido', (d) => Bazar.banido(d.banido));
+        socket.on('bazar_admin_aviso', (d) => Bazar.avisoAdmin(d));
         document.querySelector('.market-tab[data-tab="tab-bazar"]').addEventListener('click', () => Bazar.abrir());
 
         // Efeitos que só mexem na MINHA tela: onda do radar, barra de mensagem e meu card na call

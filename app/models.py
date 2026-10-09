@@ -560,6 +560,10 @@ class BazarLoja(db.Model):
     nota_qtd = db.Column(db.Integer, default=0)
     vendas = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=br_now)
+    # Rodada 18 (colunas novas: o boot cria sozinho, atualizar_banco.py também; tratar None como falso)
+    verificada = db.Column(db.Boolean, default=False)           # selo "verificada": só um admin dá
+    lat = db.Column(db.Float, nullable=True)                    # "perto de mim": posição ARREDONDADA (0,01° ~ 1 km), só se o dono pediu pra aparecer
+    lng = db.Column(db.Float, nullable=True)
 
     owner = db.relationship('Person', foreign_keys=[owner_id])
 
@@ -582,6 +586,9 @@ class BazarProduto(db.Model):
     oculta = db.Column(db.Boolean, default=False)
     vendidos = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=br_now)
+    # Rodada 18: frete e retirada (só produto físico). frete_cent: NULL = não envia, 0 = frete grátis, >0 = valor somado ao total do pedido.
+    frete_cent = db.Column(db.Integer, nullable=True)
+    aceita_retirada = db.Column(db.Boolean, default=False)
 
     loja = db.relationship('BazarLoja', backref='produtos')
 
@@ -603,6 +610,11 @@ class BazarPedido(db.Model):
     nota = db.Column(db.String(200), nullable=True)                       # recado do comprador na hora do pedido
     created_at = db.Column(db.DateTime, default=br_now)
     atualizado_em = db.Column(db.DateTime, default=br_now)
+    # Rodada 18: como o comprador quer receber. total_cent = preço x quantidade + frete. O endereço é PRIVADO (só as duas pontas) e é apagado
+    # quando o pedido termina (concluído/cancelado/recusado): guardar endereço de gente que já recebeu não serve a ninguém.
+    entrega_modo = db.Column(db.String(10), nullable=True)                # envio | retirada | digital | combinar
+    frete_cent = db.Column(db.Integer, nullable=True)
+    endereco = db.Column(db.String(300), nullable=True)
 
     produto = db.relationship('BazarProduto')
     loja = db.relationship('BazarLoja')
@@ -616,8 +628,9 @@ class BazarMensagem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pedido_id = db.Column(db.Integer, db.ForeignKey('bazar_pedido.id'), nullable=False, index=True)
     autor_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-    texto = db.Column(db.String(300), nullable=False)
+    texto = db.Column(db.String(300), nullable=False)                     # '' quando é só imagem (comprovante)
     created_at = db.Column(db.DateTime, default=br_now)
+    imagem_url = db.Column(db.String(255), nullable=True)                 # Rodada 18: comprovante/foto (só imagem do próprio app)
 
 
 class BazarAvaliacao(db.Model):
@@ -633,3 +646,64 @@ class BazarAvaliacao(db.Model):
     created_at = db.Column(db.DateTime, default=br_now)
 
     avaliador = db.relationship('Person', foreign_keys=[avaliador_id])
+
+
+# ---- Rodada 18: favoritos, anúncios com data e clique, disputa e banimento (tabelas novas: nascem pelo create_all) ----
+class BazarFavorito(db.Model):
+    """Quem segue (favoritou) qual loja. Uma linha por par."""
+    __tablename__ = 'bazar_favorito'
+    __table_args__ = (db.UniqueConstraint('person_id', 'loja_id', name='uq_bazar_favorito'),)
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    loja_id = db.Column(db.Integer, db.ForeignKey('bazar_loja.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+
+class BazarAnuncio(db.Model):
+    """Propaganda do carrossel do Bazar (só admin cria): arte própria, janela de datas e contagem de cliques."""
+    __tablename__ = 'bazar_anuncio'
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(60), nullable=False)
+    texto = db.Column(db.String(160), nullable=True)
+    imagem_url = db.Column(db.String(255), nullable=True)
+    cor = db.Column(db.String(16), default='lavanda')            # id de bazar.CORES
+    cta = db.Column(db.String(24), nullable=True)                # texto do botão
+    destino = db.Column(db.String(10), default='nenhum')         # loja | link | painel | aviso | armazem | nenhum
+    loja_id = db.Column(db.Integer, db.ForeignKey('bazar_loja.id'), nullable=True)
+    link_url = db.Column(db.String(255), nullable=True)          # só https; abre fora do app depois de um aviso
+    inicio = db.Column(db.DateTime, nullable=True)               # NULL = já começou
+    fim = db.Column(db.DateTime, nullable=True)                  # NULL = sem fim
+    ativo = db.Column(db.Boolean, default=True)
+    cliques = db.Column(db.Integer, default=0)
+    criado_por_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+
+class BazarDisputa(db.Model):
+    """Uma das duas pontas pediu a análise de um admin. Abrir a disputa libera o admin a ler A CONVERSA DAQUELE PEDIDO (a tela avisa).
+    O Panteão não toca no dinheiro: a decisão só muda o estado do pedido e fica registrada; reembolso é combinado entre as pessoas."""
+    __tablename__ = 'bazar_disputa'
+    id = db.Column(db.Integer, primary_key=True)
+    pedido_id = db.Column(db.Integer, db.ForeignKey('bazar_pedido.id'), nullable=False, index=True)
+    aberta_por_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    motivo = db.Column(db.String(16), nullable=False)
+    detalhe = db.Column(db.String(300), nullable=True)
+    status = db.Column(db.String(10), default='aberta', index=True)   # aberta | resolvida
+    resolucao = db.Column(db.String(10), nullable=True)               # concluir | cancelar | arquivar
+    nota_admin = db.Column(db.String(300), nullable=True)
+    resolvido_por_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+    resolvido_em = db.Column(db.DateTime, nullable=True)
+
+
+class BazarBanimento(db.Model):
+    """Pessoa suspensa do Bazar (não vende, não compra, a loja some do feed). `ate` NULL = permanente. Desbanir apaga a linha."""
+    __tablename__ = 'bazar_banimento'
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, unique=True)
+    motivo = db.Column(db.String(200), nullable=True)
+    por_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=br_now)
+    ate = db.Column(db.DateTime, nullable=True)
+
+    pessoa = db.relationship('Person', foreign_keys=[person_id])

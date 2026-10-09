@@ -365,3 +365,58 @@
     .bz-p-corpo .bz-ed-grid { grid-template-columns: 1fr; }
     .bz-loja-conteudo { padding: 16px 16px 0; }
 }
+
+/* ==========================================================================
+   RODADA 18: favoritos, selos de reputação, perto de mim, entrega/frete, disputa, imagem na conversa, telas de admin
+   ========================================================================== */
+#bz-tipo, #bz-ordem { padding: 9px 12px; border-radius: 999px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); font-size: 13px; font-weight: 700; outline: none; cursor: pointer; font-family: inherit; }
+.bz-dica-ordem { font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+.bz-chip i.fa-heart { margin-right: 4px; }
+
+/* coração de favoritar: canto da fachada e ao lado do nome na página da loja */
+.bz-fav { position: absolute; top: 10px; right: 12px; z-index: 4; width: 36px; height: 36px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--bz-cor) 55%, #000); background: var(--bg-secondary); color: var(--text-muted); font-size: 15px; cursor: pointer; box-shadow: 0 3px 0 color-mix(in srgb, var(--bz-cor) 40%, #000); transition: transform .12s; }
+.bz-fav:hover { transform: translateY(-2px) scale(1.06); color: #ff5a7a; }
+.bz-fav.on { color: #ff3d63; background: color-mix(in srgb, #ff3d63 14%, var(--bg-secondary)); }
+.bz-loja.grande .bz-fav { top: 14px; right: 16px; }
+.bz-loja-fav { position: relative; display: inline-flex; margin: 30px 0 0 auto; }
+.bz-loja-fav .bz-fav { position: static; }
+.bz-loja-id { flex-wrap: wrap; }
+
+/* selos: nota + reputação + distância, em linha */
+.bz-selos { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 3px; }
+.bz-rep { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 1.5px solid currentColor; background: rgba(0, 0, 0, .18); }
+.bz-rep.verificada { color: #6ee7a8; }
+.bz-rep.confiavel { color: #ffd166; }
+.bz-rep.nova { color: #b9c4d6; opacity: .9; }
+.bz-loja-meta .bz-rep.nova { color: var(--text-muted); }
+.bz-dist { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; background: rgba(0, 0, 0, .22); color: inherit; }
+.bz-loja-meta .bz-dist, .bz-ini-topo .bz-dist { color: var(--text-normal); background: var(--bg-tertiary); }
+
+/* entrega no produto e no pedido */
+.bz-entregas { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.bz-entrega-op { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); cursor: pointer; text-transform: none; font-size: 14px; color: var(--text-normal); }
+.bz-entrega-op.on { border-color: var(--bz-cor); background: color-mix(in srgb, var(--bz-cor) 14%, var(--bg-secondary)); }
+.bz-entrega-op span { display: flex; flex-direction: column; }
+.bz-entrega-op small { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: none; }
+.bz-resumo-preco { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.bz-resumo-preco b { color: var(--text-header); font-size: 15px; }
+.bz-end { display: inline-block; margin-top: 4px; padding: 6px 10px; border-radius: 10px; background: var(--bg-secondary); color: var(--text-normal); font-weight: 700; white-space: pre-wrap; }
+.bz-banido-aviso { border-color: var(--red-color); border-style: solid; color: var(--text-normal); background: color-mix(in srgb, var(--red-color) 12%, transparent); }
+.bz-banido-aviso i { color: var(--red-color); }
+
+/* disputa */
+.bz-disputa { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--yellow-color); background: color-mix(in srgb, var(--yellow-color) 12%, var(--bg-secondary)); font-size: 13.5px; line-height: 1.45; color: var(--text-normal); }
+.bz-disputa b { color: var(--text-header); }
+.bz-disputa small { color: var(--text-muted); font-weight: 700; }
+.bz-disputa.resolvida { border-color: var(--green-color); background: color-mix(in srgb, var(--green-color) 10%, var(--bg-secondary)); }
+.bz-status.disputa { background: #c9752b; }
+.bz-disp details { font-size: 13px; }
+.bz-disp summary { cursor: pointer; font-weight: 800; color: var(--text-header); }
+.bz-disp .bz-msgs { margin-top: 8px; max-height: 260px; }
+
+/* imagem na conversa do pedido */
+.bz-msg-img { display: block; max-width: 100%; max-height: 180px; margin-bottom: 4px; border-radius: 10px; cursor: zoom-in; object-fit: cover; }
+.bz-enviar .bz-btn.sec { flex: 0 0 auto; }
+
+/* selo de pendências do Bazar na barra de baixo do celular (slot do meio: Radar/Loja/Passe) */
+#mob-multi > .bz-contagem { position: absolute; top: -14px; left: 50%; margin: 0 0 0 14px; z-index: 3; box-shadow: 0 0 0 3px var(--bg-tertiary); }

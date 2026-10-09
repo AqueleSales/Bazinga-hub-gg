@@ -209,7 +209,8 @@
 .arm-modal-lado .desc { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--text-normal); }
 .arm-fechar { position: absolute; top: 12px; right: 12px; z-index: 6; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); }
 .arm-fechar:hover { background: var(--red-color); color: #fff; }
-.arm-conteudo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.arm-conteudo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; isolation: isolate; }
+.arm-conteudo .geo-note-bubble { z-index: auto; }
 .arm-conteudo button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; border-radius: 14px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-normal); cursor: pointer; font-size: 12px; font-weight: 800; text-align: center; transition: transform .12s; }
 .arm-conteudo button:hover { transform: translateY(-2px); }
 .arm-conteudo button.tem { border-color: color-mix(in srgb, var(--green-color) 60%, var(--bg-tertiary)); }

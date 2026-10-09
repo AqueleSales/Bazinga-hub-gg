@@ -238,6 +238,18 @@ def atualizar_banco():
                 db.session.rollback()
                 print(f"⚠️ Não consegui conceder as insígnias: {e}")
 
+            # 27. Bazar (Rodada 18): selo/posição da loja, frete e retirada do produto, entrega do pedido, imagem na conversa.
+            # (As tabelas bazar_favorito/anuncio/disputa/banimento nascem pelo create_all lá em cima.)
+            add_column_se_nao_existir("bazar_loja", "verificada BOOLEAN DEFAULT FALSE")
+            add_column_se_nao_existir("bazar_loja", "lat DOUBLE PRECISION")
+            add_column_se_nao_existir("bazar_loja", "lng DOUBLE PRECISION")
+            add_column_se_nao_existir("bazar_produto", "frete_cent INTEGER")
+            add_column_se_nao_existir("bazar_produto", "aceita_retirada BOOLEAN DEFAULT FALSE")
+            add_column_se_nao_existir("bazar_pedido", "entrega_modo VARCHAR(10)")
+            add_column_se_nao_existir("bazar_pedido", "frete_cent INTEGER")
+            add_column_se_nao_existir("bazar_pedido", "endereco VARCHAR(300)")
+            add_column_se_nao_existir("bazar_mensagem", "imagem_url VARCHAR(255)")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

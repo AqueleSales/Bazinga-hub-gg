@@ -326,7 +326,29 @@ with app.app_context():
     ok('dentesSvg' not in JS_COSM and 'sk-mand' not in CSS and 'svgDentes' not in open(os.path.join(RAIZ, 'js', 'loja.js'), encoding='utf-8').read(), 'Sukuna sem a boca/dentes fechando (nem no cartão, nem no carrossel)')
     m_raj = re.search(r'const RAJADAS_SUKUNA = (\[\[.*?\]\]);', JS_COSM)
     n_cortes = sum(int(q) for _, q in re.findall(r'\[([\d.]+), (\d+)\]', m_raj.group(1))) if m_raj else 0
-    ok(n_cortes >= 40, f'Sukuna: montes de cortes pretos no ciclo ({n_cortes} em rajadas)')
+    ok(n_cortes >= 24 and len(re.findall(r'\[[\d.]+, \d+\]', m_raj.group(1))) >= 4, f'Sukuna: montes de cortes pretos no ciclo ({n_cortes} em ondas)')
+    ok('(220 + r() * 90)' in JS_COSM and '-35 + r() * 40' in JS_COSM and '95 + r() * 40' in JS_COSM, 'Sukuna: os cortes são LONGOS (2 a 3 vezes a largura do cartão) e entram de fora, atravessando tudo')
+    ok(re.search(r'\.sk-corte::before \{[^}]*background: #000', CSS) is not None and re.search(r'\.sk-corte::after \{[^}]*background: #fff', CSS) is not None, 'Sukuna: cortes pretos com borda branca')
+    # os domínios do cartão são lentos e têm PAUSA entre uma passada e outra (o dono achou rápido e poluído): ciclo longo, cena de ~11-15 s e ~8 s de descanso
+    ok('animation: skAura 20s' in CSS and 'animation: gjVazio 20s' in CSS and 'animation: mhRoda 23s' in CSS and 'skAura 12s' not in CSS and 'gjVazio 12s' not in CSS and 'mhRoda 10s' not in CSS, 'Domínios do cartão (Sukuna, Gojo, Mahoraga): ciclo de 20-23 s, mais devagar')
+
+    def pcts_kf(nome):
+        """percentuais (menos 0 e 100) que marcam instantes do @keyframes `nome`"""
+        i = CSS.index('{', CSS.index('@keyframes ' + nome + ' '))
+        n, k = 0, i
+        while True:
+            n += (CSS[k] == '{') - (CSS[k] == '}')
+            if n == 0:
+                break
+            k += 1
+        return [float(x) for x in re.findall(r'(?<![\w.\-])(\d+(?:\.\d+)?)%(?=\s*[,{])', CSS[i:k]) if 0 < float(x) < 100]
+    ok(8 <= 20 - max(pcts_kf('skSombra')) / 100 * 20 <= 10 and 8 <= 23 - max(pcts_kf('mhRoda')) / 100 * 23 <= 10 and 8 <= 20 - max(pcts_kf('gjFlash')) / 100 * 20 <= 10, 'Sukuna, Gojo e Mahoraga: pausa de 8 a 10 s antes de repetir')
+    ok(max(pcts_kf('skMarcas')) <= 45, 'Sukuna: as marcas do rosto aparecem UMA vez por ciclo')
+    # corte de envio do Sukuna: lâminas pretas, sorteadas a cada envio (nada de linha fina vermelha igual toda vez)
+    envio = JS_COSM[JS_COSM.index("if (id === 'sukuna') {"):JS_COSM.index("} else if (id === 'sasuke')")]
+    ok('Math.random()' in envio and 'ef-corte' in envio and re.search(r'\.ef-envio-sukuna \.ef-corte::before \{[^}]*background: #000', CSS) is not None and '.ef-envio-sukuna svg' not in CSS, 'Corte do Sukuna ao enviar: preto, longo e em lugar/ângulo sorteado a cada mensagem')
+    # o pin de nota (z-index 500 do balão do mapa) nunca fura o botão de comprar do modal
+    ok(re.search(r'\.inv-pin \.geo-note-bubble\.minimized \{[^}]*z-index: auto', CSS) is not None and re.search(r'\.arm-conteudo \{[^}]*isolation: isolate', open(os.path.join(RAIZ, 'css', 'loja.css'), encoding='utf-8').read()) is not None, 'Modal do pacote: o pin de nota não passa por cima do botão de comprar')
     m_marcas = re.search(r'const MARCAS_SUKUNA = (\{.*?\});', JS_COSM)
     marcas = __import__('json').loads(m_marcas.group(1)) if m_marcas else {}
     ok(all(len(marcas.get(k, '')) > 150 for k in ('testa', 'nariz', 'face')) and marcas.get('vb', '').startswith('0 0 '), 'Sukuna: as marcas do rosto (testa, nariz, bochechas) estão desenhadas')
