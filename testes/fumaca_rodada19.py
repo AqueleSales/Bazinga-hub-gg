@@ -51,7 +51,7 @@ ok(APP_NOME == 'Pantheon', 'Nome: o app se chama Pantheon')
 manifesto = app.test_client().get('/manifest.webmanifest').get_json()
 ok(manifesto['name'] == 'Pantheon' and manifesto['short_name'] == 'Pantheon', 'Nome: o manifesto do PWA diz Pantheon')
 def sem_pasta_antiga(texto):   # desktop/main.js cita "Panteão" de propósito: pasta de dados antiga e entrada antiga do "iniciar com o Windows"
-    return '\n'.join(l for l in texto.splitlines() if 'userData' not in l and 'se chamava' not in l and "'/v', 'Panteão'" not in l and 'Panteão pra Pantheon' not in l)
+    return '\n'.join(l for l in texto.splitlines() if 'userData' not in l and 'se chamava' not in l and "electron.app.Panteão" not in l and 'Panteão pra Pantheon' not in l)
 ok(not any('Panteão' in sem_pasta_antiga(ler(f)) for f in ('app/static/js/bazar.js', 'app/static/js/loja.js', 'desktop/main.js', 'desktop/login.html', 'app/bazar.py')),
    'Nome: não sobrou "Panteão" em texto do app (a patente de nível 900+ é a única que mantém)')
 ok(manifesto['icons'] and any(i.get('purpose') == 'monochrome' for i in manifesto['icons']), 'Notificação: o manifesto traz o ícone monocromático')

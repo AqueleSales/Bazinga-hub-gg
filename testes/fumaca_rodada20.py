@@ -222,8 +222,12 @@ ok("if (procuraManual) { instalarAtualizacao(); return; }" in main, 'Desktop: ac
 ok("click: () => procurarAtualizacao(true)" in main and "procurarAtualizacao(true);" in main, 'Desktop: "Procurar atualizações" (aba Geral e bandeja) é o pedido manual')
 ok("setInterval(() => procurarAtualizacao(), 4 * 60 * 60 * 1000)" in main and 'autoInstallOnAppQuit = true' in main, 'Desktop: a procura automática (4 h) só baixa e avisa (instala ao sair), pra não derrubar uma call')
 ok("fase: 'instalando'" in main and "est.fase === 'instalando'" in chat and 'Instalando a versão' in chat, 'Desktop: a tela mostra "Instalando e reiniciando..."')
-ok('migrarInicioComWindows' in main and "'/v', 'Panteão'" in main, 'Desktop: "Iniciar com o Windows" é migrado (o executável mudou de nome com o novo nome do app)')
+ok('migrarInicioComWindows' in main and "['electron.app.Panteão', 'Panteão']" in main and "'reg', ['delete'" in main.replace("execFile('reg', ['delete'", "'reg', ['delete'"), 'Desktop: "Iniciar com o Windows" é migrado (o executável mudou de nome com o novo nome do app)')
 ok("openConfirmModal('Procurar atualizações?'" in chat, 'Desktop: procurar atualização numa call pergunta antes (instalar derruba a ligação)')
+
+nsh = ler('desktop/build/installer.nsh')
+ok('!macro customInstall' in nsh and 'StrCpy $launchLink "$appExe"' in nsh and 'FileExists} "$newStartMenuLink"' in nsh,
+   'Instalador: ao atualizar o app abre pelo .exe (não pelo atalho renomeado, que dava "Windows não pode encontrar Pantheon.lnk") e recria o atalho se faltar')
 
 print('\nFALHAS:', 'nenhuma' if not falhas else falhas)
 sys.exit(1 if falhas else 0)

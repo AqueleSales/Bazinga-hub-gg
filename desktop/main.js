@@ -403,16 +403,18 @@ function criarTray() {
 let autoUpdater = null;
 let atualizacaoBaixada = false;
 
-// "Iniciar com o Windows" é uma entrada no registro com o NOME do app apontando pro executável. Com a troca de Panteão pra Pantheon o
-// executável mudou de nome: a entrada antiga ficaria apontando pra um arquivo que não existe mais e o app deixaria de abrir com o Windows.
-// Se a antiga existir, apaga e liga a nova (só uma vez, no 1º início depois da atualização).
+// "Iniciar com o Windows" é uma entrada no registro (HKCU\...\Run) com o NOME do app apontando pro executável: no Electron o nome é
+// "electron.app.<nome do app>". Com a troca de Panteão pra Pantheon o executável mudou de nome (Panteão.exe -> Pantheon.exe), e a entrada
+// antiga ficaria apontando pra um arquivo que não existe mais: o app deixaria de abrir com o Windows. Se a antiga existir (o `reg delete`
+// só dá certo quando ela existe), apaga e liga a nova. Roda a cada início, mas só faz algo uma vez.
 function migrarInicioComWindows() {
   if (process.platform !== 'win32' || !app.isPackaged) return;
   const { execFile } = require('child_process');
   const chave = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
-  execFile('reg', ['query', chave, '/v', 'Panteão'], { windowsHide: true }, (erro) => {
-    if (erro) return;   // não existe: nada a migrar
-    execFile('reg', ['delete', chave, '/v', 'Panteão', '/f'], { windowsHide: true }, () => app.setLoginItemSettings({ openAtLogin: true }));
+  ['electron.app.Panteão', 'Panteão'].forEach((nome) => {
+    execFile('reg', ['delete', chave, '/v', nome, '/f'], { windowsHide: true }, (erro) => {
+      if (!erro) app.setLoginItemSettings({ openAtLogin: true });
+    });
   });
 }
 // A pessoa clicou em "Procurar atualizações" (aba Geral ou bandeja): se achar versão nova, baixa, INSTALA e reabre o app sozinho,
