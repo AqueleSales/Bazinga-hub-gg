@@ -368,7 +368,7 @@ MISSOES = {
     # --- diárias ---
     'd_msg10':    {'periodo': 'diaria',  'evento': 'mensagem',     'meta': 10,  'xp': 150,  'icone': 'comment-dots', 'titulo': 'Bate-papo',          'desc': 'Envie 10 mensagens em canais'},
     'd_msg30':    {'periodo': 'diaria',  'evento': 'mensagem',     'meta': 30,  'xp': 350,  'icone': 'comments',     'titulo': 'Língua solta',       'desc': 'Envie 30 mensagens em canais'},
-    'd_ativo15':  {'periodo': 'diaria',  'evento': 'minutos',      'meta': 15,  'xp': 150,  'icone': 'hourglass-half', 'titulo': 'De olho no Panteão', 'desc': 'Fique 15 minutos ativo no app'},
+    'd_ativo15':  {'periodo': 'diaria',  'evento': 'minutos',      'meta': 15,  'xp': 150,  'icone': 'hourglass-half', 'titulo': 'De olho no Pantheon', 'desc': 'Fique 15 minutos ativo no app'},
     'd_ativo45':  {'periodo': 'diaria',  'evento': 'minutos',      'meta': 45,  'xp': 350,  'icone': 'clock',        'titulo': 'Morador',            'desc': 'Fique 45 minutos ativo no app'},
     'd_reacao5':  {'periodo': 'diaria',  'evento': 'reacao',       'meta': 5,   'xp': 120,  'icone': 'face-smile',   'titulo': 'Reator',             'desc': 'Reaja a 5 mensagens'},
     'd_dm5':      {'periodo': 'diaria',  'evento': 'dm',           'meta': 5,   'xp': 150,  'icone': 'paper-plane',  'titulo': 'Papo reservado',     'desc': 'Envie 5 mensagens diretas'},
@@ -563,6 +563,58 @@ def url_de_imagem_ok(url):
     url = (url or '').strip()
     return bool(url) and len(url) <= 255 and (
         url.startswith('/') or url.startswith('https://res.cloudinary.com/') or bool(_RE_GIPHY.match(url)))
+
+
+# ------------------------------------------------------------
+# TEMAS DO APP (Configurações > Aparência). A paleta de cada um mora no CSS do chat.html (`:root[data-tema="<id>"]`); aqui só ficam os ids
+# aceitos e quais são "claros" (o app usa `data-claro` pra regras que só fazem sentido em fundo claro). Tema novo = id aqui + paleta no CSS
+# + item em CATALOGO_TEMAS do chat.html (nome e cores da prévia).
+# ------------------------------------------------------------
+TEMAS_ESCUROS = ('dark', 'amoled', 'meia_noite', 'floresta', 'oceano', 'por_do_sol', 'ametista', 'cafe', 'cereja')
+TEMAS_CLAROS = ('light', 'sakura', 'menta', 'areia')
+TEMAS_VALIDOS = TEMAS_ESCUROS + TEMAS_CLAROS + ('custom',)
+_RE_COR_HEX = re.compile(r'^#[0-9a-fA-F]{6}$')
+_RE_URL_SEM_CSS = re.compile(r'''^[^\s'"()<>\\]+$''')    # a URL do fundo vai dentro de url("...") no navegador: nada que feche aspas/parênteses
+
+
+def _limitar(valor, minimo, maximo, padrao):
+    try:
+        return max(minimo, min(maximo, int(float(valor))))
+    except (TypeError, ValueError):
+        return padrao
+
+
+def tema_custom_valido(dados):
+    """Normaliza o tema personalizado vindo do cliente: {base, cor, img, escuro, painel}. Nada de texto livre que vire CSS: base e cor
+    são conferidas, a imagem só pode ser do próprio app (url_de_imagem_ok, sem aspas/parênteses) e os números são limitados."""
+    if not isinstance(dados, dict):
+        return None
+    base = dados.get('base') if dados.get('base') in ('dark', 'light', 'amoled') else 'dark'
+    cor = dados.get('cor') if isinstance(dados.get('cor'), str) and _RE_COR_HEX.match(dados.get('cor')) else '#7289da'
+    img = dados.get('img') if isinstance(dados.get('img'), str) else ''
+    img = img.strip() if (img and url_de_imagem_ok(img) and _RE_URL_SEM_CSS.match(img.strip())) else ''
+    return {'base': base, 'cor': cor.lower(), 'img': img,
+            'escuro': _limitar(dados.get('escuro'), 0, 90, 35 if img else 0),
+            'painel': _limitar(dados.get('painel'), 30, 100, 60)}
+
+
+def tema_custom_da_pessoa(pessoa):
+    """Dicionário do tema personalizado guardado na conta (já validado), ou None."""
+    import json
+    bruto = getattr(pessoa, 'tema_custom', None)
+    if not bruto:
+        return None
+    try:
+        return tema_custom_valido(json.loads(bruto))
+    except (ValueError, TypeError):
+        return None
+
+
+def tema_eh_claro(tema, custom=None):
+    """O app usa isso pra ligar `data-claro` (regras de fundo claro). 'custom' segue a base escolhida."""
+    if tema == 'custom':
+        return bool(custom) and custom.get('base') == 'light'
+    return tema in TEMAS_CLAROS
 
 
 _RE_AJUSTE = re.compile(r'^-?\d{1,2}(\.\d{1,3})?,-?\d{1,2}(\.\d{1,3})?,\d{1,2}(\.\d{1,3})?,[01],[01]$')
@@ -779,6 +831,9 @@ FORMATOS_ANIMADOS = {
     'circulo': (256, 256), 'quadrado': (256, 256),
     'faixa': (816, 260),      # mesma proporção da faixa do cartão (340x108)
     'painel': (480, 608),     # fundo do cartão (300x380)
+    'tela': (640, 360),       # imagem de fundo do app (tema personalizado), 16:9
+    'produto': (600, 450),    # foto de produto do Bazar, 4:3
+    'anuncio': (660, 440),    # arte de anúncio do Bazar, 3:2
 }
 MAX_QUADROS_ANIMACAO = 90
 

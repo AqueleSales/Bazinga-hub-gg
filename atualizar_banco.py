@@ -250,6 +250,9 @@ def atualizar_banco():
             add_column_se_nao_existir("bazar_pedido", "endereco VARCHAR(300)")
             add_column_se_nao_existir("bazar_mensagem", "imagem_url VARCHAR(255)")
 
+            # 28. Tema personalizado (Rodada 20): JSON com base, cor de destaque, imagem de fundo e transparência (ver utils.tema_custom_valido).
+            add_column_se_nao_existir("person", "tema_custom TEXT")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

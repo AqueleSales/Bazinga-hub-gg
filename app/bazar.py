@@ -2,7 +2,7 @@
 pagamento por Pix DIRETO entre comprador e vendedor.
 
 Só lógica e dados (sem socket; os handlers moram em bazar_events.py). O que este modelo é e NÃO é:
-  * O Panteão NÃO toca no dinheiro, NÃO guarda saldo, NÃO retém pagamento (isso seria o "modelo B": gateway com
+  * O Pantheon NÃO toca no dinheiro, NÃO guarda saldo, NÃO retém pagamento (isso seria o "modelo B": gateway com
     split + retenção até a entrega, que exige CNPJ/KYC/termos). Aqui o app só monta o "Pix copia e cola" com a chave
     que o vendedor cadastrou e acompanha o estado do pedido. Sem proteção de escrow: o aviso na tela diz isso.
   * Regra 4: o servidor decide tudo (quem vê a chave Pix, quem pode aceitar/cancelar, estoque, preço). O cliente só
@@ -650,7 +650,7 @@ _RE_LINK_ANUNCIO = re.compile(r'''^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0
 ICONE_DESTINO = {'loja': 'fa-store', 'link': 'fa-arrow-up-right-from-square', 'painel': 'fa-store', 'aviso': 'fa-shield-halved', 'armazem': 'fa-wand-magic-sparkles', 'nenhum': 'fa-bullhorn'}
 ANUNCIOS_PADRAO = [
     {'titulo': 'Monte a sua loja', 'texto': 'Abra a sua barraca em poucos minutos: escolha a cor e o toldo, cadastre os produtos e receba por Pix direto.', 'cor': 'lavanda', 'cta': 'Abrir a minha lojinha', 'destino': 'painel'},
-    {'titulo': 'Pix direto, sem taxa do Panteão', 'texto': 'Confira o nome do recebedor antes de pagar e só pague depois que o vendedor aceitar o pedido.', 'cor': 'oceano', 'cta': 'Como funciona', 'destino': 'aviso'},
+    {'titulo': 'Pix direto, sem taxa do Pantheon', 'texto': 'Confira o nome do recebedor antes de pagar e só pague depois que o vendedor aceitar o pedido.', 'cor': 'oceano', 'cta': 'Como funciona', 'destino': 'aviso'},
     {'titulo': 'Personalize o seu perfil', 'texto': 'Molduras, nomes e placas animadas, pagos em DRC. Combine com a sua loja.', 'cor': 'ambar', 'cta': 'Ir ao Armazém', 'destino': 'armazem'},
 ]
 
@@ -740,7 +740,7 @@ def apagar_anuncio(admin, anuncio_id):
 
 
 def criar_anuncios_padrao(admin):
-    """Importa os 3 anúncios do Panteão (os que antes eram fixos no bazar.js) pra poder editar/apagar. Só se não houver nenhum anúncio ainda."""
+    """Importa os 3 anúncios do Pantheon (os que antes eram fixos no bazar.js) pra poder editar/apagar. Só se não houver nenhum anúncio ainda."""
     _exigir_admin(admin)
 
     def preparar():
@@ -1121,7 +1121,7 @@ def meus_pedidos(usuario, limite=40):
 # ==========================================
 # DISPUTA (uma das pontas pede a análise de um admin)
 # ------------------------------------------------------------
-# O Panteão não toca no dinheiro, então a decisão só muda o ESTADO do pedido (concluir / cancelar / arquivar) e fica registrada com a nota do
+# O Pantheon não toca no dinheiro, então a decisão só muda o ESTADO do pedido (concluir / cancelar / arquivar) e fica registrada com a nota do
 # admin, que as DUAS pontas leem. Reembolso, se houver, é combinado entre elas. Abrir a disputa libera o admin a ler a conversa DAQUELE pedido
 # (a tela avisa antes); conversa de pedido sem disputa o admin não lê. Enquanto a disputa está aberta as ações do pedido ficam travadas.
 # ==========================================
@@ -1342,7 +1342,7 @@ def moderar(admin, tipo, alvo_id, acao):
 # ---------------------------------------------------------------------------
 def banir(admin, pessoa_id, motivo, dias=None, denuncia=None):
     """Suspende a pessoa do Bazar (`dias` vazio = pra sempre): não vende, não compra, a loja some do feed e os pedidos ainda em aberto dela são
-    cancelados (estoque volta). Quem tem Pix já pago a ela precisa resolver fora (o Panteão não toca no dinheiro): as outras pontas são avisadas.
+    cancelados (estoque volta). Quem tem Pix já pago a ela precisa resolver fora (o Pantheon não toca no dinheiro): as outras pontas são avisadas.
     `denuncia` = (tipo, alvo_id) opcional: dispensa as denúncias daquele alvo junto. Devolve (pessoa, [pedidos cancelados])."""
     _exigir_admin(admin)
     if not str(pessoa_id).isdigit():

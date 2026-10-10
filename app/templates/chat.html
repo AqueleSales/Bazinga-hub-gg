@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-tema="{{ usuario_atual.tema or 'dark' }}">
+<html lang="pt-BR" data-tema="{{ tema_id }}"{% if tema_claro %} data-claro{% endif %}{% if tema_id == 'custom' %} data-base="{{ tema_custom.base }}"{% if tema_custom.img %} data-fundo{% endif %} style="--brand-color: {{ tema_custom.cor }}; --fundo-escuro: {{ tema_custom.escuro / 100 }}; --painel-opac: {{ tema_custom.painel }}%;{% if tema_custom.img %} --fundo-img: url('{{ tema_custom.img }}');{% endif %}"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
@@ -154,7 +154,11 @@
         .dm-card:hover::before, .dm-card.active::before { background-color: var(--brand-color); }
 
         .dm-notification-badge { background-color: var(--red-color); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; min-width: 16px; text-align: center; display: none; }
-        .dm-notification-badge.active { display: block; animation: radar-pulse 1s infinite; }
+        /* Fica parado e bem visível. Antes pulsava pra sempre entre 10% e 30% de opacidade (radar-pulse): o contador de não
+           lidas "piscava" sem parar e quase sumia. Só dá um pulinho quando chega mensagem nova (classe .novo, ver somarBadgeDM). */
+        .dm-notification-badge.active { display: block; }
+        .dm-notification-badge.novo { animation: dm-badge-pop .35s ease-out; }
+        @keyframes dm-badge-pop { 0% { transform: scale(.7); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
 
         .temp-tag { background-color: var(--purple-color); color: white; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-left: auto; }
 
@@ -1291,11 +1295,55 @@
         body::after { width: 55vw; height: 55vw; right: -15vw; bottom: -22vw; background: radial-gradient(circle, rgba(235,69,158,.5), rgba(67,181,129,.3) 50%, transparent 72%); animation: vidroDeriva2 46s ease-in-out infinite; }
         /* Paletas também em CSS puro: o tema certo já vale no primeiro paint
            (o JS só reforça e cuida da troca ao vivo). Manter igual ao TEMAS do JS. */
-        :root[data-tema="light"] { --bg-primary: #ffffff; --bg-secondary: #f2f3f5; --bg-tertiary: #e3e5e8; --bg-quaternary: #ebedef; --text-normal: #313338; --text-header: #111214; }
-        :root[data-tema="amoled"] { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #050505; --bg-quaternary: #000000; --text-header: #ffffff; }
-        :root[data-tema="light"] body::before, :root[data-tema="light"] body::after { opacity: .35; }
+        :root[data-tema="light"], :root[data-tema="custom"][data-base="light"] { --bg-primary: #ffffff; --bg-secondary: #f2f3f5; --bg-tertiary: #e3e5e8; --bg-quaternary: #ebedef; --text-normal: #313338; --text-header: #111214; }
+        :root[data-tema="amoled"], :root[data-tema="custom"][data-base="amoled"] { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #050505; --bg-quaternary: #000000; --text-header: #ffffff; }
+        /* Temas extras (Configurações > Aparência). Cada um traz a própria cor de destaque (--brand-color). Os ids têm que bater com
+           utils.TEMAS_VALIDOS e com CATALOGO_TEMAS (JS); os claros também entram em utils.TEMAS_CLAROS (ligam o data-claro). */
+        :root[data-tema="meia_noite"] { --bg-primary: #1b2233; --bg-secondary: #161c2b; --bg-tertiary: #0f1420; --bg-quaternary: #0b0f19; --text-normal: #d5dcf0; --text-muted: #8a94b0; --brand-color: #4f83ee; --brand-hover: #4272d6; }
+        :root[data-tema="floresta"] { --bg-primary: #26332d; --bg-secondary: #202b25; --bg-tertiary: #161e1a; --bg-quaternary: #101612; --text-normal: #d3e0d8; --text-muted: #8aa095; --brand-color: #2f9e6e; --brand-hover: #278a5f; }
+        :root[data-tema="oceano"] { --bg-primary: #1d3038; --bg-secondary: #182830; --bg-tertiary: #101c22; --bg-quaternary: #0b1418; --text-normal: #d2e4ea; --text-muted: #86a3ad; --brand-color: #1b9eb0; --brand-hover: #168c9c; }
+        :root[data-tema="por_do_sol"] { --bg-primary: #3b2d40; --bg-secondary: #32253a; --bg-tertiary: #231a29; --bg-quaternary: #1a131f; --text-normal: #ecd9e8; --text-muted: #b093ad; --brand-color: #f06a45; --brand-hover: #d95c3a; }
+        :root[data-tema="ametista"] { --bg-primary: #2f2a45; --bg-secondary: #272339; --bg-tertiary: #1a1729; --bg-quaternary: #120f1f; --text-normal: #e0daf5; --text-muted: #9a92c0; --brand-color: #8b6cf5; --brand-hover: #795ae0; }
+        :root[data-tema="cafe"] { --bg-primary: #3a2f28; --bg-secondary: #30261f; --bg-tertiary: #211a15; --bg-quaternary: #17120e; --text-normal: #e8dccf; --text-muted: #a39382; --brand-color: #b9772f; --brand-hover: #a26828; }
+        :root[data-tema="cereja"] { --bg-primary: #3a2a2e; --bg-secondary: #301f24; --bg-tertiary: #21151a; --bg-quaternary: #170d11; --text-normal: #f0d9dd; --text-muted: #b08e95; --brand-color: #e0425f; --brand-hover: #c9384f; }
+        :root[data-tema="sakura"] { --bg-primary: #fff7f9; --bg-secondary: #fbeaf0; --bg-tertiary: #f3d7e1; --bg-quaternary: #f7e1e9; --text-normal: #4a3340; --text-muted: #8e6f7e; --text-header: #2a1620; --brand-color: #d9487d; --brand-hover: #c23d6e; }
+        :root[data-tema="menta"] { --bg-primary: #f6fffb; --bg-secondary: #e6f7f0; --bg-tertiary: #cdebdf; --bg-quaternary: #d9f1e8; --text-normal: #2e4a3f; --text-muted: #6d8f81; --text-header: #12281f; --brand-color: #17986b; --brand-hover: #12835c; }
+        :root[data-tema="areia"] { --bg-primary: #fffaf2; --bg-secondary: #f5ecdc; --bg-tertiary: #e8dcc4; --bg-quaternary: #efe4cd; --text-normal: #4a3e2c; --text-muted: #8c7d62; --text-header: #261d10; --brand-color: #b9702a; --brand-hover: #a3621f; }
+        /* PERSONALIZADO: a base (escuro/claro/AMOLED) vem das regras acima; a cor de destaque, a imagem e as transparências vêm de variáveis
+           no <html> (--brand-color, --fundo-img, --fundo-escuro, --painel-opac), ligadas pelo servidor no primeiro desenho e pelo JS ao vivo. */
+        :root[data-tema="custom"] { --brand-hover: color-mix(in srgb, var(--brand-color) 86%, #000); }
+        :root[data-claro] body::before, :root[data-claro] body::after { opacity: .35; }
         :root[data-tema="amoled"] body::before, :root[data-tema="amoled"] body::after { opacity: .5; }
         .discord-app { position: relative; z-index: 1; }
+
+        /* ---- BOTÃO "ATUALIZAÇÃO DISPONÍVEL" (a setinha ao lado da caixa de entrada) + pop-up de novidades ----
+           Só aparece com body.tem-atualizacao. A seta é a do ícone de download: duas cópias descem em rolo, recortadas
+           na borda de cima da barra (por isso "some" ao atravessar e a próxima já entra por cima). Só transform. */
+        .btn-atualizar { display: none; align-items: center; height: 34px; padding: 0 7px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; transition: background .2s; font: inherit; color: var(--text-header); }
+        body.tem-atualizacao .btn-atualizar { display: inline-flex; }
+        .btn-atualizar svg { width: 24px; height: 24px; flex: none; display: block; }
+        .btn-atualizar .att-txt { max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; font-size: 12.5px; font-weight: 800; margin: 0; transition: max-width .55s cubic-bezier(.2,.8,.2,1), opacity .3s ease, margin .55s cubic-bezier(.2,.8,.2,1); }
+        body.att-aviso .btn-atualizar .att-txt, .btn-atualizar:hover .att-txt, .btn-atualizar:focus-visible .att-txt { max-width: 170px; opacity: 1; margin: 0 4px 0 8px; }
+        body.att-aviso .btn-atualizar, .btn-atualizar:hover, .btn-atualizar:focus-visible { background: color-mix(in srgb, #4f88dc 26%, var(--bg-secondary)); }
+        .att-seta { animation: attRolo 2.3s cubic-bezier(.65, 0, .35, 1) infinite; }
+        @keyframes attRolo { 0%, 12% { transform: translateY(0); } 78%, 100% { transform: translateY(460px); } }
+
+        .att-modal { width: 540px; max-width: calc(100vw - 20px); max-height: 86vh; max-height: 86dvh; }
+        .att-corpo { padding: 6px 18px 12px; overflow-y: auto; min-height: 120px; }
+        .att-secao { margin: 14px 0 8px; font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--text-muted); }
+        .att-versao { margin-bottom: 10px; border-radius: 12px; background: var(--bg-secondary); padding: 12px 14px; }
+        .att-versao.nova { border: 1px solid color-mix(in srgb, #4f88dc 55%, transparent); background: color-mix(in srgb, #4f88dc 9%, var(--bg-secondary)); }
+        .att-versao > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-weight: 800; color: var(--text-header); font-size: 14px; }
+        .att-versao > summary::-webkit-details-marker { display: none; }
+        .att-versao > summary small { font-weight: 600; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+        .att-item { display: flex; gap: 12px; margin-top: 12px; }
+        .att-item > i { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: color-mix(in srgb, #4f88dc 22%, var(--bg-tertiary)); color: #8fb7ff; font-size: 14px; }
+        .att-item b { display: block; color: var(--text-header); font-size: 13.5px; margin-bottom: 2px; }
+        .att-item span { color: var(--text-normal); font-size: 13px; line-height: 1.4; }
+        .att-vazio { color: var(--text-muted); font-size: 13px; padding: 10px 0; }
+        .att-rodape { padding: 14px 18px; border-top: 1px solid rgba(0,0,0,.2); display: flex; justify-content: flex-end; }
+        .att-rodape .btn { background: #4f88dc; color: #fff; padding: 11px 20px; font-weight: 800; border-radius: 10px; }
+        .att-rodape .btn:hover { background: #4276c4; }
 
         /* Superfícies de vidro */
         .servers-sidebar { background-color: color-mix(in srgb, var(--bg-quaternary) 55%, transparent); backdrop-filter: blur(var(--glass-blur)) saturate(150%); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%); border-right: 1px solid var(--glass-borda); }
@@ -1360,7 +1408,7 @@
         /* :where() = especificidade zero, então não briga com quem já define position */
         :where(.btn, .btn-cancel, .bz-pill-btn, .product-card, .bp-fonte, .welcome-action-btn, .dm-card, .bp-chip) { position: relative; }
         .btn, .btn-cancel { overflow: hidden; }
-        .btn-primary { background: linear-gradient(180deg, #7d92e0, var(--brand-color) 55%, var(--brand-hover)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px rgba(114,137,218,.25); border-radius: 8px; }
+        .btn-primary { background: linear-gradient(180deg, color-mix(in srgb, var(--brand-color) 78%, #fff), var(--brand-color) 55%, var(--brand-hover)); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px color-mix(in srgb, var(--brand-color) 25%, transparent); border-radius: 8px; }
         .btn-primary:hover { background: linear-gradient(180deg, #8ba0ea, #7a8fe0 55%, var(--brand-color)); box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 8px 22px var(--brand-glow); }
         .btn-danger { border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
         .btn-cancel { border-radius: 8px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
@@ -1380,9 +1428,9 @@
         .message:hover { background-color: rgba(255,255,255,.03); }
         .message .chat-avatar { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
-        :root[data-tema="light"] .bp-barra-fundo { background-color: rgba(0,0,0,.1); }
-        :root[data-tema="light"] .bp-barra-texto { color: #23262b; text-shadow: none; }
-        :root[data-tema="light"] .bp-rank, :root[data-tema="light"] .bp-marco-titulo { color: #a06800; }
+        :root[data-claro] .bp-barra-fundo { background-color: rgba(0,0,0,.1); }
+        :root[data-claro] .bp-barra-texto { color: #23262b; text-shadow: none; }
+        :root[data-claro] .bp-rank, :root[data-claro] .bp-marco-titulo { color: #a06800; }
 
         @media (max-width: 720px) { body::before, body::after { display: none; } }
 
@@ -1393,12 +1441,69 @@
         /* Escuro e AMOLED: sem as manchas de luz (estranhas, e o azul atrapalhava
            a leitura do texto). Painéis quase sólidos; o vidro fica nos cartões,
            modais e popups, onde tem conteúdo de verdade atrás. O Claro mantém o fundo vivo. */
-        :root:not([data-tema="light"]) body::before, :root:not([data-tema="light"]) body::after { display: none; }
-        :root:not([data-tema="light"]) .servers-sidebar { background-color: color-mix(in srgb, var(--bg-quaternary) 96%, transparent); }
-        :root:not([data-tema="light"]) .channels-sidebar, :root:not([data-tema="light"]) .members-sidebar { background-color: color-mix(in srgb, var(--bg-secondary) 94%, transparent); }
-        :root:not([data-tema="light"]) .chat-area, :root:not([data-tema="light"]) .market-wrapper { background-color: color-mix(in srgb, var(--bg-primary) 96%, transparent); }
-        :root:not([data-tema="light"]) .chat-header, :root:not([data-tema="light"]) .market-header, :root:not([data-tema="light"]) .channels-header { background-color: color-mix(in srgb, var(--bg-primary) 88%, transparent); }
-        :root:not([data-tema="light"]) .user-controls { background-color: color-mix(in srgb, var(--bg-tertiary) 94%, transparent); }
+        :root:not([data-claro]) body::before, :root:not([data-claro]) body::after { display: none; }
+        :root:not([data-claro]) .servers-sidebar { background-color: color-mix(in srgb, var(--bg-quaternary) 96%, transparent); }
+        :root:not([data-claro]) .channels-sidebar, :root:not([data-claro]) .members-sidebar { background-color: color-mix(in srgb, var(--bg-secondary) 94%, transparent); }
+        :root:not([data-claro]) .chat-area, :root:not([data-claro]) .market-wrapper { background-color: color-mix(in srgb, var(--bg-primary) 96%, transparent); }
+        :root:not([data-claro]) .chat-header, :root:not([data-claro]) .market-header, :root:not([data-claro]) .channels-header { background-color: color-mix(in srgb, var(--bg-primary) 88%, transparent); }
+        :root:not([data-claro]) .user-controls { background-color: color-mix(in srgb, var(--bg-tertiary) 94%, transparent); }
+
+        /* ---- TEMA PERSONALIZADO com imagem de fundo ----
+           A imagem é desenhada UMA vez, num pseudo-elemento fixo atrás do app (não em background-attachment: fixed, que repinta a cada
+           rolagem), com uma camada de escurecimento por cima. Os painéis ficam translúcidos na medida de --painel-opac pra imagem
+           aparecer entre eles. Sem blur de propósito: dezenas de painéis com backdrop-filter pesam (ver "Rolagem pesada"). */
+        :root[data-tema="custom"][data-fundo] body::before { content: ''; display: block; position: fixed; inset: 0; width: auto; height: auto; border-radius: 0; filter: none; animation: none; will-change: auto; opacity: 1; z-index: 0;
+            background: var(--fundo-img) center / cover no-repeat; }
+        :root[data-tema="custom"][data-fundo] body::after { content: ''; display: block; position: fixed; inset: 0; width: auto; height: auto; border-radius: 0; filter: none; animation: none; will-change: auto; opacity: 1; z-index: 0;
+            background: rgba(0, 0, 0, var(--fundo-escuro, 0)); }
+        :root[data-tema="custom"][data-fundo] .servers-sidebar { background-color: color-mix(in srgb, var(--bg-quaternary) var(--painel-opac), transparent); }
+        :root[data-tema="custom"][data-fundo] .channels-sidebar, :root[data-tema="custom"][data-fundo] .members-sidebar { background-color: color-mix(in srgb, var(--bg-secondary) var(--painel-opac), transparent); }
+        :root[data-tema="custom"][data-fundo] .chat-area, :root[data-tema="custom"][data-fundo] .market-wrapper { background-color: color-mix(in srgb, var(--bg-primary) var(--painel-opac), transparent); }
+        :root[data-tema="custom"][data-fundo] .chat-header, :root[data-tema="custom"][data-fundo] .market-header, :root[data-tema="custom"][data-fundo] .channels-header { background-color: color-mix(in srgb, var(--bg-primary) calc(var(--painel-opac) - 8%), transparent); }
+        :root[data-tema="custom"][data-fundo] .user-controls { background-color: color-mix(in srgb, var(--bg-tertiary) var(--painel-opac), transparent); }
+        :root[data-tema="custom"][data-fundo] .chat-area-main, :root[data-tema="custom"][data-fundo] #text-view, :root[data-tema="custom"][data-fundo] #messages-container, :root[data-tema="custom"][data-fundo] #dm-chat-view, :root[data-tema="custom"][data-fundo] #home-content-wrapper { background-color: transparent; }
+
+        /* grade de temas e painel do personalizado (Configurações > Aparência) */
+        .temas-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px; }
+        .tema-card { border: 2px solid transparent; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s; background: var(--bg-tertiary); padding: 0; text-align: left; color: var(--text-normal); font: inherit; }
+        .tema-card:hover { transform: translateY(-2px); }
+        .tema-card.active { border-color: var(--brand-color); }
+        .tema-amostra { display: grid; grid-template-columns: 26% 1fr; grid-template-rows: 1fr 1fr; height: 66px; }
+        .tema-amostra i { display: block; }
+        .tema-amostra .a-lado { grid-row: 1 / 3; }
+        .tema-amostra .a-topo { }
+        .tema-amostra .a-msg { position: relative; }
+        .tema-amostra .a-msg::after { content: ''; position: absolute; left: 8px; top: 50%; width: 44%; height: 6px; border-radius: 3px; background: var(--amostra-destaque); transform: translateY(-50%); }
+        .tema-nome { display: block; text-align: center; padding: 7px 4px; font-size: 12.5px; font-weight: 700; }
+        .tema-grupo { margin: 16px 0 8px; font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--text-muted); }
+        .tema-grupo:first-child { margin-top: 0; }
+        .tema-card.custom .tema-amostra { background: repeating-conic-gradient(var(--bg-secondary) 0 25%, var(--bg-tertiary) 0 50%) 50% / 16px 16px; place-items: center; grid-template-columns: 1fr; grid-template-rows: 1fr; }
+        .tema-card.custom .tema-amostra i { font-size: 22px; color: var(--brand-color); }
+        .tc-painel { margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--bg-tertiary); display: none; flex-direction: column; gap: 14px; }
+        .tc-painel.aberto { display: flex; }
+        .tc-linha { display: flex; flex-direction: column; gap: 6px; }
+        .tc-linha > .control-label { margin: 0; }
+        .tc-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .tc-chip { border: 2px solid transparent; background: var(--bg-secondary); color: var(--text-normal); padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+        .tc-chip.active { border-color: var(--brand-color); }
+        .tc-cor { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); cursor: pointer; padding: 0; }
+        .tc-cor.active { outline: 2px solid var(--text-header); outline-offset: 2px; }
+        .tc-chips input[type="color"] { width: 34px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; }
+        .tc-imagem { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .tc-prev { width: 128px; height: 72px; border-radius: 8px; background: var(--bg-secondary) center / cover no-repeat; border: 1px dashed rgba(255,255,255,.25); display: grid; place-items: center; color: var(--text-muted); font-size: 12px; text-align: center; }
+        .tc-slider { display: flex; align-items: center; gap: 12px; }
+        .tc-slider input[type="range"] { flex: 1; }
+        .tc-slider output { min-width: 42px; text-align: right; font-weight: 700; font-size: 13px; }
+        .tc-dica { font-size: 12px; color: var(--text-muted); }
+        /* campo "Colar link" do seletor de imagem */
+        .sm-link { margin-top: 12px; }
+        .sm-link-linha { display: flex; align-items: center; gap: 8px; background: var(--bg-tertiary); border-radius: 10px; padding: 4px 4px 4px 12px; border: 1px solid rgba(255,255,255,.08); }
+        .sm-link-linha i { color: var(--text-muted); }
+        .sm-link-linha input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--text-normal); font: inherit; font-size: 13px; padding: 8px 0; }
+        .sm-link-linha button { background: var(--brand-color); color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 800; font-size: 13px; cursor: pointer; }
+        .sm-link-linha button:disabled { opacity: .55; cursor: progress; }
+        #sm-link-msg { display: block; min-height: 16px; margin-top: 6px; font-size: 12px; color: var(--text-muted); }
+        #sm-link-msg.erro { color: #f0625e; }
 
         /* Anel de gradiente girando (BP, destaque do Mercado). Fica num pseudo
            com máscara: a borda é SÓ o anel - antes era um fundo em camadas e o
@@ -1459,7 +1564,7 @@
         .leaflet-control-zoom a { background-color: color-mix(in srgb, var(--bg-secondary) 76%, transparent) !important; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 0 !important; transition: background-color .2s; }
         .leaflet-control-zoom a:hover { background-color: var(--brand-color) !important; }
         #bazinga-map::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 450; box-shadow: inset 0 0 90px rgba(0,0,0,.38); }
-        :root[data-tema="light"] #bazinga-map::after { box-shadow: inset 0 0 90px rgba(0,0,0,.12); }
+        :root[data-claro] #bazinga-map::after { box-shadow: inset 0 0 90px rgba(0,0,0,.12); }
         @keyframes marcadorPulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(114,137,218,.6), 0 0 15px var(--brand-color); } 50% { box-shadow: 0 0 0 12px rgba(114,137,218,0), 0 0 15px var(--brand-color); } }
         .user-marker:not(.ghost) { animation: marcadorPulso 2.8s ease-in-out infinite; }
 
@@ -2054,7 +2159,7 @@
         .pf-faixa-amostra, #pf-tema-amostra, .cat-tema-amostra { overflow: hidden; }
         #pf-tema-amostra { position: relative; }
         .camada-tema-mini { position: absolute; inset: 0; overflow: hidden; }
-        #crop-viewport.faixa, #crop-viewport.painel { border-radius: 12px; }
+        #crop-viewport.faixa, #crop-viewport.painel, #crop-viewport.tela, #crop-viewport.produto, #crop-viewport.anuncio { border-radius: 12px; }
         #crop-viewport .gif-ajuste { position: absolute; inset: 0; overflow: hidden; display: none; }
         #crop-viewport.gif-modo .gif-ajuste { display: block; }
         #crop-viewport.gif-modo #crop-canvas { display: none; }
@@ -2276,6 +2381,12 @@
                    transition: opacity .12s ease .35s, visibility 0s linear .47s; }
         .submenu::before { content: ''; position: absolute; left: -14px; top: 0; bottom: 0; width: 14px; }
         .menu-item.has-submenu:hover > .submenu, .submenu:hover { visibility: visible; opacity: 1; pointer-events: auto; transition-delay: 0s; }
+        /* Menu de mic/fone levado pro <body> (ver posicionarMenuHardware): posição fixa, acima da call (1500) e do cartão de
+           perfil (2001), abaixo dos modais (10500). A lista de dispositivos nunca passa da altura da janela. */
+        .hardware-menu.flutuante { position: fixed; top: auto; right: auto; z-index: 2600; max-height: calc(100vh - 24px); }
+        .hardware-menu.flutuante .submenu { max-height: min(400px, 55vh); }
+        .hardware-menu.flutuante.submenu-esq .submenu { left: auto !important; right: calc(100% - 2px); }
+        .hardware-menu.flutuante.submenu-esq .submenu::before { left: auto; right: -14px; }
         .mic-test-container { padding: 10px 12px 6px; }
         .mic-bar-bg { height: 8px; }
         .mic-bar-fill { transition: width .06s linear; background: linear-gradient(90deg, var(--green-color), #f1c40f 75%, #ed4245); }
@@ -2349,9 +2460,6 @@
         .settings-content { overscroll-behavior: contain; }
 
         /* ---- versão nova no ar ---- */
-        #aviso-versao { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 11000; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); padding: 10px 12px 10px 16px; border-radius: 14px; background: var(--bg-quaternary); border: 1px solid rgba(114,137,218,.6); box-shadow: 0 14px 40px rgba(0,0,0,.55); color: var(--text-header); font-size: 13.5px; font-weight: 700; animation: modalPop .25s both; }
-        #aviso-versao i { color: var(--brand-color); }
-        #aviso-versao button { background: var(--brand-color); color: #fff; border: 0; border-radius: 9px; padding: 7px 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 
         /* ---- PESO das configurações/modais: o fundo desfocado (blur no overlay + blur no cartão) era recalculado a cada
            quadro porque atrás dele tem placas, molduras e nomes animando. Com o painel aberto o fundo é só escurecido
@@ -4221,8 +4329,12 @@
                         <small>Clique ou arraste aqui. Depois você pode cortar, girar e dar zoom. Vídeo vira animação (primeiros 6s).</small>
                     </div>
                     <input type="file" id="sm-arquivo" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none;">
+                    <div class="sm-link">
+                        <div class="sm-link-linha"><i class="fa-solid fa-link"></i><input type="text" id="sm-link" placeholder="Colar o link de uma imagem (https://...)" autocomplete="off" spellcheck="false" maxlength="2000"><button type="button" id="sm-link-ok">Usar</button></div>
+                        <small id="sm-link-msg"></small>
+                    </div>
                     <div id="sm-extras"></div>
-                    <div class="sm-dica"><i class="fa-regular fa-lightbulb"></i> Achou uma foto no Pinterest ou em outro site? Salve a imagem e envie aqui - esses sites não liberam busca direta pra outros apps.</div>
+                    <div class="sm-dica"><i class="fa-regular fa-lightbulb"></i> Achou uma foto no Pinterest ou em outro site? Cole o link dela aqui em cima (no Pinterest: abra a foto, clique com o botão direito e escolha "Copiar endereço da imagem"). O Pinterest não libera busca direta pra outros apps.</div>
                 </div>
                 <div class="sm-dir">
                     <div class="sm-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="sm-busca" placeholder="Buscar GIFs..." autocomplete="off"></div>
@@ -4230,6 +4342,19 @@
                     <div class="sm-grid" id="sm-grid"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ATUALIZAÇÃO DISPONÍVEL: novidades e histórico (o botão fica ao lado da caixa de entrada; ver anunciarAtualizacao) -->
+    <div class="modal-overlay" id="att-modal">
+        <div class="bazinga-modal att-modal" role="dialog" aria-labelledby="att-titulo">
+            <div class="modal-header" style="position: relative;">
+                <h2 id="att-titulo">Atualização disponível</h2>
+                <p>Veja o que chega quando você atualizar.</p>
+                <i class="fa-solid fa-xmark modal-close-x" id="att-fechar" title="Fechar"></i>
+            </div>
+            <div class="att-corpo" id="att-corpo"></div>
+            <div class="att-rodape"><button type="button" class="btn" id="att-atualizar"><i class="fa-solid fa-rotate"></i> Atualizar agora</button></div>
         </div>
     </div>
 
@@ -4519,6 +4644,7 @@
                         </div>
                         <p style="color: var(--text-muted); font-size: 13px;" id="geral-versao"></p>
                         <p style="color: var(--text-muted); font-size: 13px; margin-top: 6px;"><span id="att-estado"></span> <button class="btn" id="btn-procurar-att" style="margin-left: 8px; padding: 4px 12px; font-size: 12.5px;">Procurar atualizações</button></p>
+                        <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">Se houver versão nova, o app baixa, instala no lugar da antiga e abre de novo sozinho: não precisa baixar o instalador na mão.</p>
                     </div>
                 </div>
 
@@ -4527,27 +4653,45 @@
                     <h2 class="set-title">Aparência</h2>
 
                     <div class="control-group">
-                        <span class="control-label">Tema Principal</span>
-                        <div style="display: flex; gap: 16px;">
-                            <div class="theme-btn active" data-theme="dark" style="flex: 1;">
-                                <div class="theme-preview" style="background-color: #36393f;"></div>
-                                <div class="theme-label">Escuro</div>
+                        <span class="control-label">Tema</span>
+                        <!-- desenhado por desenharTemas() a partir do CATALOGO_TEMAS (JS) -->
+                        <div id="temas-grade"></div>
+
+                        <!-- Personalizado: aparece quando o card "Personalizado" está escolhido -->
+                        <div class="tc-painel" id="tc-painel">
+                            <div class="tc-linha">
+                                <span class="control-label">Base</span>
+                                <div class="tc-chips" id="tc-base">
+                                    <button type="button" class="tc-chip" data-base="dark">Escuro</button>
+                                    <button type="button" class="tc-chip" data-base="light">Claro</button>
+                                    <button type="button" class="tc-chip" data-base="amoled">AMOLED</button>
+                                </div>
                             </div>
-                            <div class="theme-btn" data-theme="light" style="flex: 1;">
-                                <div class="theme-preview" style="background-color: #f2f3f5; border: 1px solid #ccc;"></div>
-                                <div class="theme-label" style="background-color: #e3e5e8; color: #313338;">Claro</div>
+                            <div class="tc-linha">
+                                <span class="control-label">Cor de destaque</span>
+                                <div class="tc-chips" id="tc-cores"></div>
                             </div>
-                            <div class="theme-btn" data-theme="amoled" style="flex: 1;">
-                                <div class="theme-preview" style="background-color: #000000;"></div>
-                                <div class="theme-label">AMOLED</div>
+                            <div class="tc-linha">
+                                <span class="control-label">Imagem de fundo</span>
+                                <div class="tc-imagem">
+                                    <div class="tc-prev" id="tc-prev">sem imagem</div>
+                                    <div class="tc-chips">
+                                        <button type="button" class="btn btn-primary" id="tc-escolher"><i class="fa-solid fa-image"></i> Escolher imagem</button>
+                                        <button type="button" class="tc-chip" id="tc-tirar" style="display:none;">Tirar</button>
+                                    </div>
+                                </div>
+                                <span class="tc-dica">Do seu aparelho, de um link (cole até o link de uma foto do Pinterest) ou um GIF. Você pode cortar e dar zoom antes de usar.</span>
+                            </div>
+                            <div class="tc-linha" id="tc-linha-escuro">
+                                <span class="control-label">Escurecer a imagem</span>
+                                <div class="tc-slider"><input type="range" id="tc-escuro" min="0" max="90" step="5"><output id="tc-escuro-v"></output></div>
+                            </div>
+                            <div class="tc-linha" id="tc-linha-painel">
+                                <span class="control-label">Opacidade dos painéis</span>
+                                <div class="tc-slider"><input type="range" id="tc-painel-opac" min="30" max="100" step="5"><output id="tc-painel-v"></output></div>
+                                <span class="tc-dica">Menos opacidade deixa mais da imagem aparecer atrás do chat.</span>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="control-group">
-                        <span class="control-label">Imagem de Fundo Customizada (Beta)</span>
-                        <input type="text" class="discord-input" id="bg-image-input" placeholder="Cole o URL da imagem da web (Ex: https://...)">
-                        <span style="font-size: 12px; color: var(--text-muted); margin-top: 8px; display: block;">Transforma o fundo do app inteiro. Recomendado usar modo AMOLED em conjunto.</span>
                     </div>
                 </div>
 
@@ -5850,7 +5994,7 @@
                         ${htmlBolinha(statusClasse, m.emoji)}
                     </div>
                     <div style="display:flex;flex-direction:column;min-width:0;">
-                        <span class="${classeNome(m.nome_estilo)}" style="color:#fff;font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
+                        <span class="${classeNome(m.nome_estilo)}" style="color:var(--text-header);font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
                         ${sub ? `<span class="dm-sub">${esc(sub)}</span>` : ''}
                     </div>
                 </div>`;
@@ -8727,7 +8871,7 @@
                     return;
                 }
 
-                if(data.length === 0) msgContainer.innerHTML = '<div style="flex-grow: 1; display: flex; align-items: flex-end; padding: 16px; font-size: 24px; font-weight: bold; color: white;">Bem-vindo ao início do canal!</div>';
+                if(data.length === 0) msgContainer.innerHTML = '<div style="flex-grow: 1; display: flex; align-items: flex-end; padding: 16px; font-size: 24px; font-weight: bold; color: var(--text-header);">Bem-vindo ao início do canal!</div>';
                 else data.forEach(msg => appendMessageGrouped(msgContainer, msg.id, msg.autor, msg.avatar, msg.texto, msg.hora, msg.cor, msg));
                 msgContainer.dataset.temMais = data.length >= 50 ? '1' : '0';
             } catch(e) {
@@ -10177,6 +10321,26 @@
             abrirEditorImagem(file, { formato: cfg.formato, titulo: cfg.titulo, aoConfirmar: (arquivo, _o, _r, ajuste) => cfg.aoArquivo(arquivo, ajuste) });
         }
 
+        // Colar link: o SERVIDOR baixa a imagem (o navegador não consegue ler a de outro site) e ela segue como se fosse um arquivo escolhido
+        async function importarLinkDaImagem() {
+            const campo = document.getElementById('sm-link'), msg = document.getElementById('sm-link-msg'), botao = document.getElementById('sm-link-ok');
+            const url = campo.value.trim();
+            if (!url || botao.disabled) return;
+            botao.disabled = true; msg.className = ''; msg.textContent = 'Baixando a imagem...';
+            try {
+                const r = await fetch('/api/imagem/importar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+                if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'Não consegui baixar essa imagem.'); }
+                const blob = await r.blob();
+                const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' }[blob.type] || 'img';
+                campo.value = ''; msg.textContent = '';
+                escolherArquivo(new File([blob], `link.${ext}`, { type: blob.type }));
+            } catch (err) {
+                msg.className = 'erro'; msg.textContent = err.message || 'Não consegui baixar essa imagem.';
+            } finally { botao.disabled = false; }
+        }
+        document.getElementById('sm-link-ok').addEventListener('click', importarLinkDaImagem);
+        document.getElementById('sm-link').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); importarLinkDaImagem(); } });
+
         document.getElementById('sm-fechar').addEventListener('click', fecharSeletor);
         const smDrop = document.getElementById('sm-drop');
         smDrop.addEventListener('click', () => document.getElementById('sm-arquivo').click());
@@ -10513,6 +10677,7 @@
             confirmar: (titulo, texto, ok) => openConfirmModal(titulo, texto, ok),
             toast: (msg, tipo) => showToast(msg, tipo),
             upload: (arquivo) => uploadMidiaCompleto(arquivo),
+            escolherImagem: (cfg) => abrirSeletorMidia(cfg),   // seletor (arquivo/arrastar/link/GIF) + editor de imagem, os mesmos do perfil
             qr: (el, texto) => carregarLib(URL_QRCODE).then(() => { el.innerHTML = ''; new QRCode(el, { text: texto, width: 156, height: 156, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M }); })
                 .catch(() => { el.innerHTML = '<span style="color:#666;font-size:11px">QR indisponível: use o código</span>'; }),
             denunciar: (tipo, id, nome) => abrirDenuncia(tipo, id, nome),
@@ -10861,7 +11026,7 @@
                 const dur = isFinite(v.duration) && v.duration > 0 ? v.duration : VIDEO_SEG_MAX;
                 const seg = Math.min(dur, VIDEO_SEG_MAX);
                 const n = Math.max(2, Math.round(seg * VIDEO_FPS));
-                const lado = (formato === 'faixa' || formato === 'painel') ? 640 : 480;
+                const lado = ['faixa', 'painel', 'tela', 'anuncio'].includes(formato) ? 640 : 480;
                 const k = Math.min(1, lado / Math.max(v.videoWidth || lado, v.videoHeight || lado));
                 const c = document.createElement('canvas');
                 c.width = Math.max(2, Math.round((v.videoWidth || lado) * k));
@@ -10904,14 +11069,17 @@
                 }).catch((err) => showToast(err.message || 'Não consegui converter o vídeo.', 'error'));
                 return;
             }
-            const formato = ['quadrado', 'faixa', 'painel'].includes(opcoes.formato) ? opcoes.formato : 'circulo';
-            cropViewport.classList.remove('circulo', 'quadrado', 'faixa', 'painel', 'gif-modo');
+            const formato = ['quadrado', 'faixa', 'painel', 'tela', 'produto', 'anuncio'].includes(opcoes.formato) ? opcoes.formato : 'circulo';
+            cropViewport.classList.remove('circulo', 'quadrado', 'faixa', 'painel', 'tela', 'produto', 'anuncio', 'gif-modo');
             cropViewport.classList.add(formato);
             document.getElementById('editor-img-titulo').textContent = opcoes.titulo || 'Ajustar imagem';
 
             // Faixa é retangular (mesma proporção do topo do cartão de perfil).
             if (formato === 'faixa') { PW = 340; PH = 108; SW = 1360; SH = 432; }
             else if (formato === 'painel') { PW = 300; PH = 380; SW = 900; SH = 1140; }   // fundo do cartão de perfil (retrato)
+            else if (formato === 'tela') { PW = 336; PH = 189; SW = 1280; SH = 720; }       // imagem de fundo do app (16:9)
+            else if (formato === 'produto') { PW = 300; PH = 225; SW = 1200; SH = 900; }    // foto de produto do Bazar (4:3)
+            else if (formato === 'anuncio') { PW = 330; PH = 220; SW = 1320; SH = 880; }    // arte de anúncio do Bazar (3:2)
             else { PW = PH = 260; SW = SH = 512; }
             cropCanvas.width = PW; cropCanvas.height = PH;
             cropViewport.style.width = PW + 'px'; cropViewport.style.height = PH + 'px';
@@ -11228,37 +11396,147 @@
         // O tema mora na conta (Person.tema), igual ao Modo Fantasma: o valor
         // inicial vem no HTML (sem piscar) e `preferencias_carregadas` mantém
         // outras abas/aparelhos em sincronia.
-        const TEMAS = {
-            dark:   { '--bg-primary': '#36393f', '--bg-secondary': '#2f3136', '--bg-tertiary': '#202225', '--bg-quaternary': '#18191c', '--text-normal': '#dcddde', '--text-header': '#ffffff' },
-            light:  { '--bg-primary': '#ffffff', '--bg-secondary': '#f2f3f5', '--bg-tertiary': '#e3e5e8', '--bg-quaternary': '#ebedef', '--text-normal': '#313338', '--text-header': '#111214' },
-            amoled: { '--bg-primary': '#000000', '--bg-secondary': '#0a0a0a', '--bg-tertiary': '#050505', '--bg-quaternary': '#000000', '--text-normal': '#dbdee1', '--text-header': '#ffffff' }
-        };
+        // A PALETA de cada tema mora no CSS (:root[data-tema="<id>"]): o JS só liga o atributo, então o primeiro desenho (servidor) e a
+        // troca ao vivo são a mesma coisa. Ids = utils.TEMAS_VALIDOS; "claro" liga data-claro (regras de fundo claro) = utils.TEMAS_CLAROS.
+        // cores = [painel principal, barra lateral, barra mais funda, destaque] só pra desenhar a prévia do cartão.
+        const CATALOGO_TEMAS = [
+            { grupo: 'Básicos', itens: [
+                { id: 'dark', nome: 'Escuro', cores: ['#36393f', '#2f3136', '#202225', '#7289da'] },
+                { id: 'light', nome: 'Claro', claro: true, cores: ['#ffffff', '#f2f3f5', '#e3e5e8', '#7289da'] },
+                { id: 'amoled', nome: 'AMOLED', cores: ['#000000', '#0a0a0a', '#050505', '#7289da'] } ] },
+            { grupo: 'Escuros', itens: [
+                { id: 'meia_noite', nome: 'Meia-noite', cores: ['#1b2233', '#161c2b', '#0f1420', '#4f83ee'] },
+                { id: 'floresta', nome: 'Floresta', cores: ['#26332d', '#202b25', '#161e1a', '#2f9e6e'] },
+                { id: 'oceano', nome: 'Oceano', cores: ['#1d3038', '#182830', '#101c22', '#1b9eb0'] },
+                { id: 'por_do_sol', nome: 'Pôr do sol', cores: ['#3b2d40', '#32253a', '#231a29', '#f06a45'] },
+                { id: 'ametista', nome: 'Ametista', cores: ['#2f2a45', '#272339', '#1a1729', '#8b6cf5'] },
+                { id: 'cafe', nome: 'Café', cores: ['#3a2f28', '#30261f', '#211a15', '#b9772f'] },
+                { id: 'cereja', nome: 'Cereja', cores: ['#3a2a2e', '#301f24', '#21151a', '#e0425f'] } ] },
+            { grupo: 'Claros', itens: [
+                { id: 'sakura', nome: 'Sakura', claro: true, cores: ['#fff7f9', '#fbeaf0', '#f3d7e1', '#d9487d'] },
+                { id: 'menta', nome: 'Menta', claro: true, cores: ['#f6fffb', '#e6f7f0', '#cdebdf', '#17986b'] },
+                { id: 'areia', nome: 'Areia', claro: true, cores: ['#fffaf2', '#f5ecdc', '#e8dcc4', '#b9702a'] } ] },
+        ];
+        const TEMAS_CLAROS_JS = CATALOGO_TEMAS.flatMap(g => g.itens).filter(t => t.claro).map(t => t.id);
+        const TEMAS_IDS = CATALOGO_TEMAS.flatMap(g => g.itens).map(t => t.id).concat('custom');
+        const TEMA_CUSTOM_PADRAO = { base: 'dark', cor: '#7289da', img: '', escuro: 0, painel: 60 };
+        const CORES_DESTAQUE = ['#7289da', '#5865f2', '#3ba55d', '#faa61a', '#ed4245', '#eb459e', '#1abc9c', '#e67e22', '#9b59b6', '#00b0f4'];
+        let temaAtual = {{ tema_id|tojson }};
+        let temaCustom = Object.assign({}, TEMA_CUSTOM_PADRAO, {{ tema_custom|tojson }} || {});
+        let _toqueNoTema = 0, _timerSalvarTema = null;
 
-        function aplicarTema(theme) {
-            if (!TEMAS[theme]) return;
+        // a imagem do fundo vai dentro de url("...") numa variável CSS: só o que o servidor também aceita e nada que feche aspas/parênteses
+        function urlDeFundoOk(u) { return typeof u === 'string' && /^(\/|https:\/\/res\.cloudinary\.com\/|https:\/\/media\d*\.giphy\.com\/)[^\s'"()<>\\]*$/.test(u) && u.length <= 255; }
+
+        function aplicarTema(tema, custom) {
+            if (!TEMAS_IDS.includes(tema)) return;
+            if (custom) temaCustom = Object.assign({}, TEMA_CUSTOM_PADRAO, custom);
+            temaAtual = tema;
             const root = document.documentElement;
-            root.dataset.tema = theme;
-            document.body.style.backgroundImage = 'none';
-            Object.entries(TEMAS[theme]).forEach(([k, v]) => root.style.setProperty(k, v));
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-theme') === theme));
+            root.dataset.tema = tema;
+            const VARS = ['--brand-color', '--fundo-escuro', '--painel-opac', '--fundo-img'];
+            if (tema === 'custom') {
+                const c = temaCustom;
+                root.dataset.base = c.base;
+                root.toggleAttribute('data-claro', c.base === 'light');
+                root.style.setProperty('--brand-color', c.cor);
+                root.style.setProperty('--fundo-escuro', String(c.escuro / 100));
+                root.style.setProperty('--painel-opac', c.painel + '%');
+                if (c.img && urlDeFundoOk(c.img)) { root.style.setProperty('--fundo-img', `url("${c.img}")`); root.setAttribute('data-fundo', ''); }
+                else { root.style.removeProperty('--fundo-img'); root.removeAttribute('data-fundo'); }
+            } else {
+                VARS.forEach(v => root.style.removeProperty(v));
+                delete root.dataset.base; root.removeAttribute('data-fundo');
+                root.toggleAttribute('data-claro', TEMAS_CLAROS_JS.includes(tema));
+            }
             // barra de status do celular na cor do app (antes ficava no azul do manifesto)
             const cor = getComputedStyle(root).getPropertyValue('--bg-primary').trim();
             const mt = document.querySelector('meta[name="theme-color"]');
             if (mt && cor) mt.setAttribute('content', cor);
+            desenharTemas();
         }
 
-        aplicarTema("{{ usuario_atual.tema or 'dark' }}");
+        function desenharTemas() {
+            const grade = document.getElementById('temas-grade');
+            if (!grade) return;
+            const card = (t) => `<button type="button" class="tema-card ${temaAtual === t.id ? 'active' : ''}" data-tema="${t.id}" title="${esc(t.nome)}">
+                <span class="tema-amostra" style="--amostra-destaque:${t.cores[3]}"><i class="a-lado" style="background:${t.cores[1]}"></i><i class="a-topo" style="background:${t.cores[0]}"></i><i class="a-msg" style="background:${t.cores[2]}"></i></span>
+                <span class="tema-nome">${esc(t.nome)}</span></button>`;
+            grade.innerHTML = CATALOGO_TEMAS.map(g => `<div class="tema-grupo">${g.grupo}</div><div class="temas-grade">${g.itens.map(card).join('')}</div>`).join('')
+                + `<div class="tema-grupo">Seu</div><div class="temas-grade"><button type="button" class="tema-card custom ${temaAtual === 'custom' ? 'active' : ''}" data-tema="custom" title="Personalizado">
+                <span class="tema-amostra"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="tema-nome">Personalizado</span></button></div>`;
+            const p = document.getElementById('tc-painel');
+            p.classList.toggle('aberto', temaAtual === 'custom');
+            if (temaAtual !== 'custom') return;
+            const c = temaCustom;
+            document.querySelectorAll('#tc-base .tc-chip').forEach(b => b.classList.toggle('active', b.dataset.base === c.base));
+            document.getElementById('tc-cores').innerHTML = CORES_DESTAQUE.map(h => `<button type="button" class="tc-cor ${h.toLowerCase() === c.cor.toLowerCase() ? 'active' : ''}" data-cor="${h}" style="background:${h}" title="${h}"></button>`).join('')
+                + `<input type="color" id="tc-cor-livre" value="${esc(c.cor)}" title="Outra cor">`;
+            const prev = document.getElementById('tc-prev');
+            prev.style.backgroundImage = c.img && urlDeFundoOk(c.img) ? `url("${c.img}")` : '';
+            prev.textContent = c.img ? '' : 'sem imagem';
+            document.getElementById('tc-tirar').style.display = c.img ? '' : 'none';
+            document.getElementById('tc-escolher').innerHTML = `<i class="fa-solid fa-image"></i> ${c.img ? 'Trocar imagem' : 'Escolher imagem'}`;
+            const esc_ = document.getElementById('tc-escuro'), pa = document.getElementById('tc-painel-opac');
+            esc_.value = c.escuro; pa.value = c.painel;
+            document.getElementById('tc-escuro-v').textContent = c.escuro + '%';
+            document.getElementById('tc-painel-v').textContent = c.painel + '%';
+            document.getElementById('tc-linha-escuro').style.display = c.img ? '' : 'none';
+            document.getElementById('tc-linha-painel').style.display = c.img ? '' : 'none';
+        }
 
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const theme = btn.getAttribute('data-theme');
-                aplicarTema(theme);
-                socket.emit('mudar_tema', { tema: theme });
-            });
+        // salva (com um respiro: arrastar um controle não pode mandar 30 pedidos) e avisa que o eco do servidor é nosso
+        function salvarTema(imediato) {
+            _toqueNoTema = Date.now();
+            clearTimeout(_timerSalvarTema);
+            const enviar = () => {
+                if (!socket.connected) { showToast('Sem conexão - o tema não foi salvo na conta.', 'warning'); return; }
+                socket.emit('mudar_tema', temaAtual === 'custom' ? { tema: 'custom', custom: temaCustom } : { tema: temaAtual });
+            };
+            if (imediato) enviar(); else _timerSalvarTema = setTimeout(enviar, 500);
+        }
+        function mudarCustom(campos, imediato) {
+            Object.assign(temaCustom, campos);
+            aplicarTema('custom');
+            salvarTema(imediato);
+        }
+
+        aplicarTema(temaAtual);
+
+        document.getElementById('temas-grade').addEventListener('click', (e) => {
+            const card = e.target.closest('.tema-card');
+            if (!card) return;
+            aplicarTema(card.dataset.tema);
+            salvarTema(true);
         });
+        document.getElementById('tc-base').addEventListener('click', (e) => { const b = e.target.closest('.tc-chip'); if (b) mudarCustom({ base: b.dataset.base }, true); });
+        document.getElementById('tc-cores').addEventListener('click', (e) => { const b = e.target.closest('.tc-cor'); if (b) mudarCustom({ cor: b.dataset.cor }, true); });
+        document.getElementById('tc-cores').addEventListener('input', (e) => { if (e.target.id === 'tc-cor-livre') { Object.assign(temaCustom, { cor: e.target.value }); document.documentElement.style.setProperty('--brand-color', e.target.value); salvarTema(false); } });
+        document.getElementById('tc-escuro').addEventListener('input', (e) => { temaCustom.escuro = Number(e.target.value); document.documentElement.style.setProperty('--fundo-escuro', String(temaCustom.escuro / 100)); document.getElementById('tc-escuro-v').textContent = temaCustom.escuro + '%'; salvarTema(false); });
+        document.getElementById('tc-painel-opac').addEventListener('input', (e) => { temaCustom.painel = Number(e.target.value); document.documentElement.style.setProperty('--painel-opac', temaCustom.painel + '%'); document.getElementById('tc-painel-v').textContent = temaCustom.painel + '%'; salvarTema(false); });
+        document.getElementById('tc-tirar').addEventListener('click', () => mudarCustom({ img: '' }, true));
+
+        // Imagem de fundo: o MESMO seletor do perfil (arquivo, arrastar, link, GIF) e o mesmo editor (corta em 16:9, gira, dá zoom)
+        document.getElementById('tc-escolher').addEventListener('click', () => abrirSeletorMidia({
+            titulo: 'Imagem de fundo do app', formato: 'tela', sub: 'Do aparelho, de um link ou um GIF. Arraste, dê zoom e espelhe até ficar bom.',
+            aoArquivo: async (f) => {
+                try {
+                    showToast('Enviando a imagem...', 'info');
+                    const url = await uploadMidia(f);
+                    mudarCustom({ img: url, escuro: temaCustom.img ? temaCustom.escuro : 35 }, true);
+                    showToast('Fundo aplicado.', 'success');
+                } catch (err) { showToast(err.message || 'Não foi possível enviar a imagem.', 'error'); }
+            },
+            aoUrl: (url) => { mudarCustom({ img: url, escuro: temaCustom.img ? temaCustom.escuro : 35 }, true); showToast('Fundo aplicado.', 'success'); }
+        }));
 
         socket.on('preferencias_carregadas', (prefs) => {
-            if (prefs.tema && prefs.tema !== document.documentElement.dataset.tema) aplicarTema(prefs.tema);
+            if (!prefs.tema) return;
+            // o eco do que ACABEI de mexer aqui não pode puxar o controle de volta pra um valor mais velho
+            if (Date.now() - _toqueNoTema < 2500) return;
+            const mudouCustom = prefs.tema === 'custom' && prefs.tema_custom && JSON.stringify(prefs.tema_custom) !== JSON.stringify(Object.assign({}, TEMA_CUSTOM_PADRAO, temaCustom));
+            if (prefs.tema !== document.documentElement.dataset.tema || mudouCustom) aplicarTema(prefs.tema, prefs.tema_custom || undefined);
+            else if (prefs.tema_custom) temaCustom = Object.assign({}, TEMA_CUSTOM_PADRAO, prefs.tema_custom);
         });
 
         // ==========================================
@@ -11301,7 +11579,7 @@
                     ? 'Usa o serviço de localização do Google (Wi-Fi ao redor).'
                     : 'Precisa de uma chave de API do Google no config.json do app. Sem a chave este botão não faz nada.';
                 document.getElementById('loc-reiniciar').hidden = !prefsApp.precisaReiniciar;
-                document.getElementById('geral-versao').textContent = 'Panteão Desktop v' + (prefsApp.versao || '');
+                document.getElementById('geral-versao').textContent = 'Pantheon Desktop v' + (prefsApp.versao || '');
             }
         }
 
@@ -11391,15 +11669,16 @@
             const geral = document.getElementById('att-estado');
             if (geral) {
                 geral.textContent = est.fase === 'baixando' ? `Baixando a ${est.versao || 'nova versão'}... ${est.percentual || 0}%`
+                    : est.fase === 'instalando' ? `Instalando a versão ${est.versao || 'nova'}... o app vai fechar e abrir sozinho.`
                     : est.fase === 'pronta' ? `Versão ${est.versao} pronta: reinicie pra instalar.`
                     : est.fase === 'procurando' ? 'Procurando atualizações...'
                     : est.fase === 'atualizado' ? 'Você está na versão mais recente.'
                     : est.fase === 'erro' ? 'Não consegui baixar agora. Tento de novo daqui a pouco.'
                     : est.fase === 'dev' ? 'Modo de desenvolvimento (sem atualização automática).' : '';
             }
-            const ativa = est.fase === 'baixando' || est.fase === 'pronta';
+            const ativa = est.fase === 'baixando' || est.fase === 'pronta' || est.fase === 'instalando';
             if (!ativa) { if (pilulaAtt) pilulaAtt.classList.remove('visivel'); return; }
-            if (est.fase === 'pronta') attDispensada = false;
+            if (est.fase === 'pronta' || est.fase === 'instalando') attDispensada = false;
             if (!pilulaAtt) {
                 pilulaAtt = document.createElement('div');
                 pilulaAtt.id = 'pilula-att';
@@ -11411,29 +11690,27 @@
             }
             if (attDispensada && est.fase === 'baixando') return;
             const pronta = est.fase === 'pronta';
-            pilulaAtt.className = 'visivel ' + (pronta ? 'pronta' : 'baixando');
-            pilulaAtt.innerHTML = pronta
+            pilulaAtt.className = 'visivel ' + (est.fase === 'baixando' ? 'baixando' : 'pronta');
+            pilulaAtt.innerHTML = est.fase === 'instalando'
+                ? `<i class="fa-solid fa-arrows-rotate fa-spin att-icone"></i><span>Instalando a <b>${esc(est.versao || 'nova versão')}</b> e reiniciando...</span>`
+                : pronta
                 ? `<i class="fa-solid fa-circle-check att-icone"></i><span>Atualização <b>${esc(est.versao || '')}</b> pronta</span><button type="button" class="att-instalar">Reiniciar e atualizar</button><button type="button" class="att-x" title="Depois">&times;</button>`
                 : `<i class="fa-solid fa-download att-icone"></i><span>Baixando a atualização ${esc(est.versao || '')} · ${Number(est.percentual) || 0}%</span><button type="button" class="att-x" title="Esconder">&times;</button><div class="att-barra" style="width:${Number(est.percentual) || 0}%"></div>`;
         }
         if (noAppDesktop && window.panteao.atualizacaoEstado) {
             window.panteao.aoMudarAtualizacao(pintarAtualizacao);
             window.panteao.atualizacaoEstado().then(pintarAtualizacao).catch(() => {});
+            // "Procurar atualizações": se houver versão nova o app baixa, INSTALA (a antiga sai, a nova entra) e reabre sozinho.
+            // Numa call isso derrubaria a ligação, então pergunta antes.
             document.getElementById('btn-procurar-att').addEventListener('click', () => {
-                window.panteao.atualizacaoProcurar().then(pintarAtualizacao).catch(() => {});
+                const procurar = () => window.panteao.atualizacaoProcurar().then(pintarAtualizacao).catch(() => {});
+                if (typeof inCall !== 'undefined' && inCall) openConfirmModal('Procurar atualizações?', 'Se houver versão nova, o app instala e reinicia sozinho, e você sai da call. Quer procurar agora?', procurar);
+                else procurar();
             });
         }
         document.querySelector('.set-tab[data-target="set-geral"]').addEventListener('click', atualizarAbaGeral);
         // adiado de propósito: usa somLigado()/SOM_CHAVE e variáveis do mapa declaradas mais abaixo no script
         setTimeout(atualizarAbaGeral, 0);
-
-        document.getElementById('bg-image-input').addEventListener('input', (e) => {
-            const url = e.target.value.trim();
-            if(url.length > 5) {
-                document.body.style.backgroundImage = `url('${url}')`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center';
-                document.documentElement.style.setProperty('--bg-primary', 'rgba(49, 51, 56, 0.85)'); document.documentElement.style.setProperty('--bg-secondary', 'rgba(43, 45, 49, 0.85)'); document.documentElement.style.setProperty('--bg-tertiary', 'rgba(30, 31, 34, 0.85)');
-            } else { document.body.style.backgroundImage = 'none'; }
-        });
 
         // 6. HARDWARE (Microfone e Alto-Falantes)
         let currentMicId = 'default';
@@ -11449,16 +11726,36 @@
 
             if(!isActive) {
                 menu.classList.add('active'); icon.style.transform = 'rotate(180deg)';
+                posicionarMenuHardware(menu, document.getElementById(arrowBtnId).closest('.hw-group'));
                 enumerarDispositivos();
                 if(menuId === 'menu-mic') iniciarTesteMic();
             } else { pararTesteMic(); }
         }
 
+        // O menu do microfone/fone morava DENTRO da barra lateral, que corta o que passa da borda dela: o menu e a lista de
+        // dispositivos saíam pela metade (o texto parava no limite da barra). Agora ele vai pro <body>, com posição fixa
+        // calculada em cima do botão e presa dentro da janela; a lista abre pro outro lado se não houver espaço à direita.
+        function posicionarMenuHardware(menu, grupo) {
+            if (menu.parentElement !== document.body) document.body.appendChild(menu);
+            menu.classList.add('flutuante');
+            const r = (grupo || menu).getBoundingClientRect();
+            const largura = menu.offsetWidth || 280;
+            const esq = Math.max(8, Math.min(r.left - 6, window.innerWidth - largura - 8));
+            menu.style.left = esq + 'px';
+            menu.style.bottom = Math.max(8, window.innerHeight - r.top + 8) + 'px';
+            menu.classList.toggle('submenu-esq', esq + largura + 300 + 8 > window.innerWidth);
+        }
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.hardware-menu.active').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.hw-arrow-btn i').forEach(i => i.style.transform = 'rotate(0deg)');
+            pararTesteMic();
+        });
+
         document.getElementById('btn-mic-settings').addEventListener('click', (e) => { e.stopPropagation(); toggleMenu('menu-mic', 'btn-mic-settings'); });
         document.getElementById('btn-deafen-settings').addEventListener('click', (e) => { e.stopPropagation(); toggleMenu('menu-headphone', 'btn-deafen-settings'); });
 
         document.addEventListener('click', (e) => {
-            if(!e.target.closest('.hardware-controls') && !e.target.closest('#btn-open-settings')) {
+            if(!e.target.closest('.hardware-controls') && !e.target.closest('.hardware-menu') && !e.target.closest('#btn-open-settings')) {
                 document.querySelectorAll('.hardware-menu').forEach(m => m.classList.remove('active'));
                 document.querySelectorAll('.hw-arrow-btn i').forEach(i => i.style.transform = 'rotate(0deg)');
                 pararTesteMic();
@@ -11529,14 +11826,18 @@
         async function reaplicarMic() {
             if (!(inCall && myMicStream)) return;
             try {
-                const novoStream = await navigator.mediaDevices.getUserMedia({ audio: constraintsDoMic(currentMicId) });
+                const novoStream = await abrirMicrofone();
                 const novaTrack = novoStream.getAudioTracks()[0];
                 const velha = myMicStream.getAudioTracks()[0];
                 if (velha) { myMicStream.removeTrack(velha); velha.stop(); }
                 myMicStream.addTrack(novaTrack);
                 novaTrack.enabled = !micMuted;
                 atualizarMidiaparaAmigos(novaTrack);
-            } catch (err) { showToast('Não consegui trocar o microfone.', 'error'); }
+                if (semMicrofone) { semMicrofone = false; showToast('Microfone ligado.', 'success'); }
+            } catch (err) {
+                showToast(motivoDoMicFalhou(err), 'error');
+                if (semMicrofone) toggleMic(true);   // continua sem microfone: volta pro mudo em vez de parecer que está falando
+            }
         }
 
         // Saída de áudio escolhida: aplica nos vídeos/áudios da call (setSinkId). Antes só trocava o texto do menu.
@@ -11835,6 +12136,24 @@
                 console.warn('[call] conexão com', call.peer, '->', pc.connectionState);
                 if (pc.connectionState === 'failed') showToast('Não consegui ligar o áudio/vídeo com uma pessoa da call: a rede de um dos dois bloqueia a conexão direta. Sair e entrar de novo às vezes resolve.', 'error');
             });
+            // Conectou mas o som não chega? Confere os números da ligação uma vez, depois que ela estabilizou, e diz na tela
+            // (antes só dava pra descobrir olhando o console).
+            setTimeout(() => diagnosticarAudioDaCall(call), 10000);
+        }
+        async function diagnosticarAudioDaCall(call) {
+            const pc = call && call.peerConnection;
+            if (!pc || pc.connectionState !== 'connected') return;
+            try {
+                let recebido = null, enviado = null;
+                (await pc.getStats()).forEach(r => {
+                    if (r.type === 'inbound-rtp' && r.kind === 'audio') recebido = r.bytesReceived || 0;
+                    if (r.type === 'outbound-rtp' && r.kind === 'audio') enviado = r.bytesSent || 0;
+                });
+                console.info('[call] áudio com', call.peer, '-> recebido', recebido, 'bytes, enviado', enviado, 'bytes');
+                const cartao = document.getElementById('vc-' + call.peer);
+                const nome = (cartao && (cartao.querySelector('.video-label') || {}).textContent) || 'uma pessoa';
+                if (recebido === 0) showToast(`Conectou com ${nome}, mas o som dela não está chegando. Peça pra ela conferir o microfone.`, 'warning');
+            } catch (e) {}
         }
         function prepararVideoDaCall(call, tentativa = 0) {
             vigiarConexaoDaCall(call);
@@ -11950,7 +12269,11 @@
         function monitorarVolume(stream, cardId) {
             if(stream.getAudioTracks().length === 0) return;
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // UM AudioContext só, compartilhado (o dos sons do app). Antes cada pessoa que entrava criava um novo e nunca
+                // fechava: depois de algumas entradas/reconexões o navegador (principalmente o do celular) passava do limite de
+                // contextos de áudio e deixava de abrir a saída de som da call.
+                const audioCtx = garantirAudio();
+                if (!audioCtx) return;
                 const analyser = audioCtx.createAnalyser();
                 const source = audioCtx.createMediaStreamSource(stream);
                 source.connect(analyser); analyser.fftSize = 256;
@@ -11963,7 +12286,12 @@
                 let silencioDesde = 0;
                 const SEGURA_MS = 400;
                 const check = () => {
-                    if(!document.getElementById(cardId)) return;
+                    // sai quando o cartão some OU quando a faixa acabou (o cartão "my-video-card" é fixo no HTML: sem isto o
+                    // laço de cada call antiga continuava rodando pra sempre)
+                    if(!document.getElementById(cardId) || stream.getAudioTracks().every(t => t.readyState === 'ended')) {
+                        try { source.disconnect(); } catch(e) {}
+                        return;
+                    }
                     analyser.getByteFrequencyData(dataArray);
                     let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
                     let avg = sum / dataArray.length;
@@ -12001,7 +12329,29 @@
             if (deafened) { micMutedBeforeDeafen = false; toggleDeafen(false); }
             if (micMuted) toggleMic(false);
         }
+        // Abre o microfone com o que a pessoa escolheu e, se o navegador recusar por causa da ESCOLHA (dispositivo guardado que
+        // não existe mais, exigência que o aparelho não cumpre), tenta de novo com menos exigência antes de desistir. Antes
+        // qualquer falha virava "modo ouvinte" calado: a pessoa entrava na call sem mic e sem saber por quê.
+        async function abrirMicrofone() {
+            const tentativas = [constraintsDoMic(currentMicId)];
+            if (currentMicId && currentMicId !== 'default') tentativas.push(constraintsDoMic('default'));
+            tentativas.push(true);
+            let ultimo;
+            for (const audio of tentativas) {
+                try { return await navigator.mediaDevices.getUserMedia({ audio, video: false }); }
+                catch (e) { ultimo = e; if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) break; }   // permissão negada: insistir não adianta
+            }
+            throw ultimo;
+        }
+        function motivoDoMicFalhou(e) {
+            const nome = e && e.name;
+            if (nome === 'NotAllowedError' || nome === 'SecurityError') return 'O navegador ou o Windows bloqueou o microfone. Libere no cadeado do endereço (ou em Configurações do Windows > Privacidade > Microfone).';
+            if (nome === 'NotFoundError' || nome === 'OverconstrainedError') return 'Não achei nenhum microfone neste aparelho.';
+            if (nome === 'NotReadableError' || nome === 'AbortError') return 'Outro programa está usando o microfone. Feche ele e entre de novo na call.';
+            return 'Não consegui abrir o microfone' + (e && e.message ? ` (${e.message})` : '') + '.';
+        }
         async function _conectarNaCall(voiceId, voiceName, opcoes) {
+            garantirAudio();   // ainda dentro do toque/clique que entrou na call: é aqui que o navegador deixa o áudio do app ligar
             if (!inCall) resetarMudo();
             const ehDM = String(voiceId).startsWith('dm_');   // DM: janela mini (você segue no chat); canal de voz: tela cheia
             if (inCall) {
@@ -12032,12 +12382,15 @@
             try {
                 let stream;
                 try {
-                    stream = await navigator.mediaDevices.getUserMedia({ audio: constraintsDoMic(currentMicId), video: false });
+                    stream = await abrirMicrofone();
+                    semMicrofone = false;
                 } catch (mediaErr) {
-                    console.warn("[BAZINGA] Microfone não encontrado ou bloqueado. Entrando no modo ouvinte.");
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    console.warn("[BAZINGA] Microfone não encontrado ou bloqueado. Entrando no modo ouvinte.", mediaErr);
+                    showToast(motivoDoMicFalhou(mediaErr) + ' Você entrou só ouvindo; clique no microfone pra tentar de novo.', 'error');
+                    const ctx = garantirAudio() || new (window.AudioContext || window.webkitAudioContext)();
                     const dest = ctx.createMediaStreamDestination();
                     stream = dest.stream;
+                    semMicrofone = true;   // a faixa é um silêncio: desmutar tenta abrir o microfone de verdade (ver toggleMic)
                     toggleMic(true);
                 }
 
@@ -12372,6 +12725,54 @@
             if(call) { delete peers[peerId]; call.close(); }
         }
 
+        // ---------- SOM DOS OUTROS NA CALL ----------
+        // O som NÃO sai mais do <video> do cartão. Aquele elemento nasce escondido (câmera desligada = avatar) e só tocava sozinho
+        // (`autoplay`) quando o navegador o considerava "pronto" - e num stream que traz uma faixa de vídeo que nunca entrega
+        // quadro (a vaga de vídeo vazia de uma call só de voz) ele pode nunca ficar pronto: a call conectava, a tela passava e
+        // ninguém ouvia ninguém. Agora cada stream remoto ganha um <audio> próprio com play() chamado na mão; se o navegador
+        // barrar (política de autoplay), avisa e toca no próximo toque na tela.
+        const audiosBloqueados = new Set();
+        let _avisoAudioEm = 0;
+        function tocarAudioRemoto(a) {
+            if (!a) return;
+            if (!a.isConnected) { audiosBloqueados.delete(a); return; }
+            let p; try { p = a.play(); } catch (e) { p = null; }
+            if (!p || !p.then) return;
+            p.then(() => audiosBloqueados.delete(a)).catch((err) => {
+                if (err && err.name === 'AbortError') return;   // o stream foi trocado no meio: o próximo play() resolve
+                audiosBloqueados.add(a);
+                if (Date.now() - _avisoAudioEm > 15000) {
+                    _avisoAudioEm = Date.now();
+                    showToast('O navegador está segurando o som da call. Toque em qualquer lugar da tela pra ligar.', 'warning');
+                }
+            });
+        }
+        // qualquer toque/tecla da pessoa vale como permissão pro navegador: destrava o que ficou barrado
+        ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
+            if (!audiosBloqueados.size) return;
+            try { garantirAudio(); } catch (e) {}
+            audiosBloqueados.forEach(tocarAudioRemoto);
+        }, { passive: true, capture: true }));
+        function ligarAudioRemoto(card, stream) {
+            const a = document.createElement('audio');
+            a.className = 'audio-remoto';
+            a.autoplay = true;
+            a.srcObject = stream;
+            a.muted = !!deafened;
+            card.appendChild(a);
+            tocarAudioRemoto(a);
+            return a;
+        }
+        // Fone desligado = não ouve ninguém (antes o botão só mudava o ícone e o aviso pros outros; o som seguia tocando).
+        function aplicarSurdez() {
+            document.querySelectorAll('#video-grid audio.audio-remoto').forEach(a => { a.muted = !!deafened; });
+        }
+        // autocura: áudio parado (play barrado, stream que trocou) volta a tocar sozinho
+        setInterval(() => {
+            if (!inCall) return;
+            document.querySelectorAll('#video-grid audio.audio-remoto').forEach(a => { if (a.paused && a.srcObject) tocarAudioRemoto(a); });
+        }, 3000);
+
         function adicionarVideoCard(peerId, stream, nome, avatarUrl, orn) {
             const card = document.createElement('div');
             card.className = 'video-card'; card.id = `vc-${peerId}`;
@@ -12381,10 +12782,14 @@
             if (avatarSeguro) { cardAvatarHtml = `<img src="${avatarSeguro}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`; }
 
             card.innerHTML = `<div class="video-avatar" style="display: ${isAudioOnly ? 'flex' : 'none'}; background-color: ${avatarSeguro ? 'transparent' : 'var(--brand-color)'};">${cardAvatarHtml}</div>
-                              <video autoplay style="display: ${isAudioOnly ? 'none' : 'block'}; width: 100%; height: 100%; object-fit: contain;"></video>
+                              <video autoplay muted playsinline style="display: ${isAudioOnly ? 'none' : 'block'}; width: 100%; height: 100%; object-fit: contain;"></video>
                               <div class="video-label">${esc(nome)}</div>`;
             videoGrid.appendChild(card);
-            card.querySelector('video').srcObject = stream;
+            const vid = card.querySelector('video');
+            vid.muted = true; vid.playsInline = true;   // o <video> só mostra a imagem; o SOM vai pelo <audio> logo abaixo
+            vid.srcObject = stream;
+            vid.play().catch(() => {});
+            ligarAudioRemoto(card, stream);
             aplicarSaida(card);
             // O servidor já avisou quem é cada peer (visualPorPeer). Se o stream chegou antes do aviso, usa o metadata só
             // pra molduras livres e corrige quando o aviso do servidor chegar.
@@ -12971,9 +13376,12 @@
         });
 
         let micMuted = false; let deafened = false; let micMutedBeforeDeafen = false;
+        let semMicrofone = false;   // entrou na call sem conseguir abrir o microfone (a faixa enviada é um silêncio)
 
         function toggleMic(forceState) {
             micMuted = forceState !== undefined ? forceState : !micMuted;
+            // quem entrou sem microfone e agora desmuta: tenta abrir o microfone de verdade (a causa pode ter sido resolvida)
+            if (!micMuted && semMicrofone && inCall && myMicStream) reaplicarMic();
             if(!micMuted && deafened) { micMutedBeforeDeafen = false; toggleDeafen(false); }   // desmutar o mic com o fone desligado liga os dois
             document.getElementById('mic-group').classList.toggle('muted', micMuted);
             document.getElementById('btn-main-mic').classList.toggle('muted', micMuted);
@@ -12996,6 +13404,7 @@
             if (bf) bf.innerHTML = iconeFone;
             if(deafened) { micMutedBeforeDeafen = micMuted; toggleMic(true); }
             else { toggleMic(micMutedBeforeDeafen); }
+            aplicarSurdez();
             aplicarEstadoAudio('eu'); anunciarMeuAudio();
         }
 
@@ -13089,23 +13498,73 @@
         let _versaoRecebida = false, _timerSalas = null;
         socket.on('versao_app', (d) => {
             _versaoRecebida = true; clearTimeout(_timerSalas);
-            if (d && d.versao && d.versao !== VERSAO_PAGINA) mostrarAvisoNovaVersao();
+            if (d && d.versao && d.versao !== VERSAO_PAGINA) anunciarAtualizacao();
         });
-        function mostrarAvisoNovaVersao() {
-            if (document.getElementById('aviso-versao')) return;
-            const b = document.createElement('div');
-            b.id = 'aviso-versao';
-            b.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i><span>Saiu uma versão nova do {{ app_nome }}. Atualize pra tudo funcionar certo.</span><button type="button">Atualizar agora</button>';
-            b.querySelector('button').addEventListener('click', () => location.reload());
-            document.body.appendChild(b);
-            // Se ninguém está numa call nem escrevendo nada, atualiza sozinho depois de uns segundos.
-            setTimeout(function tentar() {
-                const escrevendo = [...document.querySelectorAll('textarea, input[type=text]')].some(t => (t.value || '').trim());
-                if (typeof inCall !== 'undefined' && inCall) return setTimeout(tentar, 15000);
-                if (escrevendo) return setTimeout(tentar, 15000);
-                location.reload();
-            }, 20000);
+
+        // ---------- ATUALIZAÇÃO DISPONÍVEL: setinha ao lado da caixa de entrada + pop-up de novidades ----------
+        // Substitui a faixa "Saiu uma versão nova" (que ainda recarregava a página sozinha): agora a pessoa escolhe a hora de atualizar.
+        // Aparece quando o servidor avisa uma versão diferente da desta página (`versao_app`, a cada conexão, inclusive depois de um deploy).
+        const NOVIDADE_DA_PAGINA = {{ novidade_atual|tojson }};
+        // A seta é a do ícone de download: duas cópias descem em rolo e são recortadas na borda de cima da barra (svg aninhado), então ela "some"
+        // ao atravessar a barra e a seguinte já entra por cima. 424 = topo da barra; 460 = passo do rolo (altura da seta + folga).
+        const SETA_ATT = '<path d="M256 64V366M113 240L256 366L399 240" fill="none" stroke="#6aa0fb" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>';
+        const SVG_ATUALIZACAO = `<svg viewBox="0 0 512 512" aria-hidden="true"><svg x="0" y="0" width="512" height="424" viewBox="0 0 512 424"><g transform="translate(0,-460)"><g class="att-seta">${SETA_ATT}</g></g><g><g class="att-seta">${SETA_ATT}</g></g></svg><rect x="40" y="424" width="432" height="48" rx="24" fill="#4f88dc"/></svg>`;
+        const HTML_BTN_ATT = `<button type="button" class="btn-atualizar" data-acao-att title="Atualização disponível" aria-label="Atualização disponível">${SVG_ATUALIZACAO}<span class="att-txt">Atualização disponível</span></button>`;
+        // o botão mora ao lado de CADA caixa de entrada (radar, canal, DM); o do cabeçalho da DM é refeito em htmlAcoesPadraoHeader()
+        function garantirBotoesAtualizacao() {
+            document.querySelectorAll('.btn-inbox').forEach(b => {
+                const antes = b.previousElementSibling;
+                if (!(antes && antes.classList.contains('btn-atualizar'))) b.insertAdjacentHTML('beforebegin', HTML_BTN_ATT);
+            });
         }
+        garantirBotoesAtualizacao();
+
+        let atualizacaoPendente = false, novidadesCarregadas = null;
+        function anunciarAtualizacao() {
+            if (atualizacaoPendente) return;
+            atualizacaoPendente = true;
+            garantirBotoesAtualizacao();
+            document.body.classList.add('tem-atualizacao');
+            // o texto abre ao lado do ícone, fica uns 3 s e recolhe (o ícone continua; passar o mouse mostra o texto de novo)
+            setTimeout(() => document.body.classList.add('att-aviso'), 600);
+            setTimeout(() => document.body.classList.remove('att-aviso'), 3900);
+            carregarNovidades();
+        }
+        async function carregarNovidades() {
+            if (novidadesCarregadas) return novidadesCarregadas;
+            try { const r = await fetch('/api/novidades'); if (r.ok) novidadesCarregadas = await r.json(); } catch (e) {}
+            return novidadesCarregadas;
+        }
+        function desenharNovidades() {
+            const itens = (novidadesCarregadas && novidadesCarregadas.itens) || [];
+            const novas = itens.filter(v => v.id > NOVIDADE_DA_PAGINA), antigas = itens.filter(v => v.id <= NOVIDADE_DA_PAGINA);
+            const icone = (i) => /^fa-[a-z0-9-]+$/.test(i) ? i : 'fa-star';
+            const bloco = (v, nova) => `<details class="att-versao ${nova ? 'nova' : ''}" ${nova ? 'open' : ''}><summary><span>${esc(v.titulo)}</span><small>${esc(v.data)}</small></summary>${
+                (v.itens || []).map(i => `<div class="att-item"><i class="fa-solid ${icone(i.icone)}"></i><div><b>${esc(i.titulo)}</b><span>${esc(i.texto)}</span></div></div>`).join('')}</details>`;
+            document.getElementById('att-corpo').innerHTML =
+                '<div class="att-secao">Chega nesta atualização</div>'
+                + (novas.length ? novas.map(v => bloco(v, true)).join('') : '<div class="att-vazio">Melhorias e correções por baixo dos panos: o app fica mais estável e rápido.</div>')
+                + (antigas.length ? '<div class="att-secao">Histórico de atualizações</div>' + antigas.map(v => bloco(v, false)).join('') : '');
+        }
+        async function abrirAtualizacao() {
+            document.getElementById('att-modal').style.display = 'flex';
+            if (!novidadesCarregadas) document.getElementById('att-corpo').innerHTML = '<div class="att-vazio">Carregando as novidades...</div>';
+            await carregarNovidades();
+            if (!novidadesCarregadas) document.getElementById('att-corpo').innerHTML = '<div class="att-vazio">Não consegui carregar a lista agora. Mesmo assim dá pra atualizar.</div>';
+            else desenharNovidades();
+        }
+        function fecharAtualizacao() { document.getElementById('att-modal').style.display = 'none'; }
+        document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('[data-acao-att]')) abrirAtualizacao(); });
+        document.getElementById('att-fechar').addEventListener('click', fecharAtualizacao);
+        document.getElementById('att-modal').addEventListener('click', (e) => { if (e.target.id === 'att-modal') fecharAtualizacao(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('att-modal').style.display === 'flex') fecharAtualizacao(); });
+        document.getElementById('att-atualizar').addEventListener('click', () => {
+            const emCall = typeof inCall !== 'undefined' && inCall;
+            const escrevendo = ['message-input', 'dm-message-input'].some(id => { const c = document.getElementById(id); return c && (c.value || '').trim(); });
+            if (emCall || escrevendo) {
+                openConfirmModal('Atualizar agora?', emCall ? 'Você está numa call: atualizar desconecta você dela.' : 'Você tem uma mensagem sendo escrita: ela será perdida.', () => location.reload());
+            } else location.reload();
+        });
 
         socket.on('connect', () => {
             clearTimeout(_timerPill);
@@ -13196,12 +13655,16 @@
             try {
                 if (!document.hidden || !avisoLigado() || !('Notification' in window) || Notification.permission !== 'granted') return;
                 if (typeof perfilMeu !== 'undefined' && perfilMeu.status === 'dnd') return;
-                const n = new Notification(titulo, { body: corpo, icon: '/static/img/icone-192.png', silent: true });
+                // Aparelho com push ligado: o servidor já manda o aviso pelo service worker (com som, ícone do app e toque que
+                // abre a conversa). Mandar este também dava DOIS avisos pro mesmo recado.
+                if (window.pushNesteAparelho) return;
+                // `tag` por remetente: várias mensagens da mesma pessoa trocam o aviso em vez de empilhar um por mensagem.
+                const n = new Notification(titulo, { body: corpo, icon: '/static/img/icone-192.png', badge: '/static/img/icone-badge.png', tag: 'pnt-' + titulo, silent: true });
                 n.onclick = () => { window.focus(); n.close(); };
             } catch (e) {}
         }
 
-        // número nas abas do navegador: "(3) Panteão"
+        // número nas abas do navegador: "(3) Chat - Pantheon"
         function atualizarTituloAba() {
             const n = (notifs.naoLidas || 0);
             document.title = (n > 0 ? `(${n > 99 ? '99+' : n}) ` : '') + TITULO_BASE_ABA;
@@ -13625,7 +14088,7 @@
 
         // ---------- CONVERSA DE DM ----------
         function htmlAcoesPadraoHeader() {
-            return `<div class="btn-inbox" data-acao-inbox title="Caixa de Entrada"><i class="fa-solid fa-inbox"></i><span class="inbox-badge" style="display:${notifs.naoLidas ? 'inline-flex' : 'none'};">${notifs.naoLidas > 99 ? '99+' : notifs.naoLidas}</span></div>`;
+            return HTML_BTN_ATT + `<div class="btn-inbox" data-acao-inbox title="Caixa de Entrada"><i class="fa-solid fa-inbox"></i><span class="inbox-badge" style="display:${notifs.naoLidas ? 'inline-flex' : 'none'};">${notifs.naoLidas > 99 ? '99+' : notifs.naoLidas}</span></div>`;
         }
 
         function nomeEstadoDoCartao(card) {
@@ -13726,6 +14189,7 @@
             badge.classList.add('active');
             const n = (parseInt(badge.innerText.replace('+', '')) || 0) + 1;
             badge.innerText = n > 99 ? '99+' : n;
+            badge.classList.remove('novo'); void badge.offsetWidth; badge.classList.add('novo');   // reinicia o pulinho
         }
         socket.on('dms_nao_lidas', (mapa) => {
             Object.entries(mapa || {}).forEach(([id, n]) => {
@@ -13966,6 +14430,10 @@
         });
         socket.on('notificacao_nova', (n) => {
             const novo = { ...n, chegouEm: Date.now() };
+            // Mensagem de quem eu estou vendo agora: o servidor já a marca como lida (marcar_dm_lida, emitido ao receber a
+            // mensagem). Contar aqui e descontar uns instantes depois fazia o número da caixa de entrada e o "(1)" da aba
+            // piscarem a cada mensagem com a conversa aberta.
+            if (n.tipo === 'dm' && n.de_id && vistaAtual === 'dm' && Number(currentDmUserId) === Number(n.de_id)) novo.lida = true;
             const i = notifs.itens.findIndex(x => x.id === n.id);
             if (i >= 0) notifs.itens.splice(i, 1);
             notifs.itens.unshift(novo);
@@ -14910,10 +15378,11 @@
 
         async function pintar() {
             if (!tg) return;
-            if (!suportado) { tg.classList.remove('active'); est.textContent = ios && !instalado ? 'No iPhone, instale o app na Tela de Início (Safari > Compartilhar > Adicionar à Tela de Início) pra poder ativar.' : 'Este navegador não oferece avisos no aparelho.'; return; }
-            if (Notification.permission === 'denied') { tg.classList.remove('active'); est.textContent = 'O navegador bloqueou os avisos deste site. Libere em Configurações do navegador > Permissões > Notificações.'; return; }
+            if (!suportado) { window.pushNesteAparelho = false; tg.classList.remove('active'); est.textContent = ios && !instalado ? 'No iPhone, instale o app na Tela de Início (Safari > Compartilhar > Adicionar à Tela de Início) pra poder ativar.' : 'Este navegador não oferece avisos no aparelho.'; return; }
+            if (Notification.permission === 'denied') { window.pushNesteAparelho = false; tg.classList.remove('active'); est.textContent = 'O navegador bloqueou os avisos deste site. Libere em Configurações do navegador > Permissões > Notificações.'; return; }
             let s = null; try { s = await inscricao(); } catch (e) {}
-            tg.classList.toggle('active', !!s && Notification.permission === 'granted');
+            window.pushNesteAparelho = !!s && Notification.permission === 'granted';   // avisoDoNavegador() não duplica o push
+            tg.classList.toggle('active', window.pushNesteAparelho);
             est.textContent = '';
         }
 

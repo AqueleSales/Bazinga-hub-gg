@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,6 +49,9 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = bool(os.getenv('RENDER'))
+    # Login que dura: o cookie é permanente (ver `session.permanent` no callback do Google) e a cada visita o prazo
+    # recomeça (SESSION_REFRESH_EACH_REQUEST, padrão do Flask). Só some se a pessoa sair da conta ou ficar 1 ano sem entrar.
+    PERMANENT_SESSION_LIFETIME = timedelta(days=365)
 
     # Era NullPool (conexão nova a cada query) - a ideia era deixar o Neon
     # controlar tudo e nunca reaproveitar uma conexão que ele já tivesse

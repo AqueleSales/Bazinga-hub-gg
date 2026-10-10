@@ -284,8 +284,8 @@ const Cosm = (() => {
     // INSÍGNIAS (exclusivas: ver cosmeticos.py). Mesmo molde: id -> desenho.
     // ---------------------------------------------------------------------
     const BADGES = {
-        criador:      { nome: 'Criador', desc: 'Quem construiu o Panteão do zero, tijolo por tijolo.', cor: '#ffb62e' },
-        alpha_tester: { nome: 'Alpha Tester', desc: 'Esteve aqui antes de todo mundo e viu o Panteão nascer.', cor: '#ff3b4a' },
+        criador:      { nome: 'Criador', desc: 'Quem construiu o Pantheon do zero, tijolo por tijolo.', cor: '#ffb62e' },
+        alpha_tester: { nome: 'Alpha Tester', desc: 'Esteve aqui antes de todo mundo e viu o Pantheon nascer.', cor: '#ff3b4a' },
         beta_tester:  { nome: 'Beta Tester', desc: 'Está no beta. Cada bug achado acorda a Medusa.', cor: '#34d399' },
         bazinga:      { nome: 'BAZINGA', desc: 'on top!', cor: '#3ddc6e' },
         coder:        { nome: 'Coder', desc: 'Mexeu no código por baixo do capô.', cor: '#22d3ee' },

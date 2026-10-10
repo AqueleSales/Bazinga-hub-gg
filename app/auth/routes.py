@@ -94,6 +94,9 @@ def callback():
         comitar_com_retry(atualizar_avatar)
 
     session['user_id'] = user.id
+    # Sem isto o cookie vira "de sessão" e some quando o navegador fecha por inteiro (no celular isso acontece o
+    # tempo todo): a pessoa voltava e caía de novo na tela do Google. Permanente = dura PERMANENT_SESSION_LIFETIME.
+    session.permanent = True
 
     # Login iniciado pelo app desktop: o Google roda no navegador do sistema
     # (ele barra OAuth dentro do Electron), e a sessão é entregue ao app por

@@ -78,8 +78,10 @@ class Person(db.Model):
     localizacao_ativa = db.Column(db.Boolean, nullable=True)
     # Permite a posição aproximada por IP quando o aparelho não consegue achar a sua (só vale com a localização ligada).
     localizacao_ip = db.Column(db.Boolean, nullable=True)
-    # Tema visual (dark/light/amoled) - também na conta, pelo mesmo motivo.
+    # Tema visual (ids em utils.TEMAS_VALIDOS: dark/light/amoled, os predefinidos e 'custom') - também na conta, pelo mesmo motivo.
     tema = db.Column(db.String(20), default='dark', nullable=False)
+    # Só vale com tema == 'custom': JSON {base, cor, img, escuro, painel} já validado (utils.tema_custom_valido). Anulável: o boot cria a coluna sem DEFAULT.
+    tema_custom = db.Column(db.Text, nullable=True)
 
     # Perfil (editável na tela de Configurações)
     bio = db.Column(db.Text, nullable=True)
@@ -681,7 +683,7 @@ class BazarAnuncio(db.Model):
 
 class BazarDisputa(db.Model):
     """Uma das duas pontas pediu a análise de um admin. Abrir a disputa libera o admin a ler A CONVERSA DAQUELE PEDIDO (a tela avisa).
-    O Panteão não toca no dinheiro: a decisão só muda o estado do pedido e fica registrada; reembolso é combinado entre as pessoas."""
+    O Pantheon não toca no dinheiro: a decisão só muda o estado do pedido e fica registrada; reembolso é combinado entre as pessoas."""
     __tablename__ = 'bazar_disputa'
     id = db.Column(db.Integer, primary_key=True)
     pedido_id = db.Column(db.Integer, db.ForeignKey('bazar_pedido.id'), nullable=False, index=True)

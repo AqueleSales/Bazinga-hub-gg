@@ -233,7 +233,7 @@
    NOVA ORGANIZAÇÃO: carrossel de propagandas, feed misturado, página da loja e painel "Minha lojinha"
    ========================================================================== */
 
-/* ---------- carrossel de propagandas (lojas parceiras + as do Panteão) ---------- */
+/* ---------- carrossel de propagandas (lojas parceiras + as do Pantheon) ---------- */
 .bz-ads { position: relative; border-radius: 24px; overflow: hidden; border: 2px solid #1a1a1f; box-shadow: 0 5px 0 #0c0c0f; background: var(--bg-secondary); }
 .bz-ads-trilho { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; scroll-behavior: smooth; }
 .bz-ads-trilho::-webkit-scrollbar { display: none; }

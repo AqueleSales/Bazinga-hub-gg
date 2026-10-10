@@ -464,7 +464,7 @@ const Loja = (() => {
             <div class="arm-ext-corpo"><h3>Extrato de ${esc(ctx.sigla)}</h3>
                 <div class="arm-ext-resumo"><div><small>Saldo</small><b><i class="fa-solid fa-coins"></i> ${moeda(d.saldo)}</b></div><div><small>Já ganhou</small><b class="ganho">+${moeda(d.ganho_total)}</b></div><div><small>Já gastou</small><b class="gasto">−${moeda(d.gasto_total)}</b></div></div>
                 <div class="arm-ext-lista">${d.itens.map(linha).join('') || '<div class="arm-vazio">Nenhum movimento ainda. Suba de nível e compre algo no Armazém!</div>'}</div>
-                <p class="arm-ext-nota">Mostra os últimos ${d.itens.length} movimentos. O ${esc(ctx.sigla)} só se ganha no Panteão (subindo de nível); não dá pra comprar, transferir nem sacar.</p></div></div>`;
+                <p class="arm-ext-nota">Mostra os últimos ${d.itens.length} movimentos. O ${esc(ctx.sigla)} só se ganha no Pantheon (subindo de nível); não dá pra comprar, transferir nem sacar.</p></div></div>`;
     }
 
     // ---------------------------------------------------------------------

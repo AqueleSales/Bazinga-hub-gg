@@ -228,7 +228,7 @@ with app.app_context():
     ok(db.session.query(BazarLoja).filter_by(owner_id=ids['ana']).one().porte == 'grande', 'Loja grande não volta a micro por edição do dono')
     l_ana.porte = 'media'; db.session.commit()
     v, _ = varrer(beto)
-    ok(v['propagandas'] == [], 'Sem parceira, o carrossel de propagandas fica só com as do próprio Panteão (cliente)')
+    ok(v['propagandas'] == [], 'Sem parceira, o carrossel de propagandas fica só com as do próprio Pantheon (cliente)')
 
     # ---------- 5. PEDIDO ----------
     P_RETRATO, P_COMBO = p1['id'], p2['id']

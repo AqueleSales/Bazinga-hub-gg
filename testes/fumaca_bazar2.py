@@ -238,7 +238,7 @@ with app.app_context():
     ok(erro(rec) and db.session.query(BazarAnuncio).count() == 0, 'Quem não é admin não cria anúncio')
     ok(erro(emitir(beto, 'bazar_anuncios_listar')) is not None, 'Nem lista (os cliques são do admin)')
     v, _ = varrer(beto)
-    ok(v['casa_padrao'] is True and not any(p['tipo'] == 'anuncio' for p in v['propagandas']), 'Sem anúncio cadastrado, a vitrine pede os 3 padrões do Panteão (casa_padrao)')
+    ok(v['casa_padrao'] is True and not any(p['tipo'] == 'anuncio' for p in v['propagandas']), 'Sem anúncio cadastrado, a vitrine pede os 3 padrões do Pantheon (casa_padrao)')
     hoje = br_now().strftime('%Y-%m-%d')
     futuro = (br_now() + timedelta(days=5)).strftime('%Y-%m-%d')
     passado = (br_now() - timedelta(days=5)).strftime('%Y-%m-%d')
@@ -257,7 +257,7 @@ with app.app_context():
     v, _ = varrer(beto)
     noar = [p for p in v['propagandas'] if p['tipo'] == 'anuncio']
     ok(sorted(p['titulo'] for p in noar) == ['Promo da loja', 'Promo no ar'], f'No carrossel só os anúncios que estão no ar agora (sem futuro, vencido nem pausado): {[p["titulo"] for p in noar]}')
-    ok(v['casa_padrao'] is False, 'Com anúncio cadastrado os padrões do Panteão não aparecem')
+    ok(v['casa_padrao'] is False, 'Com anúncio cadastrado os padrões do Pantheon não aparecem')
     a_link = next(p for p in noar if p['titulo'] == 'Promo no ar')
     ok(a_link['link_url'] == 'https://www.exemplo.com.br/promo?x=1' and a_link['cta'] == 'Ver oferta' and a_link['imagem_url'].endswith('arte.png'), 'O anúncio leva arte, botão e o link (só https)')
     lista = pega(emitir(duda, 'bazar_anuncios_listar'), 'bazar_anuncios')['lista']

@@ -14,8 +14,11 @@ from ..models import (Person, Channel, Message, DirectMessage,
 from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, membro_desde_texto, garantir_username,
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                      localizacao_ligada, localizacao_ip_permitida, MSG_LOCALIZACAO_DESLIGADA,
-                     recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO)
+                     recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO,
+                     TEMAS_VALIDOS, tema_custom_da_pessoa, tema_eh_claro)
 from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
+from ..importar import baixar_imagem_externa, ErroImportar
+from ..novidades import novidade_atual, novidades_para_cliente
 from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
 from ..cosmeticos import posses_da_pessoa, posses_com_regras, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
 from ..utils import nivel_da_pessoa, resumos_de_resposta_canal, resumos_de_resposta_dm
@@ -248,7 +251,10 @@ def manifest():
             {"src": url_for('static', filename='img/icone-512.png'),
              "sizes": "512x512", "type": "image/png", "purpose": "any"},
             {"src": url_for('static', filename='img/logo.svg'),
-             "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+             "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+            # silhueta branca: o Android usa pra o ícone pequeno das notificações e pro ícone temático
+            {"src": url_for('static', filename='img/icone-badge.png'),
+             "sizes": "96x96", "type": "image/png", "purpose": "monochrome"}
         ]
     })
 
@@ -290,7 +296,9 @@ self.addEventListener('push', e => {
     tag: d.tag || undefined,
     renotify: !!d.tag,
     icon: '/static/img/icone-192.png',
-    badge: '/static/img/icone-192.png',
+    // O Android desenha o ícone pequeno da barra de status só pelo canal alfa: precisa ser uma silhueta branca sobre
+    // fundo transparente. Com o PNG colorido ele virava um quadrado branco, ou o navegador usava o ícone dele (o "G").
+    badge: '/static/img/icone-badge.png',
     data: d,
     requireInteraction: !!d.urgente,
     vibrate: d.urgente ? [300, 150, 300, 150, 300] : [120]
@@ -516,8 +524,15 @@ def chat():
     # Mensagem de "entrou pelo convite" deixada pela rota /convite/<code>
     aviso_convite = session.pop('aviso_convite', None)
 
+    # Tema já no HTML (sem piscar): id, escolhas do personalizado e se o fundo é claro (data-claro)
+    tema_custom = tema_custom_da_pessoa(usuario_atual)
+    tema_id = usuario_atual.tema if usuario_atual.tema in TEMAS_VALIDOS else 'dark'
+    if tema_id == 'custom' and not tema_custom:
+        tema_id = 'dark'
+
     resposta = current_app.make_response(render_template(
         "chat.html",
+        tema_id=tema_id, tema_custom=tema_custom, tema_claro=tema_eh_claro(tema_id, tema_custom),
         aviso_convite=aviso_convite,
         usuario_atual=usuario_atual,
         text_channels=text_channels,
@@ -836,6 +851,39 @@ def recortar_gif():
         print(f"[ERRO RECORTE GIF] {e}")
         return jsonify({'error': 'Não consegui processar esse GIF'}), 422
     return Response(saida, mimetype='image/webp')
+
+
+# Imagem de um LINK (seletor de imagem > "Colar link"): o servidor baixa com proteção contra SSRF (ver app/importar.py) e devolve
+# os bytes; o cliente trata como se a pessoa tivesse escolhido o arquivo (editor, corte, upload normal).
+_ultimo_importar = {}
+
+
+@main_bp.route("/api/imagem/importar", methods=["POST"])
+def importar_imagem():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+    agora = time.time()
+    if agora - _ultimo_importar.get(session['user_id'], 0) < 2:
+        return jsonify({'error': 'Calma - espere um instante e tente de novo.'}), 429
+    _ultimo_importar[session['user_id']] = agora
+
+    url = (request.get_json(silent=True) or {}).get('url')
+    try:
+        dados, mime = baixar_imagem_externa(url)
+    except ErroImportar as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"[ERRO IMPORTAR IMAGEM] {type(e).__name__}: {e}")
+        return jsonify({'error': 'Não consegui baixar essa imagem agora. Tente de novo ou envie o arquivo.'}), 502
+    return Response(dados, mimetype=mime, headers={'Cache-Control': 'no-store'})
+
+
+@main_bp.route("/api/novidades")
+def listar_novidades():
+    """Log de atualizações do pop-up da setinha de atualização (app/novidades.py)."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+    return jsonify({'atual': novidade_atual(), 'itens': novidades_para_cliente()})
 
 
 # Vídeo (mp4/webm/mov) como foto/faixa/fundo: o navegador manda os quadros já extraídos (JPEG) e

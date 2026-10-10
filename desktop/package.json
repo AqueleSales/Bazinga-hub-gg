@@ -1,11 +1,11 @@
 {
   "name": "panteao-desktop",
-  "productName": "Panteão",
-  "version": "0.3.0",
-  "description": "Casca desktop do Panteão (carrega o site e cuida de login, tray e atualização).",
+  "productName": "Pantheon",
+  "version": "0.3.1",
+  "description": "Casca desktop do Pantheon (carrega o site e cuida de login, tray e atualização).",
   "main": "main.js",
   "private": true,
-  "author": "Panteão",
+  "author": "Pantheon",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win nsis",
@@ -13,7 +13,7 @@
   },
   "build": {
     "appId": "gg.panteao.desktop",
-    "productName": "Panteão",
+    "productName": "Pantheon",
     "files": [
       "main.js",
       "preload.js",
@@ -37,7 +37,7 @@
     },
     "protocols": [
       {
-        "name": "Panteão",
+        "name": "Pantheon",
         "schemes": [
           "panteao"
         ]

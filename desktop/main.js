@@ -1,4 +1,4 @@
-// Casca desktop do Panteão: uma janela que carrega o site, mais o que o navegador não faz
+// Casca desktop do Pantheon: uma janela que carrega o site, mais o que o navegador não faz
 // (login pelo navegador do sistema, tray, captura de tela, auto-update). Nada do chat.html mora aqui.
 const {
   app, BrowserWindow, Tray, Menu, shell, ipcMain, session, desktopCapturer, nativeImage, net, dialog,
@@ -6,6 +6,13 @@ const {
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+
+// O app se chamava "Panteão" e agora é "Pantheon"; a pasta de dados do Electron segue o nome do app. Fixa a antiga
+// pra ninguém perder o login, o tamanho da janela e as preferências ao atualizar. Tem que rodar antes de ler as prefs.
+app.setPath('userData', path.join(app.getPath('appData'), 'Panteão'));
+// Sem o AppUserModelId (o mesmo `appId` do package.json) o Windows mostra as notificações como "electron.app.<nome>"
+// e sem o ícone do app. Com ele, o aviso sai como "Pantheon".
+if (process.platform === 'win32') app.setAppUserModelId('gg.panteao.desktop');
 
 // ---------------------------------------------------------------- configuração
 function lerConfig() {
@@ -127,7 +134,7 @@ function criarJanela() {
     width: 1280, height: 800, minWidth: 900, minHeight: 600,
     ...(est.bounds || {}),
     backgroundColor: '#0b0c10',
-    title: 'Panteão',
+    title: 'Pantheon',
     icon: path.join(__dirname, 'assets', 'tray.png'),
     autoHideMenuBar: true,
     show: false,
@@ -137,6 +144,11 @@ function criarJanela() {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      // O som dos outros na call é tocado por elementos de áudio criados quando a pessoa já está na call, sem um clique
+      // naquele instante: a política padrão do Chromium pode segurar o som. É um app só do nosso site, então libera.
+      autoplayPolicy: 'no-user-gesture-required',
+      // Janela minimizada ou atrás de outra não pode estrangular a call (sinalização, medidor de voz, reconexão).
+      backgroundThrottling: false,
     },
   });
   if (est.maximizada) janela.maximize();
@@ -184,7 +196,7 @@ function criarJanela() {
     quedas.push(agora);
     while (quedas.length && agora - quedas[0] > 30000) quedas.shift();
     if (quedas.length >= 3) {      // caiu 3x em 30s: recarregar de novo só faria um loop
-      dialog.showErrorBox('Panteão', 'A janela travou várias vezes seguidas. Feche e abra o app de novo; se continuar, avise o suporte.');
+      dialog.showErrorBox('Pantheon', 'A janela travou várias vezes seguidas. Feche e abra o app de novo; se continuar, avise o suporte.');
       return;
     }
     mostrarLogin();
@@ -366,12 +378,12 @@ ipcMain.on('seletor:escolher', (e, id) => {
 function criarTray() {
   const icone = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png')).resize({ width: 16, height: 16 });
   tray = new Tray(icone);
-  tray.setToolTip('Panteão');
+  tray.setToolTip('Pantheon');
   atualizarMenuTray = () => tray.setContextMenu(montarMenuTray());
   const montarMenuTray = () => Menu.buildFromTemplate([
-    { label: 'Abrir Panteão', click: mostrarJanela },
+    { label: 'Abrir Pantheon', click: mostrarJanela },
     ...(atualizacaoBaixada ? [{ label: 'Reiniciar pra atualizar', click: instalarAtualizacao }] : []),
-    ...(autoUpdater ? [{ label: 'Procurar atualizações', click: procurarAtualizacao }] : []),
+    ...(autoUpdater ? [{ label: 'Procurar atualizações', click: () => procurarAtualizacao(true) }] : []),
     {
       label: 'Iniciar com o Windows', type: 'checkbox',
       checked: app.getLoginItemSettings().openAtLogin,
@@ -391,6 +403,22 @@ function criarTray() {
 let autoUpdater = null;
 let atualizacaoBaixada = false;
 
+// "Iniciar com o Windows" é uma entrada no registro com o NOME do app apontando pro executável. Com a troca de Panteão pra Pantheon o
+// executável mudou de nome: a entrada antiga ficaria apontando pra um arquivo que não existe mais e o app deixaria de abrir com o Windows.
+// Se a antiga existir, apaga e liga a nova (só uma vez, no 1º início depois da atualização).
+function migrarInicioComWindows() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  const { execFile } = require('child_process');
+  const chave = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+  execFile('reg', ['query', chave, '/v', 'Panteão'], { windowsHide: true }, (erro) => {
+    if (erro) return;   // não existe: nada a migrar
+    execFile('reg', ['delete', chave, '/v', 'Panteão', '/f'], { windowsHide: true }, () => app.setLoginItemSettings({ openAtLogin: true }));
+  });
+}
+// A pessoa clicou em "Procurar atualizações" (aba Geral ou bandeja): se achar versão nova, baixa, INSTALA e reabre o app sozinho,
+// substituindo a antiga. Procura automática (a cada 4 h) só baixa e avisa: reiniciar no meio de uma call seria pior que esperar.
+let procuraManual = false;
+
 function iniciarAtualizador() {
   if (!app.isPackaged) return;     // em desenvolvimento não existe release pra baixar
   try {
@@ -401,30 +429,32 @@ function iniciarAtualizador() {
   autoUpdater.autoInstallOnAppQuit = true;      // o app vive na bandeja: quem fecha de verdade já instala
   autoUpdater.on('checking-for-update', () => mudarEstadoAtualizacao({ fase: 'procurando' }));
   autoUpdater.on('update-available', (info) => mudarEstadoAtualizacao({ fase: 'baixando', versao: info.version, percentual: 0 }));
-  autoUpdater.on('update-not-available', () => mudarEstadoAtualizacao({ fase: 'atualizado', versao: null }));
+  autoUpdater.on('update-not-available', () => { procuraManual = false; mudarEstadoAtualizacao({ fase: 'atualizado', versao: null }); });
   autoUpdater.on('download-progress', (p) => mudarEstadoAtualizacao({ fase: 'baixando', percentual: Math.round(p.percent || 0) }));
   autoUpdater.on('error', (err) => {
     console.warn('[updater]', err && err.message);
     // erro de rede ao procurar não vira aviso na cara da pessoa; só conta se estava baixando
+    procuraManual = false;
     if (estadoAtualizacao.fase === 'baixando') mudarEstadoAtualizacao({ fase: 'erro' });
     else mudarEstadoAtualizacao({ fase: 'atualizado' });
   });
   autoUpdater.on('update-downloaded', (info) => {
     atualizacaoBaixada = true;
     mudarEstadoAtualizacao({ fase: 'pronta', versao: info.version, percentual: 100 });
+    if (procuraManual) { instalarAtualizacao(); return; }   // pediu pra procurar: já instala e reabre
     // O indicador dentro do app (a pílula) cuida de quem está olhando. Janela escondida na bandeja não tem
     // quem veja a pílula: aí vale a janelinha do sistema.
     if (!janela || janela.isDestroyed() || !janela.isVisible() || janela.isMinimized()) {
       dialog.showMessageBox({
         type: 'info', buttons: ['Reiniciar agora', 'Depois'], defaultId: 0, cancelId: 1,
         title: 'Atualização pronta',
-        message: `O Panteão ${info.version} foi baixado.`,
+        message: `O Pantheon ${info.version} foi baixado.`,
         detail: 'Reinicie pra usar a versão nova. Se escolher "Depois", ela é instalada quando você sair do app.',
       }).then((r) => { if (r.response === 0) instalarAtualizacao(); });
     }
   });
   procurarAtualizacao();
-  setInterval(procurarAtualizacao, 4 * 60 * 60 * 1000);   // o app fica aberto dias na bandeja
+  setInterval(() => procurarAtualizacao(), 4 * 60 * 60 * 1000);   // o app fica aberto dias na bandeja
 }
 
 // Estado da atualização da casca, mostrado dentro do app (pílula) e na aba Geral. Fases:
@@ -434,16 +464,20 @@ let estadoAtualizacao = { fase: 'nenhuma', versao: null, percentual: 0 };
 function mudarEstadoAtualizacao(parcial) {
   estadoAtualizacao = { ...estadoAtualizacao, ...parcial };
   if (estadoAtualizacao.fase !== 'baixando' && estadoAtualizacao.fase !== 'pronta') estadoAtualizacao.percentual = 0;
-  if (tray) tray.setToolTip(estadoAtualizacao.fase === 'pronta' ? `Panteão: atualização ${estadoAtualizacao.versao} pronta`
-    : estadoAtualizacao.fase === 'baixando' ? `Panteão: baixando atualização ${estadoAtualizacao.percentual}%` : 'Panteão');
+  if (tray) tray.setToolTip(estadoAtualizacao.fase === 'pronta' ? `Pantheon: atualização ${estadoAtualizacao.versao} pronta`
+    : estadoAtualizacao.fase === 'baixando' ? `Pantheon: baixando atualização ${estadoAtualizacao.percentual}%` : 'Pantheon');
   atualizarMenuTray();
   if (janela && !janela.isDestroyed()) janela.webContents.send('atualizacao:estado', estadoAtualizacao);
 }
 
 function instalarAtualizacao() {
   if (!autoUpdater || !atualizacaoBaixada) return;
+  procuraManual = false;
+  mudarEstadoAtualizacao({ fase: 'instalando' });
   saindo = true;
-  autoUpdater.quitAndInstall();
+  // (silencioso, reabrir depois): o instalador de um clique desinstala a versão antiga e instala a nova, sem janelinha nem download manual.
+  // Um instante antes pra a tela mostrar "Instalando...".
+  setTimeout(() => autoUpdater.quitAndInstall(true, true), 700);
 }
 
 ipcMain.handle('atualizacao:get', (e) => (vemDoApp(e) ? (app.isPackaged ? estadoAtualizacao : { fase: 'dev' }) : null));
@@ -451,12 +485,18 @@ ipcMain.handle('atualizacao:instalar', (e) => { if (vemDoApp(e)) instalarAtualiz
 ipcMain.handle('atualizacao:procurar', (e) => {
   if (!vemDoApp(e)) return null;
   if (!app.isPackaged) return { fase: 'dev' };
-  if (estadoAtualizacao.fase !== 'baixando' && estadoAtualizacao.fase !== 'pronta') procurarAtualizacao();
+  if (estadoAtualizacao.fase === 'pronta') { instalarAtualizacao(); return estadoAtualizacao; }   // já baixada: instala agora
+  if (estadoAtualizacao.fase === 'baixando') { procuraManual = true; return estadoAtualizacao; }   // já baixando: instala assim que terminar
+  if (estadoAtualizacao.fase !== 'instalando') procurarAtualizacao(true);
   return estadoAtualizacao;
 });
 
-function procurarAtualizacao() {
+function procurarAtualizacao(manual = false) {
   if (!autoUpdater) return;
+  if (manual) {
+    procuraManual = true;
+    if (atualizacaoBaixada) { instalarAtualizacao(); return; }
+  }
   autoUpdater.checkForUpdates().catch((err) => console.warn('[updater]', err && err.message));
 }
 
@@ -471,6 +511,7 @@ app.whenReady().then(() => {
   const link = process.argv.find((a) => a.startsWith(PROTOCOLO + '://'));
   if (link) tratarLink(link);
   iniciarAtualizador();
+  migrarInicioComWindows();
   app.on('activate', mostrarJanela);
 });
 

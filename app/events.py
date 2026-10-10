@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload
 from datetime import timedelta
+import json
 import re
 import time
 from . import socketio, APP_VERSAO
@@ -17,6 +18,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
                     ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok,
                     tema_perfil_valido, username_valido, ajuste_de_imagem_valido,
+                    TEMAS_VALIDOS, tema_custom_valido, tema_custom_da_pessoa, tema_eh_claro,
                     distancia_m, coordenada_valida, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, dados_do_mapa_perto, nota_para_json,
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
@@ -474,7 +476,7 @@ def handle_connect():
 
         # Preferências que moram na conta (não no navegador): o cliente aplica
         # ao conectar, então valem em qualquer aparelho/rede.
-        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'tema': usuario.tema or 'dark',
+        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'tema': usuario.tema or 'dark', **_dados_do_tema(usuario),
                                          'localizacao_ativa': localizacao_ligada(usuario),
                                          'localizacao_ip': usuario.localizacao_ip is not False})
 
@@ -2775,6 +2777,12 @@ def alternar_localizacao(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível salvar a localização: {e}'})
 
 
+def _dados_do_tema(usuario):
+    """O que o cliente precisa saber do tema da conta além do id: as escolhas do personalizado e se o fundo é claro."""
+    custom = tema_custom_da_pessoa(usuario)
+    return {'tema_custom': custom, 'tema_claro': tema_eh_claro(usuario.tema or 'dark', custom)}
+
+
 @socketio.on('mudar_tema')
 def mudar_tema(dados):
     """Guarda o tema visual na conta e sincroniza as outras abas/aparelhos."""
@@ -2783,15 +2791,26 @@ def mudar_tema(dados):
         return
 
     tema = (dados or {}).get('tema')
-    if tema not in ('dark', 'light', 'amoled'):
+    if tema not in TEMAS_VALIDOS:
         return
+
+    # 'custom' leva as escolhas (base, cor, imagem, escurecimento, painel). Elas ficam guardadas mesmo se a pessoa trocar pra outro tema
+    # e voltar depois: só são REESCRITAS quando o cliente manda de novo.
+    custom = None
+    if (dados or {}).get('custom') is not None:
+        custom = tema_custom_valido(dados.get('custom'))
+        if tema == 'custom' and custom is None:
+            emit('erro_bazinga', {'msg': 'Tema personalizado inválido.'})
+            return
 
     try:
         def preparar():
             usuario.tema = tema
+            if custom is not None:
+                usuario.tema_custom = json.dumps(custom, separators=(',', ':'))
 
         comitar_com_retry(preparar)
-        emit('preferencias_carregadas', {'tema': tema}, to=sala_pessoal(usuario.id))
+        emit('preferencias_carregadas', {'tema': tema, **_dados_do_tema(usuario)}, to=sala_pessoal(usuario.id))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MUDAR TEMA] {e}")
@@ -3109,7 +3128,7 @@ def enviar_pedido_amizade(dados):
                 alvo = iguais[0] if iguais else None
 
         if not alvo:
-            emit('erro_bazinga', {'msg': f'Não achei ninguém com "{busca}" no Panteão.'})
+            emit('erro_bazinga', {'msg': f'Não achei ninguém com "{busca}" no Pantheon.'})
             return
         if alvo.id == usuario.id:
             emit('erro_bazinga', {'msg': 'Você não pode adicionar a si mesmo.'})

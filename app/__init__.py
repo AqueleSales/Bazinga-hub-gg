@@ -5,7 +5,8 @@ import time
 # Adiciona a raiz do projeto ao sys.path para garantir que o Python ache o config.py
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from flask import Flask
+from flask import Flask, request, session
+from flask.sessions import SecureCookieSessionInterface
 from flask_socketio import SocketIO
 from .models import db
 
@@ -14,7 +15,7 @@ socketio = SocketIO()
 # Nome exibido do app. Trocar aqui troca no chat, login, manifesto do PWA etc.
 # (identificadores internos - colunas do banco, eventos do socket - mantêm o
 # nome antigo de propósito: renomear isso exigiria migração sem ganho nenhum.)
-APP_NOME = "Panteão"
+APP_NOME = "Pantheon"
 MOEDA_NOME = "Dracmas"
 MOEDA_SIGLA = "DRC"
 
@@ -49,7 +50,25 @@ def create_app():
     from .main.routes import main_bp
     app.register_blueprint(main_bp)
 
+    class _SessaoCookie(SecureCookieSessionInterface):
+        def should_set_cookie(self, app, session):
+            # Sessão permanente renova o cookie em TODA resposta (é o que faz o prazo andar a cada visita). Em arquivo
+            # estático isso são dezenas de Set-Cookie por carregamento de página, sem ganho nenhum.
+            if request.endpoint == 'static' and not session.modified:
+                return False
+            return super().should_set_cookie(app, session)
+
+    app.session_interface = _SessaoCookie()
+
+    @app.before_request
+    def _login_que_dura():
+        # Quem já estava logado com o cookie "de sessão" (criado antes da correção, some ao fechar o navegador) vira
+        # permanente na próxima visita, sem precisar passar pelo Google de novo.
+        if request.endpoint != 'static' and 'user_id' in session and not session.permanent:
+            session.permanent = True
+
     from . import events
+    from .novidades import novidade_atual
 
     def _versao_estatico(caminho):
         """Data de modificação do arquivo estático: vira ?v=<n> na URL, então um deploy novo nunca serve CSS/JS velho do cache."""
@@ -77,7 +96,7 @@ def create_app():
                 'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js'),
                 'loja_css_v': _versao_estatico('css/loja.css'), 'loja_js_v': _versao_estatico('js/loja.js'),
                 'bazar_css_v': _versao_estatico('css/bazar.css'), 'bazar_js_v': _versao_estatico('js/bazar.js'),
-                'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice()}
+                'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'novidade_atual': novidade_atual()}
 
     with app.app_context():
         try:

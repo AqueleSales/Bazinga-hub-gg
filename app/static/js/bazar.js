@@ -2,10 +2,10 @@
    BAZAR DA COMUNIDADE (modelo A: classificados, Pix direto entre as pessoas). Objeto global `Bazar`.
    Só DESENHA o que o servidor manda (`bazar_vitrine`, `bazar_feed`, `bazar_loja`, `bazar_minha`, `bazar_pedido`...). Quem vê a chave Pix,
    quem pode aceitar/cancelar, estoque, preço e a ORDEM do feed são decididos no servidor (app/bazar.py): aqui os botões só pedem a ação.
-   O Panteão NÃO guarda nem intermedia o dinheiro: o "copia e cola" é montado com a chave do vendedor e o pagamento vai direto pra ele.
+   O Pantheon NÃO guarda nem intermedia o dinheiro: o "copia e cola" é montado com a chave do vendedor e o pagamento vai direto pra ele.
 
    Organização da tela (as "vistas" trocam dentro do Mercado Elite; a barra lateral do app continua):
-     feed   = carrossel de propagandas (lojas parceiras + as do Panteão), faixa "bem avaliadas", filtros e o FEED misturado
+     feed   = carrossel de propagandas (lojas parceiras + as do Pantheon), faixa "bem avaliadas", filtros e o FEED misturado
               (retângulo de loja grande, caixa de loja média, quadrado de 4 itens de barracas) em ordem embaralhada por seed;
      loja   = a página de uma loja (substitui o feed);
      painel = "Minha lojinha" (abre pelo atalho ao lado das moedas): visão geral, produtos, pedidos, compras, personalizar, dados/Pix, moderação.
@@ -163,7 +163,7 @@ const Bazar = (() => {
                 <div id="bz-ads"></div>
                 <details class="bz-aviso" id="bz-aviso"><summary><i class="fa-solid fa-shield-halved"></i> Como o Bazar funciona (leia antes de comprar)</summary>
                     <ul>
-                        <li>O pagamento é <b>Pix direto para o vendedor</b>. O Panteão não guarda dinheiro, não intermedia e <b>não devolve</b> pagamento.</li>
+                        <li>O pagamento é <b>Pix direto para o vendedor</b>. O Pantheon não guarda dinheiro, não intermedia e <b>não devolve</b> pagamento.</li>
                         <li>Só pague por aqui, depois que o vendedor <b>aceitar o pedido</b>. Confira no app do banco se o nome do recebedor é o mesmo da tela.</li>
                         <li>Desconfie de pressa, de preço bom demais e de quem pede pra pagar fora do pedido. Links não são permitidos nos textos.</li>
                         <li>Algo errado? Use <b>Denunciar</b> na loja ou no produto. Com várias denúncias a loja some até um administrador revisar.</li>
@@ -182,12 +182,12 @@ const Bazar = (() => {
 
     // ---------- carrossel de propagandas ----------
     const PROPAGANDAS_CASA = [
-        { casa: true, cor: '#7d6bb8', selo: 'Panteão', titulo: 'Monte a sua loja', texto: 'Abra a sua barraca em poucos minutos: escolha a cor e o toldo, cadastre os produtos e receba por Pix direto.', cta: 'Abrir a minha lojinha', acao: 'painel', icone: 'fa-store' },
-        { casa: true, cor: '#2f6f9f', selo: 'Dica', titulo: 'Pix direto, sem taxa do Panteão', texto: 'Confira o nome do recebedor antes de pagar e só pague depois que o vendedor aceitar o pedido.', cta: 'Como funciona', acao: 'aviso', icone: 'fa-shield-halved' },
+        { casa: true, cor: '#7d6bb8', selo: 'Pantheon', titulo: 'Monte a sua loja', texto: 'Abra a sua barraca em poucos minutos: escolha a cor e o toldo, cadastre os produtos e receba por Pix direto.', cta: 'Abrir a minha lojinha', acao: 'painel', icone: 'fa-store' },
+        { casa: true, cor: '#2f6f9f', selo: 'Dica', titulo: 'Pix direto, sem taxa do Pantheon', texto: 'Confira o nome do recebedor antes de pagar e só pague depois que o vendedor aceitar o pedido.', cta: 'Como funciona', acao: 'aviso', icone: 'fa-shield-halved' },
         { casa: true, cor: '#d9822b', selo: 'Armazém', titulo: 'Personalize o seu perfil', texto: 'Molduras, nomes e placas animadas, pagos em DRC. Combine com a sua loja.', cta: 'Ir ao Armazém', acao: 'armazem', icone: 'fa-wand-magic-sparkles' },
     ];
 
-    // Os slides: lojas parceiras e anúncios cadastrados por um admin (vêm do servidor, já filtrados por data) + os 3 padrões do Panteão
+    // Os slides: lojas parceiras e anúncios cadastrados por um admin (vêm do servidor, já filtrados por data) + os 3 padrões do Pantheon
     // enquanto o admin ainda não cadastrou nenhum anúncio (`casa_padrao`). Parceira e anúncio ficam intercalados.
     function slidesDeAds() {
         const doServidor = props.map((a) => (a.tipo === 'anuncio' ? { casa: false, anuncio: true, ...a } : { casa: false, ...a }));
@@ -267,11 +267,11 @@ const Bazar = (() => {
         else if (!s.casa) { abrirLoja(s.loja_id); return; }
         if (destino === 'loja') abrirLoja(s.loja_id);
         else if (destino === 'link') {
-            // anúncio de fora: avisa antes de sair do Panteão (o servidor só aceita https:// e só admin cadastra)
+            // anúncio de fora: avisa antes de sair do Pantheon (o servidor só aceita https:// e só admin cadastra)
             let host = '';
             try { host = new URL(s.link_url).hostname; } catch (e) { return; }
             if (!/^https:\/\//.test(s.link_url)) return;
-            ctx.confirmar('Sair do Panteão?', `Esse anúncio abre ${host} em outra aba. O Panteão não controla o que tem lá: nunca digite a senha daqui nem pague fora de um pedido do Bazar.`,
+            ctx.confirmar('Sair do Pantheon?', `Esse anúncio abre ${host} em outra aba. O Pantheon não controla o que tem lá: nunca digite a senha daqui nem pague fora de um pedido do Bazar.`,
                 () => window.open(s.link_url, '_blank', 'noopener,noreferrer'));
         }
         else if (destino === 'painel') abrirPainel(minhaLojaId ? 'inicio' : 'dados');
@@ -401,7 +401,7 @@ const Bazar = (() => {
             : `<div class="bz-como"><i class="fa-solid fa-truck-fast"></i> <b>${esc(nomeEntrega(modos[0]))}</b>${modos[0] === 'envio' ? ` · ${p.frete_cent ? 'frete ' + brl(p.frete_cent) : 'frete grátis'}` : modos[0] === 'combinar' ? ': combinem os detalhes na conversa do pedido' : ''}</div>`;
         const enderecoHtml = s.entrega === 'envio'
             ? `<label class="bz-campo">Endereço de entrega<textarea id="bz-end-ped" maxlength="${(cat.limites || {}).endereco || 300}" style="min-height:64px" data-campo="endereco" placeholder="Rua, número, complemento, bairro, cidade e CEP">${esc(s.endereco)}</textarea>
-                <small>Só você e o vendedor veem. O Panteão apaga o endereço quando o pedido termina (concluído, cancelado ou recusado).</small></label>` : '';
+                <small>Só você e o vendedor veem. O Pantheon apaga o endereço quando o pedido termina (concluído, cancelado ou recusado).</small></label>` : '';
         const compra = dono ? '<div class="bz-como">Este produto é da sua loja.</div>'
             : esgotado ? '<button type="button" class="bz-btn" disabled>Esgotado</button>'
             : banido ? `<div class="bz-como bz-banido-aviso"><i class="fa-solid fa-ban"></i> Sua conta está suspensa do Bazar${banido.ate ? ' até ' + esc(banido.ate) : ''}. ${banido.motivo ? 'Motivo: ' + esc(String(banido.motivo).replace(/[.!\s]+$/, '')) + '.' : ''}</div>`
@@ -420,7 +420,7 @@ const Bazar = (() => {
                     <div class="bz-preco-grande">${brl(p.preco_cent)}${p.preco_avulso_cent > p.preco_cent ? `<s>${brl(p.preco_avulso_cent)}</s>` : ''}</div>
                     ${p.descricao ? `<p style="margin:0;line-height:1.5;white-space:pre-wrap">${esc(p.descricao)}</p>` : ''}
                     ${combo}${vendedor}${compra}
-                    <div class="bz-como"><b>Como funciona:</b> 1) você faz o pedido, 2) o vendedor aceita, 3) você paga por Pix direto a ele, 4) ele confirma e você recebe. O Panteão não intermedia o pagamento.</div>
+                    <div class="bz-como"><b>Como funciona:</b> 1) você faz o pedido, 2) o vendedor aceita, 3) você paga por Pix direto a ele, 4) ele confirma e você recebe. O Pantheon não intermedia o pagamento.</div>
                     ${dono ? '' : `<button type="button" class="bz-link" data-a="denunciar" data-t="produto" data-id="${Number(p.id)}" data-nome="${esc(p.nome)}"><i class="fa-solid fa-flag"></i> Denunciar produto</button>`}
                 </div>
             </div>`, { classe: 'larga', estilo: l ? estiloLoja(l) : (p.loja_cor ? `--bz-cor:${corDe(p.loja_cor)}` : '') });
@@ -491,7 +491,7 @@ const Bazar = (() => {
         const disputa = d && d.status === 'aberta'
             ? `<div class="bz-disputa aberta"><b><i class="fa-solid fa-scale-balanced"></i> Disputa aberta ${d.minha ? 'por você' : 'pela outra pessoa'}</b><span>${esc(d.motivo_nome)}: ${esc(d.detalhe)}</span><small>Um administrador está analisando e pode ler a conversa deste pedido. As ações do pedido ficam travadas até a decisão; vocês seguem podendo conversar.</small></div>`
             : d && d.status === 'resolvida'
-            ? `<div class="bz-disputa resolvida"><b><i class="fa-solid fa-gavel"></i> Disputa resolvida: ${esc(RES[d.resolucao] || d.resolucao)}</b><span>${esc(d.nota_admin)}</span><small>O Panteão não toca no dinheiro: se couber reembolso, combinem entre vocês pela conversa.</small></div>` : '';
+            ? `<div class="bz-disputa resolvida"><b><i class="fa-solid fa-gavel"></i> Disputa resolvida: ${esc(RES[d.resolucao] || d.resolucao)}</b><span>${esc(d.nota_admin)}</span><small>O Pantheon não toca no dinheiro: se couber reembolso, combinem entre vocês pela conversa.</small></div>` : '';
         const abrirDisputa = p.pode_disputar ? `<button type="button" class="bz-link" data-a="disputa-abrir" data-id="${Number(p.id)}"><i class="fa-solid fa-scale-balanced"></i> Algo deu errado? Abrir uma disputa</button>` : '';
         return `${topoModal(p.produto_nome, `${v ? 'Comprador' : 'Vendedor'}: ${outro.nome || '?'} · ${p.quantidade}x · ${brl(p.total_cent)} · ${p.loja_nome}`)}
             <div class="bz-card-corpo">
@@ -567,7 +567,7 @@ const Bazar = (() => {
             <label class="bz-campo">Categoria<select data-campo="categoria">${cat.categorias.map((c) => `<option value="${c.id}" ${d.categoria === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></label>
             ${campo('Região (opcional)', 'regiao', d.regiao, L.regiao, 'Ex.: Samambaia, DF. Ajuda quem compra produto físico.')}
             <label class="bz-campo cheio" style="flex-direction:row;align-items:flex-start;gap:10px;text-transform:none;font-size:14px"><input type="checkbox" data-campo="no_mapa" ${d.no_mapa ? 'checked' : ''} style="margin-top:3px"><span>Aparecer em <b>"Perto de mim"</b> no feed<small style="display:block;color:var(--text-muted);font-weight:700">Usa a localização do seu aparelho agora e guarda só um ponto ARREDONDADO (~1 km), nunca o seu endereço. Pra atualizar o ponto, salve de novo.${minha && minha.no_mapa ? ' <b>Já está aparecendo.</b>' : ''}</small></span></label>
-            <div class="bz-campo cheio" style="border-top:2px solid var(--bg-tertiary);padding-top:12px">Pix (como você recebe)<small>Só quem tem um pedido ACEITO com você vê o "copia e cola". O dinheiro vai direto pra sua conta; o Panteão não toca nele.</small></div>
+            <div class="bz-campo cheio" style="border-top:2px solid var(--bg-tertiary);padding-top:12px">Pix (como você recebe)<small>Só quem tem um pedido ACEITO com você vê o "copia e cola". O dinheiro vai direto pra sua conta; o Pantheon não toca nele.</small></div>
             ${campo('Chave Pix', 'pix_chave', d.pix_chave, 80, 'CPF, CNPJ, telefone (+55...), e-mail ou chave aleatória.')}
             ${campo('Nome do recebedor', 'pix_nome', d.pix_nome, 25, 'Como aparece no banco do comprador.')}
             ${campo('Cidade do recebedor', 'pix_cidade', d.pix_cidade, 15, '')}
@@ -607,8 +607,8 @@ const Bazar = (() => {
                 ${d.envia ? campo('Frete (R$)', 'frete', d.frete, 12, `Somado ao total do Pix. Deixe 0 pra frete grátis (máx. ${brl(L.frete_max_cent)}).`) : ''}
                 <label class="bz-campo" style="flex-direction:row;align-items:center;gap:10px;text-transform:none;font-size:14px"><input type="checkbox" data-campo="retirada" ${d.retirada ? 'checked' : ''}> Aceito retirada em mãos</label></div>` : ''}
             ${campo('Estoque', 'estoque', d.estoque, 4, 'Deixe vazio pra sem limite. Aceitar um pedido reserva o estoque.')}
-            <div class="bz-campo">Fotos (até ${L.imagens})<div class="bz-upl">${imgs}${d.imagens.length < L.imagens ? `<button type="button" class="bz-btn sec pq" data-a="pd-subir-img"><i class="fa-solid fa-image"></i> Adicionar foto</button>` : ''}</div></div>
-            <div class="bz-campo">Vídeo (opcional)<div class="bz-upl">${d.video_url ? '<span style="font-size:13px;font-weight:700;text-transform:none;color:var(--text-normal)"><i class="fa-solid fa-film"></i> Vídeo enviado</span><button type="button" class="bz-btn sec pq" data-a="pd-tirar-video">Tirar</button>' : '<button type="button" class="bz-btn sec pq" data-a="pd-subir-video"><i class="fa-solid fa-film"></i> Enviar vídeo (até 25 MB)</button>'}</div></div>
+            <div class="bz-campo">Fotos (até ${L.imagens})<div class="bz-upl">${imgs}${d.imagens.length < L.imagens ? `<button type="button" class="bz-btn sec pq" data-a="pd-subir-img"><i class="fa-solid fa-image"></i> Adicionar foto, GIF ou vídeo curto</button>` : ''}</div></div>
+            <div class="bz-campo">Vídeo completo (opcional)<small>Sai do jeito que você enviar, com som e sem edição. Pra um trecho curto com corte e zoom, use "Adicionar foto, GIF ou vídeo curto" acima.</small><div class="bz-upl">${d.video_url ? '<span style="font-size:13px;font-weight:700;text-transform:none;color:var(--text-normal)"><i class="fa-solid fa-film"></i> Vídeo enviado</span><button type="button" class="bz-btn sec pq" data-a="pd-tirar-video">Tirar</button>' : '<button type="button" class="bz-btn sec pq" data-a="pd-subir-video"><i class="fa-solid fa-film"></i> Enviar vídeo (até 25 MB)</button>'}</div></div>
             <label class="bz-campo cheio" style="flex-direction:row;align-items:center;gap:10px;text-transform:none;font-size:14px"><input type="checkbox" data-campo="combo" ${d.combo ? 'checked' : ''}> É um combo (vários itens por um preço)</label>
             ${d.combo ? `<div class="bz-campo cheio">O que vem no combo<div style="display:flex;flex-direction:column;gap:6px">${d.combo_itens.map((c, i) => `<div style="display:flex;gap:6px"><input type="text" class="bz-in-combo" data-combo="${i}" maxlength="${L.combo_item}" value="${esc(c)}" style="flex:1;padding:8px 10px;border-radius:10px;border:2px solid var(--bg-tertiary);background:var(--bg-secondary);color:var(--text-header)"><button type="button" class="bz-btn sec pq" data-a="pd-tirar-combo" data-i="${i}">×</button></div>`).join('')}${d.combo_itens.length < L.combo ? '<button type="button" class="bz-btn sec pq" style="align-self:flex-start" data-a="pd-add-combo">+ Item</button>' : ''}</div></div>
             ${campo('Preço dos itens avulsos (R$)', 'preco_avulso', d.preco_avulso, 12, 'Opcional: mostra "Avulso R$ X, você economiza Y".')}` : ''}
@@ -686,7 +686,7 @@ const Bazar = (() => {
                     <button type="button" class="bz-btn perigo pq" data-a="disp-resolver" data-id="${Number(d.id)}" data-acao="cancelar" title="Cancela o pedido e devolve o estoque (reembolso se combina entre eles)">Cancelar o pedido</button>
                     <button type="button" class="bz-btn sec pq" data-a="disp-resolver" data-id="${Number(d.id)}" data-acao="arquivar" title="Só encerra a disputa e destrava o pedido">Arquivar (não muda nada)</button></div>`}</div>`;
         };
-        return `<p style="margin:0 0 12px;color:var(--text-muted);font-size:13.5px">Abrir a disputa libera você a ler <b>a conversa daquele pedido</b> (os dois foram avisados). O Panteão não toca no dinheiro: a decisão só muda o estado do pedido e fica registrada com a sua nota.</p>
+        return `<p style="margin:0 0 12px;color:var(--text-muted);font-size:13.5px">Abrir a disputa libera você a ler <b>a conversa daquele pedido</b> (os dois foram avisados). O Pantheon não toca no dinheiro: a decisão só muda o estado do pedido e fica registrada com a sua nota.</p>
             <div class="bz-lista">${disputasAdm.abertas.map(cartao).join('') || '<div class="bz-vazio"><i class="fa-regular fa-face-smile"></i>Nenhuma disputa aberta.</div>'}</div>
             ${disputasAdm.resolvidas.length ? `<div class="bz-campo" style="margin:18px 0 8px">Últimas decididas</div><div class="bz-lista">${disputasAdm.resolvidas.map((x) => `<div class="bz-mod"><small><b>${esc(x.pedido.produto_nome)}</b> · pedido #${Number(x.pedido.id)} · ${esc(RES[x.disputa.resolucao] || x.disputa.resolucao)} em ${esc(x.disputa.resolvida_em)}<br>${esc(x.disputa.nota_admin)}</small></div>`).join('')}</div>` : ''}`;
     }
@@ -706,7 +706,7 @@ const Bazar = (() => {
             <div class="bz-campo">Arte (opcional, de preferência 3:2)<div class="bz-upl">${urlOk(a.imagem_url) ? `<span class="bz-upl-img"><img src="${esc(urlOk(a.imagem_url))}" alt=""><button type="button" data-a="an-tirar-arte">×</button></span>` : ''}<button type="button" class="bz-btn sec pq" data-a="an-subir-arte"><i class="fa-solid fa-image"></i> ${urlOk(a.imagem_url) ? 'Trocar' : 'Enviar imagem'}</button></div></div>
             <label class="bz-campo">Ao clicar<select ${f('destino')}><option value="nenhum" ${a.destino === 'nenhum' ? 'selected' : ''}>Nada (só informa)</option><option value="loja" ${a.destino === 'loja' ? 'selected' : ''}>Abrir uma loja do Bazar</option><option value="link" ${a.destino === 'link' ? 'selected' : ''}>Abrir um link de fora (https)</option><option value="painel" ${a.destino === 'painel' ? 'selected' : ''}>Abrir a Minha lojinha</option><option value="aviso" ${a.destino === 'aviso' ? 'selected' : ''}>Mostrar "Como o Bazar funciona"</option><option value="armazem" ${a.destino === 'armazem' ? 'selected' : ''}>Ir ao Armazém</option></select></label>
             ${a.destino === 'loja' ? `<label class="bz-campo">Número da loja<input type="text" ${f('loja_id')} maxlength="9" inputmode="numeric" value="${esc(a.loja_id)}"><small>O número aparece na página da loja (id) e na lista do <code>bazar_admin.py lista</code>.</small></label>` : ''}
-            ${a.destino === 'link' ? `<label class="bz-campo cheio">Link (só https://)<input type="text" ${f('link_url')} maxlength="255" value="${esc(a.link_url)}" placeholder="https://www.exemplo.com.br/oferta"><small>Quem clicar vê um aviso de que está saindo do Panteão antes de abrir.</small></label>` : ''}
+            ${a.destino === 'link' ? `<label class="bz-campo cheio">Link (só https://)<input type="text" ${f('link_url')} maxlength="255" value="${esc(a.link_url)}" placeholder="https://www.exemplo.com.br/oferta"><small>Quem clicar vê um aviso de que está saindo do Pantheon antes de abrir.</small></label>` : ''}
             <label class="bz-campo">Começa em (opcional)<input type="date" ${f('inicio')} value="${esc(a.inicio)}"></label>
             <label class="bz-campo">Termina em (opcional)<input type="date" ${f('fim')} value="${esc(a.fim)}"></label>
             <label class="bz-campo cheio" style="flex-direction:row;align-items:center;gap:10px;text-transform:none;font-size:14px"><input type="checkbox" ${f('ativo')} ${a.ativo ? 'checked' : ''}> Ativo (desmarque pra pausar sem apagar)</label>
@@ -720,8 +720,8 @@ const Bazar = (() => {
         const ESTADO = { 'no ar': 'concluido', agendado: 'aguardando', encerrado: 'cancelado', pausado: 'cancelado' };
         const janela = (a) => (a.inicio || a.fim ? `${a.inicio ? 'de ' + a.inicio.split('-').reverse().join('/') : ''} ${a.fim ? 'até ' + a.fim.split('-').reverse().join('/') : ''}`.trim() : 'sem prazo');
         return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><b style="color:var(--text-header)">${anunciosAdm.length} anúncio(s)</b>
-                <span style="display:flex;gap:8px;flex-wrap:wrap">${anunciosAdm.length ? '' : '<button type="button" class="bz-btn sec" data-a="an-padrao" title="Cria os 3 anúncios do Panteão que aparecem hoje, pra você editar">Importar os 3 padrões do Panteão</button>'}<button type="button" class="bz-btn" data-a="an-novo"><i class="fa-solid fa-plus"></i> Novo anúncio</button></span></div>
-            <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px">As lojas parceiras (porte "grande") entram no carrossel sozinhas. ${casaPadrao ? 'Enquanto não houver nenhum anúncio cadastrado, aparecem os 3 padrões do Panteão.' : ''}</p>
+                <span style="display:flex;gap:8px;flex-wrap:wrap">${anunciosAdm.length ? '' : '<button type="button" class="bz-btn sec" data-a="an-padrao" title="Cria os 3 anúncios do Pantheon que aparecem hoje, pra você editar">Importar os 3 padrões do Pantheon</button>'}<button type="button" class="bz-btn" data-a="an-novo"><i class="fa-solid fa-plus"></i> Novo anúncio</button></span></div>
+            <p style="margin:0 0 12px;color:var(--text-muted);font-size:13px">As lojas parceiras (porte "grande") entram no carrossel sozinhas. ${casaPadrao ? 'Enquanto não houver nenhum anúncio cadastrado, aparecem os 3 padrões do Pantheon.' : ''}</p>
             <div style="display:flex;flex-direction:column;gap:10px">${anunciosAdm.map((a) => `<div class="bz-linha-prod ${a.estado === 'no ar' ? '' : 'bz-pausado'}"><span class="img">${urlOk(a.imagem_url) ? `<img src="${esc(urlOk(a.imagem_url))}" alt="">` : `<i class="fa-solid ${esc(a.icone)}"></i>`}</span>
                 <span class="txt"><b>${esc(a.titulo)}</b><small><span class="bz-status ${ESTADO[a.estado] || 'aguardando'}" style="font-size:10px;padding:1px 7px">${esc(a.estado)}</span> ${esc(janela(a))} · ${Number(a.cliques)} clique(s) · ${a.destino === 'loja' ? 'abre a loja #' + Number(a.loja_id) : a.destino === 'link' ? 'link de fora' : esc(a.destino)}</small></span>
                 <span class="acoes"><button type="button" class="bz-btn sec pq" data-a="an-editar" data-id="${Number(a.id)}">Editar</button><button type="button" class="bz-btn sec pq" data-a="an-pausar" data-id="${Number(a.id)}">${a.ativo ? 'Pausar' : 'Ativar'}</button><button type="button" class="bz-btn perigo pq" data-a="an-apagar" data-id="${Number(a.id)}">Apagar</button></span></div>`).join('') || '<div class="bz-vazio"><i class="fa-solid fa-bullhorn"></i>Nenhum anúncio cadastrado ainda.</div>'}</div>`;
@@ -743,7 +743,7 @@ const Bazar = (() => {
         const L = cat.limites || {};
         modal('disputa', `${topoModal('Abrir uma disputa', p.produto_nome)}
             <div class="bz-card-corpo">
-                <div class="bz-como"><b>Antes de abrir:</b> tente resolver na conversa do pedido. Ao abrir, <b>um administrador poderá ler a conversa deste pedido</b> e decidir: concluir, cancelar ou arquivar. As ações do pedido ficam travadas até a decisão. O Panteão <b>não toca no dinheiro</b>: se couber reembolso, vocês combinam entre si.</div>
+                <div class="bz-como"><b>Antes de abrir:</b> tente resolver na conversa do pedido. Ao abrir, <b>um administrador poderá ler a conversa deste pedido</b> e decidir: concluir, cancelar ou arquivar. As ações do pedido ficam travadas até a decisão. O Pantheon <b>não toca no dinheiro</b>: se couber reembolso, vocês combinam entre si.</div>
                 <label class="bz-campo">O que aconteceu?<select data-m="motivo">${motivos.map((m) => `<option value="${esc(m.id)}" ${edDisputa.motivo === m.id ? 'selected' : ''}>${esc(m.nome)}</option>`).join('')}</select></label>
                 <label class="bz-campo">Conte o que houve (sem links)<textarea data-m="detalhe" maxlength="${L.disputa_detalhe || 300}" style="min-height:90px" placeholder="Datas, o que foi combinado, o que você já tentou...">${esc(edDisputa.detalhe)}</textarea></label>
                 <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="bz-btn perigo" data-a="disputa-enviar"><i class="fa-solid fa-scale-balanced"></i> Abrir disputa</button><button type="button" class="bz-btn sec" data-a="fechar">Voltar</button></div>
@@ -755,7 +755,7 @@ const Bazar = (() => {
         const L = cat.limites || {};
         modal('ban', `${topoModal('Banir do Bazar', edBan.pessoa_id ? edBan.nome : 'Escolha a pessoa pelo @')}
             <div class="bz-card-corpo">
-                <div class="bz-como">A pessoa não vende nem compra no Bazar, a loja some do feed e os pedidos em aberto dela são cancelados (o estoque volta). Os outros lados são avisados. Quem já pagou um Pix precisa resolver fora: o Panteão não toca no dinheiro.</div>
+                <div class="bz-como">A pessoa não vende nem compra no Bazar, a loja some do feed e os pedidos em aberto dela são cancelados (o estoque volta). Os outros lados são avisados. Quem já pagou um Pix precisa resolver fora: o Pantheon não toca no dinheiro.</div>
                 ${edBan.pessoa_id ? '' : `<label class="bz-campo">@usuario<input type="text" data-m="usuario" maxlength="32" value="${esc(edBan.usuario)}" placeholder="@fulano"></label>`}
                 <label class="bz-campo">Motivo (a pessoa lê)<textarea data-m="motivo" maxlength="${L.ban_motivo || 200}" style="min-height:70px">${esc(edBan.motivo)}</textarea></label>
                 <label class="bz-campo">Por quanto tempo<select data-m="dias"><option value="7" ${edBan.dias === '7' ? 'selected' : ''}>7 dias</option><option value="30" ${edBan.dias === '30' ? 'selected' : ''}>30 dias</option><option value="90" ${edBan.dias === '90' ? 'selected' : ''}>90 dias</option><option value="" ${edBan.dias === '' ? 'selected' : ''}>Pra sempre</option></select></label>
@@ -847,6 +847,15 @@ const Bazar = (() => {
         try { const r = await ctx.upload(file); aoSubir(r.url); } catch (e) { ctx.toast(e.message || 'Não foi possível enviar o arquivo.', 'error'); }
         if (ed) { ed.salvando = false; desenharPainel(); }
     }
+    /** Imagem da lojinha (logo, banner, foto de produto, arte de anúncio): o MESMO seletor do perfil (arquivo, arrastar, link, GIF) e o mesmo editor
+     *  (cortar, girar, espelhar, dar zoom; GIF e vídeo curto viram animação). Antes era só um seletor de arquivo: a imagem subia do jeito que estava. */
+    function escolherImagem(formato, titulo, sub, aoPronta) {
+        ctx.escolherImagem({
+            titulo, formato, sub,
+            aoArquivo: (f) => subir(f, aoPronta),
+            aoUrl: (url) => { aoPronta(url); if (ed) desenharPainel(); },
+        });
+    }
 
     function payloadProduto(d) {
         return { id: d.id, nome: d.nome, descricao: d.descricao, tipo: d.tipo, preco_cent: lerReais(d.preco), estoque: d.estoque === '' ? null : Number(d.estoque), imagens: d.imagens, video_url: d.video_url,
@@ -927,7 +936,7 @@ const Bazar = (() => {
             case 'an-editar': edAnuncio = rascunhoAnuncio((anunciosAdm || []).find((a) => a.id === Number(id))); desenharPainel(); break;
             case 'an-voltar': edAnuncio = null; desenharPainel(); break;
             case 'an-padrao': ctx.emitir('bazar_anuncios_padrao'); break;
-            case 'an-subir-arte': escolher('image/*', (f) => subir(f, (url) => { edAnuncio.imagem_url = url; })); break;
+            case 'an-subir-arte': escolherImagem('anuncio', 'Arte do anúncio', 'Proporção 3:2. Corte e dê zoom até ficar bom.', (url) => { edAnuncio.imagem_url = url; }); break;
             case 'an-tirar-arte': edAnuncio.imagem_url = ''; desenharPainel(); break;
             case 'an-salvar':
                 if (!edAnuncio.titulo.trim()) { ctx.toast('Dê um título ao anúncio.', 'warning'); break; }
@@ -960,7 +969,9 @@ const Bazar = (() => {
             case 'ed-cor': ed.loja.cor = id; desenharPainel(); break;
             case 'ed-toldo': ed.loja.toldo = id; desenharPainel(); break;
             case 'ed-porte': ed.loja.porte = id; desenharPainel(); break;
-            case 'ed-subir': escolher('image/*', (f) => subir(f, (url) => { ed.loja[id] = url; })); break;
+            case 'ed-subir': escolherImagem(id === 'logo_url' ? 'quadrado' : 'faixa', id === 'logo_url' ? 'Logo da loja' : 'Banner da loja',
+                id === 'logo_url' ? 'Quadrada: ela aparece na fachada e nos cartões. Imagem, GIF ou vídeo curto.' : 'Faixa larga no topo da página da loja. Imagem, GIF ou vídeo curto.',
+                (url) => { ed.loja[id] = url; }); break;
             case 'ed-tirar': ed.loja[id] = ''; desenharPainel(); break;
             case 'ed-salvar-loja':
                 if (!ctx.exigirLocalizacao()) break;
@@ -968,7 +979,7 @@ const Bazar = (() => {
             case 'pd-novo': ed.prod = rascunhoProduto(); desenharPainel(); break;
             case 'pd-editar': ed.prod = rascunhoProduto(minha.produtos.find((p) => p.id === Number(id))); desenharPainel(); break;
             case 'pd-voltar': ed.prod = null; desenharPainel(); break;
-            case 'pd-subir-img': escolher('image/*', (f) => subir(f, (url) => { ed.prod.imagens.push(url); })); break;
+            case 'pd-subir-img': escolherImagem('produto', 'Foto do produto', 'Foto, GIF ou um vídeo curto (vira animação de até 6 s). Corte em 4:3 e dê zoom até ficar bom.', (url) => { ed.prod.imagens.push(url); }); break;
             case 'pd-tirar-img': ed.prod.imagens.splice(Number(b.dataset.i), 1); desenharPainel(); break;
             case 'pd-subir-video': escolher('video/*', (f) => subir(f, (url) => { ed.prod.video_url = url; })); break;
             case 'pd-tirar-video': ed.prod.video_url = ''; desenharPainel(); break;
