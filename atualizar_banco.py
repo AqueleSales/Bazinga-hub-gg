@@ -253,6 +253,10 @@ def atualizar_banco():
             # 28. Tema personalizado (Rodada 20): JSON com base, cor de destaque, imagem de fundo e transparência (ver utils.tema_custom_valido).
             add_column_se_nao_existir("person", "tema_custom TEXT")
 
+            # 29. Tema por tipo de aparelho: o par tema/tema_custom é o do computador; estes dois são o do celular (NULL = usa o do computador).
+            add_column_se_nao_existir("person", "tema_mobile VARCHAR(20)")
+            add_column_se_nao_existir("person", "tema_custom_mobile TEXT")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

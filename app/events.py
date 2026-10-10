@@ -18,7 +18,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
                     ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok,
                     tema_perfil_valido, username_valido, ajuste_de_imagem_valido,
-                    TEMAS_VALIDOS, tema_custom_valido, tema_custom_da_pessoa, tema_eh_claro,
+                    TEMAS_VALIDOS, tema_custom_valido, APARELHOS, aparelho_pelo_user_agent, tema_do_aparelho, definir_tema_do_aparelho,
                     distancia_m, coordenada_valida, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, dados_do_mapa_perto, nota_para_json,
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
@@ -476,7 +476,8 @@ def handle_connect():
 
         # Preferências que moram na conta (não no navegador): o cliente aplica
         # ao conectar, então valem em qualquer aparelho/rede.
-        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'tema': usuario.tema or 'dark', **_dados_do_tema(usuario),
+        # `temas`: o tema do computador e o do celular; cada aparelho pega o seu (ver utils.tema_do_aparelho)
+        emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'temas': {a: _dados_do_tema(usuario, a) for a in APARELHOS},
                                          'localizacao_ativa': localizacao_ligada(usuario),
                                          'localizacao_ip': usuario.localizacao_ip is not False})
 
@@ -2777,15 +2778,16 @@ def alternar_localizacao(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível salvar a localização: {e}'})
 
 
-def _dados_do_tema(usuario):
-    """O que o cliente precisa saber do tema da conta além do id: as escolhas do personalizado e se o fundo é claro."""
-    custom = tema_custom_da_pessoa(usuario)
-    return {'tema_custom': custom, 'tema_claro': tema_eh_claro(usuario.tema or 'dark', custom)}
+def _dados_do_tema(usuario, aparelho):
+    """O tema deste TIPO de aparelho (computador/celular): id, as escolhas do personalizado e se o fundo é claro. `aparelho` vai junto pra
+    cada cliente saber se o aviso é pra ele (o outro tipo de aparelho ignora)."""
+    tema, custom, claro = tema_do_aparelho(usuario, aparelho)
+    return {'aparelho': aparelho, 'tema': tema, 'tema_custom': custom, 'tema_claro': claro}
 
 
 @socketio.on('mudar_tema')
 def mudar_tema(dados):
-    """Guarda o tema visual na conta e sincroniza as outras abas/aparelhos."""
+    """Guarda o tema visual na conta (no espaço do computador OU do celular, conforme o aparelho que mudou) e avisa as outras abas."""
     usuario = usuario_logado()
     if not usuario:
         return
@@ -2793,6 +2795,9 @@ def mudar_tema(dados):
     tema = (dados or {}).get('tema')
     if tema not in TEMAS_VALIDOS:
         return
+    aparelho = (dados or {}).get('aparelho')
+    if aparelho not in APARELHOS:
+        aparelho = aparelho_pelo_user_agent(request.headers.get('User-Agent'))
 
     # 'custom' leva as escolhas (base, cor, imagem, escurecimento, painel). Elas ficam guardadas mesmo se a pessoa trocar pra outro tema
     # e voltar depois: só são REESCRITAS quando o cliente manda de novo.
@@ -2805,12 +2810,10 @@ def mudar_tema(dados):
 
     try:
         def preparar():
-            usuario.tema = tema
-            if custom is not None:
-                usuario.tema_custom = json.dumps(custom, separators=(',', ':'))
+            definir_tema_do_aparelho(usuario, aparelho, tema, custom)
 
         comitar_com_retry(preparar)
-        emit('preferencias_carregadas', {'tema': tema, **_dados_do_tema(usuario)}, to=sala_pessoal(usuario.id))
+        emit('preferencias_carregadas', _dados_do_tema(usuario, aparelho), to=sala_pessoal(usuario.id))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MUDAR TEMA] {e}")

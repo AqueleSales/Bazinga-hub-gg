@@ -4653,7 +4653,8 @@
                     <h2 class="set-title">Aparência</h2>
 
                     <div class="control-group">
-                        <span class="control-label">Tema</span>
+                        <span class="control-label" id="tema-titulo">Tema</span>
+                        <span class="tc-dica" id="tema-aparelho-nota" style="display:block; margin: 0 0 12px;"></span>
                         <!-- desenhado por desenharTemas() a partir do CATALOGO_TEMAS (JS) -->
                         <div id="temas-grade"></div>
 
@@ -11421,6 +11422,9 @@
         const TEMAS_IDS = CATALOGO_TEMAS.flatMap(g => g.itens).map(t => t.id).concat('custom');
         const TEMA_CUSTOM_PADRAO = { base: 'dark', cor: '#7289da', img: '', escuro: 0, painel: 60 };
         const CORES_DESTAQUE = ['#7289da', '#5865f2', '#3ba55d', '#faa61a', '#ed4245', '#eb459e', '#1abc9c', '#e67e22', '#9b59b6', '#00b0f4'];
+        // O tema é POR TIPO DE APARELHO: a conta guarda o do computador e o do celular, cada um só carrega, mostra e edita o seu. Mesma regra do
+        // servidor (utils.aparelho_pelo_user_agent) + celular que pede "versão pra computador" (toque grosso e tela pequena, como o MOBILE_Q).
+        const APARELHO = (/Mobi|iPhone|iPod/i.test(navigator.userAgent) || matchMedia('(pointer: coarse) and (max-device-width: 820px)').matches) ? 'celular' : 'computador';
         let temaAtual = {{ tema_id|tojson }};
         let temaCustom = Object.assign({}, TEMA_CUSTOM_PADRAO, {{ tema_custom|tojson }} || {});
         let _toqueNoTema = 0, _timerSalvarTema = null;
@@ -11459,6 +11463,10 @@
         function desenharTemas() {
             const grade = document.getElementById('temas-grade');
             if (!grade) return;
+            // deixa claro que o que se escolhe aqui vale só pra este tipo de aparelho
+            const aqui = APARELHO === 'celular' ? 'celular' : 'computador', outro = APARELHO === 'celular' ? 'computador' : 'celular';
+            document.getElementById('tema-titulo').textContent = `Tema do ${aqui}`;
+            document.getElementById('tema-aparelho-nota').textContent = `Você está no ${aqui}: o que escolher aqui vale só pro ${aqui}. O tema (e o fundo) do ${outro} é separado e você muda nele.`;
             const card = (t) => `<button type="button" class="tema-card ${temaAtual === t.id ? 'active' : ''}" data-tema="${t.id}" title="${esc(t.nome)}">
                 <span class="tema-amostra" style="--amostra-destaque:${t.cores[3]}"><i class="a-lado" style="background:${t.cores[1]}"></i><i class="a-topo" style="background:${t.cores[0]}"></i><i class="a-msg" style="background:${t.cores[2]}"></i></span>
                 <span class="tema-nome">${esc(t.nome)}</span></button>`;
@@ -11491,7 +11499,7 @@
             clearTimeout(_timerSalvarTema);
             const enviar = () => {
                 if (!socket.connected) { showToast('Sem conexão - o tema não foi salvo na conta.', 'warning'); return; }
-                socket.emit('mudar_tema', temaAtual === 'custom' ? { tema: 'custom', custom: temaCustom } : { tema: temaAtual });
+                socket.emit('mudar_tema', temaAtual === 'custom' ? { tema: 'custom', custom: temaCustom, aparelho: APARELHO } : { tema: temaAtual, aparelho: APARELHO });
             };
             if (imediato) enviar(); else _timerSalvarTema = setTimeout(enviar, 500);
         }
@@ -11531,12 +11539,15 @@
         }));
 
         socket.on('preferencias_carregadas', (prefs) => {
-            if (!prefs.tema) return;
+            // Ao conectar chegam os DOIS temas da conta (`temas`) e cada aparelho pega o seu. Quando alguém muda um tema, o aviso traz de
+            // qual tipo de aparelho foi (`aparelho`): quem é do outro tipo ignora (o fundo do PC não mexe no do celular e vice-versa).
+            const dados = prefs.temas ? prefs.temas[APARELHO] : (prefs.aparelho === APARELHO ? prefs : null);
+            if (!dados || !dados.tema) return;
             // o eco do que ACABEI de mexer aqui não pode puxar o controle de volta pra um valor mais velho
             if (Date.now() - _toqueNoTema < 2500) return;
-            const mudouCustom = prefs.tema === 'custom' && prefs.tema_custom && JSON.stringify(prefs.tema_custom) !== JSON.stringify(Object.assign({}, TEMA_CUSTOM_PADRAO, temaCustom));
-            if (prefs.tema !== document.documentElement.dataset.tema || mudouCustom) aplicarTema(prefs.tema, prefs.tema_custom || undefined);
-            else if (prefs.tema_custom) temaCustom = Object.assign({}, TEMA_CUSTOM_PADRAO, prefs.tema_custom);
+            const mudouCustom = dados.tema === 'custom' && dados.tema_custom && JSON.stringify(dados.tema_custom) !== JSON.stringify(Object.assign({}, TEMA_CUSTOM_PADRAO, temaCustom));
+            if (dados.tema !== document.documentElement.dataset.tema || mudouCustom) aplicarTema(dados.tema, dados.tema_custom || undefined);
+            else if (dados.tema_custom) temaCustom = Object.assign({}, TEMA_CUSTOM_PADRAO, dados.tema_custom);
         });
 
         // ==========================================

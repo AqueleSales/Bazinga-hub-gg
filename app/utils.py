@@ -598,16 +598,59 @@ def tema_custom_valido(dados):
             'painel': _limitar(dados.get('painel'), 30, 100, 60)}
 
 
-def tema_custom_da_pessoa(pessoa):
-    """Dicionário do tema personalizado guardado na conta (já validado), ou None."""
+def _custom_do_json(bruto):
     import json
-    bruto = getattr(pessoa, 'tema_custom', None)
     if not bruto:
         return None
     try:
         return tema_custom_valido(json.loads(bruto))
     except (ValueError, TypeError):
         return None
+
+
+def tema_custom_da_pessoa(pessoa):
+    """Dicionário do tema personalizado do COMPUTADOR guardado na conta (já validado), ou None."""
+    return _custom_do_json(getattr(pessoa, 'tema_custom', None))
+
+
+# ------------------------------------------------------------
+# TEMA POR TIPO DE APARELHO. A conta guarda dois temas: o do computador (tema + tema_custom) e o do celular (tema_mobile + tema_custom_mobile).
+# Cada aparelho carrega, mostra e edita só o seu: mexer no fundo do PC não muda o do celular (e vice-versa). Celular que nunca escolheu
+# (tema_mobile NULL) usa o do computador até escolher; a partir daí ficam separados.
+# O servidor chuta o tipo pelo User-Agent (pro primeiro desenho já sair certo); o navegador confirma com a mesma regra + toque grosso/tela pequena.
+# ------------------------------------------------------------
+APARELHOS = ('computador', 'celular')
+_RE_CELULAR = re.compile(r'Mobi|iPhone|iPod', re.I)
+
+
+def aparelho_pelo_user_agent(user_agent):
+    return 'celular' if _RE_CELULAR.search(user_agent or '') else 'computador'
+
+
+def tema_do_aparelho(pessoa, aparelho):
+    """(tema_id, custom|None, claro) que vale pra este tipo de aparelho."""
+    proprio = aparelho == 'celular' and getattr(pessoa, 'tema_mobile', None) in TEMAS_VALIDOS
+    tema = pessoa.tema_mobile if proprio else getattr(pessoa, 'tema', None)
+    if tema not in TEMAS_VALIDOS:
+        tema = 'dark'
+    custom = _custom_do_json(pessoa.tema_custom_mobile if proprio else getattr(pessoa, 'tema_custom', None))
+    if tema == 'custom' and not custom:
+        tema = 'dark'
+    return tema, custom, tema_eh_claro(tema, custom)
+
+
+def definir_tema_do_aparelho(pessoa, aparelho, tema, custom=None):
+    """Grava no espaço do tipo de aparelho. `custom` (dict já validado) só reescreve as escolhas do personalizado quando vem; sem ele elas ficam guardadas."""
+    import json
+    texto = json.dumps(custom, separators=(',', ':')) if custom is not None else None
+    if aparelho == 'celular':
+        pessoa.tema_mobile = tema
+        if texto is not None:
+            pessoa.tema_custom_mobile = texto
+    else:
+        pessoa.tema = tema
+        if texto is not None:
+            pessoa.tema_custom = texto
 
 
 def tema_eh_claro(tema, custom=None):

@@ -9,6 +9,13 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 21, 'data': '10/10/2026', 'titulo': 'Tema separado pro celular e pro computador',
+        'itens': [
+            {'icone': 'fa-mobile-screen', 'titulo': 'Um fundo pra cada aparelho', 'texto': 'Em Configurações > Aparência, o tema (e o papel de parede) que você escolhe vale só pro tipo de aparelho em que você está: o do computador não mexe no do celular, e o do celular não mexe no do computador. Tudo fica salvo na conta, então ao entrar de outro celular ou computador o seu fundo já está lá.'},
+            {'icone': 'fa-arrows-rotate', 'titulo': 'Instalador do app do Windows', 'texto': 'Atualizar o app do Windows pelo botão "Procurar atualizações" agora instala no lugar da versão antiga e abre o app sozinho.'},
+        ],
+    },
+    {
         'id': 20, 'data': '10/10/2026', 'titulo': 'Aviso de atualização novo, mais temas e editor na lojinha',
         'itens': [
             {'icone': 'fa-arrow-down', 'titulo': 'Este botão', 'texto': 'A faixa de "saiu uma versão nova" foi embora. Agora uma setinha aparece ao lado da caixa de entrada quando há atualização, e você escolhe a hora de atualizar.'},

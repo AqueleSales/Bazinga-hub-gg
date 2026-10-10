@@ -82,6 +82,10 @@ class Person(db.Model):
     tema = db.Column(db.String(20), default='dark', nullable=False)
     # Só vale com tema == 'custom': JSON {base, cor, img, escuro, painel} já validado (utils.tema_custom_valido). Anulável: o boot cria a coluna sem DEFAULT.
     tema_custom = db.Column(db.Text, nullable=True)
+    # Tema do CELULAR (o par tema/tema_custom acima é o do COMPUTADOR). Cada tipo de aparelho guarda e edita o seu; NULL = o celular ainda
+    # não escolheu e usa o do computador (utils.tema_do_aparelho).
+    tema_mobile = db.Column(db.String(20), nullable=True)
+    tema_custom_mobile = db.Column(db.Text, nullable=True)
 
     # Perfil (editável na tela de Configurações)
     bio = db.Column(db.Text, nullable=True)

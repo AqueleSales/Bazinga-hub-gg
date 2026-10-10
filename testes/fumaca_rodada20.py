@@ -215,6 +215,62 @@ ok("escolherImagem('produto'" in bazar_js and "escolherImagem('anuncio'" in baza
 ok("escolher('image/*', (f) => subir(f, (url) => { ed.loja" not in bazar_js and "escolher('image/*', (f) => subir(f, (url) => { ed.prod.imagens" not in bazar_js, 'Bazar: acabou o "só escolher arquivo" nos slots de imagem da lojinha')
 ok('Adicionar foto, GIF ou vídeo curto' in bazar_js and 'Vídeo completo (opcional)' in bazar_js, 'Bazar: vídeo curto vira animação pelo botão de foto; o vídeo completo segue sem edição (e diz isso)')
 
+# ---------------------------------------------------------------- tema POR TIPO DE APARELHO (computador x celular)
+UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36'
+UA_PC = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
+UA_APP = UA_PC + ' PanteaoDesktop/0.3.1'
+ok(all(utils.aparelho_pelo_user_agent(u) == a for u, a in ((UA_IPHONE, 'celular'), (UA_ANDROID, 'celular'), (UA_PC, 'computador'), (UA_APP, 'computador'), ('', 'computador'), (None, 'computador'))),
+   'Aparelho: iPhone/Android caem em "celular"; PC, app do Windows e User-Agent vazio em "computador"')
+
+with app.app_context():
+    cx = Person(name='Caio', email='caio@x', role_id=db.session.query(Role).first().id, username='caio'); db.session.add(cx); db.session.commit(); pessoas['Caio'] = cx.id
+caio, fcaio = cliente('Caio')
+
+def pagina(ua):
+    return fcaio.get('/chat', headers={'User-Agent': ua}).get_data(as_text=True)
+def html_tag(html):
+    return html[html.index('<html'):html.index('<head>')]
+
+caio.emit('mudar_tema', {'tema': 'sakura', 'aparelho': 'computador'}); caio.get_received()
+ok('data-tema="sakura"' in html_tag(pagina(UA_PC)) and 'data-tema="sakura"' in html_tag(pagina(UA_IPHONE)), 'Aparelho: celular que ainda não escolheu usa o tema do computador')
+caio.emit('mudar_tema', {'tema': 'ametista', 'aparelho': 'celular'}); rec = caio.get_received()
+ev = [e for e in rec if e['name'] == 'preferencias_carregadas'][-1]['args'][0]
+ok(ev['aparelho'] == 'celular' and ev['tema'] == 'ametista', 'Aparelho: o aviso de mudança diz de qual tipo de aparelho foi (o outro tipo ignora)')
+with app.app_context():
+    cp = db.session.get(Person, pessoas['Caio'])
+    ok(cp.tema == 'sakura' and cp.tema_mobile == 'ametista', 'Aparelho: mexer no celular não muda o tema do computador (cada um tem o seu espaço na conta)')
+ok('data-tema="sakura"' in html_tag(pagina(UA_PC)) and 'data-tema="ametista"' in html_tag(pagina(UA_ANDROID)), 'Aparelho: cada tipo de aparelho abre com o seu tema')
+caio.emit('mudar_tema', {'tema': 'cafe', 'aparelho': 'computador'}); caio.get_received()
+ok('data-tema="cafe"' in html_tag(pagina(UA_PC)) and 'data-tema="ametista"' in html_tag(pagina(UA_IPHONE)), 'Aparelho: depois que o celular escolheu, mudar o do computador não mexe mais nele')
+
+# fundo (personalizado) separado
+caio.emit('mudar_tema', {'tema': 'custom', 'aparelho': 'computador', 'custom': {'base': 'dark', 'cor': '#112233', 'img': '/debug-up/so_pc.webp', 'escuro': 20, 'painel': 70}}); caio.get_received()
+caio.emit('mudar_tema', {'tema': 'custom', 'aparelho': 'celular', 'custom': {'base': 'light', 'cor': '#445566', 'img': '/debug-up/so_celular.webp', 'escuro': 50, 'painel': 40}}); caio.get_received()
+h_pc, h_cel = pagina(UA_PC), pagina(UA_IPHONE)
+ok('/debug-up/so_pc.webp' in html_tag(h_pc) and '/debug-up/so_celular.webp' not in h_pc, 'Fundo: o computador carrega a imagem DELE e a do celular não aparece nem na página')
+ok('/debug-up/so_celular.webp' in html_tag(h_cel) and '/debug-up/so_pc.webp' not in h_cel and 'data-claro' in html_tag(h_cel), 'Fundo: o celular carrega a imagem DELE (e a base clara dele) e a do computador não aparece nem na página')
+ok('"img":"/debug-up/so_pc.webp"' in h_pc.replace(' ', '') or "'/debug-up/so_pc.webp'" in h_pc or '/debug-up/so_pc.webp' in h_pc, 'Fundo: a página do computador sabe o personalizado do computador')
+# quem muda o tema (qualquer aba) devolve o fundo só do espaço mexido; ao conectar chegam os dois
+cl_novo = socketio.test_client(app, flask_test_client=fcaio)
+conexao = [e for e in cl_novo.get_received() if e['name'] == 'preferencias_carregadas']
+temas = conexao[0]['args'][0].get('temas') if conexao else None
+ok(temas and set(temas) == {'computador', 'celular'} and temas['computador']['tema_custom']['img'] == '/debug-up/so_pc.webp' and temas['celular']['tema_custom']['img'] == '/debug-up/so_celular.webp',
+   'Conexão: o servidor manda os dois temas e cada aparelho pega o seu')
+caio.emit('mudar_tema', {'tema': 'dark', 'aparelho': 'computador'}); caio.get_received()
+with app.app_context():
+    cp = db.session.get(Person, pessoas['Caio'])
+    ok(utils.tema_do_aparelho(cp, 'celular')[0] == 'custom' and utils.tema_do_aparelho(cp, 'celular')[1]['img'] == '/debug-up/so_celular.webp' and utils.tema_do_aparelho(cp, 'computador')[0] == 'dark',
+       'Fundo: trocar o tema do computador guarda o personalizado dele e não toca no do celular')
+caio.emit('mudar_tema', {'tema': 'amoled'}); caio.get_received()    # sem aparelho no pedido: vale o User-Agent da conexão (o teste não manda: computador)
+with app.app_context():
+    ok(db.session.get(Person, pessoas['Caio']).tema == 'amoled', 'Aparelho: sem o tipo no pedido, o servidor decide pelo User-Agent')
+# o navegador
+ok("const APARELHO = (/Mobi|iPhone|iPod/i.test(navigator.userAgent)" in chat and "aparelho: APARELHO" in chat, 'Navegador: sabe o tipo do aparelho e manda junto ao salvar o tema')
+ok("prefs.temas ? prefs.temas[APARELHO] : (prefs.aparelho === APARELHO ? prefs : null)" in chat, 'Navegador: só aplica o tema do SEU tipo de aparelho (o aviso do outro tipo é ignorado)')
+ok('Tema do ${aqui}' in chat and 'vale só pro ${aqui}' in chat, 'Aparência: a tela diz que o tema escolhido vale só pra este tipo de aparelho')
+ok('tema_mobile' in ler('app/models.py') and 'tema_custom_mobile' in ler('atualizar_banco.py'), 'Banco: colunas do tema do celular existem no modelo e na migração')
+
 # ---------------------------------------------------------------- app do Windows: "Procurar atualizações" instala sozinho
 main = ler('desktop/main.js')
 ok('autoUpdater.quitAndInstall(true, true)' in main, 'Desktop: instalar é silencioso e reabre o app (o instalador troca a versão antiga pela nova)')

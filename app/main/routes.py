@@ -15,7 +15,7 @@ from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, m
                      dados_do_mapa_perto, coordenada_valida, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                      localizacao_ligada, localizacao_ip_permitida, MSG_LOCALIZACAO_DESLIGADA,
                      recortar_animacao, animar_quadros, FORMATOS_ANIMADOS, MAX_QUADROS_ANIMACAO,
-                     TEMAS_VALIDOS, tema_custom_da_pessoa, tema_eh_claro)
+                     aparelho_pelo_user_agent, tema_do_aparelho)
 from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..importar import baixar_imagem_externa, ErroImportar
 from ..novidades import novidade_atual, novidades_para_cliente
@@ -524,15 +524,13 @@ def chat():
     # Mensagem de "entrou pelo convite" deixada pela rota /convite/<code>
     aviso_convite = session.pop('aviso_convite', None)
 
-    # Tema já no HTML (sem piscar): id, escolhas do personalizado e se o fundo é claro (data-claro)
-    tema_custom = tema_custom_da_pessoa(usuario_atual)
-    tema_id = usuario_atual.tema if usuario_atual.tema in TEMAS_VALIDOS else 'dark'
-    if tema_id == 'custom' and not tema_custom:
-        tema_id = 'dark'
+    # Tema já no HTML (sem piscar): o do TIPO de aparelho que pediu a página (pelo User-Agent; o navegador confirma depois, ver APARELHO no JS)
+    aparelho = aparelho_pelo_user_agent(request.headers.get('User-Agent'))
+    tema_id, tema_custom, tema_claro = tema_do_aparelho(usuario_atual, aparelho)
 
     resposta = current_app.make_response(render_template(
         "chat.html",
-        tema_id=tema_id, tema_custom=tema_custom, tema_claro=tema_eh_claro(tema_id, tema_custom),
+        tema_id=tema_id, tema_custom=tema_custom, tema_claro=tema_claro, aparelho_inicial=aparelho,
         aviso_convite=aviso_convite,
         usuario_atual=usuario_atual,
         text_channels=text_channels,
