@@ -99,7 +99,7 @@ def create_app():
                 'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js'),
                 'loja_css_v': _versao_estatico('css/loja.css'), 'loja_js_v': _versao_estatico('js/loja.js'),
                 'bazar_css_v': _versao_estatico('css/bazar.css'), 'bazar_js_v': _versao_estatico('js/bazar.js'),
-                'titulos_css_v': _versao_estatico('css/titulos.css'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'),
+                'titulos_css_v': _versao_estatico('css/titulos.css'), 'efeitos_js_v': _versao_estatico('js/efeitos.js'), 'efeitos_css_v': _versao_estatico('css/efeitos.css'), 'explorar_css_v': _versao_estatico('css/explorar.css'), 'explorar_js_v': _versao_estatico('js/explorar.js'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'),
                 'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'novidade_atual': novidade_atual()}
 
     with app.app_context():
@@ -107,6 +107,8 @@ def create_app():
             db.create_all()
             print("[BAZINGA INFO] Banco de dados conectado com sucesso!")
             adicionar_colunas_que_faltam()
+            from .efeitos import carregar as _carregar_efeitos
+            _carregar_efeitos()   # efeitos do Estúdio entram no catálogo (ver app/efeitos.py)
         except Exception as e:
             print(f"[BAZINGA AVISO] Banco de dados Neon dormindo no boot. O site vai ligar mesmo assim! Detalhe: {e}")
 

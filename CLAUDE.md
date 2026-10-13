@@ -36,6 +36,9 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 | `app/static/js/cosmeticos.js` | Ícones SVG das patentes/insígnias, popover "orb", inventário e efeitos (objeto global `Cosm`) |
 | `app/static/css/cosmeticos.css` | Animações das patentes, inventário e o laboratório (Gogeta/Sasuke/Fusão) |
 | `app/passe.py` / `app/passe_events.py` | **Passe de Batalha de temporada** (XP do passe, resgate, 100 níveis x 2 trilhas) e **títulos**; dados editados no /admin (ver Rodada 21) |
+| `app/efeitos.py` / `static/js/efeitos.js` | **Estúdio de efeitos**: receita JSON -> motor no navegador (ver Rodada 22 e `docs/ESTUDIO_EFEITOS.md`) |
+| `app/explorar.py` / `explorar_events.py` / `static/js/explorar.js` | **Explorar servidores** (o mar de barquinhos, prévia segura, entrar sem convite) |
+| `docs/` | `HISTORICO.md` (toda a história), `ESTUDIO_EFEITOS.md`, `PLANO_IA.md` (plano da IA, só plano) |
 | `app/admin.py` / `templates/admin.html` / `static/js/admin.js` | **Estúdio** (`/admin`, só admin): passe, títulos, missões, administradores |
 | `static/js/passe.js` / `css/passe.css` / `css/titulos.css` | Página do passe (objeto global `Passe`) e estilo dos títulos |
 | `app/loja.py` | **Armazém** (loja do app em DRC): preço, compra atômica, vitrine (ver Rodada 10) |
@@ -57,6 +60,10 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 ---
 
 # ONDE RETOMAR (leia isto primeiro numa conversa nova)
+
+**Rodada 23 (13/10/2026): passe "Odisseia" (10 cantos, 15 itens + 4 efeitos do Estúdio, 15 títulos, filtros por categoria) e plano do Guardião (IA) reescrito em `docs/PLANO_IA.md`.** Rodadas 21 a 23 commitadas juntas. Depois do deploy: passos 30, 31 e 32 do `atualizar_banco.py`.
+
+**Rodada 22 (12/10/2026): Estúdio de efeitos sem código, Explorar servidores (o mar), conserto do /admin (prefixo `es-` por causa de bloqueador de anúncio) e `docs/` (história, efeitos, plano da IA).** Ver "Rodada 22". **Depois do deploy: `python atualizar_banco.py` (passos 30 e 31) e, em /admin > Passe, criar o modelo "Deuses" e ativar.** Leia também `docs/HISTORICO.md` pra ver a história inteira em uma página.
 
 **Rodada 21 (12/10/2026, NÃO commitada): Estúdio `/admin`, Passe de Batalha de temporada (100 níveis x Grátis/Premium, títulos e temas de prêmio), 5 diárias + semanais escolhidas, anti-spam de missão, visual chapado e logo preto/dourada.** Ver "Rodada 21" abaixo. **Depois do deploy: `python atualizar_banco.py`, `python bazar_admin.py admin aquele.sales`, e em /admin > Passe criar o modelo "Deuses" e ativar.** Ainda NÃO feitos (pedidos do dono, em ordem): Explorar servidores (o mar), impulso de servidor + mapa, Nitro (nome e pagamento a decidir), Estúdio de efeitos sem código, IA de segurança/clipes, nome novo da moeda.
 
@@ -1203,6 +1210,8 @@ python testes/fumaca_insignias.py  # Beta pra todos, BAZINGA por servidor, Alpha
 python testes/fumaca_bazar.py      # Bazar: Pix copia e cola, loja/produto, pedido (estados), privacidade da chave Pix, estoque, avaliação, denúncia+moderação, corrida
 python testes/fumaca_loja.py       # Armazém: compra atômica, livro-razão, pacote com abatimento, saldo velho, clique duplo, regra 6, extrato, todo tema tem CSS/arte/slide
 python testes/fumaca_bazar2.py     # Bazar Rodada 18: reputação, frete/endereço, favoritos, ordem/perto, anúncios, disputa, banimento
+python testes/fumaca_efeitos.py    # Rodada 22: receita validada (lista fechada), efeito vira item do catálogo, equipar com posse, apagar limpa, API só admin, motor sem eval
+python testes/fumaca_explorar.py  # Rodada 22: só público aparece, prévia sem mensagem/canal privado, entrar sem convite (regra 6), busca/tema/seed, admin tira do ar
 python testes/fumaca_passe.py      # Rodada 21: /admin (só admin, anti-forja), passe (XP, janela, catch-up, resgate sem pagar duas vezes, premium), títulos, temas de temporada, missões (5 diárias, escolha de semanais, anti-spam)
 python testes/fumaca_rodada20.py   # Rodada 20: setinha de atualização e novidades, 10 temas + personalizado (validação, eco, primeiro desenho), link de imagem e SSRF, formatos do editor, editor na lojinha
 python testes/fumaca_rodada19.py   # Rodada 19: login que dura, nome Pantheon, ícone/aviso duplicado/selo da DM, áudio por stream, fone, mic com aviso, menu de mic/fone, desktop
@@ -2225,6 +2234,70 @@ Pedido do dono: um painel só pro criador (pra não depender de "pedir pra IA" a
 - **Estúdio de efeitos sem código** (motor que lê uma receita JSON: partículas, anel, brilho, texto animado, imagem, linha do tempo com pausa; só valores de uma lista fechada, nada de CSS/JS livre; fase 2 abre pra criadores externos com revisão e comissão) e o resto do painel (cosméticos, Armazém, Bazar, denúncias, servidores, selos, notas do mapa). Edição das missões pelo painel (hoje só leitura; valores em `utils.MISSOES`).
 - **IA de segurança e de clipes**: pagas por uso (modelo de visão/áudio); segurança liga nas denúncias e fila do admin; clipes substituem a heurística atual por 2+ pessoas falando. Deixar por último.
 - Conquistas como fonte de títulos (o painel já dá título à mão); título ao lado do nome nas mensagens/membros; temas "oficiais" v1 listados no painel.
+
+---
+
+## Rodada 22 de 12/10/2026 — Estúdio de efeitos sem código, Explorar servidores (o mar), plano da IA e documentação
+
+Pedido do dono: efeitos sem pedir pra IA a cada vez, o "mar de barquinhos" pra descobrir servidores, plano passo a passo da IA, e documentar toda a história. Teste novos: `python testes/fumaca_efeitos.py` e `python testes/fumaca_explorar.py`; suíte inteira passa. Visto na pane (editor de efeitos com prévia, efeito no cartão real, o mar, prévia, entrar, surpreenda-me, busca). **Nada no Neon, nada com 2 pessoas reais.**
+Docs novos em `docs/`: `HISTORICO.md` (toda a história por fase), `ESTUDIO_EFEITOS.md` (como criar efeito e camada), `PLANO_IA.md` (IA de segurança e de clipes, passo a passo; **só plano**).
+
+### Correção do /admin (bloqueador de anúncios)
+O dono viu o `/admin` em branco no Opera GX: **bloqueador de anúncio esconde tudo com classe `ad-...`**. O painel passou a usar o prefixo **`es-`** (CSS/JS/HTML) e `color-scheme: dark` (sem tema claro). **Nunca nomeie classe/id com `ad-`, `ads-`, `banner-ad`.**
+Obs.: se o passe do dono mostrava só "títulos de nível", é porque **a temporada ainda não existia no banco de produção** (precisa criar o modelo "Deuses" no /admin > Passe e ativar).
+
+### Estúdio de efeitos (`app/efeitos.py`, `static/js/efeitos.js`, `css/efeitos.css`, `/admin > Efeitos`)
+- **Receita JSON**, não código: `{pausa, camadas:[{tipo, ...parâmetros}]}`. O `ESQUEMA` em `efeitos.py` é a ÚNICA definição das camadas (validador, editor e motor seguem ele). Camadas: **partículas, brilho, raios** (cartão) e **anel, órbita, brilho** (avatar). `normalizar_receita` descarta camada/campo desconhecido, limita números, aceita só `#rrggbb` e opções da lista; o motor limita de novo. Tabela `efeito_custom` (nasce pelo create_all).
+- Ao salvar, o efeito entra no `CATALOGO` como `efeito_perfil:<id>`/`efeito_avatar:<id>` (tema `estudio`, `custom: True`, sem preço): **inventário, equipar (posse conferida), "dar", recompensa do passe** funcionam sem mudar nada. Carregado do banco no boot (`efeitos.carregar()`; `garantir_carregados()` tenta de novo se o Neon dormia). Id que já é item feito à mão do mesmo tipo é recusado; não dá pra mudar o tipo depois; apagar tira do catálogo, das posses e do que estava equipado.
+- Motor (`Efeitos` em `efeitos.js`): HTML sai vazio (`<div class="ef-pf ef-pf-custom" data-ec="id">`) e um MutationObserver monta as camadas com **Web Animations API** (só `transform`/`opacity`), refaz se o elemento mudar de tamanho, pausa em `body.rolando`, não anima com `prefers-reduced-motion`. **`const Efeitos` não vira `window.Efeitos`**: use `Efeitos` direto. `cosmeticos.js` delega (`Efeitos.tem(id, tipo)`) antes de olhar as listas feitas à mão.
+- Entrega ao cliente: mapa `{id: {tipo, receita}}` no HTML do /chat (`Efeitos.registrar(...)`), no `connect` e em **broadcast `efeitos_custom`** quando o admin salva/apaga (em cache: sem query por conexão; `efeitos._invalidar()`).
+- Admin: lista, **modelos prontos**, editor com sliders/cores/opções gerados do esquema, ordem das camadas, **prévia ao vivo** (cartão e avatar de mentira), Salvar, **Dar a mim/Dar a alguém** (`POST /admin/api/itens/conceder`, vale pra QUALQUER item do catálogo), Duplicar, Apagar.
+- **Não cobre** canvas complexo (Amaterasu, Punição de Alma) nem molduras/nomes/placas/faixas/fala/radar/pin/servidor/som: ficam à mão por enquanto (mesma ideia: receita + motor).
+
+### Explorar servidores (`app/explorar.py`, `explorar_events.py`, `static/js/explorar.js`, `css/explorar.css`)
+- Cena em CSS/SVG chapado: céu, sol, nuvens, **mar com ondas e um barquinho por servidor** (ícone em cima, nome embaixo; **tamanho por nº de membros: canoa <5, veleiro <20, caravela <100, galeão 100+**; navegam por `translateX`, balançam, **pausam ao passar o mouse** e com a aba escondida), **terra** com os mais movimentados, **listas por tema** (10 temas em `explorar.TEMAS_EXPLORAR`), chips de tema com contagem, **busca** (nome/descrição, curingas do LIKE removidos), **Surpreenda-me**, "chamar outros barcos" (seed nova; a ordem é estável com a mesma seed). Abre pelo "+" da barra de servidores (o cartão "em breve" virou real).
+- **Público só se o DONO marcar** (popup de Configurações do servidor: "Aparecer em Explorar" + tema; precisa de **descrição salva (>= 10), tema e um canal de texto aberto**; o servidor devolve `publico`/`temaExplorar`). Colunas novas `server.publico`/`tema_explorar` (anuláveis; `atualizar_banco.py` passo 31).
+- **Prévia segura** (`previa`): nome, ícone, descrição, tema, nº de membros, dono, desde, nomes dos canais de texto **não privados** e quantos de voz. **Nunca mensagens, membros nominais, e-mail nem canal privado** (testado). Servidor não público: só membro/dono abre a prévia.
+- **Entrar** (`explorar_entrar`): só em servidor público; entra na sala, `servidor_discord_criado` em todas as abas, a aba que clicou abre o servidor (`entrou_por_convite`), **os membros que já estavam são avisados** (`membro_entrou_servidor`, regra 6); entrar de novo não duplica. Quem entra **não recebe canal privado**.
+- Admin: `/admin > Servidores públicos` lista e **tira do Explorar** (`POST /admin/api/servidores/<id>/despublicar`; o servidor segue existindo; avisa os membros por `socketio.emit` — **fora de um handler `emit()` não funciona, use `socketio.emit`**). Denúncia de servidor do Explorar ainda não existe (o `denunciar` atual é do pino do mapa): fica pra quando a fila de moderação sair (`docs/PLANO_IA.md`, passo 2).
+- Quando existir **nível/impulso de servidor**, ele entra no cálculo do `porte` (e no "ver de longe no mapa"): ainda NÃO feito.
+
+### Depois do deploy
+`python atualizar_banco.py` (passo 31 cria `server.publico`/`tema_explorar`; a tabela `efeito_custom` nasce sozinha), abrir `/admin` (agora com o prefixo `es-`), criar o modelo "Deuses" e **ativar**.
+
+### O que NÃO foi feito (próximos, na ordem combinada)
+1. **IA de segurança/clipes**: só o plano em `docs/PLANO_IA.md` (precisa das decisões do dono: teto mensal, "só lê o que for denunciado/público", chave da API). Primeiro passo útil e grátis: a fila de Denúncias no Estúdio.
+2. **Impulso de servidor + visibilidade no mapa**, **Nitro** (gateway, CNPJ, armazenamento próprio), **nome da moeda**.
+3. Estúdio de efeitos para os outros slots (molduras, nomes, placas, faixas, fala, radar, pin, som), edição das missões e o resto do painel (cosméticos, Armazém, Bazar, denúncias, selos, notas do mapa).
+4. Ver tudo no monitor do dono e testar com 2 pessoas reais.
+
+---
+
+## Rodada 23 de 13/10/2026 — Passe "Odisseia" (cantos, itens e efeitos mitológicos) e plano do Guardião (IA)
+
+Pedido do dono: refazer o passe só com referência à **Odisseia, mitologia grega e romana** (ele citou um jogo; **só mitologia de domínio público, nada de marca/nome/arte do jogo**), categorizar os prêmios e dividir a temporada em temas a cada 10 níveis. Também reescreveu o pedido da IA (Gemini grátis, inativa até palavra-chave, contexto, intermediária das denúncias). Teste: `python testes/fumaca_passe.py` (agora com os cantos, o modelo novo e os efeitos do Estúdio); suíte inteira passa. Visto na pane (trilha com cantos, nome do canto que acompanha a rolagem, itens novos, filtro).
+
+### Passe: "Cantos" (capítulos)
+- `PasseTemporada.capitulos` (JSON de nomes) e `capitulo_niveis` (3 a 50, padrão 10): colunas anuláveis (boot cria; `atualizar_banco.py` passo 32). `passe.capitulos_da_temporada(snap)` -> `[{n, nome, de, ate}]` (o último é cortado no fim da temporada; nome além do fim some); `estado()` manda `capitulos` e `capitulo_atual` (o canto do PRÓXIMO nível a ganhar). JSON quebrado vira lista vazia.
+- Admin: campo "Capítulos (um por linha)" e "Níveis por capítulo" no formulário da temporada. Sem capítulos a trilha é uma fileira só, como antes.
+- Cliente (`passe.js`): um bloco por canto ("CANTO IV · O Cíclope", nome **sticky**: acompanha a rolagem enquanto você está nele), chip "Canto II: O Mar de Vinho" no hero, faixa de **meandro grego** no topo do cartão (CSS, só no tema `deuses`). **Redesenhar (resgate, filtro) não pula mais a trilha pro começo** (guarda e devolve o `scrollLeft`).
+- **Filtros por categoria** na trilha (Tudo, Molduras e visual, Efeitos, Títulos, Temas, Moedas): o que não é da categoria esmaece (`.esmaece`). A categoria sai do tipo da recompensa (`categoria()` em `passe.js`).
+
+### Modelo "Deuses" refeito (`passe.modelo_deuses`, 10 cantos da Odisseia)
+Ítaca · O Mar de Vinho · A Ilha dos Lótus · O Cíclope · Os Ventos de Éolo · A Feiticeira Circe · O Canto das Sereias · Cila e Caribdis · Os Portões do Hades · A Volta ao Olimpo. Cada fim de canto (10, 20...100) tem prêmio forte na trilha Grátis; a Premium também (menos o 90, de respiro).
+- **15 títulos** (`TITULOS_MODELO`, todos usados): Aspirante ao Olimpo, Navegante do Egeu, Comedor de Lótus, Ninguém, Favorito dos Deuses, Ouvinte das Sereias, Sobrevivente de Cila, Herói de Atenas, Campeão de Olímpia (Grátis); Filho do Trovão, Escolhido de Atena, Voz do Oráculo, Portador do Fogo, Imortal, Senhor do Olimpo (Premium). Os títulos antigos `mortal_ilustre` e `heroi_de_atenas@35` saíram do modelo.
+- **6 itens novos em código** (`cosmeticos.py`, tema `deuses`, sem preço; CSS no fim do `cosmeticos.css`): moldura **Égide de Atena** e **Tridente de Poseidon**, placas **Mar Cor de Vinho** (o "mar cor de vinho" de Homero) e **Colunata**, faixa **Trirreme ao Entardecer** (barco cruzando o mar), nome **Bronze de Troia**. Com os 9 da rodada 21 são 15 itens da temporada.
+- **4 efeitos feitos NO ESTÚDIO** (receita JSON, `EFEITOS_MODELO`; o modelo os cria no banco se ainda não existirem e **não sobrescreve** o que o admin editou): **Lira de Apolo**, **Noite de Nyx**, **Brasas de Hefesto** (cartão) e **Tridente de Poseidon** (avatar `efeito_avatar:tridente_azul`). É a prova de que o Estúdio dá conta de conteúdo de temporada sem código.
+- Temas do app exclusivos (Templo e Tártaro), moldura Coroa de Zeus, efeitos Tempestade de Zeus/Poeira do Olimpo e Relâmpago continuam. **Se o dono já criou a temporada em produção, "Aplicar modelo" refaz as recompensas (apaga as atuais) e `capitulos` só entra ao salvar a temporada com os nomes.**
+
+### Categorização dos cosméticos (próximo passo, pedido do dono)
+O catálogo já separa por **tipo** (moldura, nome, placa, faixa, efeitos de avatar/perfil/fala/radar/chat, som, pin, servidor, pacote) e por **tema** e **raridade**. Falta uma camada de **categoria temática** (mitologia, anime, fantasia, ficção científica, esportes, música...) e **estilo** (animado/estático, com som, tela cheia) pra navegar o Armazém e o Estúdio por "o que combina com o quê". Não foi feito: ver BACKLOG.
+
+### IA: plano do "Guardião" (`docs/PLANO_IA.md`, reescrito)
+Só plano. Decisões e ressalvas que o dono precisa ler: (1) **tem que ser visível** (ícone + aviso; "escondida" é risco de LGPD e de sigilo das comunicações); (2) o plano gratuito do Gemini tem limites baixos e, segundo os termos vigentes (conferir), **pode usar o conteúdo pra melhorar produtos**: por isso o gatilho de voz roda no aparelho e só **texto curto** sobe, nunca áudio/vídeo; imagem de tela só com detector local; (3) **nenhuma denúncia automática à polícia**: a IA monta o dossiê, uma pessoa revisa e o responsável envia ao canal oficial (SaferNet, Disque 100, delegacia de crimes cibernéticos, PF), com advogado pro caso de abuso infantil; (4) ações sempre **reversíveis e temporárias** (silenciar, fechar a call por 10 min, tirar do Explorar); derrubar servidor/banir é humano. Primeiros passos úteis e grátis: fila de Denúncias no Estúdio + botão "Denunciar mensagem".
+
+### Depois do deploy
+`python atualizar_banco.py` (passos 30, 31 e 32), `/admin > Passe > Criar modelo "Deuses"` (cria também os 4 efeitos do Estúdio) e **Ativar**. Se já existir uma temporada criada com o modelo antigo: abra a temporada, preencha "Capítulos" (um nome por linha, 10 níveis) e salve; depois "Aplicar modelo Deuses".
 
 ---
 

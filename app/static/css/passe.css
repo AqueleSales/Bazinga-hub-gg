@@ -84,3 +84,29 @@
 @media (prefers-reduced-motion: reduce) { .pz-cel.pronta { animation: none; } .pz-barra i { transition: none; } }
 .pz-prev .titulo-chip { white-space: normal; text-align: center; line-height: 1.15; font-size: 13px; padding: 0 2px; }
 .pz-modal-prev .titulo-chip { font-size: 22px; }
+
+/* capítulos ("cantos") e filtros por categoria */
+.pz-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.pz-filtro { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; background: var(--bg-tertiary); color: var(--text-normal); border: 2px solid transparent; }
+.pz-filtro:hover { border-color: color-mix(in srgb, var(--pz-cor) 50%, transparent); } .pz-filtro.ativo { border-color: var(--pz-cor); color: var(--text-header); } .pz-filtro i { color: var(--pz-cor); }
+.pz-cel.esmaece { opacity: .22; filter: grayscale(.6); }
+.pz-chip.canto { background: color-mix(in srgb, var(--pz-cor) 18%, transparent); color: var(--pz-cor2, var(--pz-cor)); }
+.pz-trilha { gap: 0; }
+.pz-cap { flex: none; display: flex; flex-direction: column; padding: 0 10px; border-left: 2px dashed color-mix(in srgb, var(--text-header) 14%, transparent); }
+.pz-cap:first-child { border-left: 0; padding-left: 0; }
+.pz-cap.atual .pz-cap-cab b { color: var(--pz-cor); }
+.pz-cap-cab { display: flex; flex-direction: column; justify-content: center; height: 44px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 2px solid color-mix(in srgb, var(--pz-cor) 45%, transparent); white-space: nowrap; }
+.pz-cap-cab small { font-size: 10px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); }
+.pz-cap-cab b { font-size: 14px; color: var(--text-header); }
+.pz-cols { display: flex; gap: 10px; }
+.pz-trilha-caixa.com-cap .pz-rotulos { padding-top: 64px; }
+.pz-trilha-caixa:not(.com-cap) .pz-trilha { gap: 10px; }
+
+/* Grécia: faixa de meandro (grega) no topo do cartão da temporada */
+#passe[data-passe="deuses"] .pz-hero::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 14px; opacity: .55; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='14'%3E%3Cpath d='M0 12H2V2H15V9H6V5.5H11' fill='none' stroke='%23d4a24c' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x 0 0 / 18px 14px; }
+#passe[data-passe="deuses"] .pz-hero { padding-top: 38px; }
+#passe[data-passe="deuses"] .pz-cap-cab { border-bottom-style: double; border-bottom-width: 4px; }
+@media (max-width: 720px) { .pz-trilha-caixa.com-cap .pz-rotulos { padding-top: 60px; } }
+
+.pz-cap-tit { position: sticky; left: 4px; display: flex; flex-direction: column; width: max-content; max-width: 100%; }   /* o nome do canto acompanha a rolagem enquanto você está nele */

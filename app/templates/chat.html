@@ -2934,6 +2934,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loja.css') }}?v={{ loja_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/titulos.css') }}?v={{ titulos_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/efeitos.css') }}?v={{ efeitos_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/explorar.css') }}?v={{ explorar_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 </head>
@@ -3485,6 +3487,9 @@
          MENUS, POP-UPS E MODAIS FLUTUANTES
          ========================================== -->
 
+    <!-- EXPLORAR SERVIDORES: o mar de barquinhos. static/js/explorar.js desenha tudo a partir do evento 'explorar' -->
+    <div class="modal-overlay" id="explorar-modal"></div>
+
     <!-- Modal do "+": criar, entrar com convite ou explorar -->
     <div class="modal-overlay" id="add-opcoes-modal">
         <div class="bazinga-modal" style="width: 470px;">
@@ -3510,9 +3515,9 @@
                         <button class="btn btn-primary" id="add-convite-btn" style="padding: 8px 16px; font-size: 13px; border-radius: 0 4px 4px 0; background: var(--green-color);">Entrar</button>
                     </div>
                 </div>
-                <div class="mais-card em-breve" id="mais-explorar">
+                <div class="mais-card" id="mais-explorar">
                     <span class="mais-ico" style="background: #0a8fdc;"><i class="fa-solid fa-compass"></i></span>
-                    <div><b>Explorar servidores <span class="mais-selo">Em breve</span></b><small>Um mapa vivo, com barquinhos navegando e estruturas surgindo em terra. Clique num lugar pra ver a descrição e quantas pessoas estão lá.</small></div>
+                    <div><b>Explorar servidores</b><small>Um mar de barquinhos, um por servidor: quanto maior o barco, mais gente a bordo. Veja a prévia e entre, ou peça pra ser surpreendido.</small></div>
                     <span class="mais-barco">⛵</span>
                 </div>
             </div>
@@ -3809,10 +3814,20 @@
                 </div>
 
                 <div>
-                    <label class="bz-label">Descrição <span style="opacity:.6; font-weight:500;">(opcional)</span></label>
+                    <label class="bz-label">Descrição <span style="opacity:.6; font-weight:500;">(opcional, mas necessária pra aparecer no Explorar)</span></label>
                     <textarea id="cfg-server-desc" class="bz-input" maxlength="1000" rows="3"
                               style="padding: 12px; resize: vertical; font-family: inherit;"
                               placeholder="Do que é esse servidor?"></textarea>
+                </div>
+                <div class="cfg-explorar">
+                    <label class="bz-label">Aparecer em Explorar</label>
+                    <div class="bz-radio-desc">Qualquer pessoa pode descobrir o servidor no mar de barquinhos e entrar sem convite. Precisa de descrição salva, um tema e um canal de texto aberto.</div>
+                    <div class="cfg-explorar-linha">
+                        <label><input type="checkbox" id="cfg-explorar-on"> Servidor público</label>
+                        <select id="cfg-explorar-tema" class="bz-input" style="width:auto; padding: 8px 12px;">
+                            {% for t in temas_explorar %}<option value="{{ t.id }}">{{ t.nome }}</option>{% endfor %}
+                        </select>
+                    </div>
                 </div>
 
                 <div>
@@ -4837,6 +4852,9 @@
     <script src="{{ url_for('static', filename='js/cosmeticos.js') }}?v={{ cosm_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/loja.js') }}?v={{ loja_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/passe.js') }}?v={{ passe_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/efeitos.js') }}?v={{ efeitos_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/explorar.js') }}?v={{ explorar_js_v }}"></script>
+    <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script>
         // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
@@ -6165,6 +6183,8 @@
             document.getElementById('cfg-server-desc').value = srv.description || '';
             pintarPreviewIcone(srv.iconUrl);
             montarPaletaDeCores('cfg-color-row', corServidorEscolhida, cor => { corServidorEscolhida = cor; });
+            document.getElementById('cfg-explorar-on').checked = !!srv.publico;
+            document.getElementById('cfg-explorar-tema').value = srv.temaExplorar || 'outros';
 
             document.getElementById('server-config-modal').style.display = 'flex';
         }
@@ -6667,7 +6687,7 @@
         function entrarPeloMais() { if (entrarComConvite(document.getElementById('add-convite-input').value)) document.getElementById('add-convite-input').value = ''; }
         document.getElementById('add-convite-btn').addEventListener('click', entrarPeloMais);
         document.getElementById('add-convite-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrarPeloMais(); });
-        document.getElementById('mais-explorar').addEventListener('click', () => showToast('Explorar servidores vem aí: um mapa vivo, com barquinhos navegando e estruturas em terra. Aguenta firme!', 'info'));
+        document.getElementById('mais-explorar').addEventListener('click', () => { fecharAddOpcoes(); Explorar.abrir(); });
 
         // ---------- CARTÃO DO CONVITE (na DM e no chat) ----------
         // Link do próprio site /convite/<código> vira um cartão animado com nome, ícone e quantos membros. Os dados vêm
@@ -10709,6 +10729,26 @@
             toast: (msg, tipo) => showToast(msg, tipo),
             somResgate: () => tocarSom('missao'),
         });
+        // EXPLORAR SERVIDORES (o mar): static/js/explorar.js só desenha; o que é público e quem entra são do servidor.
+        Explorar.iniciar({ emitir: (n, d) => socket.emit(n, d), esc, escUrl, toast: (m, t) => showToast(m, t) });
+        socket.on('explorar', (d) => Explorar.receber(d));
+        socket.on('explorar_previa', (p) => Explorar.previa(p));
+        socket.on('explorar_erro', (d) => { Explorar.erro(d.msg); const c = document.getElementById('cfg-explorar-on'); const srv = servidorAtivo(); if (c && srv) c.checked = !!srv.publico; });
+        socket.on('explorar_definido', (d) => showToast(d.publico ? 'Seu servidor agora aparece no Explorar.' : 'Seu servidor saiu do Explorar.', 'success'));
+        socket.on('entrou_por_convite', () => Explorar.entrou());
+        const cfgExplorar = () => {
+            const srv = servidorAtivo(), on = document.getElementById('cfg-explorar-on');
+            if (!srv || !souDonoDoServidor(srv)) return;
+            if (on.checked && (document.getElementById('cfg-server-desc').value || '').trim() !== (srv.description || '').trim()) {
+                on.checked = false;
+                showToast('Salve a descrição primeiro (botão Salvar), depois ligue o Explorar.', 'warning');
+                return;
+            }
+            socket.emit('definir_explorar', { server_id: srv.id, publico: on.checked, tema: document.getElementById('cfg-explorar-tema').value });
+        };
+        document.getElementById('cfg-explorar-on')?.addEventListener('change', cfgExplorar);
+        document.getElementById('cfg-explorar-tema')?.addEventListener('change', () => { if (document.getElementById('cfg-explorar-on').checked) cfgExplorar(); });
+        socket.on('efeitos_custom', (m) => Efeitos.registrar(m));   // efeito criado/apagado no Estúdio: refaz o que está na tela
         socket.on('passe', (d) => Passe.receber(d));
         socket.on('passe_resgatado', (r) => Passe.resgatado(r));
         socket.on('passe_erro', (d) => showToast(d.msg, 'error'));

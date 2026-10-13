@@ -231,6 +231,13 @@ _item('nome', 'ambrosia', 'Ambrosia', 'Perolado e dourado, como o néctar dos de
 _item('efeito_perfil', 'olimpo', 'Poeira do Olimpo', 'Poeira dourada sobe pelo cartão, como centelhas de um altar.', 'deuses', 'epico')
 _item('efeito_perfil', 'tempestade', 'Tempestade de Zeus', 'Raios caem pelo cartão numa tempestade azulada.', 'deuses', 'lendario')
 _item('efeito_avatar', 'relampago', 'Relâmpago', 'Uma coroa de faíscas elétricas ao redor da foto.', 'deuses', 'epico')
+# ---- ... e a Odisseia (mesma temporada; arte em CSS, só mitologia de domínio público) ----
+_item('moldura', 'egide', 'Égide de Atena', 'Escamas de bronze e prata, o escudo da deusa da sabedoria, girando devagar.', 'deuses', 'epico')
+_item('moldura', 'tridente', 'Tridente de Poseidon', 'Ondas azul-profundo e espuma rolando em volta da foto.', 'deuses', 'lendario')
+_item('placa', 'vinho_escuro', 'Mar Cor de Vinho', 'O mar de Homero: vinho escuro com ondas devagar.', 'deuses', 'epico')
+_item('placa', 'colunata', 'Colunata', 'Colunas de mármore em fila sobre a pedra escura.', 'deuses', 'epico')
+_item('faixa', 'trirreme', 'Trirreme ao Entardecer', 'Um barco de velas cruzando o mar sob o céu de fim de tarde.', 'deuses', 'lendario')
+_item('nome', 'bronze', 'Bronze de Troia', 'Bronze polido com um reflexo que passa pelas letras.', 'deuses', 'raro')
 
 # ---- LOJA (Armazém) ----
 # Tabela central de preços em DRC por raridade e tipo. É a ÚNICA fonte: item da loja usa `_item_loja`, que lê daqui.

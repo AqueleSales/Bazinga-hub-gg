@@ -1,0 +1,3 @@
+/* Efeitos do Estúdio: só a base. As camadas são desenhadas pelo js/efeitos.js (inline + Web Animations). */
+.ef-av-custom { pointer-events: none; }
+.ef-pf-custom { border-radius: inherit; }

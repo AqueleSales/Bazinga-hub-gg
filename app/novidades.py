@@ -9,6 +9,14 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 23, 'data': '12/10/2026', 'titulo': 'Explorar servidores e efeitos novos',
+        'itens': [
+            {'icone': 'fa-compass', 'titulo': 'Explorar servidores', 'texto': 'No "+" da barra de servidores agora tem o Explorar: um mar de barquinhos, um por servidor (quanto maior o barco, mais gente a bordo). Veja a prévia, entre, procure por tema ou peça pra ser surpreendido. Quer aparecer lá? Donos ligam em Configurações do servidor.'},
+            {'icone': 'fa-landmark', 'titulo': 'Passe da Odisseia', 'texto': 'A temporada Deuses agora é uma viagem em dez cantos, de Ítaca ao Olimpo: molduras, placas, faixas, efeitos e títulos de mitologia grega, com filtro por categoria na trilha.'},
+            {'icone': 'fa-wand-magic-sparkles', 'titulo': 'Efeitos novos de perfil', 'texto': 'Novos efeitos de cartão e de avatar começam a chegar, criados no Estúdio do app.'},
+        ],
+    },
+    {
         'id': 22, 'data': '12/10/2026', 'titulo': 'Passe de temporada, títulos e missões novas',
         'itens': [
             {'icone': 'fa-ranking-star', 'titulo': 'Passe de Batalha de temporada', 'texto': 'Agora o passe tem temporadas, com tema próprio, duas trilhas (Grátis e Premium) e prêmios nível a nível: moedas, molduras, efeitos de cartão, títulos e até temas do app. A primeira é a Temporada 1: Deuses. Veja em Battle Pass.'},

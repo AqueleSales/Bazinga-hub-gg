@@ -24,6 +24,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
 from . import loja as armazem
 from .passe import titulo_publico
+from .efeitos import mapa_para_cliente as efeitos_custom_mapa
 from .bazar import contar_pendencias as bazar_pendencias
 from .cosmeticos import (CATALOGO, PACOTES, TEMAS, TIPOS_COLUNA, TIPOS_JSON, TIPOS_EQUIPAVEIS, item_exclusivo, efeito_servidor_valido,
                          posses_da_pessoa, equipados_da_pessoa, definir_slot, badges_do_conjunto,
@@ -340,6 +341,7 @@ def _json_de_servidor(srv, dados, usuario=None):
         'description': srv.description,
         'bannerColor': srv.banner_color,
         'efeito': efeito_servidor_valido(srv.efeito),
+        'publico': bool(srv.publico), 'temaExplorar': srv.tema_explorar,
         'owner_id': srv.owner_id,
         'membros': contagem.get(srv.id, 0),
         'channels': visiveis
@@ -474,6 +476,7 @@ def handle_connect():
         emit('carregar_meus_servidores', servidores)
 
         emit('xp_atualizado', estado_battlepass(usuario))
+        emit('efeitos_custom', efeitos_custom_mapa())   # efeitos do Estúdio (em cache: sem query)
 
         # Preferências que moram na conta (não no navegador): o cliente aplica
         # ao conectar, então valem em qualquer aparelho/rede.
@@ -4054,3 +4057,7 @@ from . import bazar_events  # noqa: E402,F401
 
 # Passe de Batalha (temporadas), títulos e escolha das missões semanais: handlers em outro arquivo, também no FIM (importa daqui).
 from . import passe_events  # noqa: E402,F401
+
+
+# Explorar servidores (o mar de barquinhos): handlers em outro arquivo, também no FIM (importa daqui).
+from . import explorar_events  # noqa: E402,F401

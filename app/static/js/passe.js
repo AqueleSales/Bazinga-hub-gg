@@ -3,7 +3,7 @@
    Depende de: Cosm.previaItem (static/js/cosmeticos.js) e das classes .titulo-* (static/css/titulos.css).
    O app entrega o contexto em Passe.iniciar({ emitir, toast, avatarHtml, nome, somResgate }). */
 const Passe = (() => {
-    let ctx = null, S = null, T = null, desenhando = false, timerXp = null, adminLink = false;
+    let ctx = null, S = null, T = null, desenhando = false, timerXp = null, filtro = '';
     const raiz = () => document.getElementById('passe');
     const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const idOk = (v) => /^[a-z_]{1,24}$/.test(v || '');
@@ -39,6 +39,18 @@ const Passe = (() => {
         return '<span class="pz-moeda"><i class="fa-solid fa-gift"></i></span>';
     }
 
+    const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
+    const FILTROS = [['', 'Tudo', 'fa-border-all'], ['visual', 'Molduras e visual', 'fa-gem'], ['efeitos', 'Efeitos', 'fa-wand-magic-sparkles'], ['titulos', 'Títulos', 'fa-signature'], ['temas', 'Temas', 'fa-palette'], ['moedas', 'Moedas', 'fa-coins']];
+    /** A categoria de uma recompensa (pros filtros da trilha): o app sempre soube o tipo, só não separava por categoria. */
+    function categoria(r) {
+        if (!r) return '';
+        if (r.tipo === 'moeda') return 'moedas';
+        if (r.tipo === 'titulo') return 'titulos';
+        if (r.tipo === 'tema') return 'temas';
+        const t = r.item && r.item.tipo;
+        return /^(efeito_|pin_nota|som_call)/.test(t || '') ? 'efeitos' : 'visual';
+    }
+
     function estadoCel(r, trilha, n) {
         if (!r) return 'vazia';
         if (r.invalido) return 'invalida';
@@ -55,7 +67,8 @@ const Passe = (() => {
             : est === 'trancada' ? '<span class="pz-selo"><i class="fa-solid fa-lock"></i></span>'
                 : est === 'pronta' ? '<span class="pz-selo pronta"><i class="fa-solid fa-gift"></i></span>' : '';
         const rar = r.raridade ? `rar-${esc(r.raridade)}` : (r.tipo === 'moeda' ? 'rar-moeda' : '');
-        return `<button type="button" class="pz-cel ${est} ${rar} ${r.tipo === 'moeda' ? '' : 'marco'}" data-n="${n}" data-t="${trilha}" title="${esc(r.nome)}">
+        const cat = categoria(r), apagada = filtro && cat !== filtro ? 'esmaece' : '';
+        return `<button type="button" class="pz-cel ${est} ${rar} ${apagada} ${r.tipo === 'moeda' ? '' : 'marco'}" data-n="${n}" data-t="${trilha}" title="${esc(r.nome)}">
             <span class="pz-prev">${previaRec(r)}</span><span class="pz-nome">${r.tipo === 'moeda' ? 'Moedas' : esc(r.nome)}</span>${selo}</button>`;
     }
 
@@ -75,8 +88,21 @@ const Passe = (() => {
         const pct = S.nivel >= S.niveis_total ? 100 : Math.round((S.xp_no_nivel / S.xp_por_nivel) * 100);
         const fim = S.segundos_restantes != null ? `Termina em ${tempoTexto(S.segundos_restantes)}` : 'Sem data de fim';
         const comeca = S.comeca_em ? `<span class="pz-chip aviso"><i class="fa-regular fa-clock"></i> Começa em ${tempoTexto(S.comeca_em)}</span>` : '';
-        const colunas = S.niveis.map((l) => `<div class="pz-col ${l.n <= S.nivel ? 'alcancado' : ''} ${l.n === S.nivel ? 'atual' : ''}" data-n="${l.n}">
-            ${celula(l.premium, 'premium', l.n)}<div class="pz-no"><b>${l.n}</b></div>${celula(l.gratis, 'gratis', l.n)}</div>`).join('');
+        const coluna = (l) => `<div class="pz-col ${l.n <= S.nivel ? 'alcancado' : ''} ${l.n === S.nivel ? 'atual' : ''}" data-n="${l.n}">
+            ${celula(l.premium, 'premium', l.n)}<div class="pz-no"><b>${l.n}</b></div>${celula(l.gratis, 'gratis', l.n)}</div>`;
+        // Capítulos ("cantos"): um bloco por capítulo, com o nome em cima. Sem capítulos, uma fileira só.
+        const caps = S.capitulos || [];
+        let ultimo = 0;
+        let colunas = caps.map((c) => {
+            ultimo = c.ate;
+            return `<div class="pz-cap ${c.n === S.capitulo_atual ? 'atual' : ''}"><div class="pz-cap-cab"><span class="pz-cap-tit"><small>Canto ${ROMANOS[c.n - 1] || c.n}</small><b>${esc(c.nome)}</b></span></div>
+                <div class="pz-cols">${S.niveis.filter((l) => l.n >= c.de && l.n <= c.ate).map(coluna).join('')}</div></div>`;
+        }).join('');
+        const resto = S.niveis.filter((l) => l.n > ultimo);
+        if (resto.length) colunas += caps.length ? `<div class="pz-cap"><div class="pz-cap-cab"><span class="pz-cap-tit"><small>Epílogo</small><b>&nbsp;</b></span></div><div class="pz-cols">${resto.map(coluna).join('')}</div></div>` : `<div class="pz-cols">${resto.map(coluna).join('')}</div>`;
+        const capAtual = caps.find((c) => c.n === S.capitulo_atual);
+        const filtros = `<div class="pz-filtros">${FILTROS.map(([id, nome, ic]) => `<button type="button" class="pz-filtro ${filtro === id ? 'ativo' : ''}" data-f="${id}"><i class="fa-solid ${ic}"></i> ${nome}</button>`).join('')}</div>`;
+        const rolagemAntes = document.getElementById('pz-trilha') ? document.getElementById('pz-trilha').scrollLeft : null;
         r.setAttribute('data-passe', S.tema);
         r.style.setProperty('--pz-cor', v.cor || '#d4a24c');
         r.style.setProperty('--pz-cor2', v.cor2 || '#e9d9a6');
@@ -84,6 +110,7 @@ const Passe = (() => {
                 <div class="pz-arte" aria-hidden="true">${ARTE[S.tema] || `<i class="fa-solid ${esc(v.icone || 'fa-ranking-star')}"></i>`}</div>
                 <div class="pz-hero-info">
                     <div class="pz-sobre"><span class="pz-selo-temp"><i class="fa-solid ${esc(v.icone || 'fa-ranking-star')}"></i> Temporada</span>
+                        ${capAtual ? `<span class="pz-chip canto" title="O capítulo em que você está jogando agora"><i class="fa-solid fa-scroll"></i> Canto ${ROMANOS[capAtual.n - 1] || capAtual.n}: ${esc(capAtual.nome)}</span>` : ''}
                         <span class="pz-chip"><i class="fa-regular fa-hourglass-half"></i> ${esc(fim)}</span>${comeca}
                         ${S.catchup ? `<span class="pz-chip ok" title="Reta final: quem entrou tarde alcança"><i class="fa-solid fa-forward"></i> XP +${Number(S.catchup_pct)}%</span>` : ''}
                         ${S.janela_aberta ? '' : '<span class="pz-chip aviso"><i class="fa-solid fa-pause"></i> XP pausado</span>'}</div>
@@ -100,9 +127,11 @@ const Passe = (() => {
                         ${S.premium ? '<span class="pz-chip ok"><i class="fa-solid fa-crown"></i> Trilha Premium liberada</span>' : '<span class="pz-chip" title="A trilha Premium chega junto com a assinatura"><i class="fa-solid fa-lock"></i> Trilha Premium: em breve</span>'}
                     </div>
                 </div></section>
-            <div class="pz-trilha-caixa"><div class="pz-rotulos"><span class="premium"><i class="fa-solid fa-crown"></i> Premium</span><span class="nivel">Nível</span><span class="gratis">Grátis</span></div>
+            ${filtros}
+            <div class="pz-trilha-caixa ${caps.length ? 'com-cap' : ''}"><div class="pz-rotulos"><span class="premium"><i class="fa-solid fa-crown"></i> Premium</span><span class="nivel">Nível</span><span class="gratis">Grátis</span></div>
                 <div class="pz-trilha" id="pz-trilha">${colunas}</div></div>`;
         if (!desenhando) { desenhando = true; irParaNivel(true); }
+        else if (rolagemAntes != null) { const t = document.getElementById('pz-trilha'); if (t) t.scrollLeft = rolagemAntes; }   // redesenhar (resgate, filtro) não pode pular a trilha pro começo
     }
 
     function irParaNivel(instantaneo) {
@@ -178,7 +207,9 @@ const Passe = (() => {
             if (cel) { abrirDetalhe(+cel.dataset.n, cel.dataset.t); return; }
             if (e.target.closest('#pz-tudo')) { ctx.emitir('passe_resgatar', { todos: true }); return; }
             if (e.target.closest('#pz-titulos')) { abrirTitulos(); return; }
-            if (e.target.closest('#pz-ir')) { irParaNivel(false); }
+            if (e.target.closest('#pz-ir')) { irParaNivel(false); return; }
+            const f = e.target.closest('#passe .pz-filtro');
+            if (f) { filtro = f.dataset.f || ''; desenhar(); }
         });
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;

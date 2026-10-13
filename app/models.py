@@ -147,6 +147,9 @@ class Server(db.Model):
     # Cosmético do servidor (ícone na barra, cabeçalho e pino no mapa): id do catálogo (cosmeticos.py, tipo
     # 'efeito_servidor'). Só o dono aplica e só se tiver a posse do item.
     efeito = db.Column(db.String(24), nullable=True)
+    # Explorar servidores (app/explorar.py): o dono marca como público e escolhe um tema. Anuláveis (a coluna nasce sem DEFAULT): NULL = não público.
+    publico = db.Column(db.Boolean, nullable=True)
+    tema_explorar = db.Column(db.String(20), nullable=True)
 
     # Relacionamentos
     # Quando o servidor for deletado, os canais somem junto (cascade)
@@ -738,6 +741,9 @@ class PasseTemporada(db.Model):
     xp_por_nivel = db.Column(db.Integer, nullable=False, default=800)
     catchup_dias = db.Column(db.Integer, nullable=False, default=14)     # nos últimos N dias antes do fim o XP do passe rende mais
     catchup_pct = db.Column(db.Integer, nullable=False, default=50)      # ... este % a mais (0 desliga)
+    # "Cantos" da temporada: nomes dos capítulos (JSON de lista de textos) e quantos níveis cada um tem. Anuláveis (a coluna nasce sem DEFAULT).
+    capitulos = db.Column(db.Text, nullable=True)
+    capitulo_niveis = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=br_now)
 
 
@@ -781,3 +787,20 @@ class Titulo(db.Model):
     animacao = db.Column(db.String(16), nullable=True)      # id de passe.ANIMACOES_TITULO (NULL = só texto)
     raridade = db.Column(db.String(10), nullable=False, default='raro')
     descricao = db.Column(db.String(120), nullable=True)    # como se ganha (aparece no seletor)
+
+
+# ==========================================
+# ESTÚDIO DE EFEITOS (efeitos de perfil/avatar criados no /admin, sem código; ver app/efeitos.py)
+# ------------------------------------------------------------
+# `receita` = JSON já normalizado por efeitos.normalizar_receita (camadas e parâmetros de uma lista fechada). Ao salvar, o efeito
+# entra no CATALOGO como item exclusivo "efeito_perfil:<id>" / "efeito_avatar:<id>" (tema "estudio"). A tabela nasce pelo create_all.
+# ==========================================
+class EfeitoCustom(db.Model):
+    __tablename__ = 'efeito_custom'
+    id = db.Column(db.String(24), primary_key=True)
+    tipo = db.Column(db.String(20), nullable=False)          # 'efeito_perfil' | 'efeito_avatar'
+    nome = db.Column(db.String(40), nullable=False)
+    descricao = db.Column(db.String(120), nullable=True)
+    raridade = db.Column(db.String(10), nullable=False, default='epico')
+    receita = db.Column(db.Text, nullable=False)
+    criado_em = db.Column(db.DateTime, default=br_now)

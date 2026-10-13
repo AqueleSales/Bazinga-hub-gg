@@ -15,7 +15,7 @@ from functools import wraps
 from flask import Blueprint, abort, jsonify, render_template, request, session
 from sqlalchemy import or_
 
-from . import passe
+from . import passe, efeitos, explorar
 from .bazar import eh_admin, ids_dos_admins, definir_admin
 from .cosmeticos import CATALOGO, ROTULO_TIPO, RARIDADES
 from .models import db, Person, Posse
@@ -255,3 +255,114 @@ def titulos_conceder(pessoa):
 def missoes(pessoa):
     return jsonify({'missoes': [{'codigo': c, **m, 'drc': DRC_POR_MISSAO[m['periodo']]} for c, m in MISSOES.items()],
                     'regras': {'diarias': QTD_DIARIAS, 'oferta_semanais': OFERTA_SEMANAIS, 'escolhas_semanais': ESCOLHAS_SEMANAIS}})
+
+
+# ------------------------------------------------------------
+# Estúdio de efeitos (app/efeitos.py): receitas validadas, efeito entra no catálogo e é avisado a todo mundo conectado
+# ------------------------------------------------------------
+def _avisar_efeitos():
+    from . import socketio
+    try:
+        socketio.emit('efeitos_custom', efeitos.mapa_para_cliente())
+    except Exception as e:
+        print(f"[ERRO ADMIN: avisar efeitos] {e}")
+
+
+def _tratar_efeito(fn):
+    """Igual a `_tratar`, mas o erro de regra aqui é ErroEfeito."""
+    try:
+        r = fn()
+        return jsonify({'ok': True, **(r if isinstance(r, dict) else {})})
+    except efeitos.ErroEfeito as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ADMIN EFEITOS] {e}")
+        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+
+
+@admin_bp.route('/api/efeitos')
+@so_admin
+def efeitos_listar(pessoa):
+    return jsonify({'efeitos': efeitos.listar(), 'esquema': efeitos.esquema_para_cliente(), 'raridades': list(efeitos.RARIDADES),
+                    'max_camadas': efeitos.MAX_CAMADAS})
+
+
+@admin_bp.route('/api/efeitos', methods=['POST'])
+@so_admin
+def efeitos_salvar(pessoa):
+    d = _json()
+
+    def fazer():
+        eid = efeitos.salvar(d)
+        _avisar_efeitos()
+        return {'id': eid}
+    return _tratar_efeito(fazer)
+
+
+@admin_bp.route('/api/efeitos/<eid>', methods=['DELETE'])
+@so_admin
+def efeitos_apagar(pessoa, eid):
+    def fazer():
+        efeitos.apagar(eid)
+        _avisar_efeitos()
+    return _tratar_efeito(fazer)
+
+
+@admin_bp.route('/api/itens/conceder', methods=['POST'])
+@so_admin
+def itens_conceder(pessoa):
+    """Dá (ou tira, com ativo=false) QUALQUER item do catálogo a alguém: brinde, teste, compensação."""
+    d = _json()
+
+    def fazer():
+        item = str(d.get('item_id') or '')
+        if item not in CATALOGO or CATALOGO[item]['tipo'] == 'pacote':
+            raise ErroPasse('Item não existe no catálogo (ou é um pacote).')
+        alvo = com_retry(lambda: Person.query.get(int(d.get('person_id') or 0)))
+        if not alvo:
+            raise ErroPasse('Pessoa não encontrada.')
+
+        def preparar():
+            if d.get('ativo') is False:
+                Posse.query.filter_by(person_id=alvo.id, item_id=item).delete()
+            elif not Posse.query.filter_by(person_id=alvo.id, item_id=item).first():
+                db.session.add(Posse(person_id=alvo.id, item_id=item, origem='admin'))
+
+        comitar_com_retry(preparar)
+
+    return _tratar(fazer)
+
+
+# ------------------------------------------------------------
+# Servidores públicos (Explorar): o admin vê e pode tirar do ar
+# ------------------------------------------------------------
+@admin_bp.route('/api/servidores')
+@so_admin
+def servidores_publicos(pessoa):
+    return jsonify({'servidores': explorar.listar_publicos_admin()})
+
+
+@admin_bp.route('/api/servidores/<int:sid>/despublicar', methods=['POST'])
+@so_admin
+def servidores_despublicar(pessoa, sid):
+    def fazer():
+        s = explorar.despublicar(sid)
+        try:
+            from . import socketio
+            from .events import servidor_para_json, sala_pessoal
+            for m in list(s.members):      # os membros recebem o servidor com o estado novo (fora de um handler: socketio.emit, não emit)
+                socketio.emit('servidor_discord_criado', servidor_para_json(s, m), to=sala_pessoal(m.id))
+        except Exception as e:
+            print(f"[ERRO ADMIN: avisar servidor] {e}")
+    try:
+        fazer()
+        return jsonify({'ok': True})
+    except explorar.ErroExplorar as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ADMIN SERVIDORES] {e}")
+        return jsonify({'erro': f'Erro inesperado: {e}'}), 500

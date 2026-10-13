@@ -3,38 +3,43 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
     <meta name="robots" content="noindex, nofollow">
     <title>Estúdio · {{ app_nome }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/titulos.css') }}?v={{ titulos_css_v }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/efeitos.css') }}?v={{ efeitos_css_v }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ admin_css_v }}">
 </head>
 <body>
-<div class="ad-app">
-    <nav class="ad-nav" id="ad-nav">
-        <div class="ad-marca"><i class="fa-solid fa-landmark"></i> Estúdio {{ app_nome }}</div>
-        <button class="ad-item ativo" data-v="geral"><i class="fa-solid fa-gauge"></i> Visão geral</button>
+<div class="es-app">
+    <nav class="es-nav" id="es-nav">
+        <div class="es-marca"><i class="fa-solid fa-landmark"></i> Estúdio {{ app_nome }}</div>
+        <button class="es-item ativo" data-v="geral"><i class="fa-solid fa-gauge"></i> Visão geral</button>
         <small>Passe e conquistas</small>
-        <button class="ad-item" data-v="passe"><i class="fa-solid fa-ranking-star"></i> Passe de Batalha</button>
-        <button class="ad-item" data-v="titulos"><i class="fa-solid fa-signature"></i> Títulos</button>
-        <button class="ad-item" data-v="missoes"><i class="fa-solid fa-list-check"></i> Missões</button>
+        <button class="es-item" data-v="passe"><i class="fa-solid fa-ranking-star"></i> Passe de Batalha</button>
+        <button class="es-item" data-v="titulos"><i class="fa-solid fa-signature"></i> Títulos</button>
+        <button class="es-item" data-v="efeitos"><i class="fa-solid fa-wand-magic-sparkles"></i> Efeitos</button>
+        <button class="es-item" data-v="servidores"><i class="fa-solid fa-server"></i> Servidores públicos</button>
+        <button class="es-item" data-v="missoes"><i class="fa-solid fa-list-check"></i> Missões</button>
         <small>Pessoas</small>
-        <button class="ad-item" data-v="admins"><i class="fa-solid fa-user-shield"></i> Administradores</button>
+        <button class="es-item" data-v="admins"><i class="fa-solid fa-user-shield"></i> Administradores</button>
         <small>Em breve</small>
-        <div class="ad-item breve"><i class="fa-solid fa-wand-magic-sparkles"></i> Cosméticos e efeitos <span class="tag">breve</span></div>
-        <div class="ad-item breve"><i class="fa-solid fa-store"></i> Armazém <span class="tag">breve</span></div>
-        <div class="ad-item breve"><i class="fa-solid fa-shop"></i> Bazar <span class="tag">breve</span></div>
-        <div class="ad-item breve"><i class="fa-solid fa-flag"></i> Denúncias <span class="tag">breve</span></div>
-        <div class="ad-item breve"><i class="fa-solid fa-server"></i> Servidores <span class="tag">breve</span></div>
-        <div class="ad-item breve"><i class="fa-solid fa-medal"></i> Selos <span class="tag">breve</span></div>
-        <div class="ad-item breve"><i class="fa-solid fa-map-pin"></i> Notas do mapa <span class="tag">breve</span></div>
-        <div class="ad-eu">Logado como <b>{{ eu.nome }}</b>{% if eu.username %} (@{{ eu.username }}){% endif %}<br><a href="/chat">Voltar ao app</a></div>
+        <div class="es-item breve"><i class="fa-solid fa-gem"></i> Cosméticos (molduras, nomes...) <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-store"></i> Armazém <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-shop"></i> Bazar <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-flag"></i> Denúncias <span class="tag">breve</span></div>
+        
+        <div class="es-item breve"><i class="fa-solid fa-medal"></i> Selos <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-map-pin"></i> Notas do mapa <span class="tag">breve</span></div>
+        <div class="es-eu">Logado como <b>{{ eu.nome }}</b>{% if eu.username %} (@{{ eu.username }}){% endif %}<br><a href="/chat">Voltar ao app</a></div>
     </nav>
-    <main class="ad-main" id="ad-main"><div class="ad-vazio">Carregando...</div></main>
+    <main class="es-main" id="es-main"><div class="es-vazio">Carregando...</div></main>
 </div>
 <script>window.EU = {{ eu|tojson }};</script>
+<script src="{{ url_for('static', filename='js/efeitos.js') }}?v={{ efeitos_js_v }}"></script>
 <script src="{{ url_for('static', filename='js/admin.js') }}?v={{ admin_js_v }}"></script>
 </body>
 </html>

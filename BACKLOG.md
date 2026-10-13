@@ -242,3 +242,27 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [ ] Decisões do dono: nome da moeda, nome do Nitro, paleta/logo final (dourado e preto chapado ficou como primeira versão), valor do XP por nível do passe (800 = ~80 mil XP pro 100) e quantos dias de catch-up.
 - [ ] Próximos (ordem combinada): **Explorar servidores (o mar)** > impulso de servidor + visibilidade no mapa > **Nitro/Olimpo** (precisa gateway + CNPJ + armazenamento próprio) > **Estúdio de efeitos sem código** > IA de segurança e de clipes.
 - [ ] Faltam no Estúdio: cosméticos, Armazém, Bazar, denúncias, servidores, selos, notas do mapa e edição das missões. Título ao lado do nome nas mensagens/membros; conquistas como fonte de títulos.
+
+
+---
+
+## Rodada 22 (12/10/2026) - Estúdio de efeitos, Explorar servidores, plano da IA e docs - feito; testado com SQLite + navegador da pane
+- [x] /admin consertado (bloqueador de anúncio escondia `.ad-*`; agora `es-*`). Estúdio de efeitos: efeitos de cartão e de avatar por camadas, prévia ao vivo, vira item do catálogo (dar, equipar, recompensa do passe).
+- [x] Explorar servidores: mar com barquinhos (tamanho por membros), terra, listas por tema, busca, Surpreenda-me, prévia segura, entrar sem convite, dono publica nas configurações, admin tira do ar.
+- [x] `docs/HISTORICO.md`, `docs/ESTUDIO_EFEITOS.md`, `docs/PLANO_IA.md`.
+- [ ] **Depois do deploy**: `python atualizar_banco.py` (passos 30 e 31), /admin > Passe > "Criar modelo Deuses" > Ativar.
+- [ ] Ver no monitor do dono: o mar (tamanho dos barcos, clique com os barcos andando, celular), o editor de efeitos, o efeito no cartão/avatar nos contextos reais (mensagem, call, lista).
+- [ ] IA: decidir teto mensal e "só lê o que for denunciado/público"; começar pela fila de Denúncias no Estúdio (sem IA), depois moderação de imagem. Ver `docs/PLANO_IA.md`.
+- [ ] Impulso de servidor (nível do servidor: porte do barco e visibilidade de longe no mapa), Nitro, nome da moeda, denúncia de servidor do Explorar.
+- [ ] Estúdio de efeitos para molduras, nomes, placas, faixas, fala, radar, pin e som; edição das missões; resto do painel.
+
+
+---
+
+## Rodada 23 (13/10/2026) - Passe "Odisseia" e plano do Guardião - feito; testado com SQLite + navegador da pane
+- [x] Passe com 10 cantos (capítulos) da Odisseia, 15 títulos, 6 itens novos em código, 4 efeitos criados no Estúdio, filtros por categoria, meandro grego, trilha que não pula ao redesenhar.
+- [x] `docs/PLANO_IA.md` reescrito (Guardião visível, gatilho local, texto ao Gemini, dossiê com revisão humana, ações reversíveis).
+- [ ] **Depois do deploy**: `python atualizar_banco.py` (passos 30, 31, 32), /admin > Passe > "Criar modelo Deuses" > Ativar.
+- [ ] **Categorizar os cosméticos** por tema (mitologia, anime, fantasia...) e estilo (animado, com som, tela cheia) no catálogo e no Armazém/Estúdio.
+- [ ] Mais temporadas (ideias: Roma e as legiões, Egito, mitologia nórdica) usando o mesmo molde: cantos + modelo + efeitos do Estúdio.
+- [ ] Decisões do dono pra IA (ver o fim do `docs/PLANO_IA.md`): Guardião visível, nada de áudio/vídeo na nuvem, nada de denúncia automática à polícia, advogado, chave do Gemini e teto de chamadas.

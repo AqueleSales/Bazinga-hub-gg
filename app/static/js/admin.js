@@ -2,14 +2,14 @@
 (function () {
     'use strict';
     const $ = (s, r) => (r || document).querySelector(s);
-    const main = $('#ad-main');
+    const main = $('#es-main');
     const E = { cat: null, tempo: [], tid: null, recs: new Map(), mudancas: new Map(), filtro: 'todos', jogadores: [] };
 
     const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     function toast(msg, tipo) {
         const el = document.createElement('div');
-        el.className = 'ad-toast ' + (tipo || '');
+        el.className = 'es-toast ' + (tipo || '');
         el.textContent = msg;
         document.body.appendChild(el);
         setTimeout(() => el.remove(), 3800);
@@ -27,16 +27,16 @@
 
     function dialogo(titulo, corpoHtml, acoes) {
         const fundo = document.createElement('div');
-        fundo.className = 'ad-modal-fundo';
-        fundo.innerHTML = `<div class="ad-modal" role="dialog" aria-modal="true"><h3>${esc(titulo)}</h3><div class="ad-corpo">${corpoHtml}</div><div class="ad-modal-acoes"></div></div>`;
-        const barra = $('.ad-modal-acoes', fundo);
+        fundo.className = 'es-modal-fundo';
+        fundo.innerHTML = `<div class="es-modal" role="dialog" aria-modal="true"><h3>${esc(titulo)}</h3><div class="es-corpo">${corpoHtml}</div><div class="es-modal-acoes"></div></div>`;
+        const barra = $('.es-modal-acoes', fundo);
         const fechar = () => { fundo.remove(); document.removeEventListener('keydown', esc_); };
         const esc_ = (e) => { if (e.key === 'Escape') fechar(); };
         document.addEventListener('keydown', esc_);
         fundo.addEventListener('mousedown', (e) => { if (e.target === fundo) fechar(); });
         (acoes || []).forEach((a) => {
             const b = document.createElement('button');
-            b.className = 'ad-btn ' + (a.classe || '');
+            b.className = 'es-btn ' + (a.classe || '');
             b.textContent = a.texto;
             b.addEventListener('click', async () => { if (a.fn) { const r = await a.fn(fundo); if (r === false) return; } fechar(); });
             barra.appendChild(b);
@@ -56,12 +56,12 @@
     // ------------------------------------------------------------
     const VISTAS = { geral: vGeral, passe: vPasse, titulos: vTitulos, missoes: vMissoes, admins: vAdmins };
     function ir(v) {
-        document.querySelectorAll('.ad-item[data-v]').forEach((b) => b.classList.toggle('ativo', b.dataset.v === v));
+        document.querySelectorAll('.es-item[data-v]').forEach((b) => b.classList.toggle('ativo', b.dataset.v === v));
         location.hash = v;
-        main.innerHTML = '<div class="ad-vazio">Carregando...</div>';
-        Promise.resolve(VISTAS[v] && VISTAS[v]()).catch((e) => { main.innerHTML = `<div class="ad-vazio">Não foi possível carregar: ${esc(e.message)}</div>`; });
+        main.innerHTML = '<div class="es-vazio">Carregando...</div>';
+        Promise.resolve(VISTAS[v] && VISTAS[v]()).catch((e) => { main.innerHTML = `<div class="es-vazio">Não foi possível carregar: ${esc(e.message)}</div>`; });
     }
-    document.querySelectorAll('.ad-item[data-v]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.es-item[data-v]').forEach((b) => b.addEventListener('click', () => {
         if (E.mudancas.size && !confirm('Você tem alterações do passe não salvas. Sair mesmo assim?')) return;
         E.mudancas.clear();
         ir(b.dataset.v);
@@ -72,11 +72,11 @@
     // ------------------------------------------------------------
     async function vGeral() {
         const g = await api('/geral');
-        main.innerHTML = `<h1>Visão geral</h1><p class="ad-sub">O estúdio de quem cria o app. Aqui você define o passe, os títulos e as missões; o resto das áreas (cosméticos, Armazém, Bazar, denúncias...) entra nas próximas etapas.</p>
-            <div class="ad-grade-3">
-                <div class="ad-num"><b>${g.pessoas}</b><span>pessoas cadastradas</span></div>
-                <div class="ad-num"><b>${g.temporada ? esc(g.temporada.nome) : 'nenhuma'}</b><span>temporada ativa</span></div>
-                <div class="ad-num"><b>${g.admins.length}</b><span>administradores</span></div>
+        main.innerHTML = `<h1>Visão geral</h1><p class="es-sub">O estúdio de quem cria o app. Aqui você define o passe, os títulos e as missões; o resto das áreas (cosméticos, Armazém, Bazar, denúncias...) entra nas próximas etapas.</p>
+            <div class="es-grade-3">
+                <div class="es-num"><b>${g.pessoas}</b><span>pessoas cadastradas</span></div>
+                <div class="es-num"><b>${g.temporada ? esc(g.temporada.nome) : 'nenhuma'}</b><span>temporada ativa</span></div>
+                <div class="es-num"><b>${g.admins.length}</b><span>administradores</span></div>
             </div>`;
     }
 
@@ -120,11 +120,11 @@
         const t = temporadaAtual();
         const opcoes = E.tempo.map((x) => `<option value="${x.id}" ${x.id === E.tid ? 'selected' : ''}>${esc(x.nome)}${x.ativa ? ' (ativa)' : ''}</option>`).join('');
         let html = `<h1>Passe de Batalha</h1>
-            <p class="ad-sub">Defina a temporada (nome, tema, datas, quantos níveis) e, nível por nível, o que a trilha <b>Grátis</b> e a <b>Premium</b> entregam. Sem data de início/fim a temporada fica aberta até você encerrar. Só uma temporada fica ativa por vez.</p>
-            <div class="ad-cartao"><div class="ad-linha">
-                <div class="ad-campo largo"><label>Temporada</label><select id="p-sel">${opcoes || '<option value="">(nenhuma ainda)</option>'}</select></div>
-                <button class="ad-btn" id="p-nova">Nova temporada</button>
-                <button class="ad-btn" id="p-modelo-criar" title="Cria a Temporada 1: Deuses já com as 100 recompensas">Criar modelo "Deuses"</button>
+            <p class="es-sub">Defina a temporada (nome, tema, datas, quantos níveis) e, nível por nível, o que a trilha <b>Grátis</b> e a <b>Premium</b> entregam. Sem data de início/fim a temporada fica aberta até você encerrar. Só uma temporada fica ativa por vez.</p>
+            <div class="es-cartao"><div class="es-linha">
+                <div class="es-campo largo"><label>Temporada</label><select id="p-sel">${opcoes || '<option value="">(nenhuma ainda)</option>'}</select></div>
+                <button class="es-btn" id="p-nova">Nova temporada</button>
+                <button class="es-btn" id="p-modelo-criar" title="Cria a Temporada 1: Deuses já com as 100 recompensas">Criar modelo "Deuses"</button>
             </div></div>`;
         if (t) html += formTemporada(t) + gradeRecompensas(t) + `<div id="p-jogadores"></div>`;
         main.innerHTML = html;
@@ -134,27 +134,31 @@
 
     function formTemporada(t) {
         const temas = E.cat.temas_passe.map((x) => `<option value="${x.id}" ${x.id === t.tema ? 'selected' : ''}>${esc(x.nome)}</option>`).join('');
-        return `<div class="ad-cartao" id="p-form"><h2>Temporada ${t.ativa ? '<span class="ad-selo ativa">ativa</span>' : '<span class="ad-selo">inativa</span>'}</h2>
-            <div class="ad-linha">
-                <div class="ad-campo largo"><label>Nome</label><input id="t-nome" maxlength="60" value="${esc(t.nome)}"></div>
-                <div class="ad-campo largo"><label>Subtítulo</label><input id="t-sub" maxlength="120" value="${esc(t.subtitulo)}"></div>
-                <div class="ad-campo"><label>Tema visual</label><select id="t-tema">${temas}</select></div>
+        return `<div class="es-cartao" id="p-form"><h2>Temporada ${t.ativa ? '<span class="es-selo ativa">ativa</span>' : '<span class="es-selo">inativa</span>'}</h2>
+            <div class="es-linha">
+                <div class="es-campo largo"><label>Nome</label><input id="t-nome" maxlength="60" value="${esc(t.nome)}"></div>
+                <div class="es-campo largo"><label>Subtítulo</label><input id="t-sub" maxlength="120" value="${esc(t.subtitulo)}"></div>
+                <div class="es-campo"><label>Tema visual</label><select id="t-tema">${temas}</select></div>
             </div>
-            <div class="ad-linha" style="margin-top:12px">
-                <div class="ad-campo"><label>Níveis</label><input id="t-niveis" type="number" min="1" max="200" value="${t.niveis}"></div>
-                <div class="ad-campo"><label>XP por nível</label><input id="t-xp" type="number" min="50" max="100000" value="${t.xp_por_nivel}"><small>Chegar ao último = ${(t.niveis * t.xp_por_nivel).toLocaleString('pt-BR')} XP</small></div>
-                <div class="ad-campo"><label>Início (opcional)</label><input id="t-ini" type="datetime-local" value="${esc(t.inicio)}"></div>
-                <div class="ad-campo"><label>Fim (opcional)</label><input id="t-fim" type="datetime-local" value="${esc(t.fim)}"></div>
+            <div class="es-linha" style="margin-top:12px">
+                <div class="es-campo"><label>Níveis</label><input id="t-niveis" type="number" min="1" max="200" value="${t.niveis}"></div>
+                <div class="es-campo"><label>XP por nível</label><input id="t-xp" type="number" min="50" max="100000" value="${t.xp_por_nivel}"><small>Chegar ao último = ${(t.niveis * t.xp_por_nivel).toLocaleString('pt-BR')} XP</small></div>
+                <div class="es-campo"><label>Início (opcional)</label><input id="t-ini" type="datetime-local" value="${esc(t.inicio)}"></div>
+                <div class="es-campo"><label>Fim (opcional)</label><input id="t-fim" type="datetime-local" value="${esc(t.fim)}"></div>
             </div>
-            <div class="ad-linha" style="margin-top:12px">
-                <div class="ad-campo"><label>Catch-up: nos últimos (dias)</label><input id="t-cdias" type="number" min="0" max="90" value="${t.catchup_dias}"></div>
-                <div class="ad-campo"><label>...o XP rende a mais (%)</label><input id="t-cpct" type="number" min="0" max="300" value="${t.catchup_pct}"><small>0 desliga. Ajuda quem entrou tarde.</small></div>
+            <div class="es-linha" style="margin-top:12px">
+                <div class="es-campo largo"><label>Capítulos ("cantos"), um nome por linha</label><textarea id="t-caps" rows="5" placeholder="Ítaca&#10;O Mar de Vinho&#10;...">${esc((t.capitulos || []).join('\n'))}</textarea><small>Opcional. Cada capítulo aparece como um bloco na trilha, com o nome em cima.</small></div>
+                <div class="es-campo"><label>Níveis por capítulo</label><input id="t-capn" type="number" min="3" max="50" value="${t.capitulo_niveis || 10}"></div>
             </div>
-            <div class="ad-linha" style="margin-top:16px">
-                <button class="ad-btn primario" id="t-salvar">Salvar temporada</button>
-                <button class="ad-btn ${t.ativa ? '' : 'ok'}" id="t-ativar">${t.ativa ? 'Encerrar temporada' : 'Ativar temporada'}</button>
-                <button class="ad-btn" id="t-modelo">Aplicar modelo "Deuses"</button>
-                <button class="ad-btn perigo" id="t-apagar">Apagar</button>
+            <div class="es-linha" style="margin-top:12px">
+                <div class="es-campo"><label>Catch-up: nos últimos (dias)</label><input id="t-cdias" type="number" min="0" max="90" value="${t.catchup_dias}"></div>
+                <div class="es-campo"><label>...o XP rende a mais (%)</label><input id="t-cpct" type="number" min="0" max="300" value="${t.catchup_pct}"><small>0 desliga. Ajuda quem entrou tarde.</small></div>
+            </div>
+            <div class="es-linha" style="margin-top:16px">
+                <button class="es-btn primario" id="t-salvar">Salvar temporada</button>
+                <button class="es-btn ${t.ativa ? '' : 'ok'}" id="t-ativar">${t.ativa ? 'Encerrar temporada' : 'Ativar temporada'}</button>
+                <button class="es-btn" id="t-modelo">Aplicar modelo "Deuses"</button>
+                <button class="es-btn perigo" id="t-apagar">Apagar</button>
             </div></div>`;
     }
 
@@ -166,37 +170,37 @@
             const g = recAtual(n, 'gratis'), p = recAtual(n, 'premium');
             const mostrar = E.filtro === 'todos' || (E.filtro === 'marcos' && (ehMarco(n) || (g && g.tipo !== 'moeda') || (p && p.tipo !== 'moeda'))) || (E.filtro === 'vazios' && (!g || !p));
             if (!mostrar) continue;
-            linhas += `<div class="ad-grade-linha ${ehMarco(n) ? 'marco' : ''}"><div class="ad-grade-n">${n}</div>${celula(n, 'gratis', g)}${celula(n, 'premium', p)}</div>`;
+            linhas += `<div class="es-grade-linha ${ehMarco(n) ? 'marco' : ''}"><div class="es-grade-n">${n}</div>${celula(n, 'gratis', g)}${celula(n, 'premium', p)}</div>`;
         }
         const n = E.mudancas.size;
-        return `<div class="ad-barra-fixa"><div class="ad-campo" style="flex:0 0 160px;min-width:0"><select id="g-filtro">
+        return `<div class="es-barra-fixa"><div class="es-campo" style="flex:0 0 160px;min-width:0"><select id="g-filtro">
                     <option value="todos" ${E.filtro === 'todos' ? 'selected' : ''}>Todos os níveis</option>
                     <option value="marcos" ${E.filtro === 'marcos' ? 'selected' : ''}>Só marcos e prêmios</option>
                     <option value="vazios" ${E.filtro === 'vazios' ? 'selected' : ''}>Com slot vazio</option></select></div>
-                <button class="ad-btn" id="g-preencher">Preencher moedas...</button>
+                <button class="es-btn" id="g-preencher">Preencher moedas...</button>
                 <span style="flex:1"></span>
-                <span class="ad-selo ${n ? 'aviso' : ''}" id="g-cont">${n} alteraç${n === 1 ? 'ão' : 'ões'} não salva${n === 1 ? '' : 's'}</span>
-                <button class="ad-btn" id="g-descartar" ${n ? '' : 'disabled'}>Descartar</button>
-                <button class="ad-btn primario" id="g-salvar" ${n ? '' : 'disabled'}>Salvar recompensas</button></div>
-            <div class="ad-grade"><div class="ad-grade-cab"><div>Nível</div><div>Trilha Grátis</div><div>Trilha Premium</div></div>${linhas || '<div class="ad-vazio">Nada neste filtro.</div>'}</div>`;
+                <span class="es-selo ${n ? 'aviso' : ''}" id="g-cont">${n} alteraç${n === 1 ? 'ão' : 'ões'} não salva${n === 1 ? '' : 's'}</span>
+                <button class="es-btn" id="g-descartar" ${n ? '' : 'disabled'}>Descartar</button>
+                <button class="es-btn primario" id="g-salvar" ${n ? '' : 'disabled'}>Salvar recompensas</button></div>
+            <div class="es-grade"><div class="es-grade-cab"><div>Nível</div><div>Trilha Grátis</div><div>Trilha Premium</div></div>${linhas || '<div class="es-vazio">Nada neste filtro.</div>'}</div>`;
     }
 
     function celula(n, trilha, r) {
         const d = descreverRec(r);
         const mudou = E.mudancas.has(chave(n, trilha));
-        if (!r || !r.tipo) return `<button class="ad-cel vazia ${mudou ? 'mudou' : ''}" data-n="${n}" data-t="${trilha}">vazio</button>`;
-        return `<button class="ad-cel ${mudou ? 'mudou' : ''}" data-n="${n}" data-t="${trilha}"><span class="ad-cel-ico ${d.ico}"><i class="fa-solid ${iconeTipo[r.tipo]}"></i></span><span><b>${esc(d.nome)}</b>${d.sub ? `<span class="sub">${esc(d.sub)}</span>` : ''}</span></button>`;
+        if (!r || !r.tipo) return `<button class="es-cel vazia ${mudou ? 'mudou' : ''}" data-n="${n}" data-t="${trilha}">vazio</button>`;
+        return `<button class="es-cel ${mudou ? 'mudou' : ''}" data-n="${n}" data-t="${trilha}"><span class="es-cel-ico ${d.ico}"><i class="fa-solid ${iconeTipo[r.tipo]}"></i></span><span><b>${esc(d.nome)}</b>${d.sub ? `<span class="sub">${esc(d.sub)}</span>` : ''}</span></button>`;
     }
 
     function redesenharGrade() {
         const t = temporadaAtual();
-        const barra = $('.ad-barra-fixa');
-        const grade = $('.ad-grade');
+        const barra = $('.es-barra-fixa');
+        const grade = $('.es-grade');
         if (!t || !barra) return;
         const novo = document.createElement('div');
         novo.innerHTML = gradeRecompensas(t);
-        barra.replaceWith(novo.querySelector('.ad-barra-fixa'));
-        grade.replaceWith(novo.querySelector('.ad-grade'));
+        barra.replaceWith(novo.querySelector('.es-barra-fixa'));
+        grade.replaceWith(novo.querySelector('.es-grade'));
         ligarGrade();
     }
 
@@ -205,7 +209,7 @@
         $('#g-preencher').addEventListener('click', dialogoPreencher);
         $('#g-descartar').addEventListener('click', () => { E.mudancas.clear(); redesenharGrade(); });
         $('#g-salvar').addEventListener('click', salvarRecompensas);
-        document.querySelectorAll('.ad-cel').forEach((b) => b.addEventListener('click', () => editarCelula(+b.dataset.n, b.dataset.t)));
+        document.querySelectorAll('.es-cel').forEach((b) => b.addEventListener('click', () => editarCelula(+b.dataset.n, b.dataset.t)));
     }
 
     async function salvarRecompensas() {
@@ -223,10 +227,10 @@
         const t = temporadaAtual();
         dialogo('Preencher moedas em vários níveis', `
             <p style="color:var(--muda);margin-top:0">Preenche só os slots <b>vazios</b> (não mexe em prêmios que você já definiu). Níveis múltiplos de 5 pagam o dobro e de 10, o triplo.</p>
-            <div class="ad-linha"><div class="ad-campo"><label>Trilha</label><select id="f-trilha"><option value="gratis">Grátis</option><option value="premium">Premium</option></select></div>
-            <div class="ad-campo"><label>Do nível</label><input id="f-de" type="number" min="1" max="${t.niveis}" value="1"></div>
-            <div class="ad-campo"><label>Até o nível</label><input id="f-ate" type="number" min="1" max="${t.niveis}" value="${t.niveis}"></div>
-            <div class="ad-campo"><label>Moedas base</label><input id="f-base" type="number" min="1" value="50"></div></div>`,
+            <div class="es-linha"><div class="es-campo"><label>Trilha</label><select id="f-trilha"><option value="gratis">Grátis</option><option value="premium">Premium</option></select></div>
+            <div class="es-campo"><label>Do nível</label><input id="f-de" type="number" min="1" max="${t.niveis}" value="1"></div>
+            <div class="es-campo"><label>Até o nível</label><input id="f-ate" type="number" min="1" max="${t.niveis}" value="${t.niveis}"></div>
+            <div class="es-campo"><label>Moedas base</label><input id="f-base" type="number" min="1" value="50"></div></div>`,
         [{ texto: 'Cancelar' }, {
             texto: 'Preencher', classe: 'primario', fn: (f) => {
                 const trilha = $('#f-trilha', f).value, de = +$('#f-de', f).value, ate = +$('#f-ate', f).value, base = +$('#f-base', f).value;
@@ -245,7 +249,7 @@
         const atual = recAtual(n, trilha) || { tipo: '' };
         let tipo = atual.tipo || '', valor = atual.valor || '', qtd = atual.quantidade || 100;
         const d = dialogo(`Nível ${n} · trilha ${trilha === 'gratis' ? 'Grátis' : 'Premium'}`, `
-            <div class="ad-campo"><label>O que entrega</label><select id="e-tipo">
+            <div class="es-campo"><label>O que entrega</label><select id="e-tipo">
                 <option value="">Nada (vazio)</option>
                 ${Object.keys(rotuloTipo).map((k) => `<option value="${k}" ${k === tipo ? 'selected' : ''}>${rotuloTipo[k]}</option>`).join('')}</select></div>
             <div id="e-corpo"></div>`,
@@ -271,18 +275,18 @@
         const corpo = $('#e-corpo', d.fundo);
         function pintar() {
             tipo = $('#e-tipo', d.fundo).value;
-            if (tipo === 'moeda') corpo.innerHTML = `<div class="ad-campo"><label>Quantidade de moedas</label><input id="e-qtd" type="number" min="1" max="100000" value="${qtd}"></div>`;
+            if (tipo === 'moeda') corpo.innerHTML = `<div class="es-campo"><label>Quantidade de moedas</label><input id="e-qtd" type="number" min="1" max="100000" value="${qtd}"></div>`;
             else if (tipo === 'item' || tipo === 'titulo' || tipo === 'tema') {
                 const fonte = tipo === 'item' ? E.cat.itens.map((i) => ({ id: i.id, nome: i.nome, sub: `${i.rotulo} · ${i.raridade}` }))
                     : tipo === 'titulo' ? E.cat.titulos.map((t) => ({ id: t.id, nome: t.texto, sub: t.raridade }))
                         : E.cat.temas_app.map((t) => ({ id: t.id, nome: t.nome, sub: 'tema' }));
-                corpo.innerHTML = `<div class="ad-campo"><label>Procurar</label><input id="e-busca" placeholder="digite pra filtrar" autocomplete="off"></div><div class="ad-lista" id="e-lista"></div>
-                    ${tipo === 'tema' && !fonte.length ? '<p class="ad-sub">Nenhum tema de temporada cadastrado.</p>' : ''}`;
+                corpo.innerHTML = `<div class="es-campo"><label>Procurar</label><input id="e-busca" placeholder="digite pra filtrar" autocomplete="off"></div><div class="es-lista" id="e-lista"></div>
+                    ${tipo === 'tema' && !fonte.length ? '<p class="es-sub">Nenhum tema de temporada cadastrado.</p>' : ''}`;
                 const lista = $('#e-lista', corpo);
                 const pintarLista = () => {
                     const q = $('#e-busca', corpo).value.toLowerCase();
                     const f = fonte.filter((x) => !q || x.nome.toLowerCase().includes(q) || x.id.toLowerCase().includes(q)).slice(0, 80);
-                    lista.innerHTML = f.map((x) => `<button type="button" data-id="${esc(x.id)}" class="${x.id === valor ? 'sel' : ''}"><span>${esc(x.nome)}</span><small>${esc(x.sub)} · ${esc(x.id)}</small></button>`).join('') || '<div class="ad-vazio">Nada encontrado.</div>';
+                    lista.innerHTML = f.map((x) => `<button type="button" data-id="${esc(x.id)}" class="${x.id === valor ? 'sel' : ''}"><span>${esc(x.nome)}</span><small>${esc(x.sub)} · ${esc(x.id)}</small></button>`).join('') || '<div class="es-vazio">Nada encontrado.</div>';
                     lista.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { valor = b.dataset.id; pintarLista(); }));
                 };
                 $('#e-busca', corpo).addEventListener('input', pintarLista);
@@ -313,7 +317,7 @@
         $('#t-salvar').addEventListener('click', async () => {
             const corpo = {
                 id: t.id, nome: $('#t-nome').value, subtitulo: $('#t-sub').value, tema: $('#t-tema').value, niveis: +$('#t-niveis').value,
-                xp_por_nivel: +$('#t-xp').value, inicio: $('#t-ini').value, fim: $('#t-fim').value, catchup_dias: +$('#t-cdias').value, catchup_pct: +$('#t-cpct').value,
+                xp_por_nivel: +$('#t-xp').value, inicio: $('#t-ini').value, fim: $('#t-fim').value, catchup_dias: +$('#t-cdias').value, catchup_pct: +$('#t-cpct').value, capitulos: $('#t-caps').value, capitulo_niveis: +$('#t-capn').value,
             };
             try { await api('/passe/temporada', 'POST', corpo); toast('Temporada salva.', 'ok'); E.mudancas.clear(); vPasse(); } catch (e) { /* toast */ }
         });
@@ -335,12 +339,12 @@
         const d = await api(`/passe/temporada/${E.tid}/jogadores`);
         E.jogadores = d.jogadores;
         const t = temporadaAtual();
-        alvo.innerHTML = `<div class="ad-cartao" style="margin-top:16px"><h2>Quem está jogando</h2>
-            <p class="ad-sub" style="margin-bottom:10px">A trilha Premium ainda não tem pagamento: por enquanto é você quem libera (pra testar). ${t && t.ativa ? '' : 'Ative a temporada pra liberar o Premium.'}</p>
-            <div class="ad-linha" style="margin-bottom:12px"><div class="ad-campo largo"><label>Liberar Premium pra alguém (procure por nome ou @)</label><input id="j-busca" placeholder="mínimo 2 letras" autocomplete="off"></div></div>
+        alvo.innerHTML = `<div class="es-cartao" style="margin-top:16px"><h2>Quem está jogando</h2>
+            <p class="es-sub" style="margin-bottom:10px">A trilha Premium ainda não tem pagamento: por enquanto é você quem libera (pra testar). ${t && t.ativa ? '' : 'Ative a temporada pra liberar o Premium.'}</p>
+            <div class="es-linha" style="margin-bottom:12px"><div class="es-campo largo"><label>Liberar Premium pra alguém (procure por nome ou @)</label><input id="j-busca" placeholder="mínimo 2 letras" autocomplete="off"></div></div>
             <div id="j-achados"></div>
-            <table class="ad-tabela"><thead><tr><th>Pessoa</th><th>XP</th><th>Premium</th></tr></thead><tbody>
-            ${E.jogadores.map((j) => `<tr><td>${esc(j.nome)} <small style="color:var(--muda)">@${esc(j.username)}</small></td><td>${j.xp.toLocaleString('pt-BR')}</td><td><button class="ad-btn mini" data-p="${j.id}" data-a="${j.premium ? 0 : 1}">${j.premium ? 'Tirar Premium' : 'Liberar'}</button></td></tr>`).join('') || '<tr><td colspan="3" class="ad-vazio">Ninguém jogou ainda.</td></tr>'}
+            <table class="es-tabela"><thead><tr><th>Pessoa</th><th>XP</th><th>Premium</th></tr></thead><tbody>
+            ${E.jogadores.map((j) => `<tr><td>${esc(j.nome)} <small style="color:var(--muda)">@${esc(j.username)}</small></td><td>${j.xp.toLocaleString('pt-BR')}</td><td><button class="es-btn mini" data-p="${j.id}" data-a="${j.premium ? 0 : 1}">${j.premium ? 'Tirar Premium' : 'Liberar'}</button></td></tr>`).join('') || '<tr><td colspan="3" class="es-vazio">Ninguém jogou ainda.</td></tr>'}
             </tbody></table></div>`;
         alvo.querySelectorAll('button[data-p]').forEach((b) => b.addEventListener('click', () => premium(+b.dataset.p, b.dataset.a === '1')));
         const busca = $('#j-busca', alvo);
@@ -350,7 +354,7 @@
             tm = setTimeout(async () => {
                 if (busca.value.trim().length < 2) { $('#j-achados', alvo).innerHTML = ''; return; }
                 const r = await api('/pessoas?q=' + encodeURIComponent(busca.value));
-                $('#j-achados', alvo).innerHTML = `<div class="ad-lista" style="margin-bottom:12px">${r.pessoas.map((p) => `<button data-p="${p.id}"><span>${esc(p.nome)}</span><small>@${esc(p.username)} · liberar Premium</small></button>`).join('') || '<div class="ad-vazio">Ninguém encontrado.</div>'}</div>`;
+                $('#j-achados', alvo).innerHTML = `<div class="es-lista" style="margin-bottom:12px">${r.pessoas.map((p) => `<button data-p="${p.id}"><span>${esc(p.nome)}</span><small>@${esc(p.username)} · liberar Premium</small></button>`).join('') || '<div class="es-vazio">Ninguém encontrado.</div>'}</div>`;
                 $('#j-achados', alvo).querySelectorAll('button').forEach((b) => b.addEventListener('click', () => premium(+b.dataset.p, true)));
             }, 300);
         });
@@ -368,10 +372,10 @@
     async function vTitulos() {
         const c = await (E.cat = null, catalogo());
         const linhas = c.titulos.map((t) => `<tr><td>${chipTitulo(t)}</td><td>${esc(t.raridade)}</td><td>${esc(t.anim || 'só texto')}</td><td><code>${esc(t.id)}</code></td><td style="color:var(--muda)">${esc(t.descricao)}</td>
-            <td style="white-space:nowrap"><button class="ad-btn mini" data-a="editar" data-id="${esc(t.id)}">Editar</button> <button class="ad-btn mini" data-a="dar" data-id="${esc(t.id)}">Dar a alguém</button> <button class="ad-btn mini perigo" data-a="apagar" data-id="${esc(t.id)}">Apagar</button></td></tr>`).join('');
-        main.innerHTML = `<h1>Títulos</h1><p class="ad-sub">Texto que a pessoa equipa e que aparece no cartão ao lado do @ e dos pronomes. Pode vir do passe, de conquistas ou de um presente seu. Alguns podem ter animação.</p>
-            <div class="ad-linha" style="margin-bottom:14px"><button class="ad-btn primario" id="ti-novo">Novo título</button></div>
-            <div class="ad-cartao"><table class="ad-tabela"><thead><tr><th>Título</th><th>Raridade</th><th>Animação</th><th>Id</th><th>Como se ganha</th><th></th></tr></thead><tbody>${linhas || '<tr><td colspan="6" class="ad-vazio">Nenhum título ainda. Crie um, ou aplique o modelo "Deuses" no passe (ele cria os dele).</td></tr>'}</tbody></table></div>`;
+            <td style="white-space:nowrap"><button class="es-btn mini" data-a="editar" data-id="${esc(t.id)}">Editar</button> <button class="es-btn mini" data-a="dar" data-id="${esc(t.id)}">Dar a alguém</button> <button class="es-btn mini perigo" data-a="apagar" data-id="${esc(t.id)}">Apagar</button></td></tr>`).join('');
+        main.innerHTML = `<h1>Títulos</h1><p class="es-sub">Texto que a pessoa equipa e que aparece no cartão ao lado do @ e dos pronomes. Pode vir do passe, de conquistas ou de um presente seu. Alguns podem ter animação.</p>
+            <div class="es-linha" style="margin-bottom:14px"><button class="es-btn primario" id="ti-novo">Novo título</button></div>
+            <div class="es-cartao"><table class="es-tabela"><thead><tr><th>Título</th><th>Raridade</th><th>Animação</th><th>Id</th><th>Como se ganha</th><th></th></tr></thead><tbody>${linhas || '<tr><td colspan="6" class="es-vazio">Nenhum título ainda. Crie um, ou aplique o modelo "Deuses" no passe (ele cria os dele).</td></tr>'}</tbody></table></div>`;
         $('#ti-novo').addEventListener('click', () => formTitulo(null));
         main.querySelectorAll('button[data-a]').forEach((b) => b.addEventListener('click', () => {
             const t = c.titulos.find((x) => x.id === b.dataset.id);
@@ -384,12 +388,12 @@
     function formTitulo(t) {
         const c = E.cat;
         dialogo(t ? 'Editar título' : 'Novo título', `
-            <div class="ad-campo"><label>Texto (2 a 32 caracteres)</label><input id="ft-texto" maxlength="32" value="${esc(t ? t.texto : '')}"></div>
-            <div class="ad-campo"><label>Id (letras minúsculas e _)</label><input id="ft-id" maxlength="24" value="${esc(t ? t.id : '')}" ${t ? 'disabled' : ''}><small>${t ? 'O id não muda depois de criado.' : 'Ex.: favorito_dos_deuses'}</small></div>
-            <div class="ad-linha"><div class="ad-campo"><label>Raridade</label><select id="ft-rar">${c.raridades_titulo.map((r) => `<option ${t && t.raridade === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
-            <div class="ad-campo"><label>Animação</label><select id="ft-anim"><option value="">Só texto</option>${c.animacoes_titulo.map((a) => `<option ${t && t.anim === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div></div>
-            <div class="ad-campo"><label>Como se ganha (aparece no seletor)</label><input id="ft-desc" maxlength="120" value="${esc(t ? t.descricao : '')}"></div>
-            <div class="ad-campo"><label>Prévia</label><div id="ft-prev" style="padding:8px 0"></div></div>`,
+            <div class="es-campo"><label>Texto (2 a 32 caracteres)</label><input id="ft-texto" maxlength="32" value="${esc(t ? t.texto : '')}"></div>
+            <div class="es-campo"><label>Id (letras minúsculas e _)</label><input id="ft-id" maxlength="24" value="${esc(t ? t.id : '')}" ${t ? 'disabled' : ''}><small>${t ? 'O id não muda depois de criado.' : 'Ex.: favorito_dos_deuses'}</small></div>
+            <div class="es-linha"><div class="es-campo"><label>Raridade</label><select id="ft-rar">${c.raridades_titulo.map((r) => `<option ${t && t.raridade === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+            <div class="es-campo"><label>Animação</label><select id="ft-anim"><option value="">Só texto</option>${c.animacoes_titulo.map((a) => `<option ${t && t.anim === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div></div>
+            <div class="es-campo"><label>Como se ganha (aparece no seletor)</label><input id="ft-desc" maxlength="120" value="${esc(t ? t.descricao : '')}"></div>
+            <div class="es-campo"><label>Prévia</label><div id="ft-prev" style="padding:8px 0"></div></div>`,
         [{ texto: 'Cancelar' }, {
             texto: 'Salvar', classe: 'primario', fn: async (f) => {
                 try {
@@ -398,14 +402,14 @@
                 } catch (e) { return false; }
             },
         }]);
-        const f = document.querySelector('.ad-modal-fundo');
+        const f = document.querySelector('.es-modal-fundo');
         const prev = () => { $('#ft-prev', f).innerHTML = chipTitulo({ texto: $('#ft-texto', f).value || 'Prévia', raridade: $('#ft-rar', f).value, anim: $('#ft-anim', f).value }); };
         ['ft-texto', 'ft-rar', 'ft-anim'].forEach((id) => $('#' + id, f).addEventListener('input', prev));
         prev();
     }
 
     function darTitulo(t) {
-        const d = dialogo(`Dar "${t.texto}" a alguém`, `<div class="ad-campo"><label>Procurar pessoa</label><input id="dt-q" placeholder="nome ou @" autocomplete="off"></div><div id="dt-r"></div>`, [{ texto: 'Fechar' }]);
+        const d = dialogo(`Dar "${t.texto}" a alguém`, `<div class="es-campo"><label>Procurar pessoa</label><input id="dt-q" placeholder="nome ou @" autocomplete="off"></div><div id="dt-r"></div>`, [{ texto: 'Fechar' }]);
         let tm;
         $('#dt-q', d.fundo).addEventListener('input', (e) => {
             clearTimeout(tm);
@@ -413,7 +417,7 @@
                 if (e.target.value.trim().length < 2) return;
                 const r = await api('/pessoas?q=' + encodeURIComponent(e.target.value));
                 const alvo = $('#dt-r', d.fundo);
-                alvo.innerHTML = `<div class="ad-lista">${r.pessoas.map((p) => `<button data-p="${p.id}"><span>${esc(p.nome)}</span><small>@${esc(p.username)}</small></button>`).join('') || '<div class="ad-vazio">Ninguém encontrado.</div>'}</div>`;
+                alvo.innerHTML = `<div class="es-lista">${r.pessoas.map((p) => `<button data-p="${p.id}"><span>${esc(p.nome)}</span><small>@${esc(p.username)}</small></button>`).join('') || '<div class="es-vazio">Ninguém encontrado.</div>'}</div>`;
                 alvo.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => { try { await api('/titulos/conceder', 'POST', { titulo_id: t.id, person_id: +b.dataset.p }); toast('Título entregue.', 'ok'); d.fechar(); } catch (e2) { /* toast */ } }));
             }, 300);
         });
@@ -426,9 +430,9 @@
         const d = await api('/missoes');
         const bloco = (periodo) => d.missoes.filter((m) => m.periodo === periodo).map((m) => `<tr><td><i class="fa-solid fa-${esc(m.icone)}"></i> <b>${esc(m.titulo)}</b></td><td>${esc(m.desc)}</td><td>${m.xp} XP</td><td>${m.drc} moedas</td><td><code>${esc(m.codigo)}</code></td></tr>`).join('');
         const cab = '<thead><tr><th>Missão</th><th>O que pede</th><th>XP</th><th>Prêmio</th><th>Código</th></tr></thead>';
-        main.innerHTML = `<h1>Missões</h1><p class="ad-sub">Cada pessoa recebe <b>${d.regras.diarias} diárias</b> sorteadas por dia e vê <b>${d.regras.oferta_semanais} semanais</b> por semana, das quais <b>escolhe ${d.regras.escolhas_semanais}</b>. Só conta mensagem de verdade (mínimo de tamanho, sem repetir, com intervalo) e reação a mensagens diferentes. Os valores ainda moram em <code>app/utils.py</code> (MISSOES): a edição por aqui entra numa próxima etapa.</p>
-            <div class="ad-cartao"><h2>Diárias (${d.missoes.filter((m) => m.periodo === 'diaria').length})</h2><table class="ad-tabela">${cab}<tbody>${bloco('diaria')}</tbody></table></div>
-            <div class="ad-cartao"><h2>Semanais (${d.missoes.filter((m) => m.periodo === 'semanal').length})</h2><table class="ad-tabela">${cab}<tbody>${bloco('semanal')}</tbody></table></div>`;
+        main.innerHTML = `<h1>Missões</h1><p class="es-sub">Cada pessoa recebe <b>${d.regras.diarias} diárias</b> sorteadas por dia e vê <b>${d.regras.oferta_semanais} semanais</b> por semana, das quais <b>escolhe ${d.regras.escolhas_semanais}</b>. Só conta mensagem de verdade (mínimo de tamanho, sem repetir, com intervalo) e reação a mensagens diferentes. Os valores ainda moram em <code>app/utils.py</code> (MISSOES): a edição por aqui entra numa próxima etapa.</p>
+            <div class="es-cartao"><h2>Diárias (${d.missoes.filter((m) => m.periodo === 'diaria').length})</h2><table class="es-tabela">${cab}<tbody>${bloco('diaria')}</tbody></table></div>
+            <div class="es-cartao"><h2>Semanais (${d.missoes.filter((m) => m.periodo === 'semanal').length})</h2><table class="es-tabela">${cab}<tbody>${bloco('semanal')}</tbody></table></div>`;
     }
 
     // ------------------------------------------------------------
@@ -436,21 +440,184 @@
     // ------------------------------------------------------------
     async function vAdmins() {
         const g = await api('/geral');
-        main.innerHTML = `<h1>Administradores</h1><p class="ad-sub">Quem pode abrir este painel e moderar o Bazar. O poder é guardado pelo <b>id</b> da pessoa (trocar o @ não passa o acesso pra outra).</p>
-            <div class="ad-cartao"><table class="ad-tabela"><tbody>${g.admins.map((a) => `<tr><td><b>${esc(a.nome)}</b> <small style="color:var(--muda)">@${esc(a.username)}</small></td><td style="text-align:right">${a.id === window.EU.id ? '<span class="ad-selo">você</span>' : `<button class="ad-btn mini perigo" data-id="${a.id}">Remover</button>`}</td></tr>`).join('')}</tbody></table></div>
-            <div class="ad-cartao"><h2>Adicionar administrador</h2><div class="ad-campo largo"><label>Procurar pessoa</label><input id="ad-q" placeholder="nome ou @" autocomplete="off"></div><div id="ad-r" style="margin-top:10px"></div></div>`;
+        main.innerHTML = `<h1>Administradores</h1><p class="es-sub">Quem pode abrir este painel e moderar o Bazar. O poder é guardado pelo <b>id</b> da pessoa (trocar o @ não passa o acesso pra outra).</p>
+            <div class="es-cartao"><table class="es-tabela"><tbody>${g.admins.map((a) => `<tr><td><b>${esc(a.nome)}</b> <small style="color:var(--muda)">@${esc(a.username)}</small></td><td style="text-align:right">${a.id === window.EU.id ? '<span class="es-selo">você</span>' : `<button class="es-btn mini perigo" data-id="${a.id}">Remover</button>`}</td></tr>`).join('')}</tbody></table></div>
+            <div class="es-cartao"><h2>Adicionar administrador</h2><div class="es-campo largo"><label>Procurar pessoa</label><input id="es-q" placeholder="nome ou @" autocomplete="off"></div><div id="es-r" style="margin-top:10px"></div></div>`;
         main.querySelectorAll('button[data-id]').forEach((b) => b.addEventListener('click', () => confirmar('Remover o acesso de administrador desta pessoa?', async () => { try { await api('/admins', 'POST', { person_id: +b.dataset.id, ativo: false }); vAdmins(); } catch (e) { return false; } }, 'Remover')));
         let tm;
-        $('#ad-q').addEventListener('input', (e) => {
+        $('#es-q').addEventListener('input', (e) => {
             clearTimeout(tm);
             tm = setTimeout(async () => {
                 if (e.target.value.trim().length < 2) return;
                 const r = await api('/pessoas?q=' + encodeURIComponent(e.target.value));
-                $('#ad-r').innerHTML = `<div class="ad-lista">${r.pessoas.map((p) => `<button data-p="${p.id}"><span>${esc(p.nome)}</span><small>@${esc(p.username)} · tornar admin</small></button>`).join('') || '<div class="ad-vazio">Ninguém encontrado.</div>'}</div>`;
-                $('#ad-r').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => confirmar('Dar acesso de administrador a esta pessoa? Ela poderá mexer no passe, nos títulos e moderar o Bazar.', async () => { try { await api('/admins', 'POST', { person_id: +b.dataset.p, ativo: true }); vAdmins(); } catch (e2) { return false; } }, 'Dar acesso')));
+                $('#es-r').innerHTML = `<div class="es-lista">${r.pessoas.map((p) => `<button data-p="${p.id}"><span>${esc(p.nome)}</span><small>@${esc(p.username)} · tornar admin</small></button>`).join('') || '<div class="es-vazio">Ninguém encontrado.</div>'}</div>`;
+                $('#es-r').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => confirmar('Dar acesso de administrador a esta pessoa? Ela poderá mexer no passe, nos títulos e moderar o Bazar.', async () => { try { await api('/admins', 'POST', { person_id: +b.dataset.p, ativo: true }); vAdmins(); } catch (e2) { return false; } }, 'Dar acesso')));
             }, 300);
         });
     }
+
+    // ------------------------------------------------------------
+    // EFEITOS (Estúdio: receita JSON -> motor js/efeitos.js). O esquema das camadas vem do servidor (a única definição).
+    // ------------------------------------------------------------
+    const XE = { lista: [], esquema: {}, raridades: [], maxCamadas: 6, atual: null, novo: true, timer: null };
+    const PRESETS = {
+        efeito_perfil: {
+            'Poeira dourada': { pausa: 0, camadas: [{ tipo: 'particulas', cor: '#f2c14e', cor2: '#ffffff', qtd: 22, tam: 5, dur: 6, dir: 'cima', forma: 'circulo', brilho: 70 }, { tipo: 'brilho', cor: '#f2c14e', pos: 'base', forca: 30, dur: 6 }] },
+            'Neve': { pausa: 0, camadas: [{ tipo: 'particulas', cor: '#ffffff', cor2: '#bfe3ff', qtd: 30, tam: 5, dur: 9, dir: 'baixo', forma: 'circulo', brilho: 40 }] },
+            'Brasas': { pausa: 0, camadas: [{ tipo: 'particulas', cor: '#ff7a1f', cor2: '#ffd23f', qtd: 26, tam: 4, dur: 5, dir: 'cima', forma: 'losango', brilho: 80 }, { tipo: 'brilho', cor: '#ff4d1f', pos: 'base', forca: 40, dur: 4 }] },
+            'Tempestade': { pausa: 3, camadas: [{ tipo: 'raios', cor: '#bfe3ff', qtd: 5, dur: 6 }, { tipo: 'brilho', cor: '#7cc4ff', pos: 'topo', forca: 45, dur: 6 }] },
+            'Código verde': { pausa: 0, camadas: [{ tipo: 'particulas', cor: '#3dff7a', cor2: '#0f8a3a', qtd: 34, tam: 4, dur: 4, dir: 'baixo', forma: 'quadrado', brilho: 50 }] },
+            'Estrelas': { pausa: 6, camadas: [{ tipo: 'particulas', cor: '#fff3b8', cor2: '#d9c8ff', qtd: 14, tam: 7, dur: 7, dir: 'dir', forma: 'estrela', brilho: 80 }] },
+        },
+        efeito_avatar: {
+            'Onda dourada': { pausa: 0, camadas: [{ tipo: 'anel', cor: '#f2c14e', esp: 2, dur: 2.4 }] },
+            'Satélites': { pausa: 0, camadas: [{ tipo: 'orbita', cor: '#ffffff', qtd: 3, tam: 4, dur: 4 }] },
+            'Aura azul': { pausa: 2, camadas: [{ tipo: 'brilho', cor: '#7cc4ff', pos: 'centro', forca: 60, dur: 3 }, { tipo: 'anel', cor: '#7cc4ff', esp: 2, dur: 3 }] },
+            'Brasa viva': { pausa: 0, camadas: [{ tipo: 'brilho', cor: '#ff5a1f', pos: 'centro', forca: 55, dur: 2.2 }, { tipo: 'orbita', cor: '#ffd23f', qtd: 4, tam: 3, dur: 3 }] },
+        },
+    };
+
+    const novoEfeito = (tipo) => ({ id: '', nome: '', tipo: tipo || 'efeito_perfil', raridade: 'epico', descricao: '', receita: { pausa: 0, camadas: [] } });
+    const camadaPadrao = (tipo) => { const c = { tipo }; Object.entries(XE.esquema[tipo].params).forEach(([k, p]) => { c[k] = p.padrao; }); return c; };
+
+    async function vEfeitos() {
+        const d = await api('/efeitos');
+        XE.lista = d.efeitos; XE.esquema = d.esquema; XE.raridades = d.raridades; XE.maxCamadas = d.max_camadas;
+        if (!XE.atual) { XE.atual = novoEfeito(); XE.novo = true; }
+        desenharEfeitos();
+    }
+
+    function desenharEfeitos() {
+        const lista = XE.lista.map((e) => `<button class="es-ef-item ${!XE.novo && XE.atual && XE.atual.id === e.id ? 'sel' : ''}" data-id="${esc(e.id)}"><b>${esc(e.nome)}</b><small>${e.tipo === 'efeito_perfil' ? 'cartão' : 'avatar'} · ${esc(e.raridade)} · ${esc(e.id)}</small></button>`).join('');
+        main.innerHTML = `<h1>Efeitos</h1><p class="es-sub">Crie efeitos de <b>cartão de perfil</b> e de <b>avatar</b> montando camadas, sem código. Mexa nos controles e veja a prévia ao vivo. Ao salvar, o efeito entra no catálogo: dá pra <b>dar a alguém</b>, usar como <b>recompensa do passe</b> e, depois, vender. Só vale o que está na lista de camadas (nada de código livre), por isso é seguro.</p>
+            <div class="es-ef-layout"><div class="es-ef-lado"><button class="es-btn primario" id="ef-novo">Novo efeito</button><div class="es-ef-lista">${lista || '<div class="es-vazio">Nenhum efeito ainda.</div>'}</div></div>
+            <div class="es-ef-editor" id="ef-editor"></div></div>`;
+        $('#ef-novo').addEventListener('click', () => { XE.atual = novoEfeito(); XE.novo = true; desenharEfeitos(); });
+        main.querySelectorAll('.es-ef-item').forEach((b) => b.addEventListener('click', () => { const e = XE.lista.find((x) => x.id === b.dataset.id); XE.atual = JSON.parse(JSON.stringify(e)); XE.novo = false; desenharEfeitos(); }));
+        desenharEditorEfeito();
+    }
+
+    function controle(p, valor, i, nome) {
+        const id = `c${i}-${nome}`;
+        if (p.t === 'num') return `<div class="es-campo"><label for="${id}">${esc(p.rotulo)} <b data-v="${id}">${valor}</b></label><input id="${id}" type="range" min="${p.min}" max="${p.max}" step="${p.max - p.min <= 20 ? 0.5 : 1}" value="${valor}" data-i="${i}" data-p="${nome}" data-t="num"></div>`;
+        if (p.t === 'cor') return `<div class="es-campo"><label for="${id}">${esc(p.rotulo)}</label><input id="${id}" type="color" value="${esc(valor)}" data-i="${i}" data-p="${nome}" data-t="cor"></div>`;
+        return `<div class="es-campo"><label for="${id}">${esc(p.rotulo)}</label><select id="${id}" data-i="${i}" data-p="${nome}" data-t="opcao">${p.opcoes.map((o) => `<option ${o === valor ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+    }
+
+    function desenharEditorEfeito() {
+        const e = XE.atual, alvo = $('#ef-editor');
+        if (!alvo) return;
+        const tipos = Object.keys(XE.esquema).filter((t) => XE.esquema[t].slots.includes(e.tipo));
+        const presets = Object.keys(PRESETS[e.tipo] || {}).map((n) => `<option>${esc(n)}</option>`).join('');
+        const camadas = e.receita.camadas.map((c, i) => `<div class="es-camada"><div class="es-camada-cab"><b>${esc(XE.esquema[c.tipo].nome)}</b><span class="es-dica">${esc(XE.esquema[c.tipo].dica)}</span>
+            <span class="es-camada-acoes"><button class="es-btn mini" data-a="sobe" data-i="${i}" title="Subir">↑</button><button class="es-btn mini" data-a="desce" data-i="${i}" title="Descer">↓</button><button class="es-btn mini perigo" data-a="tira" data-i="${i}">Remover</button></span></div>
+            <div class="es-camada-corpo">${Object.entries(XE.esquema[c.tipo].params).map(([k, p]) => controle(p, c[k], i, k)).join('')}</div></div>`).join('');
+        alvo.innerHTML = `<div class="es-cartao"><h2>${XE.novo ? 'Novo efeito' : 'Editando: ' + esc(e.nome)}</h2>
+            <div class="es-linha"><div class="es-campo largo"><label>Nome (2 a 40)</label><input id="ef-nome" maxlength="40" value="${esc(e.nome)}"></div>
+                <div class="es-campo"><label>Id (letras minúsculas e _)</label><input id="ef-id" maxlength="24" value="${esc(e.id)}" ${XE.novo ? '' : 'disabled'}></div></div>
+            <div class="es-linha" style="margin-top:12px"><div class="es-campo"><label>Onde aparece</label><select id="ef-tipo" ${XE.novo ? '' : 'disabled'}><option value="efeito_perfil" ${e.tipo === 'efeito_perfil' ? 'selected' : ''}>Cartão de perfil</option><option value="efeito_avatar" ${e.tipo === 'efeito_avatar' ? 'selected' : ''}>Avatar</option></select></div>
+                <div class="es-campo"><label>Raridade</label><select id="ef-rar">${XE.raridades.map((r) => `<option ${r === e.raridade ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+                <div class="es-campo largo"><label>Descrição (aparece pra quem ganhar)</label><input id="ef-desc" maxlength="120" value="${esc(e.descricao)}"></div></div></div>
+            <div class="es-ef-colunas"><div>
+                <div class="es-cartao"><h2>Camadas</h2><div class="es-linha"><div class="es-campo"><label>Começar de um modelo</label><select id="ef-preset"><option value="">(escolher)</option>${presets}</select></div>
+                    <div class="es-campo"><label>Adicionar camada</label><select id="ef-add"><option value="">(escolher)</option>${tipos.map((t) => `<option value="${t}">${esc(XE.esquema[t].nome)}</option>`).join('')}</select></div></div>
+                    <div class="es-campo" style="margin-top:12px"><label for="ef-pausa">Pausa entre uma passada e outra <b data-v="ef-pausa">${e.receita.pausa}</b> s</label><input id="ef-pausa" type="range" min="0" max="15" step="0.5" value="${e.receita.pausa}"><small>0 = sem parar. Com pausa, a cena toca e fica parada um tempo antes de recomeçar.</small></div>
+                    <div class="es-camadas">${camadas || '<div class="es-vazio">Sem camadas. Escolha um modelo ou adicione uma.</div>'}</div></div></div>
+                <div><div class="es-cartao es-prev-caixa"><h2>Prévia ao vivo</h2>
+                    <div class="es-prev-cartao"><div class="es-prev-faixa"></div><div class="es-prev-av"><span class="es-prev-img">A</span><i class="ef-av ef-av-custom" id="pv-av" data-pv="1"></i></div><div class="es-prev-nome">Seu nome</div><div class="es-prev-sub">@voce</div><div class="ef-pf ef-pf-custom" id="pv-pf" data-pv="1"></div></div>
+                    <div class="es-linha" style="margin-top:12px"><button class="es-btn primario" id="ef-salvar">${XE.novo ? 'Criar efeito' : 'Salvar alterações'}</button>
+                        ${XE.novo ? '' : '<button class="es-btn" id="ef-mim">Dar a mim</button><button class="es-btn" id="ef-dar">Dar a alguém</button><button class="es-btn" id="ef-dup">Duplicar</button><button class="es-btn perigo" id="ef-apagar">Apagar</button>'}</div>
+                    ${XE.novo ? '' : `<p class="es-dica" style="margin-top:10px">Item no catálogo: <code>${esc(e.tipo + ':' + e.id)}</code>. No Passe de Batalha, escolha "Item" e procure por ele.</p>`}</div></div></div>`;
+        ligarEditorEfeito();
+        pintarPrevia();
+    }
+
+    function pintarPrevia() {
+        const e = XE.atual, pv = e.tipo === 'efeito_perfil' ? $('#pv-pf') : $('#pv-av');
+        const outro = e.tipo === 'efeito_perfil' ? $('#pv-av') : $('#pv-pf');
+        if (outro) outro.replaceChildren();
+        if (pv) Efeitos.previa(pv, e.receita, e.id || 'previa');
+    }
+
+    function agendarPrevia() { clearTimeout(XE.timer); XE.timer = setTimeout(pintarPrevia, 90); }
+
+    function ligarEditorEfeito() {
+        const e = XE.atual, alvo = $('#ef-editor');
+        $('#ef-nome').addEventListener('input', (x) => { e.nome = x.target.value; });
+        if (XE.novo) {
+            $('#ef-id').addEventListener('input', (x) => { e.id = x.target.value; });
+            $('#ef-nome').addEventListener('input', () => { const idc = $('#ef-id'); if (!idc.dataset.tocado) { e.id = e.nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24); idc.value = e.id; } });
+            $('#ef-id').addEventListener('input', (x) => { x.target.dataset.tocado = '1'; });
+            $('#ef-tipo').addEventListener('change', (x) => { e.tipo = x.target.value; e.receita = { pausa: 0, camadas: [] }; desenharEditorEfeito(); });
+        }
+        $('#ef-rar').addEventListener('change', (x) => { e.raridade = x.target.value; });
+        $('#ef-desc').addEventListener('input', (x) => { e.descricao = x.target.value; });
+        $('#ef-pausa').addEventListener('input', (x) => { e.receita.pausa = +x.target.value; $('[data-v="ef-pausa"]').textContent = x.target.value; agendarPrevia(); });
+        $('#ef-preset').addEventListener('change', (x) => { const p = (PRESETS[e.tipo] || {})[x.target.value]; if (!p) return; e.receita = JSON.parse(JSON.stringify(p)); desenharEditorEfeito(); });
+        $('#ef-add').addEventListener('change', (x) => {
+            if (!x.target.value) return;
+            if (e.receita.camadas.length >= XE.maxCamadas) { toast(`No máximo ${XE.maxCamadas} camadas.`, 'erro'); x.target.value = ''; return; }
+            e.receita.camadas.push(camadaPadrao(x.target.value)); desenharEditorEfeito();
+        });
+        alvo.querySelectorAll('.es-camada input, .es-camada select').forEach((c) => c.addEventListener('input', () => {
+            const camada = e.receita.camadas[+c.dataset.i], t = c.dataset.t;
+            camada[c.dataset.p] = t === 'num' ? +c.value : c.value;
+            const rot = alvo.querySelector(`[data-v="${c.id}"]`); if (rot) rot.textContent = c.value;
+            agendarPrevia();
+        }));
+        alvo.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => {
+            const i = +b.dataset.i, cs = e.receita.camadas;
+            if (b.dataset.a === 'tira') cs.splice(i, 1);
+            else { const j = b.dataset.a === 'sobe' ? i - 1 : i + 1; if (j < 0 || j >= cs.length) return; [cs[i], cs[j]] = [cs[j], cs[i]]; }
+            desenharEditorEfeito();
+        }));
+        $('#ef-salvar').addEventListener('click', async () => {
+            try {
+                const r = await api('/efeitos', 'POST', { id: e.id, nome: e.nome, tipo: e.tipo, raridade: e.raridade, descricao: e.descricao, receita: e.receita });
+                toast(XE.novo ? 'Efeito criado!' : 'Efeito salvo. Quem está conectado já vê a mudança.', 'ok');
+                E.cat = null; XE.novo = false;
+                const d = await api('/efeitos'); XE.lista = d.efeitos; XE.atual = JSON.parse(JSON.stringify(XE.lista.find((x) => x.id === r.id)));
+                desenharEfeitos();
+            } catch (x) { /* o toast já mostrou o motivo */ }
+        });
+        $('#ef-mim')?.addEventListener('click', async () => { try { await api('/itens/conceder', 'POST', { item_id: e.tipo + ':' + e.id, person_id: window.EU.id }); toast('Entregue pra você: abra o Inventário no app e equipe.', 'ok'); } catch (x) { /* toast */ } });
+        $('#ef-dar')?.addEventListener('click', () => darItem(e.tipo + ':' + e.id, e.nome));
+        $('#ef-dup')?.addEventListener('click', () => { XE.atual = { ...JSON.parse(JSON.stringify(e)), id: '', nome: e.nome + ' (cópia)' }; XE.novo = true; desenharEfeitos(); });
+        $('#ef-apagar')?.addEventListener('click', () => confirmar(`Apagar o efeito "${e.nome}"? Ele some de quem o tem (inventário e perfil) e das recompensas que o usam.`, async () => {
+            try { await api('/efeitos/' + encodeURIComponent(e.id), 'DELETE'); toast('Efeito apagado.', 'ok'); E.cat = null; XE.atual = null; vEfeitos(); } catch (x) { return false; }
+        }, 'Apagar'));
+    }
+
+    function darItem(itemId, nome) {
+        const d = dialogo(`Dar "${nome}" a alguém`, '<div class="es-campo"><label>Procurar pessoa</label><input id="di-q" placeholder="nome ou @" autocomplete="off"></div><div id="di-r"></div>', [{ texto: 'Fechar' }]);
+        let tm;
+        $('#di-q', d.fundo).addEventListener('input', (ev) => {
+            clearTimeout(tm);
+            tm = setTimeout(async () => {
+                if (ev.target.value.trim().length < 2) return;
+                const r = await api('/pessoas?q=' + encodeURIComponent(ev.target.value));
+                const alvo = $('#di-r', d.fundo);
+                alvo.innerHTML = `<div class="es-lista">${r.pessoas.map((p) => `<button data-p="${p.id}"><span>${esc(p.nome)}</span><small>@${esc(p.username)}</small></button>`).join('') || '<div class="es-vazio">Ninguém encontrado.</div>'}</div>`;
+                alvo.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => { try { await api('/itens/conceder', 'POST', { item_id: itemId, person_id: +b.dataset.p }); toast('Entregue.', 'ok'); d.fechar(); } catch (e2) { /* toast */ } }));
+            }, 300);
+        });
+    }
+    VISTAS.efeitos = vEfeitos;
+
+    // ------------------------------------------------------------
+    // SERVIDORES PÚBLICOS (Explorar): o admin vê e pode tirar do ar
+    // ------------------------------------------------------------
+    async function vServidores() {
+        const d = await api('/servidores');
+        main.innerHTML = `<h1>Servidores públicos</h1><p class="es-sub">Os servidores que aparecem no <b>Explorar</b> (o mar de barquinhos). Quem decide aparecer é o dono do servidor, nas configurações dele. Aqui você pode <b>tirar do Explorar</b> o que for inadequado: o servidor continua existindo, só deixa de ser descoberto.</p>
+            <div class="es-cartao"><table class="es-tabela"><thead><tr><th>Servidor</th><th>Dono</th><th>Membros</th><th>Tema</th><th>Descrição</th><th></th></tr></thead><tbody>
+            ${d.servidores.map((x) => `<tr><td><b>${esc(x.nome)}</b> <small style="color:var(--muda)">#${x.id}</small></td><td>${esc(x.dono)}</td><td>${x.membros}</td><td>${esc(x.tema)}</td><td style="color:var(--muda)">${esc(x.descricao)}</td><td><button class="es-btn mini perigo" data-id="${x.id}" data-nome="${esc(x.nome)}">Tirar do Explorar</button></td></tr>`).join('') || '<tr><td colspan="6" class="es-vazio">Nenhum servidor público ainda.</td></tr>'}
+            </tbody></table></div>`;
+        main.querySelectorAll('button[data-id]').forEach((b) => b.addEventListener('click', () => confirmar(`Tirar "${b.dataset.nome}" do Explorar? Os membros continuam no servidor.`, async () => {
+            try { await api(`/servidores/${b.dataset.id}/despublicar`, 'POST', {}); toast('Servidor tirado do Explorar.', 'ok'); vServidores(); } catch (e) { return false; }
+        }, 'Tirar')));
+    }
+    VISTAS.servidores = vServidores;
 
     window.addEventListener('beforeunload', (e) => { if (E.mudancas.size) { e.preventDefault(); e.returnValue = ''; } });
     ir((location.hash || '#geral').slice(1) in VISTAS ? (location.hash || '#geral').slice(1) : 'geral');

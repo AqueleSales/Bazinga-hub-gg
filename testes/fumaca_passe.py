@@ -12,7 +12,7 @@ from app import passe, passe_events, utils as u
 from app import cosmeticos as cos
 from app.bazar import definir_admin
 from app.models import (Role, Person, Posse, MovimentoDrc, PasseTemporada, PasseRecompensa, PassePessoa, PasseResgate, Titulo,
-                        MissaoProgresso, br_now)
+                        MissaoProgresso, EfeitoCustom, br_now)
 
 app = create_app()
 falhas = []
@@ -98,12 +98,26 @@ with app.app_context():
     passe.invalidar_cache()
     ok(passe.estado(pessoa('ana')) == {'ativa': False, 'admin': False}, 'Sem temporada ativa: o passe diz isso')
 
+    # ---------- 2b. a Odisseia: cantos, itens e efeitos do Estúdio no modelo ----------
+    itens_modelo = {x['valor'] for x in recs if x['tipo'] == 'item'}
+    ok({'moldura:egide', 'moldura:tridente', 'placa:vinho_escuro', 'placa:colunata', 'faixa:trirreme', 'nome:bronze'} <= itens_modelo, 'O modelo usa os itens novos da Odisseia (nenhum caiu pra moeda por falta de item)')
+    ok({'efeito_perfil:lira_de_apolo', 'efeito_perfil:noite_de_nyx', 'efeito_perfil:brasas_de_hefesto', 'efeito_avatar:tridente_azul'} <= itens_modelo, 'O modelo cria e usa efeitos feitos no Estúdio (receita, sem código)')
+    ok(EfeitoCustom.query.count() == 4 and all(x['valor'] in cos.CATALOGO for x in recs if x['tipo'] == 'item'), 'Os 4 efeitos do Estúdio existem no banco e no catálogo')
+    ok(len({x['valor'] for x in recs if x['tipo'] == 'titulo'}) == len(passe.TITULOS_MODELO) == 15, 'Os 15 títulos do modelo são todos usados (nenhum sobrando)')
+    ok(len(itens_modelo) >= 19 and len([x for x in recs if x['tipo'] != 'moeda']) >= 36, 'A trilha tem prêmio de verdade a cada poucos níveis (19+ itens, 36+ prêmios que não são moeda)')
+    ok(all(por[(n, 'gratis')]['tipo'] != 'moeda' for n in range(10, 101, 10)), 'Todo fim de canto (10, 20...100) tem um prêmio grande na trilha Grátis')
+    ok(all(por[(n, 'premium')]['tipo'] != 'moeda' for n in (10, 20, 30, 40, 50, 60, 70, 80, 100)), '...e na Premium (menos o 90, que é pra ter um respiro de moedas)')
+    passe.invalidar_cache()
+    tcap = db.session.get(PasseTemporada, tid)
+    ok(len(passe._ler_capitulos(tcap.capitulos)) == 10 and tcap.capitulo_niveis == 10, 'O modelo guarda 10 capítulos de 10 níveis')
+
     # ---------- 3. ativar, XP do passe, janela e catch-up ----------
     ok(fc_adm.post(f'/admin/api/passe/temporada/{tid}/ativar', json={'ativa': True}, headers=H).get_json().get('ok'), 'Ativar a temporada')
     ana = pessoa('ana'); xp_conta0 = ana.xp
     st = passe.estado(ana)
     ok(st['ativa'] and st['nivel'] == 0 and st['niveis_total'] == 100 and len(st['niveis']) == 100, 'Estado: nível 0 de 100')
     ok(st['pendentes'] == 0 and st['segundos_restantes'] is None and not st['premium'], 'Sem data: sem contagem; sem premium; nada pendente')
+    ok(len(st['capitulos']) == 10 and st['capitulos'][0] == {'n': 1, 'nome': 'Ítaca', 'de': 1, 'ate': 10} and st['capitulos'][9]['ate'] == 100 and st['capitulo_atual'] == 1, 'Estado traz os 10 cantos (níveis de cada um) e o canto em que a pessoa está')
     u.registrar_eventos(ana, {}, xp_extra=2000, motivo='tempo')
     pp = PassePessoa.query.filter_by(person_id=ids['ana'], temporada_id=tid).first()
     ok(pp and pp.xp == 2000, f'O XP da conta também vale pro passe ({pp.xp if pp else None})')
@@ -161,6 +175,7 @@ with app.app_context():
     ok({'tema:templo', 'tema:tartaro'} <= posses, 'Temas de temporada viram posse "tema:<id>"')
     ok(Posse.query.filter_by(person_id=ids['ana'], item_id='moldura:louros').first().origem == 'passe', 'Origem da posse: passe')
     ok(PasseResgate.query.filter_by(person_id=ids['ana']).count() == 200, 'Os 200 slots resgatados (grátis + premium)')
+    ok(passe.estado(pessoa('ana'))['capitulo_atual'] == 10, 'No nível 100 o canto atual é o último (A Volta ao Olimpo)')
     ok(passe.estado(pessoa('ana'))['pendentes'] == 0 and passe.estado(pessoa('ana'))['nivel'] == 100, 'Passe completo: nada pendente, nível 100 (teto)')
     u.registrar_eventos(pessoa('ana'), {}, xp_extra=50000, motivo='tempo')
     ok(PassePessoa.query.filter_by(person_id=ids['ana']).first().xp == 80000, 'O XP do passe para no teto (niveis x xp_por_nivel)')
@@ -264,9 +279,22 @@ with app.app_context():
     ok(levanta(passe.ErroPasse, lambda: passe.apagar_temporada(tid)), 'Temporada com gente jogando não se apaga (só se encerra)')
     passe.apagar_temporada(t2)
     ok(db.session.get(PasseTemporada, t2) is None, 'Temporada sem progresso se apaga')
-    passe.apagar_titulo('mortal_ilustre')
-    ok(not Posse.query.filter_by(item_id='titulo:mortal_ilustre').count() and passe.titulo_publico('mortal_ilustre') is None, 'Apagar título tira a posse de todo mundo')
+    passe.apagar_titulo('navegante_do_egeu')
+    ok(not Posse.query.filter_by(item_id='titulo:navegante_do_egeu').count() and passe.titulo_publico('navegante_do_egeu') is None, 'Apagar título tira a posse de todo mundo')
     passe.ativar_temporada(tid)
+
+    # capítulos: validação
+    ok(levanta(passe.ErroPasse, lambda: passe.salvar_temporada({'nome': 'Teste', 'niveis': 10, 'capitulo_niveis': 1})), 'Capítulo com menos de 3 níveis: recusado')
+    caps_txt = chr(10).join(['Um', '', '  Dois  ', 'x' * 100, 'Quatro'])
+    tcap2 = passe.salvar_temporada({'nome': 'Com cantos', 'tema': 'neutro', 'niveis': 25, 'xp_por_nivel': 500, 'capitulos': caps_txt, 'capitulo_niveis': 10})
+    t2 = db.session.get(PasseTemporada, tcap2)
+    nomes2 = passe._ler_capitulos(t2.capitulos)
+    ok(nomes2[:2] == ['Um', 'Dois'] and len(nomes2[2]) == 40 and len(nomes2) == 4, 'Capítulos: linhas vazias somem, espaços saem, nome limitado a 40')
+    snap2 = {'niveis': 25, 'capitulos': nomes2, 'capitulo_niveis': 10}
+    cc = passe.capitulos_da_temporada(snap2)
+    ok([(c['de'], c['ate']) for c in cc] == [(1, 10), (11, 20), (21, 25)], 'O último capítulo é cortado no fim da temporada e capítulo além do fim some')
+    passe.apagar_temporada(tcap2)
+    ok(passe._ler_capitulos('lixo{') == [] and passe._ler_capitulos('{"a":1}') == [], 'JSON de capítulos quebrado vira lista vazia')
 
     # ---------- 8. missões: 5 diárias, semanais por escolha ----------
     ok(u.QTD_DIARIAS == 5 and u.ESCOLHAS_SEMANAIS == 3 and len(u.POOL_DIARIAS) >= 10 and len(u.POOL_SEMANAIS) >= 14, 'Pool maior: 5 diárias, escolher 3 semanais')

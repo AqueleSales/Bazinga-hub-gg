@@ -538,6 +538,7 @@ const Cosm = (() => {
     const EFEITOS_PERFIL = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga', 'olimpo', 'tempestade'];
 
     function htmlEfeitoAvatar(id) {
+        if (typeof Efeitos !== 'undefined' && Efeitos.tem(id, 'efeito_avatar')) return Efeitos.htmlAvatar(id);   // efeito criado no Estúdio (receita JSON)
         if (!EFEITOS_AVATAR.includes(id)) return '';
         if (id === 'sasuke') return '<i class="ef-av ef-av-sasuke" aria-hidden="true"></i>';   // olho brilhante: só CSS (anel que acende em vermelho)
         if (id === 'gojo') return '<i class="ef-av ef-av-gojo" aria-hidden="true"><b class="gj-g"><i class="gj-azul"></i><b class="gj-v"><i class="gj-verm"></i></b><i class="gj-roxo"></i></b></i>';
@@ -548,6 +549,7 @@ const Cosm = (() => {
     // "pular"); os raios do Sasuke sorteiam uma posição nova a cada ciclo (ver `sortearPosicao`), então aparecem
     // "do nada" em lugares diferentes.
     function htmlEfeitoPerfil(id) {
+        if (typeof Efeitos !== 'undefined' && Efeitos.tem(id, 'efeito_perfil')) return Efeitos.htmlPerfil(id);   // efeito criado no Estúdio (receita JSON)
         if (!EFEITOS_PERFIL.includes(id)) return '';
         if (id === 'sasuke') {
             const caminhos = ['M12 0 L7 22 L15 24 L6 52 L16 54 L4 96', 'M10 0 L14 18 L6 30 L13 46 L5 70',

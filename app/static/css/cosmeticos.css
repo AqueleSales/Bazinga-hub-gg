@@ -1643,3 +1643,56 @@ body.mt-aberta { overflow: hidden; }
     .moldura-louros::before, .moldura-coroa_zeus::before, .banner-anim-partenon, .ne-olimpo, .ne-ambrosia, .ef-pf-olimpo i, .ef-pf-tempestade *, .ef-pf-tempestade::after, .ef-av-relampago b { animation: none !important; }
     .ef-pf-olimpo i { display: none; }
 }
+
+
+/* ==================== TEMPORADA 1 (cont.): a Odisseia ====================
+   Mais itens do passe de Deuses: Égide de Atena, Tridente de Poseidon, o mar de vinho de Homero, colunata, trirreme e bronze. Arte própria em CSS. */
+.moldura-egide::before { background: repeating-conic-gradient(from var(--bp-angulo), #aebfcf 0 5deg, #5d7790 5deg 9deg, #e8f1f8 9deg 10deg, #3f566b 10deg 14deg); animation: bpGira 50s linear infinite; }
+.moldura-tridente::before { background: conic-gradient(from var(--bp-angulo), #1b7f9e, #7be0ef 14%, #1b7f9e 28%, #0e4a68 42%, #7be0ef 58%, #1b7f9e 72%, #0e4a68 86%, #1b7f9e); animation: bpGira 8s linear infinite; }
+
+/* o "mar cor de vinho" de Homero: vinho escuro com ondas */
+.placa-vinho_escuro, .user-profile-bar.placa-vinho_escuro {
+    background-color: #2b0f21 !important;
+    background-image:
+        radial-gradient(ellipse 14px 7px at 50% 100%, transparent 62%, rgba(214, 120, 150, .38) 66% 74%, transparent 78%),
+        radial-gradient(ellipse 14px 7px at 50% 100%, transparent 62%, rgba(214, 120, 150, .22) 66% 74%, transparent 78%),
+        linear-gradient(90deg, #35122a, #44193a 50%, #35122a) !important;
+    background-size: 28px 14px, 28px 14px, 100% 100% !important;
+    background-position: 0 4px, 14px 11px, 0 0 !important;
+    background-repeat: repeat-x, repeat-x, no-repeat !important;
+    animation: placaVinho 7s linear infinite !important;
+}
+@keyframes placaVinho { to { background-position: 28px 4px, 42px 11px, 0 0; } }
+
+/* colunata: colunas de mármore sobre pedra escura (opacidade baixa pra o nome continuar legível) */
+.placa-colunata, .user-profile-bar.placa-colunata {
+    background-color: #25231e !important;
+    background-image:
+        linear-gradient(0deg, rgba(222, 214, 190, .30) 0 8%, transparent 8%),
+        linear-gradient(180deg, rgba(222, 214, 190, .30) 0 8%, transparent 8%),
+        repeating-linear-gradient(90deg, rgba(222, 214, 190, .13) 0 10px, rgba(0, 0, 0, .22) 10px 13px, transparent 13px 30px),
+        linear-gradient(90deg, #2c2a24, #35322a 50%, #2c2a24) !important;
+    background-size: 100% 100% !important; background-repeat: no-repeat !important; animation: none !important;
+}
+
+/* trirreme: um barco de velas ao entardecer cruzando o mar */
+.banner-anim-trirreme { background-color: #14324f; background-repeat: no-repeat, no-repeat, no-repeat, repeat-x, repeat-x, no-repeat;
+    background-image:
+        linear-gradient(to top right, #efe3bd 49%, transparent 50%),
+        linear-gradient(#5a3a1a, #5a3a1a),
+        linear-gradient(#3a2411, #3a2411),
+        radial-gradient(ellipse 16px 7px at 50% 100%, transparent 62%, rgba(255, 255, 255, .28) 66% 74%, transparent 78%),
+        radial-gradient(ellipse 16px 7px at 50% 100%, transparent 62%, rgba(255, 255, 255, .16) 66% 74%, transparent 78%),
+        linear-gradient(180deg, #2a3560 0 38%, #d9824a 38% 46%, #1a5a86 46%);
+    background-size: 46px 52px, 62px 8px, 3px 56px, 32px 16px, 32px 16px, 100% 100%;
+    background-position: 14% 22%, 12% 80%, 22% 44%, 0 100%, 16px 86%, 0 0;
+    animation: faixaTrirreme 26s linear infinite; }
+@keyframes faixaTrirreme { from { background-position: -80px 22%, -90px 80%, -64px 44%, 0 100%, 16px 86%, 0 0; } to { background-position: 760px 22%, 750px 80%, 774px 44%, -32px 100%, -16px 86%, 0 0; } }
+
+.ne-bronze { font-family: Georgia, 'Times New Roman', serif; font-weight: 800; letter-spacing: .3px; color: transparent !important; -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: .3px rgba(40, 20, 0, .55);
+    background-image: linear-gradient(100deg, #8a5a2b 0 30%, #f0c48a 45%, #b9783a 55%, #8a5a2b 70% 100%); background-size: 280% auto; animation: neBronze 7s linear infinite; }
+@keyframes neBronze { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .moldura-egide::before, .moldura-tridente::before, .placa-vinho_escuro, .banner-anim-trirreme, .ne-bronze { animation: none !important; }
+}

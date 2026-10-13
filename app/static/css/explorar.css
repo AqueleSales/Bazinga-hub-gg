@@ -1,0 +1,78 @@
+/* Explorar servidores: o mar com barquinhos. Chapado e fosco (sem gradiente); só transform se mexe. */
+#explorar-modal { display: none; align-items: center; justify-content: center; padding: 16px; }
+.ex-janela { position: relative; width: min(1120px, 100%); height: min(94vh, 880px); display: flex; flex-direction: column; background: var(--bg-primary); border: 1px solid color-mix(in srgb, var(--text-header) 14%, transparent); border-radius: 18px; overflow: hidden; }
+.ex-topo { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: var(--bg-secondary); border-bottom: 1px solid color-mix(in srgb, var(--text-header) 10%, transparent); flex-wrap: wrap; }
+.ex-titulo { display: flex; align-items: center; gap: 12px; margin-right: auto; } .ex-titulo > i { font-size: 24px; color: #4fb3e8; }
+.ex-titulo b { display: block; color: var(--text-header); font-size: 17px; } .ex-titulo small { color: var(--text-muted); font-size: 12px; }
+.ex-busca { display: flex; align-items: center; gap: 8px; background: var(--bg-tertiary); border-radius: 10px; padding: 0 12px; min-width: 220px; flex: 0 1 300px; }
+.ex-busca i { color: var(--text-muted); } .ex-busca input { flex: 1; background: none; border: 0; outline: 0; color: var(--text-normal); padding: 10px 0; font: inherit; }
+.ex-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 10px; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; background: color-mix(in srgb, var(--text-header) 9%, transparent); color: var(--text-header); border: 1px solid color-mix(in srgb, var(--text-header) 15%, transparent); }
+.ex-btn:hover { background: color-mix(in srgb, var(--text-header) 16%, transparent); } .ex-btn.primario { background: #1f8fd0; border-color: #1f8fd0; color: #fff; }
+.ex-x { position: absolute; top: 12px; right: 12px; z-index: 5; width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer; background: color-mix(in srgb, var(--text-header) 12%, transparent); color: var(--text-header); }
+.ex-x.fixo { position: static; flex: none; }
+.ex-corpo { flex: 1; overflow-y: auto; padding: 0 0 28px; scrollbar-width: thin; }
+.ex-chips { display: flex; gap: 8px; padding: 12px 18px; overflow-x: auto; scrollbar-width: none; }
+.ex-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; background: var(--bg-tertiary); color: var(--text-normal); border: 2px solid transparent; --c: #4fb3e8; }
+.ex-chip i { color: var(--c); } .ex-chip b { color: var(--text-muted); } .ex-chip.vazio { opacity: .45; } .ex-chip.ativo { border-color: var(--c); color: var(--text-header); }
+
+/* a cena: céu, sol, nuvens e o mar */
+.ex-cena { position: relative; height: 350px; background: #14354f; overflow: hidden; container-type: inline-size; }
+.ex-sol { position: absolute; right: 9%; top: 22px; width: 64px; height: 64px; border-radius: 50%; background: #f4c95d; }
+.ex-nuvem { position: absolute; height: 18px; border-radius: 99px; background: rgba(255,255,255,.16); animation: exNuvem 120s linear infinite; }
+.ex-nuvem::before { content: ''; position: absolute; left: 22%; top: -12px; width: 44%; height: 24px; border-radius: 99px; background: inherit; }
+.ex-nuvem.n1 { width: 110px; top: 34px; left: -140px; } .ex-nuvem.n2 { width: 80px; top: 78px; left: -140px; animation-duration: 160s; animation-delay: -60s; } .ex-nuvem.n3 { width: 130px; top: 22px; left: -140px; animation-duration: 200s; animation-delay: -120s; }
+@keyframes exNuvem { to { transform: translateX(1400px); } }
+.ex-agua { position: absolute; left: 0; right: 0; bottom: 0; top: 96px; background: #1d6a9c; }
+.ex-onda { position: absolute; left: 0; width: 200%; height: 22px; background-repeat: repeat-x; background-size: 120px 22px; will-change: transform; animation: exOnda 9s linear infinite; }
+.ex-onda.o1 { top: -10px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='22'%3E%3Cpath d='M0 22 Q15 4 30 22 T60 22 T90 22 T120 22 V22 H0Z' fill='%231d6a9c'/%3E%3C/svg%3E"); }
+.ex-onda.o2 { top: 40%; opacity: .5; animation-duration: 14s; animation-direction: reverse; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='22'%3E%3Cpath d='M0 14 Q15 2 30 14 T60 14 T90 14 T120 14' fill='none' stroke='%23ffffff' stroke-opacity='.35' stroke-width='3'/%3E%3C/svg%3E"); }
+.ex-onda.o3 { bottom: 14px; opacity: .4; animation-duration: 11s; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='22'%3E%3Cpath d='M0 14 Q15 2 30 14 T60 14 T90 14 T120 14' fill='none' stroke='%23ffffff' stroke-opacity='.3' stroke-width='3'/%3E%3C/svg%3E"); }
+@keyframes exOnda { to { transform: translateX(-120px); } }
+.ex-mar { position: absolute; inset: 14px 0 6px; }
+.ex-barco { position: absolute; left: 0; display: block; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; color: #fff; will-change: transform; animation: exNavega var(--dur, 50s) linear var(--atraso, 0s) infinite; }
+@keyframes exNavega { from { transform: translateX(-200px); } to { transform: translateX(calc(100cqw + 40px)); } }
+.ex-barco:hover, .ex-barco:focus-visible { animation-play-state: paused; z-index: 3; }
+.ex-balanca { display: flex; flex-direction: column; align-items: center; animation: exBalanca 3.6s ease-in-out infinite alternate; transform-origin: 50% 90%; }
+@keyframes exBalanca { from { transform: rotate(-2.2deg) translateY(0); } to { transform: rotate(2.2deg) translateY(3px); } }
+.ex-barco:hover .ex-balanca { animation-play-state: paused; }
+.ex-vela { display: block; margin-top: -2px; } .ex-vela svg { display: block; width: 100%; height: auto; }
+.ex-nome-barco { margin-top: 1px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+.ex-barco:hover .ex-nome-barco { background: rgba(0,0,0,.45); border-radius: 6px; padding: 0 6px; }
+.ex-ico { display: grid; place-items: center; border-radius: 50%; overflow: hidden; flex: none; color: #fff; font-weight: 900; border: 2px solid #fff; } .ex-ico img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ex-barco .ex-ico { margin-bottom: -8px; position: relative; z-index: 1; }
+.ex-vazio { position: absolute; inset: 96px 0 0; display: grid; place-items: center; text-align: center; padding: 20px; color: #cfe6f5; font-weight: 700; }
+.ex-areia { height: 18px; background: #d9c48a; border-top: 4px solid #c6ae6e; }
+
+/* terra e listas */
+.ex-terra, .ex-bloco { padding: 16px 18px 0; }
+.ex-terra h3, .ex-bloco h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; color: var(--text-header); }
+.ex-terra h3 i { color: #4caf68; } .ex-terra h3 small { color: var(--text-muted); font-weight: 600; } .ex-bloco h3 i { color: var(--c); }
+.ex-ver { margin-left: auto; background: none; border: 0; cursor: pointer; color: var(--text-muted); font: inherit; font-size: 12px; text-decoration: underline; }
+.ex-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.ex-fila { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; } .ex-fila .ex-casa { flex: 0 0 280px; }
+.ex-casa { display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 12px; border-radius: 14px; cursor: pointer; font: inherit; color: var(--text-normal); background: var(--bg-secondary); border: 2px solid transparent; border-left: 5px solid var(--c, #5865f2); }
+.ex-casa:hover { border-color: var(--c, #5865f2); transform: translateY(-2px); } .ex-casa { transition: transform .15s; }
+.ex-casa-t { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .ex-casa-t b { color: var(--text-header); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-casa-t small { color: var(--text-muted); } .ex-casa-d { font-size: 12.5px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* prévia */
+.ex-previa-fundo { position: absolute; inset: 0; z-index: 10; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 16px; }
+.ex-previa { position: relative; width: min(440px, 100%); max-height: 100%; overflow-y: auto; border-radius: 18px; background: var(--bg-secondary); border: 1px solid color-mix(in srgb, var(--text-header) 14%, transparent); }
+.ex-previa-capa { height: 84px; } .ex-previa-corpo { padding: 0 20px 20px; margin-top: -34px; }
+.ex-previa-topo { display: flex; gap: 14px; align-items: flex-end; } .ex-previa-topo .ex-ico { border-width: 4px; border-color: var(--bg-secondary); }
+.ex-previa-topo h3 { margin: 0 0 6px; color: var(--text-header); font-size: 20px; }
+.ex-previa-meta, .ex-previa-info { display: flex; flex-wrap: wrap; gap: 6px 12px; color: var(--text-muted); font-size: 12.5px; } .ex-previa-meta i, .ex-previa-info i { margin-right: 4px; } .ex-previa-meta span[style] i { color: var(--c); }
+.ex-previa-desc { margin: 14px 0 8px; color: var(--text-normal); line-height: 1.45; white-space: pre-wrap; }
+.ex-canais { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; } .ex-canais small { flex-basis: 100%; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 800; font-size: 10.5px; }
+.ex-canais span { background: var(--bg-tertiary); border-radius: 6px; padding: 3px 9px; font-size: 12.5px; }
+.ex-aviso { color: var(--text-muted); font-size: 12px; margin: 14px 0 0; }
+.ex-previa-acoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+/* configuração do servidor (toggle do Explorar) */
+.cfg-explorar { border: 1px solid color-mix(in srgb, var(--text-header) 14%, transparent); border-radius: 12px; padding: 12px 14px; }
+.cfg-explorar-linha { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; } .cfg-explorar-linha label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; }
+
+.ex-parado .ex-barco, .ex-parado .ex-balanca, .ex-parado .ex-onda, .ex-parado .ex-nuvem { animation-play-state: paused; }
+body.rolando .ex-barco, body.rolando .ex-balanca, body.rolando .ex-onda, body.rolando .ex-nuvem { animation-play-state: paused; }
+@media (max-width: 720px) { .ex-janela { height: 100vh; border-radius: 0; } #explorar-modal { padding: 0; } .ex-cena { height: 290px; } .ex-busca { flex-basis: 100%; order: 5; } .ex-terra, .ex-bloco { padding: 14px 12px 0; } }
+@media (prefers-reduced-motion: reduce) { .ex-barco { animation: none; position: relative; display: inline-block; margin: 8px; } .ex-mar { position: static; display: flex; flex-wrap: wrap; padding: 14px; } .ex-balanca, .ex-onda, .ex-nuvem { animation: none; } }

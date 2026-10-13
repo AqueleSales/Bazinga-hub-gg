@@ -262,6 +262,15 @@ def atualizar_banco():
             # (o /admin usa o mesmo poder), abra /admin > Passe de Batalha e crie o modelo "Deuses" (ou use passe.criar_temporada_modelo()).
             add_column_se_nao_existir("person", "titulo_id VARCHAR(24)")
 
+            # 31. Explorar servidores (Rodada 22): o dono marca o servidor como público e escolhe um tema. A tabela efeito_custom
+            # (Estúdio de efeitos) nasce pelo create_all.
+            # 32. Cantos (capítulos) da temporada do passe (Rodada 23).
+            add_column_se_nao_existir("passe_temporada", "capitulos TEXT")
+            add_column_se_nao_existir("passe_temporada", "capitulo_niveis INTEGER")
+
+            add_column_se_nao_existir("server", "publico BOOLEAN")
+            add_column_se_nao_existir("server", "tema_explorar VARCHAR(20)")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

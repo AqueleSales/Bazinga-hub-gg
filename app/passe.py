@@ -11,6 +11,7 @@ lista de títulos. Regras que não se negociam (regra 4 do CLAUDE.md):
     dentro da janela de datas (`somar_xp`, chamado de dentro do `_somar_xp` do utils, na mesma transação).
   * Só UMA temporada fica ativa por vez. Sem data (inicio/fim vazios) a temporada fica aberta até o admin encerrar.
 """
+import json
 import re
 from datetime import timedelta
 
@@ -38,6 +39,7 @@ TRILHAS = ('gratis', 'premium')
 TIPOS_RECOMPENSA = ('moeda', 'item', 'titulo', 'tema')
 MAX_NIVEIS = 200
 MAX_MOEDAS_RECOMPENSA = 100000
+MAX_CAPITULOS = 20
 _RE_ID_TITULO = re.compile(r'^[a-z_]{2,24}$')
 
 ROTULO_TIPO_RECOMPENSA = {'moeda': 'Moedas', 'item': 'Item', 'titulo': 'Título', 'tema': 'Tema do app'}
@@ -60,6 +62,27 @@ def _fresco(c):
     return c['quando'] is not None and (br_now() - c['quando']).total_seconds() < _TTL
 
 
+def _ler_capitulos(texto):
+    """Lista de nomes dos capítulos guardada no banco (JSON). Qualquer coisa estranha vira lista vazia."""
+    try:
+        lista = json.loads(texto) if texto else []
+    except (TypeError, ValueError):
+        return []
+    return [str(x)[:40] for x in lista if isinstance(x, str) and x.strip()][:MAX_CAPITULOS] if isinstance(lista, list) else []
+
+
+def capitulos_da_temporada(snap):
+    """[{n, nome, de, ate}]: os níveis que cada capítulo cobre (o último pode ser mais curto). Vazio = sem capítulos."""
+    tam = max(int(snap.get('capitulo_niveis') or 10), 1)
+    saida = []
+    for i, nome in enumerate(snap.get('capitulos') or []):
+        de = i * tam + 1
+        if de > snap['niveis']:
+            break
+        saida.append({'n': i + 1, 'nome': nome, 'de': de, 'ate': min(de + tam - 1, snap['niveis'])})
+    return saida
+
+
 def _montar_snapshot():
     t = PasseTemporada.query.filter_by(ativa=True).order_by(PasseTemporada.id.desc()).first()
     if not t:
@@ -69,7 +92,8 @@ def _montar_snapshot():
         recs[(r.nivel, r.trilha)] = {'tipo': r.tipo, 'valor': r.valor, 'quantidade': r.quantidade or 0}
     return {'id': t.id, 'nome': t.nome, 'subtitulo': t.subtitulo, 'tema': t.tema, 'inicio': t.inicio, 'fim': t.fim,
             'niveis': t.niveis, 'xp_por_nivel': t.xp_por_nivel, 'catchup_dias': t.catchup_dias or 0,
-            'catchup_pct': t.catchup_pct or 0, 'recs': recs}
+            'catchup_pct': t.catchup_pct or 0, 'recs': recs,
+            'capitulos': _ler_capitulos(t.capitulos), 'capitulo_niveis': t.capitulo_niveis or 10}
 
 
 def temporada_ativa():
@@ -265,6 +289,9 @@ def estado(pessoa):
             linha[trilha] = rec
         niveis.append(linha)
     resta = int((snap['fim'] - agora).total_seconds()) if snap['fim'] else None
+    caps = capitulos_da_temporada(snap)
+    proximo = min(nivel + 1, snap['niveis'])          # o capítulo em que a pessoa está jogando agora = o do próximo nível a ganhar
+    cap_atual = next((c['n'] for c in caps if c['de'] <= proximo <= c['ate']), None)
     from .bazar import eh_admin
     return {
         'admin': eh_admin(pessoa),
@@ -274,7 +301,7 @@ def estado(pessoa):
         'segundos_restantes': max(resta, 0) if resta is not None else None, 'catchup': _catchup_ativo(snap, agora), 'catchup_pct': snap['catchup_pct'],
         'xp': xp, 'nivel': nivel, 'niveis_total': snap['niveis'], 'xp_por_nivel': por_nivel,
         'xp_no_nivel': 0 if nivel >= snap['niveis'] else xp - nivel * por_nivel,
-        'premium': premium, 'niveis': niveis,
+        'premium': premium, 'niveis': niveis, 'capitulos': caps, 'capitulo_atual': cap_atual,
         'pendentes': sum(1 for l in niveis for t in TRILHAS if l.get(t) and l[t]['liberado'] and not l[t]['resgatado'] and not l[t].get('invalido')),
     }
 
@@ -400,7 +427,8 @@ def _data(v):
 def temporada_para_json(t):
     return {'id': t.id, 'nome': t.nome, 'subtitulo': t.subtitulo or '', 'tema': t.tema, 'ativa': bool(t.ativa),
             'inicio': t.inicio.strftime('%Y-%m-%dT%H:%M') if t.inicio else '', 'fim': t.fim.strftime('%Y-%m-%dT%H:%M') if t.fim else '',
-            'niveis': t.niveis, 'xp_por_nivel': t.xp_por_nivel, 'catchup_dias': t.catchup_dias or 0, 'catchup_pct': t.catchup_pct or 0}
+            'niveis': t.niveis, 'xp_por_nivel': t.xp_por_nivel, 'catchup_dias': t.catchup_dias or 0, 'catchup_pct': t.catchup_pct or 0,
+            'capitulos': _ler_capitulos(t.capitulos), 'capitulo_niveis': t.capitulo_niveis or 10}
 
 
 def listar_temporadas():
@@ -431,6 +459,16 @@ def salvar_temporada(dados, tid=None):
     if inicio and fim and fim <= inicio:
         raise ErroPasse('O fim tem de ser depois do início.')
     sub = str(dados.get('subtitulo') or '').strip()[:120] or None
+    caps_in = dados.get('capitulos')
+    if isinstance(caps_in, str):
+        caps_in = caps_in.splitlines()
+    caps = [str(x).strip()[:40] for x in (caps_in or []) if isinstance(x, str) and str(x).strip()][:MAX_CAPITULOS]
+    try:
+        cap_niv = int(dados.get('capitulo_niveis') or 10)
+    except (TypeError, ValueError):
+        raise ErroPasse('Níveis por capítulo inválido.')
+    if not 3 <= cap_niv <= 50:
+        raise ErroPasse('Cada capítulo tem de 3 a 50 níveis.')
     saida = {}
 
     def preparar():
@@ -442,6 +480,7 @@ def salvar_temporada(dados, tid=None):
             db.session.add(t)
         t.nome, t.subtitulo, t.tema, t.niveis, t.xp_por_nivel = nome, sub, tema, niveis, xpn
         t.catchup_dias, t.catchup_pct, t.inicio, t.fim = cdias, cpct, inicio, fim
+        t.capitulos, t.capitulo_niveis = (json.dumps(caps, ensure_ascii=False) if caps else None), cap_niv
         if tid:
             # encolher a temporada apaga as recompensas dos níveis que deixaram de existir
             PasseRecompensa.query.filter(PasseRecompensa.temporada_id == t.id, PasseRecompensa.nivel > niveis).delete()
@@ -560,29 +599,88 @@ def salvar_recompensas(tid, lista, substituir=False):
 # Só usa ids que existem (itens do catálogo, títulos que o próprio modelo cria, temas de temporada).
 # ------------------------------------------------------------
 TITULOS_MODELO = [
-    {'id': 'aspirante_olimpo', 'texto': 'Aspirante ao Olimpo', 'raridade': 'comum', 'descricao': 'Temporada Deuses, nível 5'},
-    {'id': 'mortal_ilustre', 'texto': 'Mortal Ilustre', 'raridade': 'raro', 'descricao': 'Temporada Deuses, nível 15'},
-    {'id': 'heroi_de_atenas', 'texto': 'Herói de Atenas', 'raridade': 'raro', 'descricao': 'Temporada Deuses, nível 35'},
+    {'id': 'aspirante_olimpo', 'texto': 'Aspirante ao Olimpo', 'raridade': 'comum', 'descricao': 'Temporada Deuses, nível 3'},
+    {'id': 'navegante_do_egeu', 'texto': 'Navegante do Egeu', 'raridade': 'raro', 'descricao': 'Temporada Deuses, nível 15'},
+    {'id': 'comedor_de_lotus', 'texto': 'Comedor de Lótus', 'raridade': 'comum', 'descricao': 'Temporada Deuses, nível 25'},
+    {'id': 'ninguem', 'texto': 'Ninguém', 'raridade': 'raro', 'descricao': 'Temporada Deuses, nível 35: o nome que enganou o Cíclope'},
     {'id': 'favorito_dos_deuses', 'texto': 'Favorito dos Deuses', 'raridade': 'epico', 'animacao': 'brilho', 'descricao': 'Temporada Deuses, nível 55'},
-    {'id': 'filho_do_trovao', 'texto': 'Filho do Trovão', 'raridade': 'epico', 'animacao': 'brilho', 'descricao': 'Temporada Deuses, trilha Premium'},
-    {'id': 'senhor_do_olimpo', 'texto': 'Senhor do Olimpo', 'raridade': 'lendario', 'animacao': 'chama', 'descricao': 'Temporada Deuses, nível 100 Premium'},
+    {'id': 'ouvinte_das_sereias', 'texto': 'Ouvinte das Sereias', 'raridade': 'raro', 'animacao': 'onda', 'descricao': 'Temporada Deuses, nível 65'},
+    {'id': 'sobrevivente_de_cila', 'texto': 'Sobrevivente de Cila', 'raridade': 'raro', 'descricao': 'Temporada Deuses, nível 75'},
+    {'id': 'heroi_de_atenas', 'texto': 'Herói de Atenas', 'raridade': 'epico', 'descricao': 'Temporada Deuses, nível 85'},
+    {'id': 'campeao_de_olimpia', 'texto': 'Campeão de Olímpia', 'raridade': 'epico', 'animacao': 'brilho', 'descricao': 'Temporada Deuses, nível 95'},
+    {'id': 'filho_do_trovao', 'texto': 'Filho do Trovão', 'raridade': 'epico', 'animacao': 'brilho', 'descricao': 'Temporada Deuses, trilha Premium, nível 30'},
+    {'id': 'escolhido_de_atena', 'texto': 'Escolhido de Atena', 'raridade': 'epico', 'descricao': 'Temporada Deuses, trilha Premium, nível 50'},
+    {'id': 'voz_do_oraculo', 'texto': 'Voz do Oráculo', 'raridade': 'raro', 'animacao': 'onda', 'descricao': 'Temporada Deuses, trilha Premium, nível 65'},
+    {'id': 'portador_do_fogo', 'texto': 'Portador do Fogo', 'raridade': 'epico', 'animacao': 'chama', 'descricao': 'Temporada Deuses, trilha Premium, nível 75'},
+    {'id': 'imortal', 'texto': 'Imortal', 'raridade': 'lendario', 'animacao': 'brilho', 'descricao': 'Temporada Deuses, trilha Premium, nível 95'},
+    {'id': 'senhor_do_olimpo', 'texto': 'Senhor do Olimpo', 'raridade': 'lendario', 'animacao': 'chama', 'descricao': 'Temporada Deuses, trilha Premium, nível 100'},
+]
+
+# Os "cantos" da temporada (um a cada 10 níveis), inspirados na Odisseia (domínio público; nada de marca de jogo).
+CAPITULOS_MODELO = ['Ítaca', 'O Mar de Vinho', 'A Ilha dos Lótus', 'O Cíclope', 'Os Ventos de Éolo', 'A Feiticeira Circe',
+                    'O Canto das Sereias', 'Cila e Caribdis', 'Os Portões do Hades', 'A Volta ao Olimpo']
+
+# Efeitos feitos pelo Estúdio (receita JSON, sem código): o modelo os cria se ainda não existirem.
+EFEITOS_MODELO = [
+    {'id': 'lira_de_apolo', 'nome': 'Lira de Apolo', 'tipo': 'efeito_perfil', 'raridade': 'epico', 'descricao': 'Estrelas douradas sobem pelo cartão como as notas de uma lira.',
+     'receita': {'pausa': 2, 'camadas': [{'tipo': 'particulas', 'cor': '#f2c14e', 'cor2': '#fff3b8', 'qtd': 18, 'tam': 6, 'dur': 8, 'dir': 'cima', 'forma': 'estrela', 'brilho': 80},
+                                         {'tipo': 'brilho', 'cor': '#f2c14e', 'pos': 'topo', 'forca': 30, 'dur': 7}]}},
+    {'id': 'noite_de_nyx', 'nome': 'Noite de Nyx', 'tipo': 'efeito_perfil', 'raridade': 'lendario', 'descricao': 'A noite desce sobre o cartão, com um céu de estrelas.',
+     'receita': {'pausa': 0, 'camadas': [{'tipo': 'brilho', 'cor': '#3b2a7a', 'pos': 'centro', 'forca': 45, 'dur': 8},
+                                          {'tipo': 'particulas', 'cor': '#ffffff', 'cor2': '#b9a7ff', 'qtd': 26, 'tam': 3, 'dur': 10, 'dir': 'baixo', 'forma': 'circulo', 'brilho': 70}]}},
+    {'id': 'brasas_de_hefesto', 'nome': 'Brasas de Hefesto', 'tipo': 'efeito_perfil', 'raridade': 'epico', 'descricao': 'Brasas da forja dos deuses subindo do fundo do cartão.',
+     'receita': {'pausa': 0, 'camadas': [{'tipo': 'particulas', 'cor': '#ff7a1f', 'cor2': '#ffd23f', 'qtd': 24, 'tam': 4, 'dur': 5, 'dir': 'cima', 'forma': 'losango', 'brilho': 85},
+                                          {'tipo': 'brilho', 'cor': '#ff4d1f', 'pos': 'base', 'forca': 40, 'dur': 4}]}},
+    {'id': 'tridente_azul', 'nome': 'Tridente de Poseidon', 'tipo': 'efeito_avatar', 'raridade': 'epico', 'descricao': 'Ondas do mar rolando em volta da foto, com gotas em órbita.',
+     'receita': {'pausa': 0, 'camadas': [{'tipo': 'anel', 'cor': '#2fb8d6', 'esp': 2, 'dur': 2.6}, {'tipo': 'orbita', 'cor': '#9be7ff', 'qtd': 3, 'tam': 4, 'dur': 5}]}},
 ]
 
 
+def _criar_efeitos_modelo():
+    """Cria no Estúdio os efeitos do modelo que ainda não existem (não sobrescreve o que o admin já editou)."""
+    from . import efeitos
+    from .models import EfeitoCustom
+    for e in EFEITOS_MODELO:
+        if not EfeitoCustom.query.get(e['id']):
+            try:
+                efeitos.salvar(e)
+            except Exception as ex:
+                db.session.rollback()
+                print(f"[PASSE] não consegui criar o efeito {e['id']}: {ex}")
+
+
 def modelo_deuses(tid):
-    """Preenche a temporada `tid` com o modelo "Deuses" (apaga o que tinha). Cria os títulos que faltam."""
+    """Preenche a temporada `tid` com o modelo "Deuses" (apaga as recompensas que tinha): 10 cantos de 10 níveis, com um prêmio forte no
+    fim de cada um. Cria os títulos e os efeitos do Estúdio que faltam."""
     from .cosmeticos import CATALOGO as C
     for t in TITULOS_MODELO:
         if not Titulo.query.get(t['id']):
             salvar_titulo(t)
+    _criar_efeitos_modelo()
     existe = lambda i: i in C
-    marcos_gratis = {5: ('titulo', 'aspirante_olimpo'), 10: ('item', 'moldura:louros'), 15: ('titulo', 'mortal_ilustre'),
-                     20: ('item', 'efeito_perfil:olimpo'), 30: ('item', 'placa:marmore'), 35: ('titulo', 'heroi_de_atenas'),
-                     45: ('tema', 'templo'), 55: ('titulo', 'favorito_dos_deuses'), 70: ('item', 'faixa:partenon'),
-                     100: ('item', 'nome:olimpo')}
-    marcos_premium = {10: ('item', 'moldura:coroa_zeus'), 20: ('item', 'nome:ambrosia'), 30: ('titulo', 'filho_do_trovao'),
-                      40: ('tema', 'tartaro'), 60: ('item', 'efeito_avatar:relampago'), 80: ('item', 'efeito_perfil:tempestade'),
-                      100: ('titulo', 'senhor_do_olimpo')}
+    # nível -> (tipo, valor). O que não está aqui vira moeda (o dobro de 5 em 5 níveis e o triplo de 10 em 10).
+    marcos_gratis = {
+        3: ('titulo', 'aspirante_olimpo'), 10: ('item', 'moldura:louros'),                                        # Ítaca
+        15: ('titulo', 'navegante_do_egeu'), 20: ('item', 'efeito_perfil:olimpo'),                                # Mar de Vinho
+        25: ('titulo', 'comedor_de_lotus'), 30: ('item', 'placa:marmore'),                                        # Lótus
+        35: ('titulo', 'ninguem'), 40: ('item', 'nome:bronze'),                                                   # Cíclope
+        45: ('tema', 'templo'), 50: ('item', 'placa:colunata'),                                                   # Éolo
+        55: ('titulo', 'favorito_dos_deuses'), 60: ('item', 'moldura:egide'),                                     # Circe
+        65: ('titulo', 'ouvinte_das_sereias'), 70: ('item', 'faixa:partenon'),                                    # Sereias
+        75: ('titulo', 'sobrevivente_de_cila'), 80: ('item', 'efeito_perfil:lira_de_apolo'),                      # Cila e Caribdis
+        85: ('titulo', 'heroi_de_atenas'), 90: ('item', 'placa:vinho_escuro'),                                    # Hades
+        95: ('titulo', 'campeao_de_olimpia'), 100: ('item', 'nome:olimpo'),                                       # Olimpo
+    }
+    marcos_premium = {
+        10: ('item', 'moldura:coroa_zeus'), 20: ('item', 'nome:ambrosia'),
+        25: ('item', 'faixa:trirreme'), 30: ('titulo', 'filho_do_trovao'),
+        35: ('item', 'efeito_perfil:brasas_de_hefesto'), 40: ('tema', 'tartaro'),
+        45: ('item', 'efeito_avatar:tridente_azul'), 50: ('titulo', 'escolhido_de_atena'),
+        60: ('item', 'efeito_avatar:relampago'), 65: ('titulo', 'voz_do_oraculo'),
+        70: ('item', 'moldura:tridente'), 75: ('titulo', 'portador_do_fogo'),
+        80: ('item', 'efeito_perfil:tempestade'), 85: ('item', 'efeito_perfil:noite_de_nyx'),
+        95: ('titulo', 'imortal'), 100: ('titulo', 'senhor_do_olimpo'),
+    }
     lista = []
     for n in range(1, 101):
         for trilha, marcos, base in (('gratis', marcos_gratis, 50), ('premium', marcos_premium, 120)):
@@ -597,9 +695,10 @@ def modelo_deuses(tid):
 
 
 def criar_temporada_modelo():
-    """Cria (inativa) a Temporada 1 'Deuses' já com as 100 recompensas. Devolve o id."""
-    tid = salvar_temporada({'nome': 'Temporada 1: Deuses', 'subtitulo': 'Do mármore ao trovão: suba até o Olimpo.', 'tema': 'deuses',
-                            'niveis': 100, 'xp_por_nivel': 800, 'catchup_dias': 14, 'catchup_pct': 50})
+    """Cria (inativa) a Temporada 1 'Deuses' já com os 10 cantos e as 200 recompensas. Devolve o id."""
+    tid = salvar_temporada({'nome': 'Temporada 1: Deuses', 'subtitulo': 'Do mármore ao trovão: uma odisseia até o Olimpo.', 'tema': 'deuses',
+                            'niveis': 100, 'xp_por_nivel': 800, 'catchup_dias': 14, 'catchup_pct': 50,
+                            'capitulos': CAPITULOS_MODELO, 'capitulo_niveis': 10})
     modelo_deuses(tid)
     return tid
 
