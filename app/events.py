@@ -14,7 +14,7 @@ from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel
 from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
-                    registrar_eventos, registrar_tempo_ativo, missoes_do_usuario,
+                    registrar_eventos, registrar_tempo_ativo, missoes_do_usuario, contagem_valida, TEMAS_EXCLUSIVOS,
                     BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
                     ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok,
                     tema_perfil_valido, username_valido, ajuste_de_imagem_valido,
@@ -23,6 +23,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
 from . import loja as armazem
+from .passe import titulo_publico
 from .bazar import contar_pendencias as bazar_pendencias
 from .cosmeticos import (CATALOGO, PACOTES, TEMAS, TIPOS_COLUNA, TIPOS_JSON, TIPOS_EQUIPAVEIS, item_exclusivo, efeito_servidor_valido,
                          posses_da_pessoa, equipados_da_pessoa, definir_slot, badges_do_conjunto,
@@ -733,7 +734,19 @@ def lidar_com_mensagem(dados):
     resultado_xp = conceder_xp_por_mensagem(usuario)
     if resultado_xp:
         emit('xp_atualizado', resultado_xp, to=sala_pessoal(usuario.id))
-    _emitir_progresso(usuario, {'mensagem': 1})
+    # Missões: só conta mensagem "de verdade" (ver utils.contagem_valida: tamanho mínimo, sem repetir, com intervalo).
+    # As extras (responder/anexo/@) dependem da mesma contagem válida, senão spam de resposta valeria o mesmo que conversa.
+    if contagem_valida(usuario.id, 'mensagem', texto or ('[anexo]' + str(nova_msg.id))):
+        eventos_missao = {'mensagem': 1}
+        if resposta:
+            eventos_missao['responder'] = 1
+        if anexo_url:
+            eventos_missao['anexo'] = 1
+        if '<@' in texto:
+            eventos_missao['mencao'] = len(set(re.findall(r'<@(\d+)>', texto)) - {str(usuario.id)})
+            if not eventos_missao['mencao']:
+                del eventos_missao['mencao']
+        _emitir_progresso(usuario, eventos_missao)
     _notificar_mencoes(usuario, canal, nova_msg)
 
 
@@ -831,7 +844,7 @@ def reagir_mensagem(dados):
             'msg_id': msg.id,
             'reacoes': reacoes_para_json(msg.id)
         }, to=str(msg.channel_id))
-        if adicionou:   # tirar a reação não conta (senão ligar/desligar viraria XP)
+        if adicionou and contagem_valida(usuario.id, 'reacao', chave=msg.id):   # tirar a reação não conta, e cada mensagem conta uma vez por dia
             _emitir_progresso(usuario, {'reacao': 1})
     except Exception as e:
         db.session.rollback()
@@ -1912,6 +1925,8 @@ def mapa_explorar(dados):
         d['centro'] = {'lat': pos[0], 'lng': pos[1]}
         d['explorando'] = True
         emit('mapa_arredores', d)
+        if contagem_valida(usuario.id, 'explorar'):
+            _emitir_progresso(usuario, {'explorar': 1})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MAPA EXPLORAR] {e}")
@@ -2349,6 +2364,7 @@ def _payload_perfil(usuario):
         'placa': usuario.placa,
         'moldura': usuario.moldura,
         'equipados': equipados_da_pessoa(usuario),
+        'titulo_perfil': titulo_publico(usuario.titulo_id),
         'avatar': usuario.avatar
     }
 
@@ -2358,7 +2374,7 @@ def _difundir_aparencia(usuario):
     via a mudança até um F5 (regra 6)."""
     payload_publico = {'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
                        'placa': usuario.placa, 'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura,
-                       'equipados': equipados_da_pessoa(usuario),
+                       'equipados': equipados_da_pessoa(usuario), 'titulo_perfil': titulo_publico(usuario.titulo_id),
                        'pensando': usuario.pensando, 'status_texto': texto_do_status(usuario)}
     for srv in usuario.servers:
         emit('perfil_membro_mudou', payload_publico, to=sala_servidor(srv.id), include_self=False)
@@ -2703,6 +2719,8 @@ def comprar_item(dados):
         emit('saldo_atualizado', {'saldo': r['saldo']}, to=sala)
         emit('loja', armazem.vitrine_para_json(usuario, posses), to=sala)
         emit('inventario', _estado_inventario(usuario, posses), to=sala)
+        if contagem_valida(usuario.id, 'compra'):
+            _emitir_progresso(usuario, {'compra': 1})
     except Exception as e:
         # A compra JÁ foi feita e comitada; só a atualização da tela falhou (o próximo listar_loja corrige).
         db.session.rollback()
@@ -2794,6 +2812,9 @@ def mudar_tema(dados):
 
     tema = (dados or {}).get('tema')
     if tema not in TEMAS_VALIDOS:
+        return
+    if tema in TEMAS_EXCLUSIVOS and f'tema:{tema}' not in com_retry(lambda: posses_da_pessoa(usuario.id)):
+        emit('erro_bazinga', {'msg': 'Esse tema é exclusivo de temporada: você ainda não o ganhou.'})
         return
     aparelho = (dados or {}).get('aparelho')
     if aparelho not in APARELHOS:
@@ -2902,7 +2923,7 @@ def obter_perfil(dados):
             'status': (alvo.status or 'online') if sou_eu else status_visivel(alvo),
             'membro_desde': membro_desde_texto(alvo.created_at),
             'nivel': nivel, 'titulo': titulo_do_nivel(nivel), 'patente': patente_do_nivel(nivel),
-            'badges': badges, 'equipados': equipados_da_pessoa(alvo),
+            'badges': badges, 'equipados': equipados_da_pessoa(alvo), 'titulo_perfil': titulo_publico(alvo.titulo_id),
             'eh_amigo': amigo, 'pedido_pendente': pendente, 'sou_eu': sou_eu,
             'tem_loja': loja_publica_id is not None, 'loja_id': loja_publica_id
         })
@@ -3669,7 +3690,8 @@ def on_enviar_mensagem_direta(data):
         resultado_xp = conceder_xp_por_mensagem(usuario)
         if resultado_xp:
             emit('xp_atualizado', resultado_xp, to=sala_pessoal(usuario.id))
-        _emitir_progresso(usuario, {'dm': 1})
+        if target_id != usuario.id and contagem_valida(usuario.id, 'dm', texto or ('[anexo]' + str(nova_msg.id))):   # anotação pra si mesmo não conta
+            _emitir_progresso(usuario, {'dm': 1})
 
     except Exception as e:
         db.session.rollback()
@@ -4028,3 +4050,7 @@ def apagar_evento(dados):
 # Bazar da comunidade: handlers em outro arquivo. Fica no FIM de propósito (ele importa daqui usuario_logado, sala_pessoal e
 # criar_notificacao, que precisam já existir).
 from . import bazar_events  # noqa: E402,F401
+
+
+# Passe de Batalha (temporadas), títulos e escolha das missões semanais: handlers em outro arquivo, também no FIM (importa daqui).
+from . import passe_events  # noqa: E402,F401

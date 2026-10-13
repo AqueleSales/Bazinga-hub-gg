@@ -291,6 +291,8 @@ def _somar_xp(usuario, quantidade, nivel_antes, drc_missoes=0, ref_missoes=None)
     """Soma XP e paga as moedas dos níveis cruzados (e, se vier, as Dracmas das missões concluídas).
     Chamar DENTRO do preparar() de um comitar_com_retry (precisa refazer a soma a cada tentativa)."""
     usuario.xp = (usuario.xp or 0) + quantidade
+    from .passe import somar_xp as _passe_somar_xp   # todo XP da conta vale também pro passe da temporada ativa (mesma transação)
+    _passe_somar_xp(usuario, quantidade)
     nivel_depois = nivel_da_pessoa(usuario.xp)
     ganho = 0
     for n in range(nivel_antes + 1, nivel_depois + 1):
@@ -364,29 +366,111 @@ def conceder_bonus_diario(usuario):
 #   (abrir o app em dias diferentes).
 # Concluiu = o XP cai na hora (sem botão de "resgatar").
 # ==========================================
+def _m(periodo, evento, meta, xp, icone, titulo, desc):
+    return {'periodo': periodo, 'evento': evento, 'meta': meta, 'xp': xp, 'icone': icone, 'titulo': titulo, 'desc': desc}
+
+
 MISSOES = {
-    # --- diárias ---
-    'd_msg10':    {'periodo': 'diaria',  'evento': 'mensagem',     'meta': 10,  'xp': 150,  'icone': 'comment-dots', 'titulo': 'Bate-papo',          'desc': 'Envie 10 mensagens em canais'},
-    'd_msg30':    {'periodo': 'diaria',  'evento': 'mensagem',     'meta': 30,  'xp': 350,  'icone': 'comments',     'titulo': 'Língua solta',       'desc': 'Envie 30 mensagens em canais'},
-    'd_ativo15':  {'periodo': 'diaria',  'evento': 'minutos',      'meta': 15,  'xp': 150,  'icone': 'hourglass-half', 'titulo': 'De olho no Pantheon', 'desc': 'Fique 15 minutos ativo no app'},
-    'd_ativo45':  {'periodo': 'diaria',  'evento': 'minutos',      'meta': 45,  'xp': 350,  'icone': 'clock',        'titulo': 'Morador',            'desc': 'Fique 45 minutos ativo no app'},
-    'd_reacao5':  {'periodo': 'diaria',  'evento': 'reacao',       'meta': 5,   'xp': 120,  'icone': 'face-smile',   'titulo': 'Reator',             'desc': 'Reaja a 5 mensagens'},
-    'd_dm5':      {'periodo': 'diaria',  'evento': 'dm',           'meta': 5,   'xp': 150,  'icone': 'paper-plane',  'titulo': 'Papo reservado',     'desc': 'Envie 5 mensagens diretas'},
-    'd_call10':   {'periodo': 'diaria',  'evento': 'call_minutos', 'meta': 10,  'xp': 300,  'icone': 'headset',      'titulo': 'Na voz',             'desc': 'Passe 10 minutos numa call de voz'},
-    # --- semanais ---
-    's_msg150':   {'periodo': 'semanal', 'evento': 'mensagem',     'meta': 150, 'xp': 1200, 'icone': 'comments',     'titulo': 'Voz da comunidade',  'desc': 'Envie 150 mensagens em canais'},
-    's_ativo240': {'periodo': 'semanal', 'evento': 'minutos',      'meta': 240, 'xp': 1500, 'icone': 'clock',        'titulo': 'Cidadão fiel',       'desc': 'Some 4 horas ativo no app'},
-    's_call90':   {'periodo': 'semanal', 'evento': 'call_minutos', 'meta': 90,  'xp': 1800, 'icone': 'headset',      'titulo': 'Rei da call',        'desc': 'Some 90 minutos em calls de voz'},
-    's_nota3':    {'periodo': 'semanal', 'evento': 'nota',         'meta': 3,   'xp': 900,  'icone': 'map-pin',      'titulo': 'Cronista do mapa',   'desc': 'Deixe 3 notas no mapa'},
-    's_plantar1': {'periodo': 'semanal', 'evento': 'plantar',      'meta': 1,   'xp': 1500, 'icone': 'location-dot', 'titulo': 'Fundador',           'desc': 'Plante um servidor no mapa'},
-    's_reacao30': {'periodo': 'semanal', 'evento': 'reacao',       'meta': 30,  'xp': 800,  'icone': 'face-smile',   'titulo': 'Torcida organizada', 'desc': 'Reaja a 30 mensagens'},
-    's_dm30':     {'periodo': 'semanal', 'evento': 'dm',           'meta': 30,  'xp': 900,  'icone': 'paper-plane',  'titulo': 'Rede de contatos',   'desc': 'Envie 30 mensagens diretas'},
-    's_login5':   {'periodo': 'semanal', 'evento': 'login',        'meta': 5,   'xp': 1000, 'icone': 'calendar-check', 'titulo': 'Presença VIP',     'desc': 'Abra o app em 5 dias diferentes'},
+    # --- diárias (a pessoa recebe 5 sorteadas) ---
+    'd_msg10':    _m('diaria', 'mensagem', 10, 150, 'comment-dots', 'Bate-papo', 'Envie 10 mensagens em canais'),
+    'd_msg30':    _m('diaria', 'mensagem', 30, 350, 'comments', 'Língua solta', 'Envie 30 mensagens em canais'),
+    'd_msg60':    _m('diaria', 'mensagem', 60, 600, 'message', 'Maratonista do papo', 'Envie 60 mensagens em canais'),
+    'd_ativo15':  _m('diaria', 'minutos', 15, 150, 'hourglass-half', 'De olho no Pantheon', 'Fique 15 minutos ativo no app'),
+    'd_ativo45':  _m('diaria', 'minutos', 45, 350, 'clock', 'Morador', 'Fique 45 minutos ativo no app'),
+    'd_reacao5':  _m('diaria', 'reacao', 5, 120, 'face-smile', 'Reator', 'Reaja a 5 mensagens diferentes'),
+    'd_reacao15': _m('diaria', 'reacao', 15, 300, 'face-grin-stars', 'Fã de carteirinha', 'Reaja a 15 mensagens diferentes'),
+    'd_dm5':      _m('diaria', 'dm', 5, 150, 'paper-plane', 'Papo reservado', 'Envie 5 mensagens diretas'),
+    'd_dm15':     _m('diaria', 'dm', 15, 350, 'envelope-open-text', 'Correspondente', 'Envie 15 mensagens diretas'),
+    'd_call10':   _m('diaria', 'call_minutos', 10, 300, 'headset', 'Na voz', 'Passe 10 minutos numa call de voz'),
+    'd_call30':   _m('diaria', 'call_minutos', 30, 600, 'microphone-lines', 'Voz ativa', 'Passe 30 minutos numa call de voz'),
+    'd_resp3':    _m('diaria', 'responder', 3, 200, 'reply', 'Resposta na ponta da língua', 'Responda 3 mensagens'),
+    'd_anexo2':   _m('diaria', 'anexo', 2, 200, 'image', 'Fotógrafo', 'Envie 2 fotos, GIFs ou vídeos'),
+    'd_mencao2':  _m('diaria', 'mencao', 2, 200, 'at', 'Chamando a turma', 'Mencione 2 pessoas com @'),
+    'd_explorar1': _m('diaria', 'explorar', 1, 150, 'compass', 'Olhar o horizonte', 'Explore o mapa em outro lugar'),
+    # --- semanais (a pessoa vê uma oferta e ESCOLHE 3) ---
+    's_msg150':   _m('semanal', 'mensagem', 150, 1200, 'comments', 'Voz da comunidade', 'Envie 150 mensagens em canais'),
+    's_msg400':   _m('semanal', 'mensagem', 400, 2600, 'message', 'Porta-voz', 'Envie 400 mensagens em canais'),
+    's_ativo240': _m('semanal', 'minutos', 240, 1500, 'clock', 'Cidadão fiel', 'Some 4 horas ativo no app'),
+    's_ativo420': _m('semanal', 'minutos', 420, 2400, 'business-time', 'Morador de carteirinha', 'Some 7 horas ativo no app'),
+    's_call90':   _m('semanal', 'call_minutos', 90, 1800, 'headset', 'Rei da call', 'Some 90 minutos em calls de voz'),
+    's_call240':  _m('semanal', 'call_minutos', 240, 3200, 'podcast', 'Locutor', 'Some 4 horas em calls de voz'),
+    's_nota3':    _m('semanal', 'nota', 3, 900, 'map-pin', 'Cronista do mapa', 'Deixe 3 notas no mapa'),
+    's_nota7':    _m('semanal', 'nota', 7, 1800, 'map-location-dot', 'Diário de bordo', 'Deixe 7 notas no mapa'),
+    's_plantar1': _m('semanal', 'plantar', 1, 1500, 'location-dot', 'Fundador', 'Plante um servidor no mapa'),
+    's_reacao30': _m('semanal', 'reacao', 30, 800, 'face-smile', 'Torcida organizada', 'Reaja a 30 mensagens diferentes'),
+    's_reacao80': _m('semanal', 'reacao', 80, 1700, 'face-grin-stars', 'Claque oficial', 'Reaja a 80 mensagens diferentes'),
+    's_dm30':     _m('semanal', 'dm', 30, 900, 'paper-plane', 'Rede de contatos', 'Envie 30 mensagens diretas'),
+    's_dm80':     _m('semanal', 'dm', 80, 1900, 'address-book', 'Amigo de todos', 'Envie 80 mensagens diretas'),
+    's_login5':   _m('semanal', 'login', 5, 1000, 'calendar-check', 'Presença VIP', 'Abra o app em 5 dias diferentes'),
+    's_login7':   _m('semanal', 'login', 7, 1800, 'calendar-days', 'Semana perfeita', 'Abra o app em todos os 7 dias'),
+    's_resp20':   _m('semanal', 'responder', 20, 1200, 'reply-all', 'Mestre do debate', 'Responda 20 mensagens'),
+    's_anexo10':  _m('semanal', 'anexo', 10, 1200, 'photo-film', 'Galeria viva', 'Envie 10 fotos, GIFs ou vídeos'),
+    's_mencao10': _m('semanal', 'mencao', 10, 1100, 'at', 'Convocador', 'Mencione 10 pessoas com @'),
+    's_compra2':  _m('semanal', 'compra', 2, 1300, 'bag-shopping', 'Cliente do Armazém', 'Compre 2 itens no Armazém'),
+    's_explorar5': _m('semanal', 'explorar', 5, 1000, 'earth-americas', 'Viajante', 'Explore o mapa 5 vezes'),
 }
 POOL_DIARIAS = [c for c, m in MISSOES.items() if m['periodo'] == 'diaria']
 POOL_SEMANAIS = [c for c, m in MISSOES.items() if m['periodo'] == 'semanal']
-QTD_POR_PERIODO = 3
+QTD_DIARIAS = 5            # a pessoa recebe 5 diárias sorteadas
+OFERTA_SEMANAIS = 8        # e vê 8 semanais por semana...
+ESCOLHAS_SEMANAIS = 3      # ...das quais ESCOLHE 3 (só conta o progresso das escolhidas)
+QTD_POR_PERIODO = QTD_DIARIAS
 TEMPO_ATIVO_CODIGO = '_tempo_ativo'   # contador interno (não é missão)
+
+
+# ------------------------------------------------------------
+# ANTI-SPAM: o que conta pra missão. O XP por mensagem já tem cooldown de 30 s; as missões de "enviar N mensagens"/"reagir N vezes"
+# precisavam de freio próprio (antes dava pra concluir tudo mandando "a" em loop ou ligando/desligando reação). Em memória (por
+# processo, como a presença): reiniciar o servidor zera, e o pior caso é contar uma vez a mais.
+# ------------------------------------------------------------
+INTERVALO_CONTAGEM_S = 6.0         # entre duas mensagens contadas da mesma pessoa
+INTERVALO_REACAO_S = 1.5
+INTERVALO_EXPLORAR_S = 20.0
+_contagem_recente = {}             # (pessoa, tipo) -> {'t': epoch, 'textos': [últimos 3 normalizados]}
+_reacoes_contadas = {}             # pessoa -> (dia, {id da mensagem})
+
+
+def _normalizar_texto(texto):
+    return re.sub(r'\s+', ' ', (texto or '').strip().lower())
+
+
+def contagem_valida(pessoa_id, tipo, texto=None, chave=None):
+    """True se este evento pode contar pra missão. `tipo`: 'mensagem'|'dm' (texto), 'reacao' (chave = id da mensagem)."""
+    import time as _t
+    agora = _t.time()
+    if len(_contagem_recente) > 5000:
+        _contagem_recente.clear()
+    if tipo == 'reacao':
+        dia = br_now().date()
+        dia_salvo, vistas = _reacoes_contadas.get(pessoa_id, (None, set()))
+        if dia_salvo != dia:
+            vistas = set()
+        if chave is None or chave in vistas:
+            return False
+        reg = _contagem_recente.setdefault((pessoa_id, 'reacao'), {'t': 0, 'textos': []})
+        if agora - reg['t'] < INTERVALO_REACAO_S:
+            return False
+        reg['t'] = agora
+        vistas.add(chave)
+        if len(_reacoes_contadas) > 5000:
+            _reacoes_contadas.clear()
+        _reacoes_contadas[pessoa_id] = (dia, vistas)
+        return True
+    if tipo in ('explorar', 'compra'):                   # ação sem texto: só um intervalo (panorâmica no mapa não vira missão)
+        reg = _contagem_recente.setdefault((pessoa_id, tipo), {'t': 0, 'textos': []})
+        if agora - reg['t'] < (INTERVALO_EXPLORAR_S if tipo == 'explorar' else 1.0):
+            return False
+        reg['t'] = agora
+        return True
+    norm = _normalizar_texto(texto)
+    if len(norm) < 3 or len(set(norm.replace(' ', ''))) < 2:
+        return False                                   # "oi" ou "aaaa" não contam
+    reg = _contagem_recente.setdefault((pessoa_id, tipo), {'t': 0, 'textos': []})
+    if agora - reg['t'] < INTERVALO_CONTAGEM_S or norm in reg['textos']:
+        return False
+    reg['t'] = agora
+    reg['textos'] = (reg['textos'] + [norm])[-3:]
+    return True
 
 
 def _chave_do_periodo(periodo, hoje=None):
@@ -405,20 +489,25 @@ def _segundos_ate_reset(periodo):
 
 
 def _sortear_codigos(usuario_id, periodo, chave):
+    """As 5 diárias da pessoa ou a oferta de 8 semanais (nas duas, determinístico: nada é guardado, só o progresso)."""
     pool = POOL_DIARIAS if periodo == 'diaria' else POOL_SEMANAIS
-    return random.Random(f"{usuario_id}|{periodo}|{chave}").sample(pool, QTD_POR_PERIODO)
+    qtd = QTD_DIARIAS if periodo == 'diaria' else OFERTA_SEMANAIS
+    return random.Random(f"{usuario_id}|{periodo}|{chave}").sample(pool, min(qtd, len(pool)))
 
 
 def _linhas_do_periodo(usuario, periodo, criar=True):
-    """Linhas de progresso do período atual (cria as que faltam)."""
+    """Linhas de progresso do período atual. Diária: as 5 sorteadas (cria as que faltam). Semanal: SÓ as que a pessoa escolheu
+    (a linha nasce na escolha, em `escolher_semanal`)."""
     chave = _chave_do_periodo(periodo)
-    codigos = _sortear_codigos(usuario.id, periodo, chave)
 
     def existentes():
         return {r.codigo: r for r in MissaoProgresso.query.filter_by(
             person_id=usuario.id, periodo=periodo, chave=chave).all()}
 
     linhas = com_retry(existentes)
+    if periodo == 'semanal':
+        return [l for c, l in linhas.items() if c in MISSOES and MISSOES[c]['periodo'] == 'semanal']
+    codigos = _sortear_codigos(usuario.id, periodo, chave)
     if criar and any(c not in linhas for c in codigos):
         def preparar():
             ja = {r.codigo for r in MissaoProgresso.query.filter_by(
@@ -431,21 +520,59 @@ def _linhas_do_periodo(usuario, periodo, criar=True):
     return [linhas[c] for c in codigos if c in linhas]
 
 
-def _missao_para_json(linha):
-    m = MISSOES[linha.codigo]
+def _json_missao(codigo, progresso=0, concluida=False):
+    m = MISSOES[codigo]
     return {
-        'codigo': linha.codigo, 'titulo': m['titulo'], 'descricao': m['desc'], 'icone': m['icone'],
-        'meta': m['meta'], 'progresso': min(linha.progresso, m['meta']), 'xp': m['xp'],
-        'drc': DRC_POR_MISSAO[m['periodo']], 'concluida': bool(linha.concluida),
+        'codigo': codigo, 'titulo': m['titulo'], 'descricao': m['desc'], 'icone': m['icone'],
+        'meta': m['meta'], 'progresso': min(progresso or 0, m['meta']), 'xp': m['xp'],
+        'drc': DRC_POR_MISSAO[m['periodo']], 'concluida': bool(concluida),
     }
+
+
+def _missao_para_json(linha):
+    return _json_missao(linha.codigo, linha.progresso, linha.concluida)
+
+
+class ErroMissao(Exception):
+    pass
+
+
+def escolher_semanal(usuario, codigo, escolher=True):
+    """Escolhe (ou, com `escolher=False`, desfaz) uma das semanais da oferta da semana. Máximo `ESCOLHAS_SEMANAIS`; só dá pra desfazer
+    uma que ainda não tem progresso (senão dava pra trocar de missão depois de adiantar a anterior)."""
+    chave = _chave_do_periodo('semanal')
+    if codigo not in _sortear_codigos(usuario.id, 'semanal', chave):
+        raise ErroMissao('Essa missão não está na sua oferta da semana.')
+
+    def preparar():
+        escolhidas = {r.codigo: r for r in MissaoProgresso.query.filter_by(person_id=usuario.id, periodo='semanal', chave=chave).all()
+                      if r.codigo in MISSOES}
+        if escolher:
+            if codigo in escolhidas:
+                return
+            if len(escolhidas) >= ESCOLHAS_SEMANAIS:
+                raise ErroMissao(f'Você já escolheu {ESCOLHAS_SEMANAIS} missões semanais. Desfaça uma que ainda não começou pra trocar.')
+            db.session.add(MissaoProgresso(person_id=usuario.id, codigo=codigo, periodo='semanal', chave=chave))
+        else:
+            linha = escolhidas.get(codigo)
+            if not linha:
+                return
+            if (linha.progresso or 0) > 0 or linha.concluida:
+                raise ErroMissao('Essa missão já tem progresso, não dá mais pra desfazer.')
+            db.session.delete(linha)
+
+    comitar_com_retry(preparar)
 
 
 def missoes_do_usuario(usuario, linhas=None):
     """`linhas` = (diárias, semanais) já carregadas - evita reler o banco logo depois de registrar_eventos."""
     diarias, semanais = linhas if linhas else (_linhas_do_periodo(usuario, 'diaria'), _linhas_do_periodo(usuario, 'semanal'))
+    escolhidas = {l.codigo for l in semanais}
+    oferta = [_json_missao(c) for c in _sortear_codigos(usuario.id, 'semanal', _chave_do_periodo('semanal')) if c not in escolhidas]
     return {
         'diarias': [_missao_para_json(l) for l in diarias],
         'semanais': [_missao_para_json(l) for l in semanais],
+        'oferta_semanais': oferta, 'escolhas_semanais': ESCOLHAS_SEMANAIS,
         'reseta_diarias': _segundos_ate_reset('diaria'),
         'reseta_semanais': _segundos_ate_reset('semanal'),
     }
@@ -570,9 +697,17 @@ def url_de_imagem_ok(url):
 # aceitos e quais são "claros" (o app usa `data-claro` pra regras que só fazem sentido em fundo claro). Tema novo = id aqui + paleta no CSS
 # + item em CATALOGO_TEMAS do chat.html (nome e cores da prévia).
 # ------------------------------------------------------------
-TEMAS_ESCUROS = ('dark', 'amoled', 'meia_noite', 'floresta', 'oceano', 'por_do_sol', 'ametista', 'cafe', 'cereja')
+# Temas EXCLUSIVOS de temporada (recompensa do passe): só vale escolher quem tem a posse 'tema:<id>' (ver events.mudar_tema).
+# A paleta mora no CSS como qualquer outro; aqui fica só o id e o nome (o do passe usa o nome na recompensa).
+TEMAS_EXCLUSIVOS = {'templo': 'Templo', 'tartaro': 'Tártaro'}
+CORES_TEMAS_EXCLUSIVOS = {'templo': ['#1c1a14', '#15130e', '#0f0d09', '#d4a24c'], 'tartaro': ['#241618', '#1b1012', '#130a0c', '#c1403a']}   # amostra: fundo, lateral, topo, destaque
+TEMAS_ESCUROS = ('dark', 'amoled', 'meia_noite', 'floresta', 'oceano', 'por_do_sol', 'ametista', 'cafe', 'cereja') + tuple(TEMAS_EXCLUSIVOS)
 TEMAS_CLAROS = ('light', 'sakura', 'menta', 'areia')
 TEMAS_VALIDOS = TEMAS_ESCUROS + TEMAS_CLAROS + ('custom',)
+
+
+def nome_do_tema(tid):
+    return TEMAS_EXCLUSIVOS.get(tid)
 _RE_COR_HEX = re.compile(r'^#[0-9a-fA-F]{6}$')
 _RE_URL_SEM_CSS = re.compile(r'''^[^\s'"()<>\\]+$''')    # a URL do fundo vai dentro de url("...") no navegador: nada que feche aspas/parênteses
 

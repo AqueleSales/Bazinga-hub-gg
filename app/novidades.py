@@ -9,6 +9,16 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 22, 'data': '12/10/2026', 'titulo': 'Passe de temporada, títulos e missões novas',
+        'itens': [
+            {'icone': 'fa-ranking-star', 'titulo': 'Passe de Batalha de temporada', 'texto': 'Agora o passe tem temporadas, com tema próprio, duas trilhas (Grátis e Premium) e prêmios nível a nível: moedas, molduras, efeitos de cartão, títulos e até temas do app. A primeira é a Temporada 1: Deuses. Veja em Battle Pass.'},
+            {'icone': 'fa-signature', 'titulo': 'Títulos', 'texto': 'Ganhe títulos no passe e escolha um pra aparecer no cartão, ao lado do @ e dos pronomes. Alguns têm animação.'},
+            {'icone': 'fa-list-check', 'titulo': 'Missões novas', 'texto': 'Agora são 5 diárias por dia, e as semanais você escolhe (3 entre 8). Tem muito mais tipos de missão. Mensagem repetida ou sem sentido, e reação em rajada, não contam mais.'},
+            {'icone': 'fa-palette', 'titulo': 'Temas de temporada', 'texto': 'Templo e Tártaro: dois temas do app que só saem no passe. Aparecem trancados em Configurações > Aparência até você ganhar.'},
+            {'icone': 'fa-landmark', 'titulo': 'Visual mais limpo e logo nova', 'texto': 'Saíram os gradientes coloridos dos títulos e barras. A logo agora é preta e dourada, chapada.'},
+        ],
+    },
+    {
         'id': 21, 'data': '10/10/2026', 'titulo': 'Tema separado pro celular e pro computador',
         'itens': [
             {'icone': 'fa-mobile-screen', 'titulo': 'Um fundo pra cada aparelho', 'texto': 'Em Configurações > Aparência, o tema (e o papel de parede) que você escolhe vale só pro tipo de aparelho em que você está: o do computador não mexe no do celular, e o do celular não mexe no do computador. Tudo fica salvo na conta, então ao entrar de outro celular ou computador o seu fundo já está lá.'},

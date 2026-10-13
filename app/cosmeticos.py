@@ -66,6 +66,8 @@ TEMAS = {
     'arcade': {'nome': 'Arcade 8-bit', 'cor': '#ffd23f', 'loja': True, 'cores': ['#ff4fa3', '#ffd23f'], 'icone': 'fa-gamepad', 'premium': True,
                'lema': 'Insira uma moeda para continuar.',
                'desc': 'Pixels, corações de vida, moedas girando, chuva de pixels e o som de uma moeda coletada.'},
+    # ---- Temporada 1 do Passe de Batalha (itens que SÓ saem do passe: não têm preço, não vão pra vitrine do Armazém) ----
+    'deuses': {'nome': 'Deuses', 'cor': '#d4a24c', 'desc': 'Temporada 1 do passe: do mármore ao trovão. Itens exclusivos da temporada.'},
     # ---- Fora dos temas da vitrine (sem chip nem pacote): edições limitadas à venda e recompensas de coleção ----
     'edicao': {'nome': 'Edição Limitada', 'cor': '#ffcc33', 'desc': 'Acaba por prazo ou por estoque. Quando acabar, acabou.'},
     'colecao': {'nome': 'Coleção', 'cor': '#c0c8d6', 'desc': 'Prêmios de quem coleciona o Armazém. Não se compram: se conquistam.'},
@@ -218,6 +220,17 @@ _item('moldura', 'fusao', 'Fusão', 'Laranja e roxo girando juntos num anel só.
 _item('placa', 'fusao', 'Duas Chamas', 'Uma chama laranja e uma roxa disputando a placa.', 'fusao')
 _item('nome', 'fusao', 'Fusão', 'O nome muda do laranja pro roxo e volta.', 'fusao')
 _item('faixa', 'fusao', 'Fusão', 'Chamas laranja e roxa se misturando na faixa.', 'fusao')
+
+# ---- Temporada 1 do Passe: Deuses (recompensas do passe; sem preço, nunca aparecem na loja) ----
+_item('moldura', 'louros', 'Coroa de Louros', 'Folhas de louro douradas e verdes contornando a foto, girando devagar.', 'deuses', 'epico')
+_item('moldura', 'coroa_zeus', 'Coroa de Zeus', 'Anel de ouro com arcos de relâmpago que giram em volta da foto.', 'deuses', 'lendario')
+_item('placa', 'marmore', 'Mármore Negro', 'Mármore escuro com veios dourados.', 'deuses', 'epico')
+_item('faixa', 'partenon', 'Partenon ao Entardecer', 'Colunas de mármore contra um céu de fim de tarde, com nuvens passando.', 'deuses', 'epico')
+_item('nome', 'olimpo', 'Ouro do Olimpo', 'Ouro com um brilho de luz divina passando pelas letras.', 'deuses', 'lendario')
+_item('nome', 'ambrosia', 'Ambrosia', 'Perolado e dourado, como o néctar dos deuses.', 'deuses', 'epico')
+_item('efeito_perfil', 'olimpo', 'Poeira do Olimpo', 'Poeira dourada sobe pelo cartão, como centelhas de um altar.', 'deuses', 'epico')
+_item('efeito_perfil', 'tempestade', 'Tempestade de Zeus', 'Raios caem pelo cartão numa tempestade azulada.', 'deuses', 'lendario')
+_item('efeito_avatar', 'relampago', 'Relâmpago', 'Uma coroa de faíscas elétricas ao redor da foto.', 'deuses', 'epico')
 
 # ---- LOJA (Armazém) ----
 # Tabela central de preços em DRC por raridade e tipo. É a ÚNICA fonte: item da loja usa `_item_loja`, que lê daqui.

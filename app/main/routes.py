@@ -20,6 +20,7 @@ from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..importar import baixar_imagem_externa, ErroImportar
 from ..novidades import novidade_atual, novidades_para_cliente
 from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
+from ..passe import titulo_publico
 from ..cosmeticos import posses_da_pessoa, posses_com_regras, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
 from ..utils import nivel_da_pessoa, resumos_de_resposta_canal, resumos_de_resposta_dm
 
@@ -540,6 +541,7 @@ def chat():
         amigos=amigos,
         servidores_iniciais=servidores_iniciais,
         inventario_inicial=inventario_inicial,
+        titulo_inicial=titulo_publico(usuario_atual.titulo_id),
         patente_inicial=patente_do_nivel(nivel_da_pessoa(usuario_atual.xp)),
         badges_iniciais=badges_do_conjunto(set(inventario_inicial['posses'])),
         membro_desde_texto=membro_desde_texto(usuario_atual.created_at)

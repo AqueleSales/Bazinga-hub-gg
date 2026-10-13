@@ -329,7 +329,7 @@ def vitrine_para_json(pessoa, posses=None):
 # ==========================================
 # EXTRATO (histórico de DRC): o livro-razão visto pela própria pessoa
 # ==========================================
-ROTULO_MOTIVO = {'compra': 'Compra', 'nivel': 'Subiu de nível', 'missao': 'Missão', 'ajuste': 'Ajuste'}
+ROTULO_MOTIVO = {'compra': 'Compra', 'nivel': 'Subiu de nível', 'missao': 'Missão', 'passe': 'Passe de Batalha', 'ajuste': 'Ajuste'}
 
 
 def extrato(pessoa, limite=60):

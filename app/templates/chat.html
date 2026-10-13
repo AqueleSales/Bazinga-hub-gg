@@ -456,9 +456,7 @@
         @keyframes bpAtual { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,106,.45), 0 6px 18px rgba(0,0,0,.35); } 50% { box-shadow: 0 0 0 7px rgba(255,215,106,0), 0 6px 18px rgba(0,0,0,.35); } }
 
         .bp-hero { position: relative; display: flex; align-items: center; gap: 28px; padding: 28px; border-radius: 16px; isolation: isolate; overflow: hidden;
-                   background: linear-gradient(var(--bg-tertiary), var(--bg-tertiary)) padding-box,
-                               conic-gradient(from var(--bp-angulo), #7289da, #eb459e, #ffd76a, #43b581, #7289da) border-box;
-                   border: 2px solid transparent; animation: bpGira 7s linear infinite, bpEntra .5s cubic-bezier(.16,.84,.44,1) both; }
+                   background: var(--bg-tertiary); border: 2px solid var(--brand-color); animation: bpEntra .5s cubic-bezier(.16,.84,.44,1) both; }
         .bp-hero::before { content: ''; position: absolute; inset: -40% -10% auto auto; width: 420px; height: 420px; border-radius: 50%; z-index: -1; pointer-events: none;
                            background: radial-gradient(circle, rgba(114,137,218,.28), transparent 65%); }
 
@@ -474,7 +472,7 @@
         .bp-titulo { font-size: 26px; font-weight: 900; color: var(--text-header); margin-bottom: 12px; letter-spacing: -.01em; }
         .bp-barra-wrapper { position: relative; }
         .bp-barra-fundo { height: 24px; border-radius: 12px; background-color: var(--bg-quaternary); overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,.4); }
-        .bp-barra-preenchida { position: relative; height: 100%; border-radius: 12px; background: linear-gradient(90deg, var(--brand-color), #8a6ff2 60%, #eb459e); transition: width .9s cubic-bezier(.22,1,.36,1); overflow: hidden; }
+        .bp-barra-preenchida { position: relative; height: 100%; border-radius: 12px; background: var(--brand-color); transition: width .9s cubic-bezier(.22,1,.36,1); overflow: hidden; }
         .bp-barra-preenchida::after { content: ''; position: absolute; inset: 0; width: 40%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); animation: bpBrilho 2.8s ease-in-out infinite; }
         .bp-barra-texto { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); font-variant-numeric: tabular-nums; }
         .bp-faltam { color: var(--text-muted); font-size: 13px; margin-top: 10px; }
@@ -1305,6 +1303,8 @@
         :root[data-tema="por_do_sol"] { --bg-primary: #3b2d40; --bg-secondary: #32253a; --bg-tertiary: #231a29; --bg-quaternary: #1a131f; --text-normal: #ecd9e8; --text-muted: #b093ad; --brand-color: #f06a45; --brand-hover: #d95c3a; }
         :root[data-tema="ametista"] { --bg-primary: #2f2a45; --bg-secondary: #272339; --bg-tertiary: #1a1729; --bg-quaternary: #120f1f; --text-normal: #e0daf5; --text-muted: #9a92c0; --brand-color: #8b6cf5; --brand-hover: #795ae0; }
         :root[data-tema="cafe"] { --bg-primary: #3a2f28; --bg-secondary: #30261f; --bg-tertiary: #211a15; --bg-quaternary: #17120e; --text-normal: #e8dccf; --text-muted: #a39382; --brand-color: #b9772f; --brand-hover: #a26828; }
+        :root[data-tema="templo"] { --bg-primary: #1c1a14; --bg-secondary: #15130e; --bg-tertiary: #0f0d09; --bg-quaternary: #0a0906; --text-normal: #ece3cf; --text-muted: #a39a84; --brand-color: #d4a24c; --brand-hover: #bd8f3f; }
+        :root[data-tema="tartaro"] { --bg-primary: #241618; --bg-secondary: #1b1012; --bg-tertiary: #130a0c; --bg-quaternary: #0c0607; --text-normal: #f0dcdc; --text-muted: #a98a8a; --brand-color: #c1403a; --brand-hover: #a93530; }
         :root[data-tema="cereja"] { --bg-primary: #3a2a2e; --bg-secondary: #301f24; --bg-tertiary: #21151a; --bg-quaternary: #170d11; --text-normal: #f0d9dd; --text-muted: #b08e95; --brand-color: #e0425f; --brand-hover: #c9384f; }
         :root[data-tema="sakura"] { --bg-primary: #fff7f9; --bg-secondary: #fbeaf0; --bg-tertiary: #f3d7e1; --bg-quaternary: #f7e1e9; --text-normal: #4a3340; --text-muted: #8e6f7e; --text-header: #2a1620; --brand-color: #d9487d; --brand-hover: #c23d6e; }
         :root[data-tema="menta"] { --bg-primary: #f6fffb; --bg-secondary: #e6f7f0; --bg-tertiary: #cdebdf; --bg-quaternary: #d9f1e8; --text-normal: #2e4a3f; --text-muted: #6d8f81; --text-header: #12281f; --brand-color: #17986b; --brand-hover: #12835c; }
@@ -1377,7 +1377,7 @@
             box-shadow: inset 0 1px 0 var(--glass-brilho);
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
         }
-        .bp-hero { background: linear-gradient(color-mix(in srgb, var(--bg-secondary) 70%, transparent), color-mix(in srgb, var(--bg-secondary) 70%, transparent)) padding-box, conic-gradient(from var(--bp-angulo), #7289da, #eb459e, #ffd76a, #43b581, #7289da) border-box; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+        .bp-hero { background: color-mix(in srgb, var(--bg-secondary) 70%, transparent); }
         .bp-marco.atual { background: linear-gradient(180deg, rgba(255,215,106,.14), color-mix(in srgb, var(--bg-secondary) 62%, transparent)); }
         .bp-marco.especial { background: linear-gradient(160deg, rgba(235,69,158,.16), rgba(114,137,218,.16)), color-mix(in srgb, var(--bg-secondary) 62%, transparent); }
 
@@ -1468,6 +1468,8 @@
         .tema-card { border: 2px solid transparent; border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s; background: var(--bg-tertiary); padding: 0; text-align: left; color: var(--text-normal); font: inherit; }
         .tema-card:hover { transform: translateY(-2px); }
         .tema-card.active { border-color: var(--brand-color); }
+        .tema-card.bloqueado { opacity: .5; cursor: not-allowed; position: relative; } .tema-card.bloqueado:hover { transform: none; }
+        .tema-card .tema-cadeado { position: absolute; top: 6px; right: 6px; font-size: 11px; background: rgba(0,0,0,.6); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; }
         .tema-amostra { display: grid; grid-template-columns: 26% 1fr; grid-template-rows: 1fr 1fr; height: 66px; }
         .tema-amostra i { display: block; }
         .tema-amostra .a-lado { grid-row: 1 / 3; }
@@ -1510,10 +1512,10 @@
            arco-íris vazava por dentro do cartão translúcido. */
         .cartao-anel { position: relative; isolation: isolate; }
         .cartao-anel::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none; z-index: 3;
-            background: conic-gradient(from var(--bp-angulo), #7289da, #eb459e, #ffd76a, #43b581, #7289da);
+            background: color-mix(in srgb, var(--brand-color) 70%, transparent);
             -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
             mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
-            animation: bpGira 7s linear infinite; }
+            animation: none; }
         .bp-hero.cartao-anel { background: color-mix(in srgb, var(--bg-secondary) 72%, transparent); border: 0; animation: bpEntra .5s cubic-bezier(.16,.84,.44,1) backwards; }
 
         .mkt-destaque { width: 100%; min-height: 200px; border-radius: 16px; padding: 32px; margin-bottom: 32px; display: flex; flex-direction: column; justify-content: center; overflow: hidden;
@@ -1524,7 +1526,7 @@
 
         /* Títulos de seção com filete de cor (igual ao do Battle Pass) */
         .market-section-title { position: relative; border-bottom: 0; padding-bottom: 12px; }
-        .market-section-title::after { content: ''; position: absolute; left: 0; bottom: 0; width: 56px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--brand-color), #eb459e); }
+        .market-section-title::after { content: ''; position: absolute; left: 0; bottom: 0; width: 56px; height: 3px; border-radius: 3px; background: var(--brand-color); }
 
         /* --- Barra lateral (Radar, Mercado, Battle Pass, Todos...) --- */
         #dms-sidebar .channel-item { border-radius: 10px; }
@@ -1570,7 +1572,7 @@
 
         /* --- Mercado --- */
         .market-tab { padding: 0 6px; }
-        .market-tab::after, .market-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 3px; border-radius: 3px 3px 0 0; background: linear-gradient(90deg, var(--brand-color), #eb459e); transform: scaleX(0); transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
+        .market-tab::after, .market-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 3px; border-radius: 3px 3px 0 0; background: var(--brand-color); transform: scaleX(0); transition: transform .3s cubic-bezier(.34,1.56,.64,1); }
         .market-tab.active::after { transform: scaleX(1); }
         .market-header .price-bzc { background: rgba(255,255,255,.07); border: 1px solid var(--glass-borda); border-radius: 999px; padding: 6px 14px; transition: transform .2s, background .2s; }
         .market-header .price-bzc:hover { transform: translateY(-2px); background: rgba(255,255,255,.12); }
@@ -1636,7 +1638,7 @@
             background-color: color-mix(in srgb, var(--bg-secondary) 62%, transparent); border: 1px solid var(--glass-borda);
             clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
             animation: bpEntra .45s cubic-bezier(.16,.84,.44,1) backwards; animation-delay: calc(var(--i, 0) * 70ms); transition: transform .2s, background-color .2s; }
-        .bp-missao::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--brand-color), #eb459e); }
+        .bp-missao::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--brand-color); }
         .bp-missao:hover { transform: translateY(-3px); background-color: color-mix(in srgb, var(--bg-secondary) 40%, rgba(114,137,218,.22)); }
         .bp-missao-topo { display: flex; align-items: center; gap: 12px; }
         .bp-missao-ico { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; background: rgba(114,137,218,.2); color: #aab6f5; }
@@ -1645,7 +1647,7 @@
         .bp-missao-txt span { color: var(--text-muted); font-size: 12px; line-height: 1.35; }
         .bp-missao-xp { font-size: 12px; font-weight: 900; color: #ffd76a; background: rgba(255,215,106,.12); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
         .bp-missao-barra { position: relative; height: 10px; border-radius: 5px; background: rgba(0,0,0,.35); overflow: hidden; }
-        .bp-missao-barra i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: linear-gradient(90deg, var(--brand-color), #eb459e); transition: width .8s cubic-bezier(.22,1,.36,1); }
+        .bp-missao-barra i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: var(--brand-color); transition: width .8s cubic-bezier(.22,1,.36,1); }
         .bp-missao-num { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-top: -6px; }
         .bp-missao.feita { opacity: .8; }
         .bp-missao.feita::before { background: var(--green-color); }
@@ -2416,8 +2418,12 @@
         .qs-card { display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: color-mix(in srgb, var(--bg-secondary) 88%, transparent); border: 1px solid var(--glass-borda);
                    box-shadow: 0 6px 20px rgba(0,0,0,.22); transition: transform .2s, box-shadow .2s; animation: vistaEntra .35s cubic-bezier(.16,.84,.44,1) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
         .qs-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(0,0,0,.35); }
-        .qs-capa { position: relative; height: 104px; background: linear-gradient(135deg, var(--c1), var(--c2)); overflow: hidden; }
-        .qs-capa::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 85% -20%, rgba(255,255,255,.35), transparent 55%); }
+        .qs-capa { position: relative; height: 104px; background: var(--c1); overflow: hidden; }
+        .qs-capa::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.12); }
+        .qs-escolher, .qs-desfazer { margin-top: 10px; align-self: flex-start; font: inherit; font-weight: 800; font-size: 12px; padding: 7px 12px; border-radius: 9px; cursor: pointer; border: 1px solid color-mix(in srgb, var(--text-header) 18%, transparent); background: color-mix(in srgb, var(--text-header) 8%, transparent); color: var(--text-header); }
+        .qs-escolher { background: var(--brand-color); border-color: var(--brand-color); color: #fff; } .qs-escolher:hover, .qs-desfazer:hover { filter: brightness(1.12); }
+        .qs-card.oferta { opacity: .92; border-style: dashed; }
+        .bp-oferta-cab { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 2px; margin-top: 6px; } .bp-oferta-cab b { color: var(--text-header); font-size: 15px; } .bp-oferta-cab span { color: var(--text-muted); font-size: 12.5px; }
         .qs-icone { position: absolute; right: -6px; bottom: -14px; font-size: 92px; color: rgba(255,255,255,.22); transform: rotate(-12deg); }
         .qs-tag { position: absolute; left: 12px; top: 12px; z-index: 1; font-size: 10px; font-weight: 900; letter-spacing: .1em; color: #fff; background: rgba(0,0,0,.35); padding: 4px 9px; border-radius: 999px; }
         .qs-xp { position: absolute; left: 12px; bottom: 12px; z-index: 1; font-size: 15px; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
@@ -2927,6 +2933,8 @@
 <!-- Cosméticos (patentes, insígnias, popover orb, inventário, laboratório): depois do <style> acima, pra ganhar por ordem -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loja.css') }}?v={{ loja_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/titulos.css') }}?v={{ titulos_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 </head>
 <body>
@@ -3356,6 +3364,10 @@
                     </h2>
                 </header>
                 <div class="bp-content">
+                    <!-- PASSE DA TEMPORADA: static/js/passe.js desenha tudo a partir do evento 'passe' (nível, trilhas e resgate vêm do servidor) -->
+                    <div id="passe"><div class="pz-vazio">Carregando o passe...</div></div>
+
+                    <div class="market-section-title">Seu nível de conta</div>
                     <div class="bp-hero cartao-anel">
                         <div class="bp-anel">
                             <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -3385,7 +3397,7 @@
                     <div class="bp-secao-cab">
                         <div class="market-section-title">Missões</div>
                         <div class="bp-mtabs" id="bp-mtabs">
-                            <button class="bp-mtab active" data-per="diarias">Diárias <span id="bp-cont-diarias">0/3</span></button>
+                            <button class="bp-mtab active" data-per="diarias">Diárias <span id="bp-cont-diarias">0/5</span></button>
                             <button class="bp-mtab" data-per="semanais">Semanais <span id="bp-cont-semanais">0/3</span></button>
                         </div>
                         <div class="bp-reset" id="bp-reset"><i class="fa-regular fa-clock"></i> <span id="bp-reset-txt">--</span></div>
@@ -3393,7 +3405,7 @@
                     <div class="bp-missoes" id="bp-missoes-lista"><div class="bp-vazio">Carregando missões...</div></div>
 
                     <div class="bp-secao-cab">
-                        <div class="market-section-title">Trilha de recompensas <span class="bp-sub" id="bp-trilha-sub">níveis 1 a 100</span></div>
+                        <div class="market-section-title">Moedas por nível de conta <span class="bp-sub" id="bp-trilha-sub">níveis 1 a 100</span></div>
                         <div class="bp-setas">
                             <button class="bp-seta" id="bp-trilha-esq" title="Voltar"><i class="fa-solid fa-chevron-left"></i></button>
                             <button class="bp-seta" id="bp-trilha-atual" title="Ir pro meu nível"><i class="fa-solid fa-crosshairs"></i></button>
@@ -3408,7 +3420,7 @@
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-comment-dots"></i></div><div><b>Converse: +10 XP</b><span>Em canais e DMs, no máximo 1 vez a cada 30 segundos.</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>Tempo ativo: +3 XP/min</b><span>Mexendo no app ou numa call. Vale até 60 minutos por dia (180 XP).</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico fogo"><i class="fa-solid fa-fire"></i></div><div><b>Bônus diário: +50 XP</b><span>Abra o app todo dia. Cada dia seguido soma +10 XP (até 7 dias).</span></div></div>
-                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-list-check"></i></div><div><b>Missões: até +1.800 XP e +40 {{ moeda_sigla }}</b><span>3 diárias (+10 {{ moeda_sigla }} cada) e 3 semanais (+40 {{ moeda_sigla }} cada) novas pra você. O prêmio cai assim que completar.</span></div></div>
+                        <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-list-check"></i></div><div><b>Missões: XP e +10 / +40 {{ moeda_sigla }} cada</b><span>5 diárias sorteadas por dia e 3 semanais que você escolhe entre as da semana. O prêmio cai assim que completar. Só conta mensagem de verdade (nada de repetir ou mandar "aaa").</span></div></div>
                         <div class="bp-fonte"><div class="bp-fonte-ico"><i class="fa-solid fa-coins"></i></div><div><b>Subir de nível: {{ moeda_sigla }}</b><span>+50 por nível, +150 a cada 5 e +300 a cada 10. Patente nova a cada grande marco (passe o mouse no ícone).</span></div></div>
                     </div>
                 </div>
@@ -4426,6 +4438,11 @@
                                     <label class="control-label" for="pf-pronomes">Pronomes</label>
                                     <input type="text" class="discord-input" id="pf-pronomes" maxlength="15" placeholder="ele/dele, ela/dela, elu/delu..." autocomplete="off">
                                 </div>
+                                <div class="pf-grupo">
+                                    <label class="control-label">Título</label>
+                                    <button type="button" class="btn btn-secondary" onclick="Passe.abrirTitulos()"><i class="fa-solid fa-signature"></i> Escolher título</button>
+                                    <span class="pf-dica">Aparece ao lado do @ e dos pronomes. Vem do passe de temporada e de conquistas.</span>
+                                </div>
                             </div>
 
                             <div class="pf-bloco">
@@ -4819,6 +4836,7 @@
 
     <script src="{{ url_for('static', filename='js/cosmeticos.js') }}?v={{ cosm_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/loja.js') }}?v={{ loja_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/passe.js') }}?v={{ passe_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script>
         // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
@@ -5056,6 +5074,7 @@
                 if(marketContent) marketContent.style.display = 'flex';
             } else if (viewName === 'battlepass') {
                 if(battlepassContent) battlepassContent.style.display = 'flex';
+                if (typeof Passe !== 'undefined') Passe.abrir();
             } else if (viewName === 'calendar') {
                 if(calendarContent) calendarContent.style.display = 'flex';
             }
@@ -5190,19 +5209,23 @@
         function desenharMissoes() {
             const lista = document.getElementById('bp-missoes-lista');
             if (!lista || !bpMissoes) return;
-            ['diarias', 'semanais'].forEach(per => {
-                const el = document.getElementById('bp-cont-' + per);
-                if (el) el.textContent = `${bpMissoes[per].filter(m => m.concluida).length}/${bpMissoes[per].length}`;
-            });
-            // Cartões de "missão" no estilo das Quests do Discord: capa colorida com ícone grande, recompensa em destaque,
-            // barra de progresso e estado (em andamento / concluída). A cor vem do ícone, então a mesma missão tem sempre a mesma cara.
-            const PALETA = [['#5865f2', '#eb459e'], ['#11998e', '#38ef7d'], ['#f2994a', '#f2c94c'], ['#7f00ff', '#e100ff'], ['#0575e6', '#00f260'], ['#ee0979', '#ff6a00']];
+            const meta = bpMissoes.escolhas_semanais || 3;
+            const el1 = document.getElementById('bp-cont-diarias');
+            if (el1) el1.textContent = `${bpMissoes.diarias.filter(m => m.concluida).length}/${bpMissoes.diarias.length}`;
+            const el2 = document.getElementById('bp-cont-semanais');
+            if (el2) el2.textContent = `${bpMissoes.semanais.filter(m => m.concluida).length}/${meta}`;
+            // Cartões de "missão": capa de cor chapada com ícone grande, recompensa em destaque, barra de progresso e estado.
+            // A cor vem do ícone, então a mesma missão tem sempre a mesma cara.
+            const PALETA = ['#5865f2', '#11998e', '#d9822b', '#8e44ad', '#0575e6', '#d6336c'];
             const corDe = (txt) => { let h = 0; for (const c of String(txt || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETA[h % PALETA.length]; };
-            const rotuloPer = bpAbaMissoes === 'diarias' ? 'DIÁRIA' : 'SEMANAL';
-            lista.innerHTML = bpMissoes[bpAbaMissoes].map((m, i) => {
+            const semanal = bpAbaMissoes === 'semanais';
+            const rotuloPer = semanal ? 'SEMANAL' : 'DIÁRIA';
+            const cartao = (m, i, oferta) => {
                 const pct = Math.min(100, Math.round((m.progresso / m.meta) * 100));
-                const [c1, c2] = corDe(m.icone || m.titulo);
-                return `<div class="qs-card ${m.concluida ? 'feita' : ''}" style="--i:${i};--c1:${c1};--c2:${c2}">
+                const acao = oferta
+                    ? `<button type="button" class="qs-escolher" data-escolher="${esc(m.codigo)}"><i class="fa-solid fa-plus"></i> Escolher esta</button>`
+                    : (semanal && !m.concluida && m.progresso === 0 ? `<button type="button" class="qs-desfazer" data-desfazer="${esc(m.codigo)}" title="Trocar por outra da oferta (só antes de começar)">Desfazer</button>` : '');
+                return `<div class="qs-card ${m.concluida ? 'feita' : ''} ${oferta ? 'oferta' : ''}" style="--i:${i};--c1:${corDe(m.icone || m.titulo)}">
                     <div class="qs-capa">
                         <i class="fa-solid fa-${esc(m.icone)} qs-icone"></i>
                         <span class="qs-tag">${rotuloPer}</span>
@@ -5212,16 +5235,35 @@
                     <div class="qs-corpo">
                         <b>${esc(m.titulo)}</b>
                         <span class="qs-desc">${esc(m.descricao)}</span>
-                        <div class="qs-prog"><i style="width:${pct}%"></i></div>
+                        ${oferta ? `<div class="qs-rodape"><span class="qs-num">Meta: ${Number(m.meta)}</span></div>` : `<div class="qs-prog"><i style="width:${pct}%"></i></div>
                         <div class="qs-rodape">
                             <span class="qs-num">${Number(m.progresso)} / ${Number(m.meta)}</span>
                             <span class="qs-estado ${m.concluida ? 'ok' : ''}">${m.concluida ? '<i class="fa-solid fa-circle-check"></i> Recompensa recebida' : (pct > 0 ? 'Em andamento' : 'Não iniciada')}</span>
-                        </div>
+                        </div>`}
+                        ${acao}
                     </div>
                 </div>`;
-            }).join('');
+            };
+            let html = bpMissoes[bpAbaMissoes].map((m, i) => cartao(m, i, false)).join('');
+            if (semanal) {
+                const faltam = meta - bpMissoes.semanais.length;
+                const oferta = bpMissoes.oferta_semanais || [];
+                if (faltam > 0 && oferta.length) {
+                    html += `<div class="bp-oferta-cab"><b>Escolha ${faltam} ${faltam > 1 ? 'missões semanais' : 'missão semanal'}</b><span>Só conta o progresso das que você escolher. Dá pra desfazer enquanto não começou.</span></div>`
+                        + oferta.map((m, i) => cartao(m, i, true)).join('');
+                } else if (!bpMissoes.semanais.length) {
+                    html = '<div class="bp-vazio">Sem missões semanais por enquanto.</div>';
+                }
+            }
+            lista.innerHTML = html;
             atualizarContagemReset();
         }
+
+        document.getElementById('bp-missoes-lista')?.addEventListener('click', (e) => {
+            const esc_ = e.target.closest('[data-escolher]'), des = e.target.closest('[data-desfazer]');
+            if (esc_) socket.emit('escolher_missao_semanal', { codigo: esc_.dataset.escolher, escolher: true });
+            else if (des) socket.emit('escolher_missao_semanal', { codigo: des.dataset.desfazer, escolher: false });
+        });
 
         document.querySelectorAll('.bp-mtab').forEach(btn => btn.addEventListener('click', () => {
             bpAbaMissoes = btn.dataset.per;
@@ -5300,6 +5342,7 @@
         }
 
         socket.on('xp_atualizado', (dados) => {
+            if (typeof Passe !== 'undefined') Passe.xpMudou();
             const badgeSidebar = document.getElementById('sidebar-nivel-badge');
             if (badgeSidebar) badgeSidebar.textContent = dados.nivel;
             const badgePopout = document.getElementById('popout-nivel-badge');
@@ -9624,6 +9667,7 @@
             banner_url: {{ (usuario_atual.banner_url or '')|tojson }},
             banner_ajuste: {{ (usuario_atual.banner_ajuste or '')|tojson }},
             pronomes: {{ (usuario_atual.pronomes or '')|tojson }},
+            titulo_perfil: {{ titulo_inicial|tojson }},
             perfil_tema: {{ (usuario_atual.perfil_tema or '')|tojson }},
             nome_estilo: {{ (usuario_atual.nome_estilo or '')|tojson }},
             placa: {{ (usuario_atual.placa or '')|tojson }},
@@ -9794,8 +9838,11 @@
                 ${Number(pf.nivel || 1) < 10 ? `<button type="button" class="pc-info" data-acao="montanha" title="Como funcionam as patentes e as insígnias">!</button>` : ''}
             </div>`;
 
-            const linhaUsuario = (pf.username || pf.pronomes)
-                ? `<div class="pc-usuario">${pf.username ? '@' + esc(pf.username) : ''}${pf.username && pf.pronomes ? ' • ' : ''}${pf.pronomes ? esc(pf.pronomes) : ''}</div>` : '';
+            // @conta • pronomes • título (cada parte só aparece se existir; as bolinhas só ligam o que está presente)
+            const tp = pf.titulo_perfil;
+            const tituloHtml = tp && tp.texto ? `<span class="titulo-chip titulo-rar-${esc(tp.raridade || 'raro')} ${/^[a-z]{3,12}$/.test(tp.anim || '') ? 'titulo-anim-' + tp.anim : ''}">${esc(tp.texto)}</span>` : '';
+            const partesUsuario = [pf.username ? '@' + esc(pf.username) : '', pf.pronomes ? esc(pf.pronomes) : '', tituloHtml].filter(Boolean);
+            const linhaUsuario = partesUsuario.length ? `<div class="pc-usuario">${partesUsuario.join(' • ')}</div>` : '';
 
             let acoes = '';
             if (modo === 'previa') {
@@ -10497,6 +10544,7 @@
              'perfil_tema', 'nome_estilo', 'placa', 'moldura'].forEach(k => { if (k in d) perfilMeu[k] = d[k] || ''; });
             if (d.avatar) perfilMeu.avatar = d.avatar;
             if (d.equipados) perfilMeu.equipados = d.equipados;
+            if ('titulo_perfil' in d) { perfilMeu.titulo_perfil = d.titulo_perfil; if (typeof pintarPrevia === 'function') pintarPrevia(); }
 
             CAMPOS_PERFIL.forEach(k => { if (!pendentes.includes(k)) rascunho[k] = perfilMeu[k] || ''; });
             // o que acabou de ser salvo deixa de ser rascunho
@@ -10636,6 +10684,7 @@
 
         socket.on('inventario', (estado) => {
             inventario = estado;
+            if (typeof desenharTemas === 'function') desenharTemas();
             perfilMeu.badges = Object.keys(Cosm.BADGES).filter(id => (estado.posses || []).includes('badge:' + id));
             desenharInventario();
             pintarPrevia();
@@ -10653,6 +10702,17 @@
             ouvir: (idSom) => ouvirSomDeEntrada(idSom),
             abrirInventario: (aba) => abrirInventario(aba),
         });
+        // PASSE DE BATALHA (temporadas) e títulos: static/js/passe.js só desenha; nível, trilha premium e resgate são do servidor.
+        Passe.iniciar({
+            avatarHtml: () => avatarMini(), nome: () => perfilMeu.nome,
+            emitir: (nome, dados) => socket.emit(nome, dados),
+            toast: (msg, tipo) => showToast(msg, tipo),
+            somResgate: () => tocarSom('missao'),
+        });
+        socket.on('passe', (d) => Passe.receber(d));
+        socket.on('passe_resgatado', (r) => Passe.resgatado(r));
+        socket.on('passe_erro', (d) => showToast(d.msg, 'error'));
+        socket.on('titulos', (d) => Passe.titulosRecebidos(d));
         socket.on('loja', (v) => Loja.receber(v));
         socket.on('compra_ok', (d) => Loja.compraOk(d));
         socket.on('compra_recusada', (d) => Loja.compraRecusada(d));
@@ -11413,6 +11473,9 @@
                 { id: 'ametista', nome: 'Ametista', cores: ['#2f2a45', '#272339', '#1a1729', '#8b6cf5'] },
                 { id: 'cafe', nome: 'Café', cores: ['#3a2f28', '#30261f', '#211a15', '#b9772f'] },
                 { id: 'cereja', nome: 'Cereja', cores: ['#3a2a2e', '#301f24', '#21151a', '#e0425f'] } ] },
+            { grupo: 'Da temporada', exclusivo: true, itens: [
+                { id: 'templo', nome: 'Templo', cores: ['#1c1a14', '#15130e', '#0f0d09', '#d4a24c'] },
+                { id: 'tartaro', nome: 'Tártaro', cores: ['#241618', '#1b1012', '#130a0c', '#c1403a'] } ] },
             { grupo: 'Claros', itens: [
                 { id: 'sakura', nome: 'Sakura', claro: true, cores: ['#fff7f9', '#fbeaf0', '#f3d7e1', '#d9487d'] },
                 { id: 'menta', nome: 'Menta', claro: true, cores: ['#f6fffb', '#e6f7f0', '#cdebdf', '#17986b'] },
@@ -11467,10 +11530,12 @@
             const aqui = APARELHO === 'celular' ? 'celular' : 'computador', outro = APARELHO === 'celular' ? 'computador' : 'celular';
             document.getElementById('tema-titulo').textContent = `Tema do ${aqui}`;
             document.getElementById('tema-aparelho-nota').textContent = `Você está no ${aqui}: o que escolher aqui vale só pro ${aqui}. O tema (e o fundo) do ${outro} é separado e você muda nele.`;
-            const card = (t) => `<button type="button" class="tema-card ${temaAtual === t.id ? 'active' : ''}" data-tema="${t.id}" title="${esc(t.nome)}">
+            const tem = (t) => !t.exclusivo || ((inventario && inventario.posses) || []).includes('tema:' + t.id);
+            const card = (t) => `<button type="button" class="tema-card ${temaAtual === t.id ? 'active' : ''} ${tem(t) ? '' : 'bloqueado'}" data-tema="${t.id}" data-bloqueado="${tem(t) ? '' : '1'}" title="${tem(t) ? esc(t.nome) : esc(t.nome) + ' (exclusivo de temporada)'}">
+                ${tem(t) ? '' : '<span class="tema-cadeado"><i class="fa-solid fa-lock"></i></span>'}
                 <span class="tema-amostra" style="--amostra-destaque:${t.cores[3]}"><i class="a-lado" style="background:${t.cores[1]}"></i><i class="a-topo" style="background:${t.cores[0]}"></i><i class="a-msg" style="background:${t.cores[2]}"></i></span>
                 <span class="tema-nome">${esc(t.nome)}</span></button>`;
-            grade.innerHTML = CATALOGO_TEMAS.map(g => `<div class="tema-grupo">${g.grupo}</div><div class="temas-grade">${g.itens.map(card).join('')}</div>`).join('')
+            grade.innerHTML = CATALOGO_TEMAS.map(g => `<div class="tema-grupo">${g.grupo}</div><div class="temas-grade">${g.itens.map((t) => card({ ...t, exclusivo: !!g.exclusivo })).join('')}</div>`).join('')
                 + `<div class="tema-grupo">Seu</div><div class="temas-grade"><button type="button" class="tema-card custom ${temaAtual === 'custom' ? 'active' : ''}" data-tema="custom" title="Personalizado">
                 <span class="tema-amostra"><i class="fa-solid fa-wand-magic-sparkles"></i></span><span class="tema-nome">Personalizado</span></button></div>`;
             const p = document.getElementById('tc-painel');
@@ -11514,6 +11579,7 @@
         document.getElementById('temas-grade').addEventListener('click', (e) => {
             const card = e.target.closest('.tema-card');
             if (!card) return;
+            if (card.dataset.bloqueado) { showToast('Tema exclusivo de temporada: ganhe no passe de batalha.', 'info'); return; }
             aplicarTema(card.dataset.tema);
             salvarTema(true);
         });

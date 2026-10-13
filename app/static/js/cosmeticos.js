@@ -534,8 +534,8 @@ const Cosm = (() => {
     // EFEITOS (avatar / cartão): só ids do catálogo viram classe; o desenho é CSS.
     // ---------------------------------------------------------------------
     const idOk = (v) => /^[a-z_]{1,24}$/.test(String(v || ''));
-    const EFEITOS_AVATAR = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'];
-    const EFEITOS_PERFIL = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga'];
+    const EFEITOS_AVATAR = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga', 'relampago'];
+    const EFEITOS_PERFIL = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga', 'olimpo', 'tempestade'];
 
     function htmlEfeitoAvatar(id) {
         if (!EFEITOS_AVATAR.includes(id)) return '';
@@ -580,6 +580,20 @@ const Cosm = (() => {
                 px += `<i style="--x:${x}%;--d:${d}s;--t:${t}s;--s:${s}px;--c:${cores[i % cores.length]}"></i>`;
             }
             return `<div class="ef-pf ef-pf-arcade" aria-hidden="true">${px}</div>`;
+        }
+        if (id === 'olimpo') {         // poeira dourada do altar (sem canvas)
+            let ps = '';
+            for (let i = 0; i < 20; i++) {
+                const x = (i * 43 + 9) % 100, atraso = ((i * 47) % 40) / 10, dur = 3.6 + ((i * 31) % 30) / 10, tam = 2 + (i * 5) % 4;
+                ps += `<i style="--x:${x}%;--d:-${atraso}s;--t:${dur}s;--s:${tam}px"></i>`;
+            }
+            return `<div class="ef-pf ef-pf-olimpo" aria-hidden="true">${ps}</div>`;
+        }
+        if (id === 'tempestade') {     // raios azulados caindo (mesma mecânica dos do Sasuke: o traço se desenha e a posição é sorteada a cada ciclo)
+            const caminhos = ['M12 0 L7 22 L15 24 L6 52 L16 54 L4 96', 'M10 0 L14 18 L6 30 L13 46 L5 70', 'M14 0 L8 16 L16 30 L9 44 L17 62 L10 84'];
+            const raios = [[6, 60, 32, 4.3, 0.5], [22, 46, 26, 6.1, 2.1], [38, 68, 36, 5.2, 1.3], [55, 42, 26, 7.7, 3.4], [72, 62, 34, 4.7, 0.9], [88, 50, 28, 6.4, 2.8]];
+            const bolts = raios.map(([x, h, w, t, d], i) => `<svg class="ef-raio" data-aleatorio="efRaioPisca" style="left:${x}%;height:${h}%;width:${w}px;--t:${t}s;--d:${d}s" viewBox="0 0 24 100" preserveAspectRatio="none"><path pathLength="100" d="${caminhos[i % caminhos.length]}" fill="none" stroke="#bfe3ff" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg>`).join('');
+            return `<div class="ef-pf ef-pf-tempestade" aria-hidden="true">${bolts}</div>`;
         }
         if (id === 'eldoria') {        // poeira mágica subindo (sem canvas)
             let ps = '';

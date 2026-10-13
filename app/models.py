@@ -113,6 +113,8 @@ class Person(db.Model):
     nome_estilo = db.Column(db.String(24), nullable=True)
     placa = db.Column(db.String(24), nullable=True)
     moldura = db.Column(db.String(24), nullable=True)
+    # Título equipado (id de `Titulo`, posse 'titulo:<id>'). Aparece no cartão ao lado do @ e dos pronomes. Anulável.
+    titulo_id = db.Column(db.String(24), nullable=True)
     # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
     # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
     equipados = db.Column(db.Text, nullable=True)
@@ -713,3 +715,69 @@ class BazarBanimento(db.Model):
     ate = db.Column(db.DateTime, nullable=True)
 
     pessoa = db.relationship('Person', foreign_keys=[person_id])
+
+
+# ==========================================
+# PASSE DE BATALHA (temporadas) E TÍTULOS
+# ------------------------------------------------------------
+# Tudo é DADO editado no painel do admin (/admin), não código: o admin define a temporada (tema, datas, quantos níveis,
+# XP por nível) e, pra cada nível, o que a trilha GRÁTIS e a PREMIUM entregam. O XP do passe é separado do nível da conta:
+# cada XP que a pessoa ganha vale também pra temporada ativa (ver passe.somar_xp). Recompensa só cai com o resgate
+# (PasseResgate, único por pessoa+nível+trilha: clique duplo/2 abas nunca pagam duas vezes).
+# ==========================================
+class PasseTemporada(db.Model):
+    __tablename__ = 'passe_temporada'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(60), nullable=False)
+    subtitulo = db.Column(db.String(120), nullable=True)
+    tema = db.Column(db.String(24), nullable=False, default='deuses')   # id visual (passe.TEMAS_PASSE)
+    ativa = db.Column(db.Boolean, nullable=False, default=False)         # só UMA temporada ativa por vez
+    inicio = db.Column(db.DateTime, nullable=True)                       # NULL = sem data (aberta)
+    fim = db.Column(db.DateTime, nullable=True)
+    niveis = db.Column(db.Integer, nullable=False, default=100)
+    xp_por_nivel = db.Column(db.Integer, nullable=False, default=800)
+    catchup_dias = db.Column(db.Integer, nullable=False, default=14)     # nos últimos N dias antes do fim o XP do passe rende mais
+    catchup_pct = db.Column(db.Integer, nullable=False, default=50)      # ... este % a mais (0 desliga)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+
+class PasseRecompensa(db.Model):
+    __tablename__ = 'passe_recompensa'
+    __table_args__ = (db.UniqueConstraint('temporada_id', 'nivel', 'trilha', name='uq_passe_recompensa'),)
+    id = db.Column(db.Integer, primary_key=True)
+    temporada_id = db.Column(db.Integer, db.ForeignKey('passe_temporada.id'), nullable=False, index=True)
+    nivel = db.Column(db.Integer, nullable=False)
+    trilha = db.Column(db.String(8), nullable=False)       # 'gratis' | 'premium'
+    tipo = db.Column(db.String(8), nullable=False)         # 'moeda' | 'item' | 'titulo' | 'tema'
+    valor = db.Column(db.String(60), nullable=True)        # id do item ('moldura:louros'), do título ou do tema
+    quantidade = db.Column(db.Integer, nullable=False, default=0)   # só 'moeda'
+
+
+class PassePessoa(db.Model):
+    __tablename__ = 'passe_pessoa'
+    __table_args__ = (db.UniqueConstraint('person_id', 'temporada_id', name='uq_passe_pessoa'),)
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    temporada_id = db.Column(db.Integer, db.ForeignKey('passe_temporada.id'), nullable=False, index=True)
+    xp = db.Column(db.Integer, nullable=False, default=0)
+    premium = db.Column(db.Boolean, nullable=False, default=False)   # trilha premium liberada (hoje só o admin libera; depois, a assinatura)
+
+
+class PasseResgate(db.Model):
+    __tablename__ = 'passe_resgate'
+    __table_args__ = (db.UniqueConstraint('person_id', 'temporada_id', 'nivel', 'trilha', name='uq_passe_resgate'),)
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    temporada_id = db.Column(db.Integer, db.ForeignKey('passe_temporada.id'), nullable=False)
+    nivel = db.Column(db.Integer, nullable=False)
+    trilha = db.Column(db.String(8), nullable=False)
+
+
+class Titulo(db.Model):
+    """Título equipável (texto ao lado do @ e dos pronomes). Criado pelo admin; vira posse 'titulo:<id>' quando ganho."""
+    __tablename__ = 'titulo'
+    id = db.Column(db.String(24), primary_key=True)         # slug [a-z_], validado em passe.py
+    texto = db.Column(db.String(32), nullable=False)
+    animacao = db.Column(db.String(16), nullable=True)      # id de passe.ANIMACOES_TITULO (NULL = só texto)
+    raridade = db.Column(db.String(10), nullable=False, default='raro')
+    descricao = db.Column(db.String(120), nullable=True)    # como se ganha (aparece no seletor)

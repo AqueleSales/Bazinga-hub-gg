@@ -1588,3 +1588,58 @@ body.mt-aberta { overflow: hidden; }
     .placa-gojo, .placa-sukuna, .placa-mahoraga, .banner-anim-gojo, .banner-anim-sukuna, .banner-anim-mahoraga, .ef-av-gojo *, .ef-av-sukuna b, .ef-av-mahoraga b,
     .ef-pf-gojo *, .ef-pf-sukuna *, .ef-pf-mahoraga * { animation: none !important; }
 }
+
+
+/* ==================== TEMPORADA 1 DO PASSE: DEUSES ====================
+   Itens que só saem do passe (sem preço, fora do Armazém): mármore negro, ouro e relâmpago. Arte própria em CSS. */
+.moldura-louros::before { background: repeating-conic-gradient(from var(--bp-angulo), #4f8a3a 0 6deg, #a9cf6b 6deg 10deg, #d4a24c 10deg 12deg, transparent 12deg 17deg); animation: bpGira 40s linear infinite; }
+.moldura-coroa_zeus::before { background: conic-gradient(from var(--bp-angulo), #d4a24c, #fff3b8 12%, #d4a24c 24%, #7cc4ff 30%, #ffffff 33%, #7cc4ff 36%, #d4a24c 42%, #fff3b8 62%, #d4a24c 76%, #7cc4ff 82%, #ffffff 85%, #7cc4ff 88%, #d4a24c); animation: bpGira 7s linear infinite; }
+
+.placa-marmore, .user-profile-bar.placa-marmore {
+    background-color: #1b1b20 !important;
+    background-image:
+        linear-gradient(112deg, transparent 28%, rgba(212, 162, 76, .55) 28.4% 28.9%, transparent 29.3%),
+        linear-gradient(74deg, transparent 52%, rgba(212, 162, 76, .35) 52.3% 52.7%, transparent 53%),
+        linear-gradient(131deg, transparent 71%, rgba(255, 255, 255, .14) 71.3% 71.8%, transparent 72.2%),
+        linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 40%, rgba(0, 0, 0, .3)),
+        linear-gradient(90deg, #202026, #26262d 50%, #202026) !important;
+    background-size: 100% 100% !important; background-repeat: no-repeat !important; animation: none !important;
+}
+
+.banner-anim-partenon { background-color: #2a2f52; background-repeat: no-repeat, repeat-x, repeat-x, no-repeat;
+    background-image:
+        radial-gradient(ellipse 60px 14px at 30% 28%, rgba(255, 244, 220, .75), transparent 70%),
+        repeating-linear-gradient(90deg, rgba(238, 228, 204, .92) 0 9px, transparent 9px 34px),
+        linear-gradient(0deg, rgba(238, 228, 204, .95) 0 7%, transparent 7%),
+        linear-gradient(180deg, #232a4f, #6a5a8a 45%, #e3a75d 92%);
+    background-size: 100% 100%, 100% 52%, 100% 100%, 100% 100%; background-position: 0 0, 0 100%, 0 0, 0 0;
+    animation: faixaPartenon 24s linear infinite; }
+@keyframes faixaPartenon { from { background-position: -80px 0, 0 100%, 0 0, 0 0; } to { background-position: 400px 0, 0 100%, 0 0, 0 0; } }
+
+.ne-olimpo { font-family: Georgia, 'Times New Roman', serif; font-weight: 800; letter-spacing: .4px; color: transparent !important; -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: .3px rgba(60, 40, 0, .45);
+    background-image: linear-gradient(100deg, #c18a22 0 38%, #fffbe6 49%, #f2c14e 52%, #c18a22 64% 100%); background-size: 300% auto; animation: neOlimpo 4.5s linear infinite; }
+@keyframes neOlimpo { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.ne-ambrosia { font-weight: 800; color: transparent !important; -webkit-background-clip: text; background-clip: text;
+    background-image: linear-gradient(100deg, #f5f1ff 0 30%, #d9c8ff 42%, #ffe9a8 54%, #f5f1ff 66% 100%); background-size: 300% auto; animation: neOlimpo 6s linear infinite reverse; filter: drop-shadow(0 0 4px rgba(255, 233, 168, .45)); }
+
+.ef-pf-olimpo i { position: absolute; bottom: -8px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%; background: radial-gradient(circle, #fffbe6, #f2c14e 55%, rgba(242, 193, 78, 0)); box-shadow: 0 0 7px 1px rgba(242, 193, 78, .8); opacity: 0; animation: efSobe var(--t) linear var(--d) infinite; }
+.ef-pf-olimpo i:nth-child(4n) { background: radial-gradient(circle, #ffffff, #bfe3ff 55%, rgba(191, 227, 255, 0)); box-shadow: 0 0 7px 1px rgba(191, 227, 255, .75); }
+.inv-perfil-ef .ef-pf-olimpo i { bottom: -6px; animation-name: efSobeMini; }
+
+.ef-pf-tempestade .ef-raio { position: absolute; top: 0; opacity: 0; filter: drop-shadow(0 0 6px #7cc4ff); animation: efRaioPisca var(--t) linear var(--d) infinite; }
+.ef-pf-tempestade .ef-raio path { stroke-dasharray: 100; stroke-dashoffset: 100; animation: efRaioTraco var(--t) linear var(--d) infinite; }
+.ef-pf-tempestade::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0, rgba(124, 196, 255, .28), transparent 62%); opacity: 0; animation: tempestadeClarao 5.2s ease-in-out infinite; }
+@keyframes tempestadeClarao { 0%, 82%, 100% { opacity: 0; } 86% { opacity: 1; } 90% { opacity: .25; } 93% { opacity: .8; } }
+
+.ef-av-relampago { filter: drop-shadow(0 0 4px rgba(124, 196, 255, .7)); }
+.ef-av-relampago b:nth-child(1) { background: radial-gradient(circle closest-side, rgba(124, 196, 255, 0) 56%, rgba(124, 196, 255, .5) 68%, rgba(255, 255, 255, 0) 84%); animation: eldoriaHalo 1.6s ease-in-out infinite alternate; }
+.ef-av-relampago b:nth-child(2) { background:
+        radial-gradient(circle at 50% 3%, #ffffff 0 2px, rgba(124, 196, 255, .7) 3px 5px, transparent 6px),
+        radial-gradient(circle at 97% 50%, #ffffff 0 1.6px, rgba(124, 196, 255, .6) 2.4px 4px, transparent 5px),
+        radial-gradient(circle at 50% 97%, #ffffff 0 2px, rgba(124, 196, 255, .7) 3px 5px, transparent 6px),
+        radial-gradient(circle at 3% 50%, #ffffff 0 1.6px, rgba(124, 196, 255, .6) 2.4px 4px, transparent 5px); animation: cyberGira 3.4s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .moldura-louros::before, .moldura-coroa_zeus::before, .banner-anim-partenon, .ne-olimpo, .ne-ambrosia, .ef-pf-olimpo i, .ef-pf-tempestade *, .ef-pf-tempestade::after, .ef-av-relampago b { animation: none !important; }
+    .ef-pf-olimpo i { display: none; }
+}

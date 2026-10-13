@@ -50,6 +50,9 @@ def create_app():
     from .main.routes import main_bp
     app.register_blueprint(main_bp)
 
+    from .admin import admin_bp
+    app.register_blueprint(admin_bp)
+
     class _SessaoCookie(SecureCookieSessionInterface):
         def should_set_cookie(self, app, session):
             # Sessão permanente renova o cookie em TODA resposta (é o que faz o prazo andar a cada visita). Em arquivo
@@ -96,6 +99,7 @@ def create_app():
                 'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js'),
                 'loja_css_v': _versao_estatico('css/loja.css'), 'loja_js_v': _versao_estatico('js/loja.js'),
                 'bazar_css_v': _versao_estatico('css/bazar.css'), 'bazar_js_v': _versao_estatico('js/bazar.js'),
+                'titulos_css_v': _versao_estatico('css/titulos.css'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'),
                 'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'novidade_atual': novidade_atual()}
 
     with app.app_context():

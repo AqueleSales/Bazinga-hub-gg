@@ -1,0 +1,20 @@
+/* Títulos (texto equipável ao lado do @ e dos pronomes). Vale no chat e no painel do admin.
+   Id de animação = Titulo.animacao (passe.ANIMACOES_TITULO); raridade = Titulo.raridade (passe.RARIDADES_TITULO).
+   Só transform/opacity/text-shadow em texto pequeno; o body.rolando do chat pausa tudo ao rolar. */
+.titulo-chip { display: inline-block; font-weight: 800; letter-spacing: .02em; white-space: nowrap; color: var(--tt-cor, #9aa3b2); }
+.titulo-rar-comum { --tt-cor: #aab2c0; }
+.titulo-rar-raro { --tt-cor: #5fb0ff; }
+.titulo-rar-epico { --tt-cor: #b57bff; }
+.titulo-rar-lendario { --tt-cor: #f2b84b; }
+
+.titulo-anim-brilho { animation: tituloBrilho 2.6s ease-in-out infinite; }
+.titulo-anim-chama { color: #ff9a3c; animation: tituloChama 1.5s ease-in-out infinite; }
+.titulo-anim-onda { animation: tituloOnda 2.2s ease-in-out infinite; }
+.titulo-anim-glitch { animation: tituloGlitch 3s steps(1, end) infinite; }
+
+@keyframes tituloBrilho { 0%, 100% { text-shadow: 0 0 2px color-mix(in srgb, var(--tt-cor) 40%, transparent); } 50% { text-shadow: 0 0 9px var(--tt-cor), 0 0 2px #fff; } }
+@keyframes tituloChama { 0%, 100% { text-shadow: 0 -1px 4px #ff5a1f, 0 0 8px #ff9a3c; opacity: 1; } 35% { text-shadow: 0 -2px 6px #ff3b0f, 0 0 12px #ffbd59; opacity: .92; } 70% { text-shadow: 0 -1px 3px #ff5a1f, 0 0 6px #ff9a3c; opacity: 1; } }
+@keyframes tituloOnda { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes tituloGlitch { 0%, 88%, 100% { text-shadow: none; transform: none; } 90% { text-shadow: 2px 0 #ff2d55, -2px 0 #22d3ee; transform: translateX(1px); } 94% { text-shadow: -2px 0 #ff2d55, 2px 0 #22d3ee; transform: translateX(-1px); } }
+
+@media (prefers-reduced-motion: reduce) { .titulo-chip { animation: none !important; } }

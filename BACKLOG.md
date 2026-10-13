@@ -229,3 +229,16 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 **App**
 - [ ] Patente/insígnia ao lado do nome nas mensagens e listas; menção (@) em DM; denunciar mensagem; escolher o trecho do vídeo como foto; gadget do mapa (música; pedido ambíguo); remover HTML morto (`#status-picker-menu`, `quality-modal-overlay`, CSS `.popout-*`); redimensionar o chat da call; TURN próprio se a call não conectar (`TURN_URLS`...).
 **Limpeza feita**: legado `Product`/`Purchase`/`/api/produtos`/`seed_loja.py` (as tabelas `product` e `purchase` seguem no Neon: dá pra `DROP` à mão).
+
+
+---
+
+## Rodada 21 (12/10/2026) - Estúdio /admin, passe de temporada, títulos, missões novas e visual chapado - feito; testado com SQLite + navegador da pane (nada no Neon, nada com 2 pessoas reais)
+- [x] `/admin` (só admin): Passe de Batalha (temporadas, 100 níveis x Grátis/Premium, modelo "Deuses", Premium liberado à mão), Títulos, Missões (leitura), Administradores.
+- [x] Passe de temporada com XP próprio, datas opcionais (duração indefinida), catch-up, resgate manual atômico, títulos e temas do app (Templo, Tártaro) como prêmio; Temporada 1 "Deuses" com 9 itens novos (moldura, placa, faixa, nomes, efeitos de cartão e avatar).
+- [x] Título no cartão (`@conta • pronomes • título`), 5 diárias, semanais escolhidas (3 de 8), pool de 35 missões, anti-spam, gradientes decorativos fora, logo preta e dourada.
+- [ ] **Depois do deploy**: `python atualizar_banco.py` (passo 30), `python bazar_admin.py admin aquele.sales`, /admin > Passe > "Criar modelo Deuses" > Ativar.
+- [ ] **Ver no monitor do dono**: a página do passe (trilha, previews pequenos), o /admin, o cartão com título, os temas Templo/Tártaro e os 9 itens de Deuses nos contextos reais (mensagem, call, barra do usuário, radar).
+- [ ] Decisões do dono: nome da moeda, nome do Nitro, paleta/logo final (dourado e preto chapado ficou como primeira versão), valor do XP por nível do passe (800 = ~80 mil XP pro 100) e quantos dias de catch-up.
+- [ ] Próximos (ordem combinada): **Explorar servidores (o mar)** > impulso de servidor + visibilidade no mapa > **Nitro/Olimpo** (precisa gateway + CNPJ + armazenamento próprio) > **Estúdio de efeitos sem código** > IA de segurança e de clipes.
+- [ ] Faltam no Estúdio: cosméticos, Armazém, Bazar, denúncias, servidores, selos, notas do mapa e edição das missões. Título ao lado do nome nas mensagens/membros; conquistas como fonte de títulos.

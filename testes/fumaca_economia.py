@@ -64,9 +64,10 @@ with app.app_context():
     # ---------- 1. missão paga DRC ----------
     ok(u.DRC_POR_MISSAO == {'diaria': 10, 'semanal': 40}, 'Missão diária paga 10 e semanal 40 DRC')
     sorteio_original = u._sortear_codigos
-    u._sortear_codigos = lambda uid, periodo, chave: (['d_msg10', 'd_ativo15', 'd_dm5'] if periodo == 'diaria' else ['s_msg150', 's_dm30', 's_nota3'])
+    u._sortear_codigos = lambda uid, periodo, chave: (['d_msg10', 'd_ativo15', 'd_dm5', 'd_reacao5', 'd_call10'] if periodo == 'diaria' else ['s_msg150', 's_dm30', 's_nota3', 's_login5', 's_plantar1', 's_reacao30', 's_ativo240', 's_call90'])
     try:
         ana = pessoa('ana')
+        u.escolher_semanal(ana, 's_msg150')        # semanal agora se ESCOLHE (só conta o progresso da escolhida)
         antes = ana.bazinga_coins
         res = u.registrar_eventos(ana, {'mensagem': 10})
         ok(res and [m['titulo'] for m in res['concluidas']] == ['Bate-papo'], 'Diária de 10 mensagens concluída')
@@ -95,6 +96,7 @@ with app.app_context():
 
         # duas missões na mesma chamada: um movimento só, soma e lista os códigos
         beto = pessoa('beto')
+        u.escolher_semanal(beto, 's_dm30')
         res = u.registrar_eventos(beto, {'mensagem': 10, 'dm': 5})
         movs_b = MovimentoDrc.query.filter_by(person_id=beto.id, motivo='missao').all()
         ok(len(movs_b) == 1 and movs_b[0].delta == 20 and set(movs_b[0].ref.split(',')) == {'d_msg10', 'd_dm5'}, 'Duas diárias juntas: 1 movimento de +20 com os dois códigos')

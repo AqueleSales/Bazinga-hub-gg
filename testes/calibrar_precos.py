@@ -34,9 +34,9 @@ def missoes_do_dia(p, dias_ativos_na_semana, xp_por_missao=True, drc_diaria=0, d
     Devolve (xp, drc)."""
     dia = [m for m in u.MISSOES.values() if m['periodo'] == 'diaria']
     sem = [m for m in u.MISSOES.values() if m['periodo'] == 'semanal']
-    k = u.QTD_POR_PERIODO
-    xp = k * sum(m['xp'] for m in dia if _cumpre(p, m)) / len(dia) + k * sum(m['xp'] for m in sem if _cumpre(p, m, dias_ativos_na_semana)) / len(sem) / max(dias_ativos_na_semana, 1)
-    drc = k * sum(1 for m in dia if _cumpre(p, m)) / len(dia) * drc_diaria + k * sum(1 for m in sem if _cumpre(p, m, dias_ativos_na_semana)) / len(sem) / max(dias_ativos_na_semana, 1) * drc_semanal
+    kd, ks = u.QTD_DIARIAS, u.ESCOLHAS_SEMANAIS      # 5 diárias sorteadas; semanal a pessoa ESCOLHE 3 (aqui: média do pool, sem supor escolha esperta)
+    xp = kd * sum(m['xp'] for m in dia if _cumpre(p, m)) / len(dia) + ks * sum(m['xp'] for m in sem if _cumpre(p, m, dias_ativos_na_semana)) / len(sem) / max(dias_ativos_na_semana, 1)
+    drc = kd * sum(1 for m in dia if _cumpre(p, m)) / len(dia) * drc_diaria + ks * sum(1 for m in sem if _cumpre(p, m, dias_ativos_na_semana)) / len(sem) / max(dias_ativos_na_semana, 1) * drc_semanal
     return xp, drc
 
 

@@ -257,6 +257,11 @@ def atualizar_banco():
             add_column_se_nao_existir("person", "tema_mobile VARCHAR(20)")
             add_column_se_nao_existir("person", "tema_custom_mobile TEXT")
 
+            # 30. Passe de temporada e títulos (Rodada 21): as tabelas passe_temporada/passe_recompensa/passe_pessoa/passe_resgate/titulo
+            # nascem pelo create_all lá em cima. Só a coluna do título equipado entra aqui. Depois: python bazar_admin.py admin <@usuario>
+            # (o /admin usa o mesmo poder), abra /admin > Passe de Batalha e crie o modelo "Deuses" (ou use passe.criar_temporada_modelo()).
+            add_column_se_nao_existir("person", "titulo_id VARCHAR(24)")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)
