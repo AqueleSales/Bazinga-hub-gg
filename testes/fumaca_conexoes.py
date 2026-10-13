@@ -457,6 +457,23 @@ with app.app_context():
     ok(re.search(r'(?<!\w)eval\(|document\.write', js) is None and "innerHTML = '" not in js.replace("innerHTML = '<div class=\"cx-vazio\">", ''), 'conexoes.js sem eval/document.write')
     ok('id="set-conexoes"' in html and 'data-target="set-conexoes"' in html and 'js/conexoes.js' in html and 'css/conexoes.css' in html, 'chat.html tem a aba Conexões e carrega o módulo')
     ok('Conexoes.htmlSeta' in html and 'conexoes_qtd' in html and "socket.on('conexoes_do_perfil'" in html, 'o cartão tem a setinha (só quando há conexões) e escuta as conexões do perfil')
+    ok('Conexoes.tocando()' in html and 'tocando: () => players.size > 0' in js, 'a face não é repintada por cima de uma música tocando')
+
+    # ---------- 12. cada empresa com a cara dela ----------
+    css = open(os.path.join(RAIZ, 'static', 'css', 'conexoes.css'), encoding='utf-8').read()
+    marcas = re.search(r'const MARCAS = new Set\(\[(.*?)\]\)', js).group(1)
+    marcas = re.findall(r"'([a-z]+)'", marcas)
+    ok(len(marcas) >= 12 and 'youtube' in marcas and 'amazon' in marcas and 'linkedin' in marcas, f'o cliente conhece as marcas ({len(marcas)})')
+    ok(all(f'.cx-card[data-marca="{m}"]' in css for m in marcas), 'todas as marcas têm o visual no CSS: ' + ', '.join(m for m in marcas if f'.cx-card[data-marca="{m}"]' not in css))
+    ok(js.count('<article class="cx-card') == js.count('${marca(c.tipo)}') >= 7, 'todo cartão de conexão leva o id da marca (data-marca), sem exceção')
+    bloco_li = css.split('.cx-card[data-marca="linkedin"] {', 1)[1].split('}', 1)[0]
+    ok('--m-bg: #fff' in bloco_li and '--text-header: #1d2226' in bloco_li, 'o LinkedIn é um cartão BRANCO com letras escuras')
+    ok('--m-faixa: #ff0000' in css.split('.cx-card[data-marca="youtube"]', 1)[1].split('}', 1)[0] and '--m-faixa: #ff9900' in css.split('.cx-card[data-marca="amazon"]', 1)[1].split('}', 1)[0],
+       'YouTube com a faixa vermelha e Amazon com a faixa amarela/laranja')
+    ok(css.index('.cx-card[data-marca="linkedin"] {') > css.index('.cx-card[data-marca] {'), 'o branco do LinkedIn vem DEPOIS da regra geral escura (mesma especificidade: o último vence)')
+    ok('fa-x-twitter' not in js.split('const LOGO_X')[1].split('\n')[0] and 'LOGO_X' in js and "tipo === 'x'" in js, 'o logo do X é desenhado (o Font Awesome 6.4 do app não tem o ícone)')
+    ok('.cx-card.vinil.tocando .cx-braco' in css and '.cx-vinil.tocando' not in css, 'o toca-discos reage ao "tocando" (seletor do cartão certo: a agulha desce e o disco gira)')
+    ok(":where(:not(.cx-cab)" in css, 'as seções do currículo têm espaço (a regra geral de margem não engole as de .cx-sub/.cx-rodape)')
 
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)

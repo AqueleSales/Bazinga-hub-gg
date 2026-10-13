@@ -81,14 +81,14 @@
 /* Currículo */
 .cx-card.cv { padding: 0; gap: 0; overflow: hidden; }
 .cx-card.cv .cx-cab { padding: 10px 12px 8px; }
-.cx-card.cv > :not(.cx-cab):not(.cx-cv-banner):not(.cx-cv-topo) { margin: 0 12px; }
+.cx-card.cv > :where(:not(.cx-cab):not(.cx-cv-banner):not(.cx-cv-topo)) { margin: 0 12px; }   /* :where() = especificidade zero: as regras de .cx-sub e .cx-rodape logo abaixo ganham (antes eram engolidas e as seções ficavam coladas) */
 .cx-card.cv > .cx-sub { margin-top: 12px; margin-bottom: 6px; }
 .cx-card.cv > .cx-rodape { margin: 12px; }
 .cx-cv-banner { height: 78px; background: color-mix(in srgb, var(--c) 46%, #12141a); position: relative; overflow: hidden; }
 .cx-cv-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cx-cv-topo { display: flex; gap: 12px; align-items: flex-end; margin: -28px 12px 0; position: relative; }
+.cx-cv-topo { display: flex; gap: 12px; align-items: flex-start; margin: -28px 12px 0; position: relative; }
 .cx-cv-foto { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--bg-quaternary); background: var(--bg-tertiary); flex: none; display: grid; place-items: center; color: var(--text-muted); font-size: 26px; }
-.cx-cv-topo > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding-bottom: 2px; }
+.cx-cv-topo > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 32px 0 2px; }
 .cx-cv-topo b { color: var(--text-header); font-size: 16px; overflow-wrap: anywhere; }
 .cx-cv-topo span { color: var(--text-normal); font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
 .cx-cv-topo small { color: var(--text-muted); font-size: 12px; }
@@ -164,3 +164,45 @@
     #user-popout.largo { width: min(94vw, 440px) !important; }
 }
 @media (prefers-reduced-motion: reduce) { .pc.pc-conexoes, .pc.pc-voltando, .cx-linha.entra, .cx-card.vinil.tocando .cx-disco { animation: none; } .pc-seta, .cx-braco { transition: none; } }
+
+/* ---------- cada empresa com a cara dela ----------
+   Chapado (sem degradê): a cor da marca vai na faixa do topo e no logo; o resto do cartão fica escuro. Só o LinkedIn é branco.
+   O JS só põe o id da marca em data-marca (conexoes.js: MARCAS); site e link comum ficam com o visual neutro de sempre.
+   As variáveis de texto são redefinidas DENTRO do cartão: assim ele não depende do tema do app (claro ou escuro). */
+.cx-card[data-marca] { --text-header: #f2f3f5; --text-normal: #d4d7dc; --text-muted: #9ba1ab; background: var(--m-bg, #15161b); border: 1px solid var(--m-borda, rgba(255, 255, 255, .14)); overflow: hidden; }
+.cx-card[data-marca] > .cx-cab { margin: -12px -12px 0; padding: 9px 12px; background: var(--m-faixa, transparent); color: var(--m-faixa-fg, var(--text-header)); }
+.cx-card.cv[data-marca] > .cx-cab { margin: 0; }
+.cx-card[data-marca] .cx-cab-nome { color: inherit; font-size: 13px; }
+.cx-card[data-marca] .cx-cab-nome small { color: inherit; opacity: .72; }
+.cx-card[data-marca] .cx-ico.peq { width: 28px; height: 28px; border-radius: 8px; font-size: 15px; background: var(--m-tile, rgba(255, 255, 255, .1)); color: var(--m-tile-fg, #fff); }
+
+.cx-card[data-marca="youtube"]   { --m-bg: #171011; --m-faixa: #ff0000; --m-faixa-fg: #fff; --m-tile: #fff; --m-tile-fg: #ff0000; --m-borda: rgba(255, 0, 0, .34); }
+.cx-card[data-marca="amazon"]    { --m-bg: #131921; --m-faixa: #ff9900; --m-faixa-fg: #131921; --m-tile: #131921; --m-tile-fg: #ff9900; --m-borda: rgba(255, 153, 0, .4); }
+.cx-card[data-marca="instagram"] { --m-bg: #170f14; --m-faixa: #e1306c; --m-faixa-fg: #fff; --m-tile: #fff; --m-tile-fg: #e1306c; --m-borda: rgba(225, 48, 108, .38); }
+.cx-card[data-marca="tiktok"]    { --m-bg: #0a0a0c; --m-faixa: #000; --m-faixa-fg: #fff; --m-tile: #000; --m-tile-fg: #fff; --m-borda: rgba(37, 244, 238, .32); }
+.cx-card[data-marca="tiktok"] > .cx-cab { box-shadow: inset 0 -2px 0 #fe2c55; }
+.cx-card[data-marca="tiktok"] .cx-ico.peq i { text-shadow: -1.5px -1px 0 #25f4ee, 1.5px 1px 0 #fe2c55; }
+.cx-card[data-marca="x"]         { --m-bg: #000; --m-faixa: #000; --m-faixa-fg: #fff; --m-tile: #fff; --m-tile-fg: #000; --m-borda: rgba(255, 255, 255, .24); }
+.cx-card[data-marca="x"] > .cx-cab { box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .16); }
+.cx-card[data-marca="steam"]     { --m-bg: #171a21; --m-faixa: #1b2838; --m-faixa-fg: #c7d5e0; --m-tile: #66c0f4; --m-tile-fg: #171a21; --m-borda: rgba(102, 192, 244, .32); }
+.cx-card[data-marca="ifood"]     { --m-bg: #1b0e10; --m-faixa: #ea1d2c; --m-faixa-fg: #fff; --m-tile: #fff; --m-tile-fg: #ea1d2c; --m-borda: rgba(234, 29, 44, .38); }
+.cx-card[data-marca="olx"]       { --m-bg: #150d22; --m-faixa: #6e0ad6; --m-faixa-fg: #fff; --m-tile: #fff; --m-tile-fg: #6e0ad6; --m-borda: rgba(110, 10, 214, .5); }
+.cx-card[data-marca="twitch"]    { --m-bg: #120e1d; --m-faixa: #9146ff; --m-faixa-fg: #fff; --m-tile: #fff; --m-tile-fg: #9146ff; --m-borda: rgba(145, 70, 255, .42); }
+.cx-card[data-marca="spotify"]   { --m-bg: #0d1711; --m-faixa: #1db954; --m-faixa-fg: #0b0c0f; --m-tile: #0b0c0f; --m-tile-fg: #1db954; --m-borda: rgba(29, 185, 84, .38); }
+.cx-card[data-marca="github"]    { --m-bg: #0d1117; --m-faixa: #161b22; --m-faixa-fg: #e6edf3; --m-tile: #e6edf3; --m-tile-fg: #0d1117; --m-borda: rgba(240, 246, 252, .16); }
+.cx-card[data-marca="bazar"]     { --m-bg: #17140d; --m-faixa: #d4a24c; --m-faixa-fg: #1a1405; --m-tile: #1a1405; --m-tile-fg: #d4a24c; --m-borda: rgba(212, 162, 76, .42); }
+
+/* LinkedIn: cartão BRANCO, letras escuras e o azul da marca no logo (declarado depois do bloco geral: mesma especificidade, o último vence) */
+.cx-card[data-marca="linkedin"] { --text-header: #1d2226; --text-normal: #38434f; --text-muted: #5e6b78; --m-bg: #fff; --m-faixa: #fff; --m-faixa-fg: #0a66c2; --m-tile: #0a66c2; --m-tile-fg: #fff; --m-borda: rgba(0, 0, 0, .16); }
+.cx-card[data-marca="linkedin"] > .cx-cab { box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .1); }
+.cx-card[data-marca="linkedin"] .cx-cv-banner { background: #70b5f9; }
+.cx-card[data-marca="linkedin"] .cx-cv-foto { border-color: #fff; background: #e9eef3; color: #8896a3; }
+.cx-card[data-marca="linkedin"] .cx-linha-tempo::before { background: rgba(0, 0, 0, .12); }
+.cx-card[data-marca="linkedin"] .cx-bola { background: #0a66c2; box-shadow: 0 0 0 3px #fff; }
+.cx-card[data-marca="linkedin"] .cx-chip { border-color: rgba(0, 0, 0, .2); }
+.cx-card[data-marca="linkedin"] .cx-abrir { border-color: #0a66c2; color: #0a66c2; }
+.cx-card[data-marca="linkedin"] .cx-abrir:hover, .cx-card[data-marca="linkedin"] .cx-abrir:focus-visible { background: rgba(10, 102, 194, .1); }
+.cx-card[data-marca="linkedin"] .cx-link-t em { color: #915907; }
+
+.cx-svg { width: 1em; height: 1em; display: block; }
+.cx-card[data-marca] .cx-capa.vazia .cx-svg { width: 22px; height: 22px; }

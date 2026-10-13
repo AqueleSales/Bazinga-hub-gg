@@ -11,6 +11,12 @@ const Conexoes = (() => {
     const $ = (id) => document.getElementById(id);
     const T = (v) => ctx.esc(v == null ? '' : v);
     const num = (n) => Number(n || 0).toLocaleString('pt-BR');
+    // Cada empresa com a cara dela: o JS só põe o id da marca no cartão (data-marca); as cores e o visual moram em conexoes.css.
+    const MARCAS = new Set(['youtube', 'amazon', 'linkedin', 'instagram', 'tiktok', 'x', 'steam', 'ifood', 'olx', 'twitch', 'spotify', 'github', 'bazar']);
+    const marca = (tipo) => (MARCAS.has(tipo) ? ` data-marca="${tipo}"` : '');
+    // O Font Awesome 6.4 do app ainda não tem o "X" (só a partir da 6.4.2): o logo é desenhado aqui (path do Simple Icons, CC0).
+    const LOGO_X = '<svg class="cx-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>';
+    const iconeHtml = (tipo, p) => (tipo === 'x' ? LOGO_X : `<i class="${T(p.icone)}"></i>`);
 
     const HOSTS = [['github', ['github.com']], ['linkedin', ['linkedin.com']], ['youtube', ['youtube.com', 'youtu.be']], ['twitch', ['twitch.tv']], ['spotify', ['spotify.com']],
         ['instagram', ['instagram.com']], ['tiktok', ['tiktok.com']], ['x', ['x.com', 'twitter.com']], ['steam', ['steamcommunity.com', 'steampowered.com']],
@@ -57,15 +63,15 @@ const Conexoes = (() => {
 
     function cabecalhoCard(c, extra) {
         const p = plataforma(c.tipo);
-        return `<div class="cx-cab"><span class="cx-ico peq" style="--c:${T(p.cor)}"><i class="${T(p.icone)}"></i></span><span class="cx-cab-nome">${T(p.nome)}${extra ? ` <small>${T(extra)}</small>` : ''}</span></div>`;
+        return `<div class="cx-cab"><span class="cx-ico peq" style="--c:${T(p.cor)}">${iconeHtml(c.tipo, p)}</span><span class="cx-cab-nome">${T(p.nome)}${extra ? ` <small>${T(extra)}</small>` : ''}</span></div>`;
     }
 
     function cartaoLink(c, aviso) {
         const p = plataforma(c.tipo), host = hostDe(c.url);
         const d = c.dados || {};
         const titulo = d.titulo || c.titulo || host;
-        return `<article class="cx-card" style="--c:${T(p.cor)}">${cabecalhoCard(c)}
-            <div class="cx-link">${d.imagem ? img(d.imagem, 'cx-capa') : ''}<div class="cx-link-t"><b>${T(titulo)}</b>${d.descricao ? `<p>${T(d.descricao)}</p>` : ''}<small>${T(host)}</small>${aviso ? `<em>${T(aviso)}</em>` : ''}</div>${botaoAbrir(c.url, 'Abrir')}</div></article>`;
+        return `<article class="cx-card" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c)}
+            <div class="cx-link">${d.imagem ? img(d.imagem, 'cx-capa') : ''}<div class="cx-link-t"><b>${T(titulo)}</b>${d.descricao ? `<p>${T(d.descricao)}</p>` : ''}${host && host !== titulo ? `<small>${T(host)}</small>` : ''}${aviso ? `<em>${T(aviso)}</em>` : ''}</div>${botaoAbrir(c.url, 'Abrir')}</div></article>`;
     }
 
     // ---------------------------------------------------------------------
@@ -88,9 +94,9 @@ const Conexoes = (() => {
         const p = plataforma(c.tipo), d = c.dados || {};
         const tipoRecurso = { track: 'Música', album: 'Álbum', playlist: 'Playlist', artist: 'Artista', episode: 'Episódio', show: 'Podcast' }[d.recurso] || (d.lista ? 'Playlist do YouTube' : 'Vídeo do YouTube');
         const sub = [d.autor, tipoRecurso].filter(Boolean).join(' · ');
-        return `<article class="cx-card vinil" style="--c:${T(p.cor)}" data-cx-vinil>${cabecalhoCard(c)}
+        return `<article class="cx-card vinil" style="--c:${T(p.cor)}"${marca(c.tipo)} data-cx-vinil>${cabecalhoCard(c)}
             <div class="cx-vinil-corpo">
-                <div class="cx-vinil-cena" aria-hidden="true"><span class="cx-disco"><span class="cx-rotulo">${d.imagem ? img(d.imagem, 'cx-rotulo-img') : `<i class="${T(p.icone)}"></i>`}</span><span class="cx-furo"></span></span><span class="cx-braco"><i></i></span></div>
+                <div class="cx-vinil-cena" aria-hidden="true"><span class="cx-disco"><span class="cx-rotulo">${d.imagem ? img(d.imagem, 'cx-rotulo-img') : iconeHtml(c.tipo, p)}</span><span class="cx-furo"></span></span><span class="cx-braco"><i></i></span></div>
                 <div class="cx-vinil-info"><b>${T(d.titulo || c.titulo)}</b>${sub ? `<small>${T(sub)}</small>` : ''}
                     <div class="cx-vinil-bt"><button type="button" class="cx-play" data-cx-tocar="${c.tipo}" data-ref="${T(ref)}"><i class="fa-solid fa-play"></i> <span>Ouvir</span></button>${botaoAbrir(c.url, c.tipo === 'spotify' ? 'No Spotify' : 'No YouTube')}</div>
                     <em class="cx-terc">Ao ouvir, o player ${c.tipo === 'spotify' ? 'do Spotify' : 'do YouTube'} é carregado (serviço de terceiros).</em></div></div>
@@ -165,8 +171,8 @@ const Conexoes = (() => {
         const redonda = c.tipo === 'twitch' || (c.tipo === 'youtube' && !d.video && !d.lista);
         const tipoRecurso = { track: 'Música', album: 'Álbum', playlist: 'Playlist', artist: 'Artista', episode: 'Episódio', show: 'Podcast' }[d.recurso] || '';
         const sub = d.autor || tipoRecurso || (c.tipo === 'twitch' ? 'Canal da Twitch' : c.tipo === 'youtube' ? (d.video ? 'Vídeo' : d.lista ? 'Playlist' : 'Canal') : '');
-        return `<article class="cx-card" style="--c:${T(p.cor)}">${cabecalhoCard(c)}
-            <div class="cx-midia">${d.imagem ? img(d.imagem, 'cx-capa' + (redonda ? ' redonda' : '')) : `<span class="cx-capa vazia"><i class="${T(p.icone)}"></i></span>`}
+        return `<article class="cx-card" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c)}
+            <div class="cx-midia">${d.imagem ? img(d.imagem, 'cx-capa' + (redonda ? ' redonda' : '')) : `<span class="cx-capa vazia">${iconeHtml(c.tipo, p)}</span>`}
             <div class="cx-midia-t"><b>${T(d.titulo || c.titulo)}</b>${sub ? `<small>${T(sub)}</small>` : ''}</div>${botaoAbrir(c.url, c.tipo === 'spotify' || (c.tipo === 'youtube' && (d.video || d.lista)) ? 'Ouvir' : 'Abrir')}</div></article>`;
     }
 
@@ -174,8 +180,8 @@ const Conexoes = (() => {
         const d = c.dados;
         const p = plataforma('bazar');
         if (!d) return '';
-        return `<article class="cx-card" style="--c:${T(p.cor)}">${cabecalhoCard(c)}
-            <div class="cx-midia">${d.logo ? `<img class="cx-capa" src="${ctx.escUrl(d.logo)}" alt="" loading="lazy">` : `<span class="cx-capa vazia"><i class="${T(p.icone)}"></i></span>`}
+        return `<article class="cx-card" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c)}
+            <div class="cx-midia">${d.logo ? `<img class="cx-capa" src="${ctx.escUrl(d.logo)}" alt="" loading="lazy">` : `<span class="cx-capa vazia">${iconeHtml(c.tipo, p)}</span>`}
             <div class="cx-midia-t"><b>${T(d.nome)}</b><small>${d.nota ? `★ ${T(d.nota)} · ` : ''}${num(d.vendas)} ${d.vendas === 1 ? 'venda' : 'vendas'}</small>${d.descricao ? `<p>${T(d.descricao)}</p>` : ''}</div>
             <button type="button" class="cx-abrir" data-cx-loja="${Number(d.loja_id)}"><span>Visitar</span> <i class="fa-solid fa-store"></i></button></div></article>`;
     }
@@ -190,7 +196,7 @@ const Conexoes = (() => {
             <div class="cx-grade-leg"><span>${d.total ? `${num(d.total)} contribuições no último ano` : ''}</span><span class="cx-grade-esc">menos <i class="g0"></i><i class="g1"></i><i class="g2"></i><i class="g3"></i><i class="g4"></i> mais</span></div>` : '';
         const repos = (d.repos || []).map((r) => `<button type="button" class="cx-repo" data-cx-abrir="${T(r.url)}" title="Abrir ${T(r.nome)} no GitHub">
             <b>${T(r.nome)}</b>${r.desc ? `<p>${T(r.desc)}</p>` : ''}<small>${r.lang ? `<span class="cx-lang"><i></i>${T(r.lang)}</span>` : ''}${r.estrelas ? `<span><i class="fa-regular fa-star"></i> ${num(r.estrelas)}</span>` : ''}${r.push ? `<span>${T(r.push.split('-').reverse().join('/'))}</span>` : ''}</small></button>`).join('');
-        return `<article class="cx-card gh" style="--c:${T(p.cor)}">${cabecalhoCard(c, '@' + d.login)}
+        return `<article class="cx-card gh" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c, '@' + d.login)}
             <div class="cx-gh-topo">${img(d.avatar, 'cx-gh-av') || '<span class="cx-gh-av vazio"><i class="fa-brands fa-github"></i></span>'}
                 <div><b>${T(d.nome)}</b><small>@${T(d.login)}${d.local ? ' · ' + T(d.local) : ''}</small>${d.bio ? `<p>${T(d.bio)}</p>` : ''}</div></div>
             <div class="cx-nums"><span><b>${num(d.repos_publicos)}</b> repositórios</span><span><b>${num(d.seguidores)}</b> seguidores</span><span><b>${num(d.seguindo)}</b> seguindo</span></div>
@@ -201,7 +207,7 @@ const Conexoes = (() => {
     function cartaoCurriculo(c, pf) {
         const p = plataforma('linkedin'), dados = c.dados && c.dados.cv;
         if (!dados) {
-            return `<article class="cx-card" style="--c:${T(p.cor)}">${cabecalhoCard(c)}<div class="cx-link"><div class="cx-link-t"><b>${T(c.titulo || hostDe(c.url))}</b><small>${T(hostDe(c.url))}</small>
+            return `<article class="cx-card" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c)}<div class="cx-link"><div class="cx-link-t"><b>${T(c.titulo || hostDe(c.url))}</b>${c.titulo ? `<small>${T(hostDe(c.url))}</small>` : ''}
                 ${pf && pf.sou_eu ? '<em>Pra mostrar o currículo aqui, solte o PDF do seu LinkedIn em Configurações > Conexões.</em>' : ''}</div>${botaoAbrir(c.url, 'Ver no LinkedIn')}</div></article>`;
         }
         const foto = dados.foto && /^https:\/\//i.test(dados.foto) ? `<img class="cx-cv-foto" src="${ctx.escUrl(dados.foto)}" alt="">` : (pf && pf.avatar ? `<img class="cx-cv-foto" src="${ctx.escUrl(pf.avatar)}" alt="">` : '<span class="cx-cv-foto vazio"><i class="fa-solid fa-user"></i></span>');
@@ -209,7 +215,7 @@ const Conexoes = (() => {
         const exps = (dados.experiencias || []).map((e) => `<li><span class="cx-bola"></span><div><b>${T(e.cargo || e.empresa)}</b><small>${T([e.cargo ? e.empresa : '', e.periodo, e.local].filter(Boolean).join(' · '))}</small>${e.desc ? `<p>${T(e.desc)}</p>` : ''}</div></li>`).join('');
         const forms = (dados.formacao || []).map((e) => `<li><span class="cx-bola"></span><div><b>${T(e.escola || e.curso)}</b><small>${T([e.escola ? e.curso : '', e.periodo].filter(Boolean).join(' · '))}</small></div></li>`).join('');
         const chips = (lista) => (lista || []).map((x) => `<span class="cx-chip">${T(x)}</span>`).join('');
-        return `<article class="cx-card cv" style="--c:${T(p.cor)}">${cabecalhoCard(c, 'Currículo')}
+        return `<article class="cx-card cv" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c, 'Currículo')}
             <div class="cx-cv-banner">${banner}</div>
             <div class="cx-cv-topo">${foto}<div><b>${T(dados.nome || c.titulo)}</b>${dados.headline ? `<span>${T(dados.headline)}</span>` : ''}${dados.local ? `<small><i class="fa-solid fa-location-dot"></i> ${T(dados.local)}</small>` : ''}</div></div>
             ${dados.sobre ? `<div class="cx-sub">Sobre</div><p class="cx-texto">${T(dados.sobre)}</p>` : ''}
@@ -303,7 +309,7 @@ const Conexoes = (() => {
             : `<input type="text" class="discord-input" data-cx="url" inputmode="url" maxlength="300" spellcheck="false" autocomplete="off" value="${T(l.url)}" placeholder="Cole um link: GitHub, LinkedIn, YouTube, Twitch, Spotify, loja, site...">`;
         const vazia = !l.id && !l.url.trim() && l.tipo !== 'bazar';
         return `<div class="cx-linha ${l.erro ? 'erro' : ''} ${l.id ? 'salvo' : ''} ${vazia ? 'vazia' : ''}" data-k="${T(l.k)}">
-            <span class="cx-ico" style="--c:${T(p.cor)}"><i class="${T(p.icone)}"></i></span>
+            <span class="cx-ico" style="--c:${T(p.cor)}">${iconeHtml(l.tipo, p)}</span>
             <div class="cx-campo">${campo}<small class="cx-estado">${estadoHtml(l)}</small></div>
             <div class="cx-acoes">${extra}${vazia ? '' : `<button type="button" class="cx-bt ic" data-cx-sobe="${T(l.k)}" ${i === 0 ? 'disabled' : ''} title="Subir" aria-label="Subir"><i class="fa-solid fa-chevron-up"></i></button>
                 <button type="button" class="cx-bt ic" data-cx-desce="${T(l.k)}" ${i >= total - 1 || !linhas[i + 1] || (!linhas[i + 1].id && !linhas[i + 1].url.trim()) ? 'disabled' : ''} title="Descer" aria-label="Descer"><i class="fa-solid fa-chevron-down"></i></button>
@@ -315,7 +321,7 @@ const Conexoes = (() => {
         if (!el) return;
         const p = plataforma(l.tipo);
         const ico = el.querySelector('.cx-ico');
-        ico.style.setProperty('--c', p.cor); ico.firstElementChild.className = p.icone;
+        ico.style.setProperty('--c', p.cor); ico.innerHTML = iconeHtml(l.tipo, p);
         el.querySelector('.cx-estado').innerHTML = estadoHtml(l);
         el.classList.toggle('erro', !!l.erro);
     }

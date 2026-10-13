@@ -55,7 +55,7 @@ Nome: nasceu como "BazingaCord/Bazinga Hub", virou **Panteão** (30/09) e depois
   (opt-in recíproco, desligado por padrão, vulto anônimo com ruído de posição, nunca amigo/colega/bloqueado/Fantasma).
 - **Rodada 24** **Conexões do perfil**: a pessoa só cola o link (GitHub, YouTube, Spotify, Twitch, Instagram, Amazon, site, loja do Bazar...) e o cartão vem pronto, **sem editor** (mudou algo,
   muda no site oficial). A setinha do cartão vira a segunda face. Spotify e YouTube viram **toca-discos** (player oficial só carrega no "Ouvir"). LinkedIn não é lido pelo link (termos do site):
-  a pessoa solta o PDF do perfil e o currículo aparece (leitura por cabeçalhos; IA opcional).
+  a pessoa solta o PDF do perfil e o currículo aparece (leitura por cabeçalhos; IA opcional). Cada cartão tem a **cara da empresa** (faixa na cor da marca com o logo; LinkedIn branco).
 - **Rodada 24** Estúdio com gráficos e lista de pessoas; apagar temporada do passe ficou rápido e sem erro (trava + escrita em lote).
 
 ## Lições que custaram caro (resumo)
