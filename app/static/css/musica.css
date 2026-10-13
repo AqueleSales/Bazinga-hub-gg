@@ -1,0 +1,97 @@
+/* Música (static/js/musica.js): a janelinha flutuante com o player do YouTube, a pesquisa, a fila e a playlist do perfil.
+   Chapada e fosca como o resto do app (sem vidro, sem degradê de enfeite). Só transform/opacity se mexem.
+   O player fica sempre visível (os termos do YouTube proíbem esconder o vídeo): "mini" só esconde o resto. */
+
+#btn-musica .ic-musica { color: #ff5e7e; font-size: 16px; display: inline-block; }
+#btn-musica .mu-badge { margin-left: auto; background: rgba(255, 255, 255, .12); color: var(--text-header); font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 10px; }
+#btn-musica.tocando .ic-musica { animation: muSalto 1s ease-in-out infinite; }
+#btn-musica.aberto { color: var(--text-header); }
+@keyframes muSalto { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+.musica-janela { --mu-c: #ff3b5c; position: fixed; right: 16px; bottom: 16px; width: 360px; max-width: calc(100vw - 16px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; z-index: 1450;
+    background: var(--bg-secondary); color: var(--text-normal); border: 1px solid rgba(255, 255, 255, .12); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .55); overflow: hidden; }
+.musica-janela[hidden] { display: none; }
+.mu-topo { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; background: var(--bg-tertiary); cursor: grab; touch-action: none; user-select: none; flex: none; }
+.mu-topo:active { cursor: grabbing; }
+.mu-topo > i { color: var(--mu-c); }
+.mu-topo b { color: var(--text-header); font-size: 13.5px; }
+.mu-esp { flex: 1; }
+
+.mu-ic { width: 32px; height: 32px; border-radius: 9px; border: 0; background: transparent; color: var(--text-normal); display: inline-grid; place-items: center; cursor: pointer; font-size: 14px; padding: 0; flex: none; }
+.mu-ic:hover:not(.off), .mu-ic:focus-visible { background: rgba(255, 255, 255, .1); color: var(--text-header); outline: none; }
+.mu-ic.peq { width: 28px; height: 28px; font-size: 12px; }
+.mu-ic.grande { width: 42px; height: 42px; border-radius: 50%; background: var(--mu-c); color: #fff; font-size: 16px; }
+.mu-ic.grande:hover { background: var(--mu-c); filter: brightness(1.12); color: #fff; }
+.mu-ic.tg.on { color: var(--mu-c); }
+.mu-ic.perigo:hover:not(.off) { color: var(--red-color, #ed4245); }
+.mu-ic.off { opacity: .3; cursor: default; }
+
+.mu-player { background: #000; flex: none; }
+.mu-player[hidden] { display: none; }
+.mu-yt { aspect-ratio: 16 / 9; min-height: 200px; }
+.mu-yt iframe { display: block; width: 100%; height: 100%; min-height: 200px; border: 0; }
+
+.mu-agora { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid rgba(255, 255, 255, .08); flex: none; flex-wrap: wrap; justify-content: center; }
+.mu-agora[hidden] { display: none; }
+.mu-agora-t { flex: 1 1 100%; min-width: 0; display: flex; flex-direction: column; text-align: center; }
+.mu-agora-t b { color: var(--text-header); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mu-agora-t small { color: var(--text-muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mu-ctl { display: flex; align-items: center; gap: 6px; }
+
+.mu-corpo { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.musica-janela.mini .mu-corpo { display: none; }
+.mu-abas { display: flex; flex: none; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.mu-abas button { flex: 1; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12.5px; font-weight: 700; padding: 10px 4px; cursor: pointer; border-bottom: 2px solid transparent; }
+.mu-abas button:hover { color: var(--text-header); }
+.mu-abas button.on { color: var(--text-header); border-bottom-color: var(--mu-c); }
+.mu-n { color: var(--text-muted); font-weight: 600; }
+[data-sec] { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: hidden; }
+[data-sec][hidden] { display: none; }
+
+.mu-busca { display: flex; gap: 6px; padding: 10px 10px 4px; flex: none; }
+.mu-busca input { flex: 1; min-width: 0; background: var(--bg-tertiary); border: 1px solid rgba(255, 255, 255, .1); border-radius: 9px; color: var(--text-header); padding: 8px 10px; font: inherit; font-size: 13px; }
+.mu-busca input:focus { outline: none; border-color: var(--mu-c); }
+.mu-opc { display: flex; align-items: center; gap: 6px; padding: 2px 12px 4px; color: var(--text-muted); font-size: 12px; flex: none; cursor: pointer; }
+.mu-status { margin: 0; padding: 2px 12px 6px; min-height: 18px; color: var(--text-muted); font-size: 12px; line-height: 1.4; flex: none; }
+.mu-status.e { color: var(--red-color, #ed4245); }
+.mu-status.a { color: var(--yellow-color, #f2b84b); }
+.mu-lote { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 10px; flex: none; }
+.mu-lote[hidden] { display: none; }
+.mu-lote:empty { display: none; }
+.mu-lote-t { color: var(--text-muted); font-size: 12px; margin-right: auto; }
+.mu-bt { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .05); color: var(--text-header); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.mu-bt:hover { border-color: rgba(255, 255, 255, .35); }
+.mu-bt.perigo { color: var(--red-color, #ed4245); }
+
+.mu-lista { list-style: none; margin: 0; padding: 0 6px 6px; overflow-y: auto; flex: 1; min-height: 100px; max-height: 300px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .22) transparent; }
+.mu-it { display: flex; align-items: center; gap: 10px; padding: 5px 6px; border-radius: 10px; cursor: pointer; position: relative; }
+.mu-it:hover { background: rgba(255, 255, 255, .06); }
+.mu-it.atual { background: color-mix(in srgb, var(--mu-c) 18%, transparent); }
+.mu-capa { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex: none; background: rgba(255, 255, 255, .07); }
+.mu-capa.vazia { display: grid; place-items: center; color: var(--mu-c); font-size: 16px; }
+.mu-it-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mu-it-t b { color: var(--text-header); font-size: 13px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.mu-it-t small { color: var(--text-muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mu-it-bt { display: flex; flex: none; }
+.mu-vazio { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; padding: 18px 10px; text-align: center; list-style: none; }
+.mu-termos { margin: 0; padding: 8px 12px 10px; color: var(--text-muted); font-size: 11px; line-height: 1.4; border-top: 1px solid rgba(255, 255, 255, .06); flex: none; }
+.mu-termos a { color: var(--text-normal); text-decoration: underline; }
+
+.mu-eq { display: none; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
+.mu-eq i { display: block; width: 3px; height: 100%; border-radius: 1px; background: var(--mu-c); transform-origin: 50% 100%; transform: scaleY(.35); }
+.mu-it.atual .mu-eq { display: inline-flex; }
+.musica-janela.tocando .mu-it.atual .mu-eq i { animation: muEq .9s ease-in-out infinite; }
+.musica-janela.tocando .mu-it.atual .mu-eq i:nth-child(2) { animation-delay: .18s; }
+.musica-janela.tocando .mu-it.atual .mu-eq i:nth-child(3) { animation-delay: .36s; }
+@keyframes muEq { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .musica-janela.tocando .mu-it.atual .mu-eq i, #btn-musica.tocando .ic-musica { animation: none; } .musica-janela.tocando .mu-it.atual .mu-eq i { transform: scaleY(.65); } }
+
+/* celular: vira uma folha colada acima da barra de baixo, na largura toda */
+@media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
+    .musica-janela { left: 0 !important; right: 0 !important; top: auto !important; bottom: var(--nav-h, 64px) !important; width: auto; max-width: none; border-radius: 18px 18px 0 0; z-index: 1350; max-height: calc(100dvh - var(--nav-h, 64px) - 12px); }
+    .mu-topo { cursor: default; }
+    .mu-lista { max-height: 36dvh; }
+    .mu-ic { width: 40px; height: 40px; }
+    .mu-ic.peq { width: 36px; height: 36px; }
+    .mu-ic.grande { width: 48px; height: 48px; }
+}

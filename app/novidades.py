@@ -9,6 +9,13 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 25, 'data': '13/10/2026', 'titulo': 'Música no Pantheon e playlist no perfil',
+        'itens': [
+            {'icone': 'fa-music', 'titulo': 'Música', 'texto': 'Novo botão Música na barra lateral (no celular, em Você): pesquise uma música, toque, monte a sua fila e ouça enquanto usa o app. Dá pra colar um link de música ou playlist do YouTube e do YouTube Music, e guardar as que você gosta na playlist do seu perfil. O som vem do player do YouTube, que fica sempre à vista.'},
+            {'icone': 'fa-compact-disc', 'titulo': 'Playlist no perfil', 'texto': 'Em Configurações > Conexões, crie a sua playlist e cole links de músicas ou playlists do YouTube ou do YouTube Music. No seu perfil ela vira um disco que toca em sequência, com próxima e anterior, e quem abrir escolhe qual faixa ouvir. Vídeo que o dono não deixa tocar fora do YouTube é pulado.'},
+        ],
+    },
+    {
         'id': 24, 'data': '13/10/2026', 'titulo': 'Conexões no perfil, radar no mapa e painel do Estúdio',
         'itens': [
             {'icone': 'fa-link', 'titulo': 'Conexões no perfil', 'texto': 'Em Configurações > Conexões, cole o link do seu GitHub, YouTube, Spotify, Twitch, Instagram, site ou da sua loja do Bazar e o cartão já vem pronto. Não tem edição: se mudar algo, mude na página oficial e o Pantheon atualiza. Cada cartão ganha a cara da empresa (YouTube vermelho, Amazon amarelo, LinkedIn branco...). No cartão de perfil, a setinha ao lado vira o cartão para as conexões. Prefere uma conexão por página? Ligue o carrossel em Configurações > Conexões. Spotify e YouTube viram um toca-discos que só carrega o player quando você aperta Ouvir. Pro LinkedIn, solte o PDF do seu perfil e o currículo aparece.'},

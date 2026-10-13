@@ -28,20 +28,20 @@ def _freio(usuario, chave, intervalo=1.0):
     return False
 
 
-def _freio_avisa(usuario, chave, intervalo):
+def _freio_avisa(usuario, chave, intervalo, evento='conexoes_erro'):
     """Como _freio, mas AVISA a tela quando barra (senão o botão ficava esperando uma resposta que nunca vem)."""
     if _freio(usuario, chave, intervalo):
-        emit('conexoes_erro', {'msg': 'Calma: espere um instante e tente de novo.', 'indice': None})
+        emit(evento, {'msg': 'Calma: espere um instante e tente de novo.', 'indice': None})
         return True
     return False
 
 
-def _seguro(rotulo, fn):
+def _seguro(rotulo, fn, evento='conexoes_erro', extra=None):
     try:
         fn()
     except ErroConexao as e:
         db.session.rollback()
-        emit('conexoes_erro', {'msg': str(e), 'indice': getattr(e, 'indice', None)})
+        emit(evento, {'msg': str(e), 'indice': getattr(e, 'indice', None), **(extra or {})})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO CONEXOES {rotulo}] {type(e).__name__}: {e}")
@@ -50,7 +50,7 @@ def _seguro(rotulo, fn):
 
 def carga_do_dono(pessoa_id, linhas=None):
     return {'lista': conexoes.lista_json(pessoa_id, dono=True, linhas=linhas), 'plataformas': conexoes.registro_plataformas(),
-            'max': conexoes.MAX_CONEXOES, 'ia': conexoes.ia_disponivel(), 'imagens_ok': list(conexoes.IMAGENS_OK)}
+            'max': conexoes.MAX_CONEXOES, 'max_faixas': conexoes.MAX_FAIXAS, 'ia': conexoes.ia_disponivel(), 'imagens_ok': list(conexoes.IMAGENS_OK)}
 
 
 def carga_do_perfil(alvo_id, eu, linhas=None):
@@ -128,6 +128,57 @@ def conexao_atualizar(dados=None):
             raise ErroConexao('Calma: dá pra atualizar uma conexão por minuto.')
         _buscar_em_segundo_plano(usuario.id, [cid])
     _seguro('atualizar a conexão', fazer)
+
+
+def _avisar_fila_mudou(usuario, buscar=True):
+    """Regra 6: a playlist mudou, todas as abas da pessoa recebem a lista nova; e se faltam títulos, a busca roda em segundo plano (e avisa de novo no fim)."""
+    linhas = conexoes.listar(usuario.id)
+    emit('conexoes', carga_do_dono(usuario.id, linhas), to=sala_pessoal(usuario.id))
+    if buscar:
+        _buscar_em_segundo_plano(usuario.id, [c.id for c in linhas if c.tipo == 'fila' and conexoes.precisa_atualizar(c)])
+
+
+@socketio.on('fila_adicionar')
+def fila_adicionar(dados=None):
+    dados = dados if isinstance(dados, dict) else {}                      # (cliente adulterado pode mandar texto/lista)
+    """Cola um ou vários links de música/playlist do YouTube (ou YouTube Music) na playlist do perfil."""
+    usuario = usuario_logado()
+    if not usuario or _freio_avisa(usuario, 'fila', 1.0, 'fila_erro'):
+        return
+
+    origem = 'musica' if (dados or {}).get('origem') == 'musica' else None       # de onde veio o pedido (a tela da Música e a aba Conexões ouvem os mesmos eventos)
+
+    def fazer():
+        r = conexoes.adicionar_faixas(usuario, (dados or {}).get('url'), criar=bool((dados or {}).get('criar')))
+        emit('fila_ok', {'adicionadas': r['adicionadas'], 'avisos': r['avisos'], 'origem': origem})
+        _avisar_fila_mudou(usuario)
+    _seguro('adicionar à playlist', fazer, 'fila_erro', {'origem': origem})
+
+
+@socketio.on('fila_remover')
+def fila_remover(dados=None):
+    dados = dados if isinstance(dados, dict) else {}                      # (cliente adulterado pode mandar texto/lista)
+    usuario = usuario_logado()
+    if not usuario or _freio_avisa(usuario, 'fila_rm', 0.15, 'fila_erro'):
+        return
+
+    def fazer():
+        conexoes.remover_faixa(usuario, (dados or {}).get('chave'))
+        _avisar_fila_mudou(usuario, buscar=False)
+    _seguro('tirar da playlist', fazer, 'fila_erro')
+
+
+@socketio.on('fila_mover')
+def fila_mover(dados=None):
+    dados = dados if isinstance(dados, dict) else {}                      # (cliente adulterado pode mandar texto/lista)
+    usuario = usuario_logado()
+    if not usuario or _freio_avisa(usuario, 'fila_mv', 0.15, 'fila_erro'):
+        return
+
+    def fazer():
+        conexoes.mover_faixa(usuario, (dados or {}).get('chave'), (dados or {}).get('delta'))
+        _avisar_fila_mudou(usuario, buscar=False)
+    _seguro('mover na playlist', fazer, 'fila_erro')
 
 
 @socketio.on('conexoes_do_perfil')

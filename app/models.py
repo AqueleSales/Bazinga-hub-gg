@@ -822,8 +822,8 @@ class Conexao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
     ordem = db.Column(db.Integer, nullable=False, default=0)
-    tipo = db.Column(db.String(16), nullable=False)          # github | linkedin | youtube | twitch | spotify | instagram | tiktok | x | steam | ifood | amazon | olx | bazar | site
-    url = db.Column(db.String(320), nullable=True)           # sempre https, já normalizada (o tipo 'bazar' não tem)
+    tipo = db.Column(db.String(16), nullable=False)          # github | linkedin | youtube | twitch | spotify | instagram | tiktok | x | steam | ifood | amazon | olx | bazar | fila | site
+    url = db.Column(db.String(320), nullable=True)           # sempre https, já normalizada (os tipos 'bazar' e 'fila' não têm)
     titulo = db.Column(db.String(90), nullable=True)         # o nome mostrado (@usuario, nome da loja...)
     dados = db.Column(db.Text, nullable=True)                # JSON do que foi buscado (github, currículo, oembed...), até ~24 KB
     atualizado_em = db.Column(db.DateTime, nullable=True)    # quando os dados foram buscados (o cache vale por horas)

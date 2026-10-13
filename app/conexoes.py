@@ -10,6 +10,8 @@ O que é cada coisa:
     deu razão a ele no caso hiQ, e o próprio LinkedIn bloqueia robô). O jeito legítimo mais automático: a pessoa solta o PDF que o próprio LinkedIn gera
     ("Salvar como PDF") e o currículo é lido e PUBLICADO na hora, sem editor. Pra mudar algo: muda no LinkedIn e solta o PDF de novo.
   * Loja do Bazar: cartão da própria loja da pessoa (lido na hora, nunca fica velho).
+  * Playlist ("fila", Rodada 25): uma por pessoa; ela cola links de música/playlist do YouTube ou do YouTube Music e eles viram um disco que toca em sequência
+    (player oficial do YouTube, título e autor pelo oEmbed público). Sem login do Google, sem API paga: o YouTube Music não tem API oficial.
 Os links são informados pela própria pessoa: o Pantheon ainda não confirma que a conta é dela (a tela avisa isso embaixo da face).
 
 Segurança (tudo no servidor, regra 4):
@@ -66,8 +68,12 @@ PLATAFORMAS = {
     'amazon':    {'nome': 'Amazon',    'icone': 'fa-brands fa-amazon',        'cor': '#ff9900', 'hosts': ('amazon.com.br', 'amazon.com'), 'busca': 'og_suave'},
     'olx':       {'nome': 'OLX',       'icone': 'fa-solid fa-tags',           'cor': '#6e0ad6', 'hosts': ('olx.com.br',), 'busca': 'og_suave'},
     'bazar':     {'nome': 'Loja do Bazar', 'icone': 'fa-solid fa-store',      'cor': '#d4a24c', 'hosts': (), 'busca': None},
+    'fila':      {'nome': 'Playlist',  'icone': 'fa-solid fa-compact-disc',   'cor': '#ff3b3b', 'hosts': (), 'busca': 'fila'},
     'site':      {'nome': 'Site',      'icone': 'fa-solid fa-globe',          'cor': '#7289da', 'hosts': (), 'busca': 'og'},
 }
+
+MAX_FAIXAS = 30                                      # músicas (ou playlists) numa playlist do perfil
+NOME_FILA = 'Minha playlist'
 
 ENCURTADORES = {'bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'cutt.ly', 'is.gd', 'rb.gy', 'ow.ly', 'shorturl.at', 't.ly', 'lnkd.in', 'buff.ly',
                 'amzn.to', 'spoti.fi', 'linktr.ee.invalid', 'tiny.cc', 'bl.ink', 'v.gd', 'qr.ae', 'shorte.st', 'adf.ly', 'l.instagram.com'}
@@ -332,6 +338,186 @@ def _buscar_oembed(c):
     return titulo, dados
 
 
+# ---------------------------------------------------------------------
+# PLAYLIST DO PERFIL ("fila"): uma por pessoa. Cada faixa guarda só o id (`v` = vídeo/música, `l` = playlist) e, depois da busca, título (`t`), autor (`a`),
+# a capa das playlists (`i`; a das músicas o cliente deriva do id) e `x` = o oEmbed disse que não toca/não existe. Quem decide tudo é o servidor: o cliente
+# só manda o link colado (adicionar) ou a chave `v:<id>`/`l:<id>` (remover/mover), nunca a lista.
+# ---------------------------------------------------------------------
+_RE_CHAVE_FAIXA = re.compile(r'^[vl]:[\w-]{6,40}$')
+_RE_FAIXA_VIDEO = re.compile(r'^https://www\.youtube\.com/watch\?v=([\w-]{6,40})$')
+_RE_FAIXA_LISTA = re.compile(r'^https://www\.youtube\.com/playlist\?list=([\w-]{6,40})$')
+
+
+def faixa_de_link(texto):
+    """Link colado -> {'v': id} (música/vídeo) ou {'l': id} (playlist). Só YouTube e YouTube Music: canal, outro site e link estranho são recusados."""
+    tipo, url, _ = normalizar(texto)
+    if tipo == 'youtube':
+        m = _RE_FAIXA_VIDEO.match(url)
+        if m:
+            return {'v': m.group(1)}
+        m = _RE_FAIXA_LISTA.match(url)
+        if m:
+            return {'l': m.group(1)}
+    raise ErroConexao('Cole o link de uma música ou playlist do YouTube ou do YouTube Music (canal e outros sites não valem aqui).')
+
+
+def chave_da_faixa(f):
+    return f'v:{f["v"]}' if f.get('v') else f'l:{f.get("l", "")}'
+
+
+def _sem_titulo(f):
+    return not f.get('t') and not f.get('x')
+
+
+def _faixas_de(c):
+    """As faixas guardadas, só as que têm id válido (o JSON é nosso, mas a leitura nunca confia cegamente no que está no banco)."""
+    d = _dados_de(c) or {}
+    brutas = d.get('faixas')
+    saida = []
+    for f in brutas if isinstance(brutas, list) else []:
+        if isinstance(f, dict) and ((isinstance(f.get('v'), str) and _RE_YT_ID.match(f['v'])) or (isinstance(f.get('l'), str) and _RE_YT_ID.match(f['l']))):
+            saida.append(f)
+    return saida
+
+
+def _guardar_faixas(c, faixas):
+    texto = json.dumps({'faixas': faixas}, ensure_ascii=False, separators=(',', ':'))
+    if len(texto.encode('utf-8')) > MAX_DADOS_BYTES:
+        raise ErroConexao('A playlist ficou grande demais.')
+    c.dados = texto
+
+
+def _fila_da(pessoa_id, travar=False):
+    """A playlist da pessoa. `populate_existing` + trava de linha: quem lê pra mudar precisa do dado de AGORA (a busca em segundo plano e um clique
+    podem mexer na mesma linha ao mesmo tempo) e não da cópia que ficou na sessão."""
+    q = Conexao.query.filter_by(person_id=pessoa_id, tipo='fila').populate_existing()
+    return (q.with_for_update() if travar else q).first()
+
+
+def adicionar_faixas(pessoa, texto, criar=False):
+    """Cola de um ou vários links (separados por espaço, vírgula ou linha). Adiciona os que valem e devolve {'id', 'adicionadas', 'avisos'}.
+    `criar=True` (o botão "adicionar à playlist do perfil" da Música) cria a playlist se a pessoa ainda não tem. Levanta ErroConexao se nada pôde ser adicionado."""
+    pedacos = [p for p in re.split(r'[\s,;]+', str(texto or '').strip()) if p]
+    if not pedacos:
+        raise ErroConexao('Cole o link de uma música ou playlist do YouTube ou do YouTube Music.')
+    if len(pedacos) > MAX_FAIXAS:
+        raise ErroConexao(f'Cole no máximo {MAX_FAIXAS} links de uma vez.')
+    novas, invalidos = [], []
+    for p in pedacos:
+        try:
+            novas.append(faixa_de_link(p))
+        except ErroConexao as e:
+            invalidos.append(str(e))
+    if not novas:
+        raise ErroConexao(invalidos[0])
+    resultado = {}
+
+    def preparar():
+        resultado.clear()
+        c = _fila_da(pessoa.id, travar=True)
+        if c is None and criar:
+            qtd = Conexao.query.filter_by(person_id=pessoa.id).count()
+            if qtd >= MAX_CONEXOES:
+                raise ErroConexao(f'Você já tem {MAX_CONEXOES} conexões: abra espaço em Configurações > Conexões pra criar a playlist.')
+            c = Conexao(person_id=pessoa.id, ordem=qtd, tipo='fila', url=None, titulo=NOME_FILA, dados='{"faixas":[]}', atualizado_em=br_now())
+            db.session.add(c)
+            db.session.flush()
+            pessoa.conexoes_qtd = qtd + 1
+        if c is None:
+            raise ErroConexao('Crie a sua playlist em Configurações > Conexões antes de adicionar músicas.')
+        faixas = _faixas_de(c)
+        existentes = {chave_da_faixa(f) for f in faixas}
+        add = repetidas = sem_espaco = 0
+        for f in novas:
+            k = chave_da_faixa(f)
+            if k in existentes:
+                repetidas += 1
+            elif len(faixas) >= MAX_FAIXAS:
+                sem_espaco += 1
+            else:
+                faixas.append(f)
+                existentes.add(k)
+                add += 1
+        if not add:
+            raise ErroConexao(f'A playlist aceita até {MAX_FAIXAS} músicas.' if sem_espaco else 'Essa música já está na playlist.' if len(novas) == 1 else 'Essas músicas já estão na playlist.')
+        _guardar_faixas(c, faixas)
+        resultado.update(id=c.id, adicionadas=add, repetidas=repetidas, sem_espaco=sem_espaco)
+
+    comitar_com_retry(preparar)
+    avisos = []
+    if invalidos:
+        avisos.append(f'{len(invalidos)} link(s) não valeram: {invalidos[0]}')
+    if resultado['repetidas']:
+        avisos.append(f'{resultado["repetidas"]} já estava(m) na playlist.')
+    if resultado['sem_espaco']:
+        avisos.append(f'{resultado["sem_espaco"]} ficou(aram) de fora: a playlist aceita até {MAX_FAIXAS} músicas.')
+    return {'id': resultado['id'], 'adicionadas': resultado['adicionadas'], 'avisos': avisos}
+
+
+def remover_faixa(pessoa, chave):
+    if not isinstance(chave, str) or not _RE_CHAVE_FAIXA.match(chave):
+        raise ErroConexao('Música inválida.')
+
+    def preparar():
+        c = _fila_da(pessoa.id, travar=True)
+        if c is None:
+            raise ErroConexao('Você ainda não tem uma playlist.')
+        _guardar_faixas(c, [f for f in _faixas_de(c) if chave_da_faixa(f) != chave])
+    comitar_com_retry(preparar)
+
+
+def mover_faixa(pessoa, chave, delta):
+    """Troca a faixa com a vizinha de cima (-1) ou de baixo (+1). Na ponta não faz nada."""
+    if not isinstance(chave, str) or not _RE_CHAVE_FAIXA.match(chave) or delta not in (-1, 1):
+        raise ErroConexao('Música inválida.')
+
+    def preparar():
+        c = _fila_da(pessoa.id, travar=True)
+        if c is None:
+            raise ErroConexao('Você ainda não tem uma playlist.')
+        faixas = _faixas_de(c)
+        i = next((n for n, f in enumerate(faixas) if chave_da_faixa(f) == chave), None)
+        if i is None or not 0 <= i + delta < len(faixas):
+            return
+        faixas[i], faixas[i + delta] = faixas[i + delta], faixas[i]
+        _guardar_faixas(c, faixas)
+    comitar_com_retry(preparar)
+
+
+def _buscar_fila(c):
+    """Título e autor das faixas que ainda não têm (oEmbed público, 1 chamada por faixa nova). Devolve (None, {'meta': {chave: {...}}, 'erro': texto|None}):
+    só o que foi buscado, porque a gravação MESCLA na lista de agora (a pessoa pode ter adicionado/removido faixa enquanto a rede respondia)."""
+    meta, erro = {}, None
+    for f in [x for x in _faixas_de(c) if _sem_titulo(x)][:MAX_FAIXAS]:
+        url = f'https://www.youtube.com/watch?v={f["v"]}' if f.get('v') else f'https://www.youtube.com/playlist?list={f["l"]}'
+        try:
+            st, _tp, txt, _ = importar.baixar_texto('https://www.youtube.com/oembed?format=json&url=' + quote(url, safe=''), aceita='application/json')
+            if st in (400, 401, 404):   # 400 = id que não existe; 401 = o dono não deixa tocar fora do YouTube; 404 = apagado ou privado. (403/429/5xx podem ser o YouTube nos barrando: NÃO marcam a faixa)
+                meta[chave_da_faixa(f)] = {'x': 1}
+                continue
+            j = _json_de(st, txt, 'essa música')
+        except (ErroConexao, ErroImportar) as e:
+            erro = str(e)[:140]
+            break                       # a rede/o serviço está ruim: não insiste nas outras (a próxima tentativa é daqui a 10 min)
+        if not isinstance(j, dict):
+            continue
+        m = {'t': _limpo(j.get('title'), 90) or 'Sem título', 'a': _limpo(j.get('author_name'), 80)}
+        capa = j.get('thumbnail_url') or ''
+        if f.get('l') and imagem_ok(capa):
+            m['i'] = capa
+        meta[chave_da_faixa(f)] = m
+    return None, {'meta': meta, 'erro': erro}
+
+
+def _mesclar_fila(c, meta):
+    faixas = _faixas_de(c)
+    for f in faixas:
+        m = meta.get(chave_da_faixa(f))
+        if m:
+            f.update(m)
+    _guardar_faixas(c, faixas)
+
+
 def _buscar_og(c):
     st, _tp, html, final = importar.baixar_texto(c.url, aceita='text/html,application/xhtml+xml;q=0.9,*/*;q=0.1')
     if st == 404:
@@ -363,6 +549,8 @@ def buscar_dados(c):
     como = PLATAFORMAS.get(c.tipo, {}).get('busca')
     if como == 'github':
         return _buscar_github(c)
+    if como == 'fila':
+        return _buscar_fila(c)
     if como in ('spotify', 'youtube'):
         # canal/usuário do YouTube não tem oEmbed: cai na leitura da página
         if c.tipo == 'youtube' and '/watch' not in c.url and '/playlist' not in c.url:
@@ -404,7 +592,10 @@ def para_json(c, dono=False):
          'atualizado': c.atualizado_em.isoformat() if c.atualizado_em else None}
     if dono:
         j['erro'] = c.erro
-        j['buscando'] = bool(PLATAFORMAS.get(c.tipo, {}).get('busca')) and not c.atualizado_em and not c.erro
+        if c.tipo == 'fila':
+            j['buscando'] = any(_sem_titulo(f) for f in _faixas_de(c)) and not c.erro      # (a playlist nasce com `atualizado_em`: "buscando" = ainda faltam títulos)
+        else:
+            j['buscando'] = bool(PLATAFORMAS.get(c.tipo, {}).get('busca')) and not c.atualizado_em and not c.erro
     return j
 
 
@@ -434,6 +625,8 @@ def lista_json(pessoa_id, dono=False, linhas=None):
             if not j['dados'] and not dono:
                 continue                                       # sem loja pública, não aparece pra os outros
             j['titulo'] = (j['dados'] or {}).get('nome') or 'Minha loja'
+        elif c.tipo == 'fila' and not dono and not _faixas_de(c):
+            continue                                           # playlist vazia não aparece pra os outros
         saida.append(j)
     return saida
 
@@ -454,12 +647,14 @@ def salvar_lista(pessoa, itens):
                 tipo, url, titulo = 'bazar', None, 'Minha loja'
                 if not com_retry(lambda: BazarLoja.query.filter_by(owner_id=pessoa.id).first()):
                     raise ErroConexao('Você ainda não tem uma loja no Bazar.')
+            elif it.get('tipo') == 'fila':
+                tipo, url, titulo = 'fila', None, NOME_FILA          # a playlist não tem link: é uma por pessoa e as músicas entram por `adicionar_faixas`
             else:
                 tipo, url, titulo = normalizar(it.get('url'))
         except ErroConexao as e:
             raise ErroConexao(str(e), indice)
         if (tipo, url) in vistos:
-            raise ErroConexao('Esse link já está na sua lista.', indice)
+            raise ErroConexao('Você só pode ter uma playlist.' if tipo == 'fila' else 'Esse link já está na sua lista.', indice)
         vistos.add((tipo, url))
         try:
             ident = int(it['id']) if it.get('id') else None
@@ -481,10 +676,12 @@ def salvar_lista(pessoa, itens):
                 manter.add(c.id)
                 continue
             c = Conexao(person_id=pessoa.id, ordem=ordem, tipo=n['tipo'], url=n['url'], titulo=n['titulo'])   # link novo (ou trocado): linha nova
+            if n['tipo'] == 'fila':
+                c.dados, c.atualizado_em = '{"faixas":[]}', br_now()          # playlist nasce vazia e "atualizada": nada a buscar até entrar a 1ª música
             db.session.add(c)
             db.session.flush()
             manter.add(c.id)
-            if PLATAFORMAS[n['tipo']]['busca']:
+            if PLATAFORMAS[n['tipo']]['busca'] and n['tipo'] != 'fila':
                 a_buscar.append(c.id)
         for cid, c in atuais.items():
             if cid not in manter:
@@ -521,6 +718,12 @@ def atualizar_uma(conexao_id):
             x = Conexao.query.get(conexao_id)
             if not x:
                 return
+            if x.tipo == 'fila' and not erro:
+                # a playlist MESCLA o que foi buscado na lista de agora (lida de novo, com trava): enquanto a rede respondia, a pessoa pode ter mexido nela
+                x = _fila_da(x.person_id, travar=True) or x
+                _mesclar_fila(x, (dados or {}).get('meta') or {})
+                x.erro, x.atualizado_em = (dados or {}).get('erro'), br_now()
+                return
             if erro:
                 x.erro = erro
                 x.atualizado_em = br_now()                            # marca a TENTATIVA (o dado velho, se houver, continua valendo na tela)
@@ -544,6 +747,10 @@ def precisa_atualizar(c):
     """True se os dados estão velhos pro tipo (ou nunca vieram) e a última falha já passou."""
     if not PLATAFORMAS.get(c.tipo, {}).get('busca'):
         return False
+    if c.tipo == 'fila':                                         # só busca enquanto faltar título; depois de uma falha espera 10 min
+        if not any(_sem_titulo(f) for f in _faixas_de(c)):
+            return False
+        return not (c.erro and c.atualizado_em and br_now() - c.atualizado_em <= TTL_ERRO)
     if not c.atualizado_em:
         return True                                              # nunca buscou
     idade = br_now() - c.atualizado_em

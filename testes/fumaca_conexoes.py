@@ -478,6 +478,200 @@ with app.app_context():
     ok('compactarVazias' in js and 'slice(0, compacto ? 3 : 6)' in js, 'escrever e apagar não empilha caixinhas vazias; a lista usa cartões compactos')
     ok(":where(:not(.cx-cab)" in css, 'as seções do currículo têm espaço (a regra geral de margem não engole as de .cx-sub/.cx-rodape)')
 
+    # ---------- 13. playlist do perfil ("fila", Rodada 25): cola links do YouTube / YouTube Music e vira um disco que toca em sequência ----------
+    cx.importar.baixar_texto = falso
+    cx.salvar_lista(pa, [])
+    conexoes_events._ultimo.clear()
+    fila_de = lambda pid: Conexao.query.filter_by(person_id=pid, tipo='fila').first()
+    faixas_de = lambda pid: json.loads(fila_de(pid).dados)['faixas']
+    chaves_de = lambda pid: [cx.chave_da_faixa(f) for f in faixas_de(pid)]
+
+    # 13a. quais links valem
+    bons_fila = {
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ': {'v': 'dQw4w9WgXcQ'},
+        'https://music.youtube.com/watch?v=dQw4w9WgXcQ&list=RDAMVMdQw4w9WgXcQ': {'v': 'dQw4w9WgXcQ'},
+        'https://youtu.be/9bZkp7q19f0?si=abc': {'v': '9bZkp7q19f0'},
+        'https://www.youtube.com/shorts/abcdEFGhij1': {'v': 'abcdEFGhij1'},
+        'music.youtube.com/playlist?list=OLAK5uy_kXyz1234567890abcdefghijk': {'l': 'OLAK5uy_kXyz1234567890abcdefghijk'},
+    }
+    for entrada, esperado in bons_fila.items():
+        ok(cx.faixa_de_link(entrada) == esperado, f'playlist aceita {entrada[:60]} -> {esperado}')
+    for entrada in ('https://www.youtube.com/@Fulano', 'https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv', 'open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC', 'https://exemplo.com/x',
+                    'bit.ly/abc', '', 'lixo', 'javascript:alert(1)', 'https://www.youtube.com/', 'https://www.youtube.com/watch?v=<script>', 'http://127.0.0.1/watch?v=abcdefghij'):
+        ok(levanta(lambda e=entrada: cx.faixa_de_link(e)), f'playlist recusa {entrada[:50]!r}')
+
+    # 13b. a playlist é um item da lista: uma por pessoa, entra no teto de 12 e nasce vazia
+    ok(cx.salvar_lista(pa, [{'tipo': 'fila'}]) == [] and fila_de(ids['Ana']) is not None and ana().conexoes_qtd == 1, 'cria a playlist (item sem link), sem busca de rede')
+    f0 = fila_de(ids['Ana'])
+    ok(f0.url is None and f0.titulo == cx.NOME_FILA and f0.dados == '{"faixas":[]}' and f0.atualizado_em, 'ela nasce vazia, sem link, com nome padrão e já "atualizada"')
+    ok(levanta(lambda: cx.salvar_lista(pa, [{'tipo': 'fila'}, {'tipo': 'fila'}])), 'duas playlists na mesma lista são recusadas')
+    cx.salvar_lista(pa, [{'tipo': 'fila'}])
+    ok(Conexao.query.filter_by(person_id=ids['Ana'], tipo='fila').count() == 1 and fila_de(ids['Ana']).id == f0.id, 'pedir a playlist de novo não cria outra (nem apaga a que existe)')
+    ok(levanta(lambda: cx.salvar_lista(pa, [{'tipo': 'fila'}] + [{'url': f'https://site{i}.com'} for i in range(12)])), 'a playlist conta no teto de 12 conexões')
+    cx.salvar_lista(pa, [{'url': 'github.com/AqueleSales'}, {'id': f0.id, 'tipo': 'fila'}])
+    ok([x.tipo for x in cx.listar(ids['Ana'])] == ['github', 'fila'], 'a playlist entra na ordem escolhida junto com os outros links')
+
+    # 13c. adicionar músicas
+    ok(levanta(lambda: cx.adicionar_faixas(db.session.get(Person, ids['Duda']), 'https://youtu.be/dQw4w9WgXcQ')), 'sem playlist criada, adicionar música é recusado (e a mensagem manda criar)')
+    r1 = cx.adicionar_faixas(pa, 'https://youtu.be/dQw4w9WgXcQ  https://music.youtube.com/watch?v=9bZkp7q19f0, music.youtube.com/playlist?list=OLAK5uy_kXyz1234567890abcdefghijk')
+    ok(r1['adicionadas'] == 3 and chaves_de(ids['Ana']) == ['v:dQw4w9WgXcQ', 'v:9bZkp7q19f0', 'l:OLAK5uy_kXyz1234567890abcdefghijk'] and not r1['avisos'], 'vários links colados de uma vez entram na ordem (espaço, vírgula ou linha separam)')
+    ok(levanta(lambda: cx.adicionar_faixas(pa, 'https://youtu.be/dQw4w9WgXcQ')), 'a mesma música não entra duas vezes')
+    r2 = cx.adicionar_faixas(pa, 'https://youtu.be/dQw4w9WgXcQ https://youtu.be/vid00000001 spotify.com/x https://www.youtube.com/@Fulano')
+    ok(r2['adicionadas'] == 1 and len(r2['avisos']) == 2 and 'não valeram' in r2['avisos'][0] and 'já estava' in r2['avisos'][1], 'mistura: entra o que vale, o resto vira aviso (inválidos e repetidos)')
+    ok(levanta(lambda: cx.adicionar_faixas(pa, 'https://exemplo.com/a bit.ly/b')), 'só links que não valem: nada entra e a mensagem explica o motivo')
+    ok(levanta(lambda: cx.adicionar_faixas(pa, '')) and levanta(lambda: cx.adicionar_faixas(pa, 'x ' * 31)), 'vazio e links demais de uma vez são recusados')
+    for i in range(2, 28):
+        cx.adicionar_faixas(pa, f'https://youtu.be/vid{i:08d}')
+    ok(len(faixas_de(ids['Ana'])) == 30, 'a playlist vai até 30 músicas')
+    ok(levanta(lambda: cx.adicionar_faixas(pa, 'https://youtu.be/vid99999999')) and len(faixas_de(ids['Ana'])) == 30, 'a 31ª é recusada e nada muda')
+    ok(len(json.dumps(faixas_de(ids['Ana']))) < cx.MAX_DADOS_BYTES, 'a playlist cheia cabe no limite de dados da conexão')
+
+    # 13d. remover e mover (por chave; idempotente; só da própria playlist)
+    cx.remover_faixa(pa, 'v:vid00000027')
+    ok(len(faixas_de(ids['Ana'])) == 29 and 'v:vid00000027' not in chaves_de(ids['Ana']), 'remover tira a faixa')
+    cx.remover_faixa(pa, 'v:vid00000027')
+    ok(len(faixas_de(ids['Ana'])) == 29, 'remover de novo a mesma faixa não dá erro nem mexe em nada')
+    ok(levanta(lambda: cx.remover_faixa(pa, "v:');alert(1)")) and levanta(lambda: cx.remover_faixa(pa, None)) and levanta(lambda: cx.mover_faixa(pa, 'v:dQw4w9WgXcQ', 5)), 'chave estranha ou deslocamento fora de -1/+1 é recusado')
+    cx.mover_faixa(pa, 'v:dQw4w9WgXcQ', 1)
+    ok(chaves_de(ids['Ana'])[:3] == ['v:9bZkp7q19f0', 'v:dQw4w9WgXcQ', 'l:OLAK5uy_kXyz1234567890abcdefghijk'], 'mover pra baixo troca com a vizinha')
+    cx.mover_faixa(pa, 'v:9bZkp7q19f0', -1)
+    ok(chaves_de(ids['Ana'])[0] == 'v:9bZkp7q19f0', 'mover a primeira pra cima (na ponta) não faz nada')
+    ok(levanta(lambda: cx.remover_faixa(db.session.get(Person, ids['Duda']), 'v:dQw4w9WgXcQ')), 'quem não tem playlist não consegue mexer na dos outros')
+
+    # 13e. títulos pelo oEmbed (simulado): só o que falta, 401/404 marca "não toca", falha de rede não marca, e a gravação NÃO apaga o que mudou enquanto a rede respondia
+    chamadas_oembed = []
+
+    def oembed(url, **kw):
+        chamadas_oembed.append(url)
+        if 'oembed' not in url:
+            return 404, '', '', url
+        if 'vid00000003' in url:
+            return 401, '', '', url
+        if 'vid00000004' in url:
+            return 404, '', '', url
+        if 'vid00000005' in url:
+            return 400, '', '', url
+        if 'playlist' in url:
+            return 200, 'application/json', json.dumps({'title': 'Álbum <b>Bom</b>', 'author_name': 'Banda', 'thumbnail_url': 'https://i.ytimg.com/vi/abc/hqdefault.jpg'}), url
+        return 200, 'application/json', json.dumps({'title': 'Música\x07 ​Linda <img src=x onerror=alert(1)>', 'author_name': 'Fulano - Topic', 'thumbnail_url': 'https://i.ytimg.com/vi/x/hq.jpg', 'html': '<iframe>'}), url
+
+    cx.importar.baixar_texto = oembed
+    fila_ana = fila_de(ids['Ana'])
+    ok(cx.precisa_atualizar(fila_ana) and cx.para_json(fila_ana, dono=True)['buscando'] is True, 'com títulos faltando a playlist precisa de busca (e a tela do dono mostra "buscando")')
+    cx.atualizar_uma(fila_ana.id)
+    fx = {cx.chave_da_faixa(f): f for f in faixas_de(ids['Ana'])}
+    ok(len(chamadas_oembed) == 29 and all('oembed' in u for u in chamadas_oembed), 'uma chamada de oEmbed por faixa sem título (29)')
+    ok(fx['v:dQw4w9WgXcQ']['t'] == 'Música Linda <img src=x onerror=alert(1)>' and fx['v:dQw4w9WgXcQ']['a'] == 'Fulano - Topic', 'título e autor entram limpos (sem caractere de controle/invisível; o HTML fica como TEXTO, o cliente escapa)')
+    ok('html' not in fx['v:dQw4w9WgXcQ'] and 'i' not in fx['v:dQw4w9WgXcQ'], 'o HTML do oEmbed NÃO é guardado e a capa de música não é guardada (o cliente deriva do id)')
+    ok(fx['l:OLAK5uy_kXyz1234567890abcdefghijk']['t'].startswith('Álbum') and fx['l:OLAK5uy_kXyz1234567890abcdefghijk']['i'] == 'https://i.ytimg.com/vi/abc/hqdefault.jpg', 'playlist: título e capa do CDN do YouTube')
+    ok(fx['v:vid00000003'].get('x') == 1 and fx['v:vid00000004'].get('x') == 1 and fx['v:vid00000005'].get('x') == 1 and 't' not in fx['v:vid00000003'], '401 (embed bloqueado), 404 (apagado/privado) e 400 (id que não existe) marcam a faixa como "não toca"')
+    ok(fx['v:vid00000006'].get('t') and fx['v:vid00000026'].get('t'), '...e uma faixa ruim no meio NÃO impede de buscar o título das seguintes')
+    fila_ana = fila_de(ids['Ana'])
+    ok(fila_ana.erro is None and not cx.precisa_atualizar(fila_ana) and cx.para_json(fila_ana, dono=True)['buscando'] is False, 'tudo com título (ou marcado): não busca de novo e não aparece "buscando"')
+    n_antes = len(chamadas_oembed)
+    cx.atualizar_uma(fila_ana.id)
+    ok(len(chamadas_oembed) == n_antes, 'atualizar de novo sem faixa nova não chama a rede')
+
+    # corrida: durante a busca a pessoa adiciona uma faixa e remove outra -> nada se perde nem ressuscita
+    cx.adicionar_faixas(pa, 'https://youtu.be/corrida0001')
+    mexeu = []
+
+    def oembed_mexe(url, **kw):
+        if not mexeu:
+            mexeu.append(1)
+            cx.remover_faixa(pa, 'v:vid00000010')
+            cx.adicionar_faixas(pa, 'https://youtu.be/corrida0002')
+        return oembed(url, **kw)
+    cx.importar.baixar_texto = oembed_mexe
+    cx.atualizar_uma(fila_de(ids['Ana']).id)
+    ch = chaves_de(ids['Ana'])
+    ok('v:corrida0002' in ch and 'v:vid00000010' not in ch and 'v:corrida0001' in ch, 'a busca em segundo plano MESCLA: a faixa adicionada no meio fica, a removida não volta')
+    ok(next(f for f in faixas_de(ids['Ana']) if f.get('v') == 'corrida0001').get('t') == 'Música Linda <img src=x onerror=alert(1)>', '...e a faixa que já estava na fila recebe o título')
+    ok('t' not in next(f for f in faixas_de(ids['Ana']) if f.get('v') == 'corrida0002'), '...enquanto a que entrou no meio ainda espera a próxima busca')
+
+    # falha de rede: para na primeira, guarda o erro, não marca ninguém como "não toca" e só tenta de novo daqui a 10 min
+    def oembed_cai(url, **kw): return 503, '', '', url
+    cx.importar.baixar_texto = oembed_cai
+    cx.atualizar_uma(fila_de(ids['Ana']).id)
+    fila_ana = fila_de(ids['Ana'])
+    ok(fila_ana.erro and 'x' not in next(f for f in faixas_de(ids['Ana']) if f.get('v') == 'corrida0002'), 'serviço fora do ar: guarda o erro e NÃO marca a faixa como "não toca"')
+    ok(not cx.precisa_atualizar(fila_ana), 'depois da falha, só tenta de novo depois de 10 min')
+    fila_ana.atualizado_em = br_now() - timedelta(minutes=11); db.session.commit()
+    ok(cx.precisa_atualizar(fila_ana), 'passados 10 min da falha, tenta de novo')
+    def oembed_barra(url, **kw): return 403, '', '', url
+    cx.importar.baixar_texto = oembed_barra
+    cx.atualizar_uma(fila_ana.id)
+    ok(not any(f.get('x') for f in faixas_de(ids['Ana']) if f.get('v') == 'corrida0002'), '403 (o YouTube pode estar nos barrando) também NÃO marca a faixa como "não toca"')
+    cx.importar.baixar_texto = oembed
+    fila_de(ids['Ana']).erro = None; db.session.commit()
+    cx.atualizar_uma(fila_de(ids['Ana']).id)
+    ok(not cx.precisa_atualizar(fila_de(ids['Ana'])) and fila_de(ids['Ana']).erro is None, 'a busca seguinte, com a rede boa, completa os títulos e limpa o erro')
+
+    # 13f. quem vê o quê
+    vistos_dono = cx.lista_json(ids['Ana'], dono=True)
+    vistos_outros = cx.lista_json(ids['Ana'], dono=False)
+    ok(any(x['tipo'] == 'fila' and x['dados']['faixas'] for x in vistos_outros), 'quem olha o perfil vê a playlist com as faixas')
+    ok(all('erro' not in x for x in vistos_outros) and 'buscando' in next(x for x in vistos_dono if x['tipo'] == 'fila'), 'só o dono recebe erro/"buscando"')
+    cx.salvar_lista(db.session.get(Person, ids['Duda']), [{'tipo': 'fila'}])
+    ok(not any(x['tipo'] == 'fila' for x in cx.lista_json(ids['Duda'], dono=False)) and any(x['tipo'] == 'fila' for x in cx.lista_json(ids['Duda'], dono=True)), 'playlist vazia: aparece pro dono (pra ele montar) e NÃO aparece pra os outros')
+    cx.salvar_lista(db.session.get(Person, ids['Duda']), [])
+
+    # 13g. eventos (regra 6 e erros)
+    cx.remover_faixa(pa, 'v:vid00000020'); cx.remover_faixa(pa, 'v:vid00000021')      # (a playlist está cheia: abre espaço pros eventos)
+    conexoes_events._ultimo.clear(); cx._ultima_atualizacao.clear()
+    ca, _ = cliente('Ana'); ca2, _ = cliente('Ana'); cb, _ = cliente('Beto'); cd, _ = cliente('Duda')
+    for x in (ca, ca2, cb, cd):
+        ev(x)
+    ca.emit('fila_adicionar', {'url': 'https://music.youtube.com/watch?v=evento00001'})
+    ok_ = ev(ca, 'fila_ok'); co = ev(ca2, 'conexoes')
+    ok(ok_ and ok_[0]['args'][0]['adicionadas'] == 1, 'fila_adicionar responde fila_ok com quantas entraram')
+    ok(co and any(f.get('v') == 'evento00001' for x in co[-1]['args'][0]['lista'] if x['tipo'] == 'fila' for f in x['dados']['faixas']), 'regra 6: a OUTRA aba da pessoa recebe a playlist nova')
+    ok(any(f.get('v') == 'evento00001' and f.get('t') for x in co[-1]['args'][0]['lista'] if x['tipo'] == 'fila' for f in x['dados']['faixas']), '...e de novo, com o título, quando a busca em segundo plano termina')
+    ca.emit('fila_adicionar', {'url': 'https://youtu.be/evento00002'})
+    er = ev(ca, 'fila_erro')
+    ok(er and 'Calma' in er[0]['args'][0]['msg'], 'adicionar logo em seguida é barrado pelo freio E a tela é avisada')
+    conexoes_events._ultimo.clear()
+    ca.emit('fila_adicionar', {'url': 'https://exemplo.com/nao'})
+    er = ev(ca, 'fila_erro')
+    ok(er and 'YouTube' in er[0]['args'][0]['msg'] and not ev(ca, 'erro_bazinga') and not ev(ca, 'fila_ok'), 'link que não vale volta como fila_erro (mensagem pra pessoa), sem fila_ok')
+    conexoes_events._ultimo.clear()
+    ca.emit('fila_adicionar', {}); ca.emit('fila_adicionar', {'url': 123})
+    ok(not ev(ca, 'erro_bazinga'), 'pedido malformado não derruba nada')
+    conexoes_events._ultimo.clear()
+    antes = chaves_de(ids['Ana'])
+    cd.emit('fila_remover', {'chave': antes[0]})
+    cd.emit('fila_mover', {'chave': antes[0], 'delta': 1})
+    cd.emit('fila_adicionar', {'url': 'https://youtu.be/intruso0001'})
+    ok(chaves_de(ids['Ana']) == antes and len(ev(cd, 'fila_erro')) >= 1, 'outra pessoa não mexe na minha playlist (cada evento age só na DELA)')
+    conexoes_events._ultimo.clear()
+    ca.emit('fila_mover', {'chave': antes[0], 'delta': 1})
+    ok(chaves_de(ids['Ana'])[1] == antes[0] and ev(ca2, 'conexoes'), 'fila_mover troca a ordem e avisa as outras abas')
+    conexoes_events._ultimo.clear()
+    ca.emit('fila_remover', {'chave': antes[0]})
+    ok(antes[0] not in chaves_de(ids['Ana']) and ev(ca2, 'conexoes'), 'fila_remover tira a faixa e avisa as outras abas')
+    conexoes_events._ultimo.clear()
+    ca.emit('fila_mover', {'chave': 'v:abcdefghi', 'delta': 9}); ca.emit('fila_remover', {'chave': ["x"]})
+    ok(len(ev(ca, 'fila_erro')) >= 1 and not ev(ca, 'erro_bazinga'), 'chave/delta inválidos voltam como fila_erro')
+    conexoes_events._ultimo.clear()
+    cb.emit('conexoes_do_perfil', {'usuario_id': ids['Ana']})
+    pf_fila = next(x for x in ev(cb, 'conexoes_do_perfil')[0]['args'][0]['lista'] if x['tipo'] == 'fila')
+    ok(bool(pf_fila['dados']['faixas']), 'amigo que abre o perfil recebe a playlist com as faixas')
+    conexoes_events._ultimo.clear()
+    cd.emit('conexoes_do_perfil', {'usuario_id': ids['Ana']})
+    ok(ev(cd, 'conexoes_do_perfil')[0]['args'][0]['restrito'] is True, 'estranho continua sem ver nada (nem a playlist)')
+    reg = cx.registro_plataformas()
+    ok(reg['fila']['nome'] == 'Playlist' and reg['fila']['busca'] is True, 'o cliente recebe a playlist no registro de plataformas')
+    ok(cx.salvar_lista(pa, []) == [] and fila_de(ids['Ana']) is None, 'tirar a playlist da lista apaga a playlist')
+
+    # 13h. cliente e código
+    ok("'fila'" in re.search(r'const MARCAS = new Set\(\[(.*?)\]\)', js).group(1) and '.cx-card[data-marca="fila"]' in css, 'a playlist tem marca (data-marca) e o visual no CSS')
+    ok('function cartaoFila' in js and 'case \'fila\'' in js and 'fila_adicionar' in js and 'fila_remover' in js and 'fila_mover' in js, 'o cliente desenha o disco da playlist e conversa com o servidor')
+    ok(js.count('youtube.com/iframe_api') == 1 and 'function carregarYt' in js, 'o script do player do YouTube só é carregado dentro de carregarYt (ao apertar Ouvir), nunca ao abrir o perfil')
+    ok('T(nomeFaixa(f))' in js and 'T(subFaixa(f))' in js and not re.search(r'\$\{f\.(t|a|v|l|i)\}', re.sub(r'const capaFaixa.*\n', '', js)), 'título/autor/id da faixa passam por esc() antes do innerHTML (nada de ${f.t} cru)')
+    ok("onYouTubeIframeAPIReady" in js and "getPlaylistIndex" in js and "onError" in js, 'o player avança de faixa, cuida de playlist dentro da fila e pula a que não toca')
+    ok("socket.on('fila_ok'" in html and "socket.on('fila_erro'" in html, 'chat.html escuta fila_ok e fila_erro')
+    ok('.cx-eq' in css and 'prefers-reduced-motion' in css.split('.cx-eq', 1)[1], 'o equalizador da faixa tocando respeita "reduzir movimento"')
+
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)
 sys.exit(1 if falhas else 0)

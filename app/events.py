@@ -4213,3 +4213,4 @@ from . import explorar_events  # noqa: E402,F401
 
 # Conexões do perfil (links de outras plataformas, currículo, GitHub): handlers em outro arquivo, também no FIM (importa daqui).
 from . import conexoes_events  # noqa: E402,F401
+from . import musica_events  # noqa: E402,F401

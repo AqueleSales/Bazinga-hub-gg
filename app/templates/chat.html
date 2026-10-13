@@ -2829,7 +2829,7 @@
             .chat-header { padding: 0 10px; }
 
             /* painel Amigos: só amigos e conversas (Radar/Loja/Inventário/Passe têm lugar próprio na barra e no "Você") */
-            #dms-sidebar .channels-list > div:first-child, #btn-voltar-radar, #btn-mercado, #btn-inventario, #btn-battlepass, #btn-battlepass + div { display: none !important; }
+            #dms-sidebar .channels-list > div:first-child, #btn-voltar-radar, #btn-mercado, #btn-inventario, #btn-battlepass, #btn-musica, #btn-musica + div { display: none !important; }
 
             /* botão de ação do mapa (arrastável pelos 4 cantos; abre 3 ícones em leque) */
             #mob-fab { position: fixed; z-index: 1250; width: 54px; height: 54px; display: none; touch-action: none; }
@@ -2938,6 +2938,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/explorar.css') }}?v={{ explorar_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mapa_social.css') }}?v={{ mapa_social_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conexoes.css') }}?v={{ conexoes_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 </head>
@@ -2991,6 +2992,8 @@
                             <div style="display:flex; align-items:center; gap:12px;"><i class="fa-solid fa-ranking-star ic-passe" style="font-size: 16px;"></i> Battle Pass</div>
                             <span id="sidebar-nivel-badge" style="background: var(--brand-color); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">1</span>
                         </div>
+
+                        <div class="channel-item" id="btn-musica" style="gap: 12px; margin: 0 8px; padding: 8px;" title="Pesquise, toque e monte a sua fila de músicas"><i class="fa-solid fa-music ic-musica"></i> Música <span class="mu-badge" hidden></span></div>
 
                         <div style="height: 1px; background-color: rgba(255,255,255,0.05); margin: 8px 16px;"></div>
 
@@ -4569,8 +4572,10 @@
                                 <p class="cx-aba-info">Cole o link do seu <b>GitHub, YouTube, Twitch, Spotify, Instagram, TikTok, X, Steam, iFood, Amazon, OLX</b> ou da sua <b>loja/site</b> (Shopify, Wix, domínio próprio) e pronto: o cartão se monta sozinho, sem você editar nada. Pra mudar alguma coisa, mude no site oficial: o Pantheon atualiza sozinho. Quem abrir o seu perfil vê uma setinha ao lado do cartão e vira pra ver tudo (uma lista compacta, ou um carrossel se você ligar a opção abaixo), e o app sempre pergunta antes de abrir um link fora dele.</p>
                                 <div id="cx-lista"><div class="cx-vazio">Carregando...</div></div>
                                 <button type="button" class="cx-bt" id="cx-bazar" style="align-self:flex-start;"><i class="fa-solid fa-store"></i> Adicionar a minha loja do Bazar</button>
+                                <button type="button" class="cx-bt" id="cx-fila" style="align-self:flex-start;"><i class="fa-solid fa-compact-disc"></i> Criar a minha playlist de músicas</button>
                                 <label class="cx-ia" id="cx-car-linha"><input type="checkbox" id="cx-car"> <span>Ver as conexões em carrossel <small>(uma por página, com mais detalhes; só muda como VOCÊ vê os perfis. Desligado, é uma lista compacta)</small></span></label>
                                 <label class="cx-ia" id="cx-ia-linha" hidden><input type="checkbox" id="cx-ia"> <span>Usar IA pra ler o PDF do LinkedIn <small>(o texto do PDF é enviado ao Google pra ler melhor; só marque se concordar)</small></span></label>
+                                <p class="cx-aba-info"><b>Playlist:</b> crie a sua playlist e cole links de músicas ou playlists do <b>YouTube</b> ou do <b>YouTube Music</b> (no YouTube Music: Compartilhar &gt; Copiar link). Elas viram um disco no seu perfil que toca em sequência, com próxima e anterior, e quem abrir o seu perfil escolhe qual faixa ouvir. O som vem do player do YouTube, então vídeo que o dono não deixa tocar fora do YouTube é pulado. Até 30 músicas.</p>
                                 <p class="cx-aba-info"><b>LinkedIn:</b> o LinkedIn proíbe qualquer app de ler um perfil pelo link (nem a IA consegue abrir). O jeito mais direto: no seu perfil do LinkedIn clique em <b>Mais &gt; Salvar como PDF</b>, depois cole o link do LinkedIn aqui e use o botão <b>Importar o PDF do LinkedIn</b>. O currículo aparece na hora, sem editor; pra mudar algo, mude no LinkedIn e importe de novo.</p>
                             </div>
                         </div>
@@ -4891,6 +4896,7 @@
     <script src="{{ url_for('static', filename='js/explorar.js') }}?v={{ explorar_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/mapa_social.js') }}?v={{ mapa_social_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script>
@@ -9713,7 +9719,8 @@
             confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
             escolherImagem: (cfg) => abrirSeletorMidia(cfg), subir: (f) => uploadMidia(f),
             abrirLoja: (id) => { fecharCartao(); settingsModal.classList.remove('active'); document.getElementById('btn-mercado').click(); document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click(); Bazar.abrirLojaDe(id); },
-            aoMudarMinhas: (lista) => { perfilMeu.conexoes_qtd = lista.length; if (typeof pintarPrevia === 'function') pintarPrevia(); if (!Conexoes.tocando()) { pintarPreviaConexoes(); if (cartaoAberto && Number(cartaoAberto.id) === Number(currentUserId)) pintarCartao(); } },
+            aoTocar: () => Musica.pausar(),                         // o player do cartão e o da Música (janelinha) não tocam juntos
+            aoMudarMinhas: (lista) => { perfilMeu.conexoes_qtd = lista.length; Musica.aoMudarPlaylist(); if (typeof pintarPrevia === 'function') pintarPrevia(); if (!Conexoes.tocando()) { pintarPreviaConexoes(); if (cartaoAberto && Number(cartaoAberto.id) === Number(currentUserId)) pintarCartao(); } },
         });
 
         // 5. PERFIL: cartão (popup + pré-visualização), edição e status de presença
@@ -10067,6 +10074,8 @@
         });
         socket.on('conexoes_salvas', () => Conexoes.aoSalvar());
         socket.on('conexoes_erro', (d) => Conexoes.erro(d.msg, d.indice));
+        socket.on('fila_ok', (d) => { if (d && d.origem === 'musica') Musica.aoAdicionar(d); else Conexoes.filaOk(d); });     // (a aba Conexões e a janela de Música ouvem os mesmos eventos)
+        socket.on('fila_erro', (d) => { if (d && d.origem === 'musica') Musica.aoErroPlaylist(d.msg); else Conexoes.filaErro(d && d.msg); });
         socket.on('conexoes_do_perfil', (d) => {
             Conexoes.definirRegistro(d);
             if (!cartaoAberto || Number(cartaoAberto.id) !== Number(d.usuario_id)) return;
@@ -10824,6 +10833,17 @@
             pintarPrevia();
             if (typeof Loja !== 'undefined') Loja.inventarioMudou();
         });
+
+        // MÚSICA (janelinha com pesquisa, player e fila): static/js/musica.js só desenha; quem pesquisa é o servidor (a chave da API nunca chega aqui).
+        Musica.iniciar({
+            emitir: (n, d) => socket.emit(n, d), esc, toast: (m, t) => showToast(m, t), confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
+            carregarYt: () => Conexoes.carregarYt(), pararPerfil: () => Conexoes.parar(),
+            minhas: () => Conexoes.minhas(), listarConexoes: () => socket.emit('conexoes_listar', {}),
+        });
+        document.getElementById('btn-musica').addEventListener('click', () => Musica.alternar());
+        socket.on('musica_estado', (d) => Musica.aoEstado(d));
+        socket.on('musica_resultados', (d) => Musica.aoResultados(d));
+        socket.on('musica_erro', (d) => Musica.aoErro(d));
 
         // ARMAZÉM (loja do app em {{ moeda_sigla }}): static/js/loja.js só desenha; preço, posse e saldo vêm do servidor.
         Loja.iniciar({
@@ -15122,6 +15142,7 @@
             <div class="mob-voce-grade">
                 <button type="button" data-a="perfil"><i class="fa-solid fa-id-card"></i>Meu perfil</button>
                 <button type="button" data-a="inventario"><i class="fa-solid fa-box-open"></i>Inventário</button>
+                <button type="button" data-a="musica"><i class="fa-solid fa-music"></i>Música</button>
                 <button type="button" data-a="config"><i class="fa-solid fa-gear"></i>Configurações</button>
                 <button type="button" data-a="avisos"><i class="fa-solid fa-bell"></i>Avisos</button>
                 <button type="button" data-a="mic"><i class="fa-solid fa-microphone"></i>Microfone</button>
@@ -15310,7 +15331,7 @@
             if (a === 'sair') { Promise.resolve(window.pushSairAntes && window.pushSairAntes()).finally(() => { location.href = '/auth/logout'; }); return; }
             fecharVoce();
             if (a === 'avisos') { const cfg = $('btn-open-settings'); if (cfg) cfg.click(); setTimeout(() => { const t = document.querySelector('.set-tab[data-target="set-geral"]'); if (t) t.click(); }, 120); return; }
-            const alvo = { perfil: 'btn-open-popout', inventario: 'btn-inventario', config: 'btn-open-settings', mic: 'btn-mic', fone: 'btn-deafen' }[a];
+            const alvo = { perfil: 'btn-open-popout', inventario: 'btn-inventario', musica: 'btn-musica', config: 'btn-open-settings', mic: 'btn-mic', fone: 'btn-deafen' }[a];
             const el = $(alvo); if (el) el.click();
         }));
 
