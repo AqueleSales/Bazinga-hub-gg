@@ -10025,13 +10025,17 @@
             if (!cartaoAberto) return;
             const d = cartaoAberto.dados;
             const naFace = cartaoAberto.face === 'conexoes';
-            userPopout.classList.toggle('largo', !!(d && naFace));
+            const car = !!(d && naFace && Conexoes.modoCarrossel());
+            userPopout.classList.toggle('largo', !!(d && naFace && !car));
+            userPopout.classList.toggle('car-fixo', car);                   // carrossel: a face tem o MESMO tamanho do cartão da frente
+            if (car && cartaoAberto.tam) { userPopout.style.setProperty('--cx-w', cartaoAberto.tam.w + 'px'); userPopout.style.setProperty('--cx-h', cartaoAberto.tam.h + 'px'); }
             userPopout.innerHTML = d
                 ? (naFace ? Conexoes.htmlFace(d, dadosDaFace(), 'popout') : htmlCartao(d, 'popout'))
                 : `<div class="pc"><div class="pc-banner banner-animado"></div><div class="pc-corpo" style="padding-top:40px;color:var(--text-muted);">Carregando perfil...</div></div>`;
             if (cartaoAberto.voltando) { userPopout.firstElementChild?.classList.add('pc-voltando'); cartaoAberto.voltando = false; }
             emojificar(userPopout);
             posicionarCartao();
+            if (d && !naFace) { const r = userPopout.getBoundingClientRect(); if (r.height > 200) cartaoAberto.tam = { w: Math.round(r.width), h: Math.round(r.height) }; }
         }
 
         function abrirCartao(id, ancora, acimaDaAncora) {
@@ -10046,7 +10050,7 @@
 
         function fecharCartao() {
             Conexoes.parar();                                       // fechou o cartão: o player (Spotify/YouTube) da face das conexões para junto
-            userPopout.classList.remove('largo');
+            userPopout.classList.remove('largo', 'car-fixo');
             userPopout.style.display = 'none';
             popoutOverlay.style.display = 'none';
             cartaoAberto = null;

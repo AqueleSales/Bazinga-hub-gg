@@ -241,11 +241,11 @@ const Conexoes = (() => {
         pararPlayers();                                              // a face é redesenhada por inteiro: o player antigo sairia do documento e ficaria tocando sem dono
         const av = pf.avatar ? `<img src="${ctx.escUrl(pf.avatar)}" alt="">` : T((pf.nome || '?')[0].toUpperCase());
         const lista = dados && dados.lista ? dados.lista : [];
+        if (dados && !dados.restrito && lista.length && carrossel()) return htmlCarrossel(pf, lista, modo);
         let corpo;
         if (!dados) corpo = '<div class="cx-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando as conexões...</div>';
         else if (dados.restrito) corpo = '<div class="cx-vazio">As conexões ficam reservadas pra quem tem servidor em comum ou amizade.</div>';
         else if (!lista.length) corpo = '<div class="cx-vazio">Nenhuma conexão por aqui ainda.</div>';
-        else if (carrossel()) corpo = htmlCarrossel(pf, lista, modo);
         else corpo = lista.map((c) => cartao(c, pf, true)).join('') + '<p class="cx-nota">Os links são informados pela própria pessoa: o Pantheon ainda não confirma que a conta é dela.</p>';
         return `<div class="pc pc-conexoes ${modo === 'previa' ? 'pc-previa' : ''}">
             <div class="cx-topo"><button type="button" class="pc-seta volta" data-acao="voltar-cartao" title="Voltar ao perfil" aria-label="Voltar ao perfil"><i class="fa-solid fa-chevron-left"></i></button>
@@ -264,19 +264,23 @@ const Conexoes = (() => {
     const NOTA = '<p class="cx-nota">Os links são informados pela própria pessoa: o Pantheon ainda não confirma que a conta é dela.</p>';
 
     function paginaCarrossel(k) {
-        const { pf, lista, i } = cars.get(k), n = lista.length;
+        const { pf, lista, i, modo } = cars.get(k), n = lista.length;
+        const av = pf.avatar ? `<img src="${ctx.escUrl(pf.avatar)}" alt="">` : T((pf.nome || '?')[0].toUpperCase());
         const pontos = lista.map((c, j) => `<button type="button" class="cx-pt ${j === i ? 'on' : ''}" data-cx-pag="${j}" title="${T(plataforma(c.tipo).nome)}" aria-label="Conexão ${j + 1} de ${n}"></button>`).join('');
+        // as setas ficam no MEIO dos lados do retângulo, como a do perfil; a da 1ª conexão volta ao perfil (a página 0 é ele)
         const esq = i === 0
-            ? '<button type="button" class="pc-seta volta" data-acao="voltar-cartao" title="Voltar ao perfil" aria-label="Voltar ao perfil"><i class="fa-solid fa-chevron-left"></i></button>'
-            : `<button type="button" class="pc-seta volta" data-cx-pag="${i - 1}" title="Anterior" aria-label="Conexão anterior"><i class="fa-solid fa-chevron-left"></i></button>`;
-        const dir = `<button type="button" class="pc-seta volta" data-cx-pag="${i + 1}" ${i >= n - 1 ? 'disabled' : ''} title="Próxima" aria-label="Próxima conexão"><i class="fa-solid fa-chevron-right"></i></button>`;
-        return `<div class="cx-car-pag">${cartao(lista[i], pf, false)}</div><div class="cx-car-nav">${esq}<div class="cx-pts">${pontos}</div>${dir}</div>${NOTA}`;
+            ? '<button type="button" class="pc-seta cx-fl e" data-acao="voltar-cartao" title="Voltar ao perfil" aria-label="Voltar ao perfil"><i class="fa-solid fa-chevron-left"></i></button>'
+            : `<button type="button" class="pc-seta cx-fl e" data-cx-pag="${i - 1}" title="Anterior" aria-label="Conexão anterior"><i class="fa-solid fa-chevron-left"></i></button>`;
+        const dir = `<button type="button" class="pc-seta cx-fl d" data-cx-pag="${i + 1}" ${i >= n - 1 ? 'disabled' : ''} title="Próxima" aria-label="Próxima conexão"><i class="fa-solid fa-chevron-right"></i></button>`;
+        return `<div class="pc pc-conexoes car ${modo === 'previa' ? 'pc-previa' : ''}">
+            <div class="cx-topo"><span class="cx-mini-av">${av}</span><div class="cx-mini-nome"><b>${T(pf.nome)}</b><small>Conexões${pf.username ? ' · @' + T(pf.username) : ''} · ${i + 1}/${n}</small></div></div>
+            <div class="cx-car-pag">${cartao(lista[i], pf, false)}</div><div class="cx-pts">${pontos}</div></div>${esq}${dir}`;
     }
 
     function htmlCarrossel(pf, lista, modo) {
         const k = chaveCar(pf, modo), ant = cars.get(k);
-        cars.set(k, { pf, lista, i: Math.min(ant ? ant.i : 0, lista.length - 1) });
-        return `<div class="cx-car" data-car="${T(k)}">${paginaCarrossel(k)}</div>`;
+        cars.set(k, { pf, lista, modo, i: Math.min(ant ? ant.i : 0, lista.length - 1) });
+        return `<div class="cx-cwrap" data-car="${T(k)}">${paginaCarrossel(k)}</div>`;
     }
 
     function irPagina(box, j) {
@@ -285,14 +289,13 @@ const Conexoes = (() => {
         s.i = Math.max(0, Math.min(j, s.lista.length - 1));
         pararPlayers();                                              // a página some: o player dela não pode ficar tocando sem dono
         box.innerHTML = paginaCarrossel(box.dataset.car);
-        const corpo = box.closest('.cx-corpo'); if (corpo) corpo.scrollTop = 0;
     }
 
     let toque = null;
     function ligarGestos() {
         if (ligarGestos.feito) return;
         ligarGestos.feito = true;
-        document.addEventListener('touchstart', (e) => { const b = e.target.closest && e.target.closest('.cx-car'); toque = b ? { x: e.touches[0].clientX, y: e.touches[0].clientY, b } : null; }, { passive: true });
+        document.addEventListener('touchstart', (e) => { const b = e.target.closest && e.target.closest('.cx-cwrap'); toque = b ? { x: e.touches[0].clientX, y: e.touches[0].clientY, b } : null; }, { passive: true });
         document.addEventListener('touchend', (e) => {
             if (!toque) return;
             const t = e.changedTouches[0], dx = t.clientX - toque.x, dy = t.clientY - toque.y, b = toque.b;
@@ -323,7 +326,7 @@ const Conexoes = (() => {
     /** Clique dentro de uma face (delegado pelo popup e pelas prévias). true = tratei. */
     function aoClicar(e) {
         const g = e.target.closest('[data-cx-pag]');
-        if (g) { e.stopPropagation(); if (!g.disabled) irPagina(g.closest('.cx-car'), Number(g.dataset.cxPag)); return true; }
+        if (g) { e.stopPropagation(); if (!g.disabled) irPagina(g.closest('.cx-cwrap'), Number(g.dataset.cxPag)); return true; }
         const t = e.target.closest('[data-cx-tocar]');
         if (t) { e.stopPropagation(); tocar(t); return true; }
         const a = e.target.closest('[data-cx-abrir]');
@@ -564,7 +567,7 @@ const Conexoes = (() => {
     return {
         iniciar(c) { ctx = c; ligarGestos(); },
         receber, aoSalvar, erro, abrirAba, htmlFace, htmlSeta, aoClicar, abrirLink, parar() { pararPlayers(); cars.clear(); },
-        tocando: () => players.size > 0,
+        tocando: () => players.size > 0, modoCarrossel: carrossel,
         minhas: () => minhas, qtdMinhas: () => (minhas ? minhas.length : null), registro: () => P, imagens: () => IMAGENS,
         definirRegistro(d) { P = d.plataformas || P; IMAGENS = d.imagens_ok || IMAGENS; },
         _tipoPorTexto: tipoPorTexto,

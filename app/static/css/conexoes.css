@@ -220,3 +220,17 @@
 .cx-pt.on { background: var(--text-header); transform: scale(1.3); }
 .cx-pt:hover { background: rgba(255, 255, 255, .6); }
 .cx-car-nav { position: sticky; bottom: -10px; z-index: 2; margin: 0 -10px; padding: 8px 10px; background: color-mix(in srgb, var(--bg-quaternary) 96%, transparent); border-top: 1px solid rgba(255, 255, 255, .06); }
+
+/* carrossel: todo cartão do MESMO tamanho do cartão do perfil (o chat.html mede a frente e passa --cx-w/--cx-h); o que sobra fica em branco */
+.cx-cwrap { position: relative; display: flex; flex-direction: column; min-height: 0; }
+#user-popout.car-fixo { width: var(--cx-w, 345px) !important; }
+#user-popout.car-fixo .pc-conexoes.car { height: var(--cx-h, 560px); max-height: none; }
+.pf-previa .pc-conexoes.car { height: 520px; max-height: none; }
+.pc-conexoes.car { display: flex; flex-direction: column; }
+.pc-conexoes.car .cx-car-pag { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .22) transparent; }
+.pc-conexoes.car .cx-car-pag > .cx-card { flex: 1 0 auto; }
+.pc-conexoes.car .cx-pts { flex: none; padding: 8px 10px 12px; }
+.cx-fl.e { left: -18px; right: auto; }
+.cx-fl.d { right: -18px; }
+.cx-fl[disabled] { opacity: .3; cursor: default; }
+@media (max-width: 720px) { .cx-fl { width: 30px; height: 30px; } .cx-fl.e { left: 4px; } .cx-fl.d { right: 4px; } }
