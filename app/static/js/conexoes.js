@@ -187,14 +187,14 @@ const Conexoes = (() => {
     }
 
     const NIVEL_GRADE = ['g0', 'g1', 'g2', 'g3', 'g4'];
-    function cartaoGithub(c) {
+    function cartaoGithub(c, compacto) {
         const d = c.dados, p = plataforma('github');
         if (!d) return cartaoLink(c, c.erro ? c.erro : 'Buscando os dados...');
         const semanas = Array.isArray(d.grade) ? d.grade : [];
         const grade = semanas.length ? `<div class="cx-grade" role="img" aria-label="Contribuições no último ano${d.total ? ': ' + num(d.total) : ''}" style="--sem:${semanas.length}">${semanas.map((col) =>
             `<span>${String(col).split('').map((ch) => `<i class="${ch >= '0' && ch <= '4' ? NIVEL_GRADE[+ch] : 'gx'}"></i>`).join('')}</span>`).join('')}</div>
             <div class="cx-grade-leg"><span>${d.total ? `${num(d.total)} contribuições no último ano` : ''}</span><span class="cx-grade-esc">menos <i class="g0"></i><i class="g1"></i><i class="g2"></i><i class="g3"></i><i class="g4"></i> mais</span></div>` : '';
-        const repos = (d.repos || []).map((r) => `<button type="button" class="cx-repo" data-cx-abrir="${T(r.url)}" title="Abrir ${T(r.nome)} no GitHub">
+        const repos = (d.repos || []).slice(0, compacto ? 3 : 6).map((r) => `<button type="button" class="cx-repo" data-cx-abrir="${T(r.url)}" title="Abrir ${T(r.nome)} no GitHub">
             <b>${T(r.nome)}</b>${r.desc ? `<p>${T(r.desc)}</p>` : ''}<small>${r.lang ? `<span class="cx-lang"><i></i>${T(r.lang)}</span>` : ''}${r.estrelas ? `<span><i class="fa-regular fa-star"></i> ${num(r.estrelas)}</span>` : ''}${r.push ? `<span>${T(r.push.split('-').reverse().join('/'))}</span>` : ''}</small></button>`).join('');
         return `<article class="cx-card gh" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c, '@' + d.login)}
             <div class="cx-gh-topo">${img(d.avatar, 'cx-gh-av') || '<span class="cx-gh-av vazio"><i class="fa-brands fa-github"></i></span>'}
@@ -204,7 +204,7 @@ const Conexoes = (() => {
             <div class="cx-rodape">${botaoAbrir(c.url, 'Ver no GitHub')}</div></article>`;
     }
 
-    function cartaoCurriculo(c, pf) {
+    function cartaoCurriculo(c, pf, compacto) {
         const p = plataforma('linkedin'), dados = c.dados && c.dados.cv;
         if (!dados) {
             return `<article class="cx-card" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c)}<div class="cx-link"><div class="cx-link-t"><b>${T(c.titulo || hostDe(c.url))}</b>${c.titulo ? `<small>${T(hostDe(c.url))}</small>` : ''}
@@ -212,13 +212,13 @@ const Conexoes = (() => {
         }
         const foto = dados.foto && /^https:\/\//i.test(dados.foto) ? `<img class="cx-cv-foto" src="${ctx.escUrl(dados.foto)}" alt="">` : (pf && pf.avatar ? `<img class="cx-cv-foto" src="${ctx.escUrl(pf.avatar)}" alt="">` : '<span class="cx-cv-foto vazio"><i class="fa-solid fa-user"></i></span>');
         const banner = dados.banner && /^https:\/\//i.test(dados.banner) ? `<img src="${ctx.escUrl(dados.banner)}" alt="">` : '';
-        const exps = (dados.experiencias || []).map((e) => `<li><span class="cx-bola"></span><div><b>${T(e.cargo || e.empresa)}</b><small>${T([e.cargo ? e.empresa : '', e.periodo, e.local].filter(Boolean).join(' · '))}</small>${e.desc ? `<p>${T(e.desc)}</p>` : ''}</div></li>`).join('');
-        const forms = (dados.formacao || []).map((e) => `<li><span class="cx-bola"></span><div><b>${T(e.escola || e.curso)}</b><small>${T([e.escola ? e.curso : '', e.periodo].filter(Boolean).join(' · '))}</small></div></li>`).join('');
-        const chips = (lista) => (lista || []).map((x) => `<span class="cx-chip">${T(x)}</span>`).join('');
+        const exps = (dados.experiencias || []).slice(0, compacto ? 2 : 20).map((e) => `<li><span class="cx-bola"></span><div><b>${T(e.cargo || e.empresa)}</b><small>${T([e.cargo ? e.empresa : '', e.periodo, e.local].filter(Boolean).join(' · '))}</small>${e.desc ? `<p>${T(e.desc)}</p>` : ''}</div></li>`).join('');
+        const forms = (dados.formacao || []).slice(0, compacto ? 1 : 10).map((e) => `<li><span class="cx-bola"></span><div><b>${T(e.escola || e.curso)}</b><small>${T([e.escola ? e.curso : '', e.periodo].filter(Boolean).join(' · '))}</small></div></li>`).join('');
+        const chips = (lista) => (lista || []).slice(0, compacto ? 6 : 40).map((x) => `<span class="cx-chip">${T(x)}</span>`).join('');
         return `<article class="cx-card cv" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c, 'Currículo')}
             <div class="cx-cv-banner">${banner}</div>
             <div class="cx-cv-topo">${foto}<div><b>${T(dados.nome || c.titulo)}</b>${dados.headline ? `<span>${T(dados.headline)}</span>` : ''}${dados.local ? `<small><i class="fa-solid fa-location-dot"></i> ${T(dados.local)}</small>` : ''}</div></div>
-            ${dados.sobre ? `<div class="cx-sub">Sobre</div><p class="cx-texto">${T(dados.sobre)}</p>` : ''}
+            ${dados.sobre ? `<div class="cx-sub">Sobre</div><p class="cx-texto${compacto ? ' cx-clamp' : ''}">${T(dados.sobre)}</p>` : ''}
             ${exps ? `<div class="cx-sub">Experiência</div><ul class="cx-linha-tempo">${exps}</ul>` : ''}
             ${forms ? `<div class="cx-sub">Formação</div><ul class="cx-linha-tempo">${forms}</ul>` : ''}
             ${(dados.competencias || []).length ? `<div class="cx-sub">Competências</div><div class="cx-chips">${chips(dados.competencias)}</div>` : ''}
@@ -226,10 +226,10 @@ const Conexoes = (() => {
             <div class="cx-rodape">${botaoAbrir(c.url, 'Ver no LinkedIn')}</div></article>`;
     }
 
-    function cartao(c, pf) {
+    function cartao(c, pf, compacto) {
         switch (c.tipo) {
-            case 'github': return cartaoGithub(c);
-            case 'linkedin': return cartaoCurriculo(c, pf);
+            case 'github': return cartaoGithub(c, compacto);
+            case 'linkedin': return cartaoCurriculo(c, pf, compacto);
             case 'youtube': case 'spotify': case 'twitch': return cartaoMidia(c);
             case 'bazar': return cartaoLoja(c);
             default: return cartaoLink(c);
@@ -245,11 +245,74 @@ const Conexoes = (() => {
         if (!dados) corpo = '<div class="cx-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando as conexões...</div>';
         else if (dados.restrito) corpo = '<div class="cx-vazio">As conexões ficam reservadas pra quem tem servidor em comum ou amizade.</div>';
         else if (!lista.length) corpo = '<div class="cx-vazio">Nenhuma conexão por aqui ainda.</div>';
-        else corpo = lista.map((c) => cartao(c, pf)).join('') + '<p class="cx-nota">Os links são informados pela própria pessoa: o Pantheon ainda não confirma que a conta é dela.</p>';
+        else if (carrossel()) corpo = htmlCarrossel(pf, lista, modo);
+        else corpo = lista.map((c) => cartao(c, pf, true)).join('') + '<p class="cx-nota">Os links são informados pela própria pessoa: o Pantheon ainda não confirma que a conta é dela.</p>';
         return `<div class="pc pc-conexoes ${modo === 'previa' ? 'pc-previa' : ''}">
             <div class="cx-topo"><button type="button" class="pc-seta volta" data-acao="voltar-cartao" title="Voltar ao perfil" aria-label="Voltar ao perfil"><i class="fa-solid fa-chevron-left"></i></button>
                 <span class="cx-mini-av">${av}</span><div class="cx-mini-nome"><b>${T(pf.nome)}</b><small>Conexões${pf.username ? ' · @' + T(pf.username) : ''}</small></div></div>
             <div class="cx-corpo">${corpo}</div></div>`;
+    }
+
+    // ---------------------------------------------------------------------
+    // CARROSSEL (opcional, Configurações > Conexões): uma conexão por página, com mais detalhes. A página 0 é o próprio perfil: "<" na 1ª conexão volta pra ele.
+    // O padrão continua sendo a lista (compacta) com rolagem.
+    // ---------------------------------------------------------------------
+    const CAR_CHAVE = 'pnt_cx_carrossel';
+    const carrossel = () => { try { return localStorage.getItem(CAR_CHAVE) === '1'; } catch (e) { return false; } };
+    const cars = new Map();                                          // chave (modo + pessoa) -> { pf, lista, i }
+    const chaveCar = (pf, modo) => `${modo || 'p'}:${pf.id != null ? pf.id : (pf.usuario_id != null ? pf.usuario_id : (pf.username || 'x'))}`;
+    const NOTA = '<p class="cx-nota">Os links são informados pela própria pessoa: o Pantheon ainda não confirma que a conta é dela.</p>';
+
+    function paginaCarrossel(k) {
+        const { pf, lista, i } = cars.get(k), n = lista.length;
+        const pontos = lista.map((c, j) => `<button type="button" class="cx-pt ${j === i ? 'on' : ''}" data-cx-pag="${j}" title="${T(plataforma(c.tipo).nome)}" aria-label="Conexão ${j + 1} de ${n}"></button>`).join('');
+        const esq = i === 0
+            ? '<button type="button" class="pc-seta volta" data-acao="voltar-cartao" title="Voltar ao perfil" aria-label="Voltar ao perfil"><i class="fa-solid fa-chevron-left"></i></button>'
+            : `<button type="button" class="pc-seta volta" data-cx-pag="${i - 1}" title="Anterior" aria-label="Conexão anterior"><i class="fa-solid fa-chevron-left"></i></button>`;
+        const dir = `<button type="button" class="pc-seta volta" data-cx-pag="${i + 1}" ${i >= n - 1 ? 'disabled' : ''} title="Próxima" aria-label="Próxima conexão"><i class="fa-solid fa-chevron-right"></i></button>`;
+        return `<div class="cx-car-pag">${cartao(lista[i], pf, false)}</div><div class="cx-car-nav">${esq}<div class="cx-pts">${pontos}</div>${dir}</div>${NOTA}`;
+    }
+
+    function htmlCarrossel(pf, lista, modo) {
+        const k = chaveCar(pf, modo), ant = cars.get(k);
+        cars.set(k, { pf, lista, i: Math.min(ant ? ant.i : 0, lista.length - 1) });
+        return `<div class="cx-car" data-car="${T(k)}">${paginaCarrossel(k)}</div>`;
+    }
+
+    function irPagina(box, j) {
+        const s = box && cars.get(box.dataset.car);
+        if (!s) return;
+        s.i = Math.max(0, Math.min(j, s.lista.length - 1));
+        pararPlayers();                                              // a página some: o player dela não pode ficar tocando sem dono
+        box.innerHTML = paginaCarrossel(box.dataset.car);
+        const corpo = box.closest('.cx-corpo'); if (corpo) corpo.scrollTop = 0;
+    }
+
+    let toque = null;
+    function ligarGestos() {
+        if (ligarGestos.feito) return;
+        ligarGestos.feito = true;
+        document.addEventListener('touchstart', (e) => { const b = e.target.closest && e.target.closest('.cx-car'); toque = b ? { x: e.touches[0].clientX, y: e.touches[0].clientY, b } : null; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            if (!toque) return;
+            const t = e.changedTouches[0], dx = t.clientX - toque.x, dy = t.clientY - toque.y, b = toque.b;
+            toque = null;
+            if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;       // só gesto de lado (rolar pra baixo não vira de página)
+            const s = cars.get(b.dataset.car); if (!s) return;
+            if (dx < 0) irPagina(b, s.i + 1); else if (s.i > 0) irPagina(b, s.i - 1);
+        }, { passive: true });
+    }
+
+    function ligarCarrossel() {
+        const c = $('cx-car');
+        if (!c || c._ligada) return;
+        c._ligada = true;
+        c.checked = carrossel();
+        c.addEventListener('change', () => {
+            try { localStorage.setItem(CAR_CHAVE, c.checked ? '1' : '0'); } catch (e) { /* sem armazenamento: vale só até recarregar */ }
+            cars.clear();
+            if (typeof ctx.aoMudarMinhas === 'function') ctx.aoMudarMinhas(minhas || []);      // repinta a prévia e o cartão aberto
+        });
     }
 
     /** A setinha (parte do cartão da frente): chamada pelo htmlCartao quando a pessoa tem conexões. */
@@ -259,6 +322,8 @@ const Conexoes = (() => {
 
     /** Clique dentro de uma face (delegado pelo popup e pelas prévias). true = tratei. */
     function aoClicar(e) {
+        const g = e.target.closest('[data-cx-pag]');
+        if (g) { e.stopPropagation(); if (!g.disabled) irPagina(g.closest('.cx-car'), Number(g.dataset.cxPag)); return true; }
         const t = e.target.closest('[data-cx-tocar]');
         if (t) { e.stopPropagation(); tocar(t); return true; }
         const a = e.target.closest('[data-cx-abrir]');
@@ -277,7 +342,20 @@ const Conexoes = (() => {
         return novaLinha({ k: 's' + l.id, id: l.id, tipo: l.tipo, url: l.url || '', titulo: l.titulo || '', dados: l.dados, erro: l.erro || '', buscando: !!l.buscando, atualizado: l.atualizado });
     }
 
+    /** Só pode sobrar UMA caixinha vazia (a do foco, ou a última): escrever e apagar não empilha caixinhas. */
+    function compactarVazias(manterK) {
+        const vazias = linhas.filter((l) => !l.id && l.tipo !== 'bazar' && !l.url.trim());
+        if (vazias.length <= 1) return;
+        const fica = vazias.find((l) => l.k === manterK) || vazias[vazias.length - 1];
+        vazias.forEach((l) => {
+            if (l === fica) return;
+            linhas.splice(linhas.indexOf(l), 1);
+            const el = document.querySelector(`#cx-lista [data-k="${l.k}"]`); if (el) el.remove();
+        });
+    }
+
     function garantirLinhaVazia() {
+        compactarVazias();
         if (linhas.length < MAX && !linhas.some((l) => !l.id && l.tipo !== 'bazar' && !l.url.trim())) linhas.push(novaLinha());
     }
 
@@ -372,7 +450,7 @@ const Conexoes = (() => {
     function receber(d) {
         P = d.plataformas || P; MAX = d.max || MAX; IA = !!d.ia; IMAGENS = d.imagens_ok || IMAGENS;
         minhas = d.lista || [];
-        ligarIa();
+        ligarIa(); ligarCarrossel();
         const pendentes = linhas.filter((l) => !l.id && l.url.trim() && l.tipo !== 'bazar' && !l.salvando);     // digitado e ainda não confirmado: não some
         linhas = minhas.map(doServidor).concat(pendentes);
         desenharLinhas();
@@ -402,6 +480,7 @@ const Conexoes = (() => {
             const l = achar(e.target); if (!l) return;
             l.url = e.target.value; l.tipo = tipoPorTexto(l.url); l.sujo = true; l.erro = '';
             atualizarLinhaNoDom(l);
+            compactarVazias(l.k);
             if (l.url.trim() && linhas.length < MAX && !linhas.some((x) => !x.id && !x.url.trim() && x.tipo !== 'bazar')) {       // "já aparece outro retângulo embaixo"
                 const nova = novaLinha(); linhas.push(nova);
                 lista.insertAdjacentHTML('beforeend', htmlLinha(nova, linhas.length - 1, linhas.length));
@@ -425,7 +504,7 @@ const Conexoes = (() => {
     }
 
     function abrirAba() {
-        ligarAba();
+        ligarAba(); ligarCarrossel();
         if (minhas === null) { const a = $('cx-lista'); if (a) a.innerHTML = '<div class="cx-vazio"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>'; }
         else desenharLinhas();
         ctx.emitir('conexoes_listar', {});
@@ -483,8 +562,8 @@ const Conexoes = (() => {
 
     // ---------------------------------------------------------------------
     return {
-        iniciar(c) { ctx = c; },
-        receber, aoSalvar, erro, abrirAba, htmlFace, htmlSeta, aoClicar, abrirLink, parar: pararPlayers,
+        iniciar(c) { ctx = c; ligarGestos(); },
+        receber, aoSalvar, erro, abrirAba, htmlFace, htmlSeta, aoClicar, abrirLink, parar() { pararPlayers(); cars.clear(); },
         tocando: () => players.size > 0,
         minhas: () => minhas, qtdMinhas: () => (minhas ? minhas.length : null), registro: () => P, imagens: () => IMAGENS,
         definirRegistro(d) { P = d.plataformas || P; IMAGENS = d.imagens_ok || IMAGENS; },

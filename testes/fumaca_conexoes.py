@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from app import create_app, db, socketio, conexoes as cx, conexoes_events, importar
 from app.models import Role, Person, Friendship, Server, Conexao, BazarLoja, br_now
 
+os.environ.pop('GEMINI_API_KEY', None)      # o .env de quem roda pode ter a chave de verdade: o teste decide sozinho quando a IA está "ligada"
 app = create_app()
 falhas = []
 RAIZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app')
@@ -473,6 +474,8 @@ with app.app_context():
     ok(css.index('.cx-card[data-marca="linkedin"] {') > css.index('.cx-card[data-marca] {'), 'o branco do LinkedIn vem DEPOIS da regra geral escura (mesma especificidade: o último vence)')
     ok('fa-x-twitter' not in js.split('const LOGO_X')[1].split('\n')[0] and 'LOGO_X' in js and "tipo === 'x'" in js, 'o logo do X é desenhado (o Font Awesome 6.4 do app não tem o ícone)')
     ok('.cx-card.vinil.tocando .cx-braco' in css and '.cx-vinil.tocando' not in css, 'o toca-discos reage ao "tocando" (seletor do cartão certo: a agulha desce e o disco gira)')
+    ok('pnt_cx_carrossel' in js and 'data-cx-pag' in js and 'id="cx-car"' in html and 'cx-car-nav' in css, 'carrossel opcional: uma conexão por página, ligado em Configurações > Conexões (o padrão segue sendo a lista)')
+    ok('compactarVazias' in js and 'slice(0, compacto ? 3 : 6)' in js, 'escrever e apagar não empilha caixinhas vazias; a lista usa cartões compactos')
     ok(":where(:not(.cx-cab)" in css, 'as seções do currículo têm espaço (a regra geral de margem não engole as de .cx-sub/.cx-rodape)')
 
 print()
