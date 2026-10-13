@@ -203,6 +203,8 @@ with app.app_context():
     falsa.status['playlistItems'] = 200
 
     # ---------- 7. eventos ----------
+    for k in ('SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET'):
+        os.environ.pop(k, None)                  # (o .env de quem roda pode ter as chaves de verdade: o teste decide sozinho)
     zerar(); mu_pessoa = mu.MAX_BUSCAS_PESSOA_DIA
     conexoes_events.socketio.start_background_task = lambda f, *a, **k: f(*a, **k)
 
