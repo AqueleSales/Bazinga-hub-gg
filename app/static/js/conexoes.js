@@ -812,7 +812,7 @@ const Conexoes = (() => {
     // ---------------------------------------------------------------------
     return {
         iniciar(c) { ctx = c; ligarGestos(); },
-        receber, aoSalvar, erro, filaOk, filaErro, carregarYt, abrirAba, htmlFace, htmlSeta, aoClicar, abrirLink, parar() { pararPlayers(); cars.clear(); },
+        receber, aoSalvar, erro, filaOk, filaErro, carregarYt, carregarSpotify, abrirAba, htmlFace, htmlSeta, aoClicar, abrirLink, parar() { pararPlayers(); cars.clear(); },
         tocando: () => players.size > 0, modoCarrossel: carrossel,
         minhas: () => minhas, qtdMinhas: () => (minhas ? minhas.length : null), registro: () => P, imagens: () => IMAGENS,
         definirRegistro(d) { P = d.plataformas || P; IMAGENS = d.imagens_ok || IMAGENS; },

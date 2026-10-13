@@ -10837,7 +10837,7 @@
         // MÚSICA (janelinha com pesquisa, player e fila): static/js/musica.js só desenha; quem pesquisa é o servidor (a chave da API nunca chega aqui).
         Musica.iniciar({
             emitir: (n, d) => socket.emit(n, d), esc, toast: (m, t) => showToast(m, t), confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
-            carregarYt: () => Conexoes.carregarYt(), pararPerfil: () => Conexoes.parar(),
+            carregarYt: () => Conexoes.carregarYt(), carregarSpotify: () => Conexoes.carregarSpotify(), pararPerfil: () => Conexoes.parar(),
             minhas: () => Conexoes.minhas(), listarConexoes: () => socket.emit('conexoes_listar', {}),
         });
         document.getElementById('btn-musica').addEventListener('click', () => Musica.alternar());

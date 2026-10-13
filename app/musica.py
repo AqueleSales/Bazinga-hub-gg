@@ -13,6 +13,7 @@ Como funciona e por que é assim:
   * O que vem do YouTube é texto não confiável: entidades HTML desfeitas, caracteres de controle fora, tamanho limitado; o cliente ainda passa por esc().
 Toda chamada de rede passa por `importar.baixar_texto` (anti-SSRF), como as Conexões.
 """
+import base64
 import json
 import os
 import re
@@ -20,7 +21,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 from html import unescape
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 from . import importar
 from .conexoes import ErroConexao, faixa_de_link, _limpo, _RE_YT_ID
@@ -50,6 +51,11 @@ _trava = threading.Lock()
 _cache = {}                        # (consulta, so_musica) -> (instante, itens)
 _estado = {'dia': None, 'unidades': 0, 'bloqueado_ate': 0.0}
 _por_pessoa = {}                   # pessoa_id -> [dia, buscas]
+_sp_pessoa = {}                   # pessoa_id -> [dia, buscas] (Spotify)
+_sp = {'token': None, 'ate': 0.0, 'bloqueado_ate': 0.0}
+MAX_BUSCAS_SPOTIFY_PESSOA_DIA = 60
+MAX_RESULTADOS_SPOTIFY = 10         # o Spotify reduziu o teto de resultados dos apps novos: 10 é seguro
+_RE_SP_ID = re.compile(r'^[A-Za-z0-9]{22}$')
 
 
 MSG_PLAYLIST = 'Não consegui abrir essa playlist. Só funcionam as públicas ou não listadas (as suas curtidas e os mixes automáticos ficam de fora).'
@@ -80,6 +86,7 @@ def _virar_dia():
     if _estado['dia'] != dia:
         _estado.update(dia=dia, unidades=0)
         _por_pessoa.clear()
+        _sp_pessoa.clear()
     return dia
 
 
@@ -308,4 +315,107 @@ def resolver_link(texto):
 
 
 def estado_para(pessoa_id):
-    return {'disponivel': disponivel(), 'restantes': restantes_pessoa(pessoa_id)}
+    return {'disponivel': disponivel(), 'restantes': restantes_pessoa(pessoa_id), 'spotify': spotify_disponivel()}
+
+
+# ---------------------------------------------------------------------
+# SPOTIFY: pesquisa de músicas (credencial do APP, sem login de ninguém) e o player embutido do Spotify toca no cliente.
+# Pra tocar a música INTEIRA a pessoa precisa estar logada no Spotify nesse navegador/celular; sem login o player toca só um trecho de 30 s (regra do Spotify).
+# As chaves (`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`) ficam só aqui; o token dura ~1 h e fica em memória. Sem as chaves o botão do Spotify some.
+# ---------------------------------------------------------------------
+def spotify_disponivel():
+    return bool((os.environ.get('SPOTIFY_CLIENT_ID') or '').strip() and (os.environ.get('SPOTIFY_CLIENT_SECRET') or '').strip())
+
+
+def _token_spotify(renovar=False):
+    with _trava:
+        if not renovar and _sp['token'] and time.time() < _sp['ate'] - 30:
+            return _sp['token']
+    cid, seg = os.environ.get('SPOTIFY_CLIENT_ID', '').strip(), os.environ.get('SPOTIFY_CLIENT_SECRET', '').strip()
+    basico = base64.b64encode(f'{cid}:{seg}'.encode('utf-8')).decode('ascii')
+    try:
+        st, txt = importar.enviar_form('https://accounts.spotify.com/api/token', {'grant_type': 'client_credentials'}, extra={'Authorization': f'Basic {basico}'})
+    except ErroImportar:
+        raise ErroMusica('O Spotify não respondeu agora. Tente de novo daqui a pouco.')
+    try:
+        j = json.loads(txt) if st == 200 else {}
+    except ValueError:
+        j = {}
+    if st != 200 or not isinstance(j, dict) or not isinstance(j.get('access_token'), str):
+        print(f'[MUSICA] o Spotify recusou o token ({st})')
+        _bloquear_spotify(1800)
+        raise ErroMusica('A pesquisa do Spotify está indisponível agora.')
+    with _trava:
+        _sp['token'] = j['access_token']
+        _sp['ate'] = time.time() + float(j.get('expires_in') or 3600)
+    return j['access_token']
+
+
+def _bloquear_spotify(segundos):
+    with _trava:
+        _sp['bloqueado_ate'] = max(_sp['bloqueado_ate'], time.time() + segundos)
+
+
+def _imagem_spotify(url):
+    try:
+        p = urlsplit(url or '')
+    except ValueError:
+        return ''
+    return url if p.scheme == 'https' and (p.hostname or '') == 'i.scdn.co' and len(url) <= 200 else ''
+
+
+def buscar_spotify(pessoa_id, texto):
+    """Pesquisa de faixas no Spotify. Devolve {'itens': [{'s': 'sp', 'v': id, 't', 'a', 'd', 'i'}], 'cache': bool}. Mesmo cuidado do YouTube: cache de 12 h,
+    teto por pessoa por dia e bloqueio temporário quando o Spotify pede calma (429)."""
+    consulta = _consulta(texto)
+    if len(consulta) < 2:
+        raise ErroMusica('Digite pelo menos 2 letras pra pesquisar.')
+    if not spotify_disponivel():
+        raise ErroMusica('A pesquisa do Spotify ainda não foi ligada neste servidor.')
+    k = ('sp', consulta.lower())
+    with _trava:
+        achou = _cache.get(k)
+    if achou and time.time() - achou[0] < TTL_CACHE:
+        return {'itens': [dict(i) for i in achou[1]], 'cache': True}
+    with _trava:
+        dia = _virar_dia()
+        if time.time() < _sp['bloqueado_ate']:
+            raise ErroMusica('A pesquisa do Spotify está indisponível agora. Tente de novo mais tarde.')
+        d = _sp_pessoa.get(pessoa_id)
+        if not d or d[0] != dia:
+            d = _sp_pessoa[pessoa_id] = [dia, 0]
+        if d[1] >= MAX_BUSCAS_SPOTIFY_PESSOA_DIA:
+            raise ErroMusica(f'Você já fez as {MAX_BUSCAS_SPOTIFY_PESSOA_DIA} pesquisas do Spotify de hoje.')
+        d[1] += 1
+    url = 'https://api.spotify.com/v1/search?' + urlencode({'q': consulta, 'type': 'track', 'limit': MAX_RESULTADOS_SPOTIFY, 'market': 'BR'})
+    with _vagas:
+        st, txt = 0, ''
+        for tentativa in (0, 1):
+            tok = _token_spotify(renovar=bool(tentativa))
+            try:
+                st, _tp, txt, _ = importar.baixar_texto(url, aceita='application/json', extra={'Authorization': f'Bearer {tok}'})
+            except ErroImportar:
+                raise ErroMusica('O Spotify não respondeu agora. Tente de novo daqui a pouco.')
+            if st != 401:
+                break                                                    # 401 = token vencido: pega outro e tenta uma vez
+    if st == 429:
+        _bloquear_spotify(300)
+    if st != 200:
+        print(f'[MUSICA] o Spotify respondeu {st} na pesquisa')
+        raise ErroMusica('A pesquisa do Spotify está indisponível agora. Tente de novo mais tarde.' if st in (401, 403, 429) else 'O Spotify respondeu com erro. Tente de novo mais tarde.')
+    try:
+        j = json.loads(txt)
+    except ValueError:
+        raise ErroMusica('A resposta do Spotify veio estranha. Tente de novo.')
+    brutos = ((j.get('tracks') or {}).get('items') or []) if isinstance(j, dict) and isinstance(j.get('tracks'), dict) else []
+    itens = []
+    for x in brutos:
+        if not isinstance(x, dict) or not isinstance(x.get('id'), str) or not _RE_SP_ID.match(x['id']) or x.get('is_playable') is False:
+            continue
+        artistas = ', '.join(str(a.get('name') or '') for a in (x.get('artists') or []) if isinstance(a, dict))
+        imgs = [i.get('url') for i in ((x.get('album') or {}).get('images') or []) if isinstance(i, dict)] if isinstance(x.get('album'), dict) else []
+        capa = next((u for u in (_imagem_spotify(u) for u in reversed(imgs)) if u), '')      # a menor que couber (as imagens vêm da maior pra menor)
+        itens.append({'s': 'sp', 'v': x['id'], 't': _limpo(unescape(str(x.get('name') or '')), 100) or 'Sem título', 'a': _limpo(unescape(artistas), 60),
+                      'd': (int(x.get('duration_ms') or 0) // 1000) or None, 'i': capa})
+    _guardar_cache(k, itens)
+    return {'itens': [dict(i) for i in itens], 'cache': False}

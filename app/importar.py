@@ -69,7 +69,7 @@ def _validar_url(url):
     return host, (partes.path or '/') + ('?' + partes.query if partes.query else '')
 
 
-def _pedir(host, ip, caminho, aceita='image/*,text/html;q=0.5,*/*;q=0.1', extra=None, ua=None):
+def _pedir(host, ip, caminho, aceita='image/*,text/html;q=0.5,*/*;q=0.1', extra=None, ua=None, metodo='GET', corpo=None):
     """Um GET na mão: conecta no IP já validado e confere o certificado contra o nome do site. Devolve (pool, resposta)."""
     import certifi
     import urllib3
@@ -77,7 +77,7 @@ def _pedir(host, ip, caminho, aceita='image/*,text/html;q=0.5,*/*;q=0.1', extra=
         ip, port=443, server_hostname=host, assert_hostname=host, cert_reqs='CERT_REQUIRED', ca_certs=certifi.where(),
         timeout=urllib3.Timeout(connect=5, read=8), retries=False, maxsize=1)
     try:
-        resp = pool.urlopen('GET', caminho, redirect=False, retries=False, preload_content=False, assert_same_host=False,
+        resp = pool.urlopen(metodo, caminho, body=corpo, redirect=False, retries=False, preload_content=False, assert_same_host=False,
                             headers={'Host': host, 'User-Agent': ua or _UA, 'Accept': aceita, 'Accept-Encoding': 'identity', **(extra or {})})
     except urllib3.exceptions.SSLError:
         pool.close()
@@ -222,3 +222,21 @@ def metadados_da_pagina(html, base):
     imagem = meta.get('og:image') or meta.get('og:image:url') or meta.get('twitter:image') or meta.get('twitter:image:src') or ''
     return {'titulo': titulo, 'descricao': meta.get('og:description') or meta.get('twitter:description') or meta.get('description') or '',
             'imagem': urljoin(base, imagem) if imagem else '', 'site': meta.get('og:site_name') or ''}
+
+
+def enviar_form(url, campos, extra=None):
+    """POST de formulário (application/x-www-form-urlencoded) num endereço https público, com as mesmas travas anti-SSRF do GET e SEM seguir redirecionamento
+    (quem manda credencial não pode ser levado pra outro lugar). Devolve (status, texto). Usado só pra pegar o token do Spotify."""
+    from urllib.parse import urlencode
+    host, caminho = _validar_url(url)
+    ip = _ip_publico_de(host)
+    pool, resp = _pedir(host, ip, caminho, aceita='application/json', ua=_UA_CONEXAO, metodo='POST', corpo=urlencode(campos).encode('utf-8'),
+                        extra={'Content-Type': 'application/x-www-form-urlencoded', **(extra or {})})
+    try:
+        if resp.status in (301, 302, 303, 307, 308):
+            raise ErroImportar('O serviço redirecionou o pedido: não sigo (levaria a credencial pra outro lugar).')
+        corpo, _passou = _ler(resp, 64 * 1024)
+        return resp.status, corpo.decode('utf-8', 'ignore')
+    finally:
+        resp.release_conn()
+        pool.close()

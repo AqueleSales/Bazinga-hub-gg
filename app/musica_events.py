@@ -54,8 +54,13 @@ def musica_buscar(dados=None):
         emit('musica_erro', {'msg': 'Calma: espere um instante e pesquise de novo.', 'tag': tag})
         return
     texto = str(dados.get('q') or '').strip()[:300]
+    spotify = dados.get('fonte') == 'spotify'
     try:
-        if musica.parece_link(texto):
+        if spotify:
+            r = musica.buscar_spotify(usuario.id, texto)
+            emit('musica_resultados', {'tag': tag, 'q': texto[:musica.MAX_CONSULTA], 'itens': r['itens'], 'origem': 'busca', 'cache': r['cache'], 'fonte': 'spotify',
+                                       'restantes': None})
+        elif musica.parece_link(texto):
             r = musica.resolver_link(texto)
             emit('musica_resultados', {'tag': tag, 'q': '', 'itens': r['itens'], 'origem': 'playlist' if r['playlist'] else 'link', 'cache': False,
                                        'restantes': musica.restantes_pessoa(usuario.id)})

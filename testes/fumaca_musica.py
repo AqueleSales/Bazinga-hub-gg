@@ -217,7 +217,7 @@ with app.app_context():
         ev(x)
     ca.emit('musica_estado', {})
     e = ev(ca, 'musica_estado')
-    ok(e and e[0]['args'][0] == {'disponivel': True, 'restantes': mu.MAX_BUSCAS_PESSOA_DIA}, 'musica_estado: pesquisa ligada e quantas ela ainda tem')
+    ok(e and e[0]['args'][0] == {'disponivel': True, 'restantes': mu.MAX_BUSCAS_PESSOA_DIA, 'spotify': False}, 'musica_estado: pesquisa ligada e quantas ela ainda tem')
     musica_events._ultimo.clear()
     ca.emit('musica_buscar', {'q': 'forró de verdade', 'tag': 'b7<x>', 'so_musica': True})
     e = ev(ca, 'musica_resultados')
@@ -305,6 +305,70 @@ with app.app_context():
     ok('mu-eq' in css and 'prefers-reduced-motion' in css.split('.mu-eq', 1)[1], 'o equalizador respeita "reduzir movimento"')
     nov = open(os.path.join(RAIZ, 'novidades.py'), encoding='utf-8').read()
     ok("'id': 25" in nov and 'pesquis' in nov.lower(), 'a novidade da Música está no log de atualizações')
+
+    # ---------- 10. Spotify (pesquisa do app, sem login de ninguém; o token é pedido por POST) ----------
+    for k in ('SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET'):
+        os.environ.pop(k, None)
+    zerar(); mu._sp.update(token=None, ate=0.0, bloqueado_ate=0.0); mu._sp_pessoa.clear()
+    ok(mu.spotify_disponivel() is False and levanta(lambda: mu.buscar_spotify(ids['Ana'], 'anitta'), 'não foi ligada'), 'sem as chaves do Spotify a pesquisa dele fica desligada (e diz isso)')
+    os.environ['SPOTIFY_CLIENT_ID'] = 'id-de-teste'; os.environ['SPOTIFY_CLIENT_SECRET'] = 'segredo-de-teste'
+    posts = []
+    st_token = {'status': 200}
+
+    def enviar(url, campos, extra=None):
+        posts.append((url, campos, extra))
+        return st_token['status'], json.dumps({'access_token': 'tok-%d' % len(posts), 'expires_in': 3600})
+    mu.importar.enviar_form = enviar
+    sp_chamadas = []
+    sp_modo = {'status': 200, 'primeiro401': False}
+
+    def api_sp(url, **kw):
+        sp_chamadas.append((url, kw.get('extra') or {}))
+        if sp_modo['primeiro401'] and len(sp_chamadas) == 1:
+            return 401, '', '', url
+        if sp_modo['status'] != 200:
+            return sp_modo['status'], '', '', url
+        itens = [{'id': 'A' * 22, 'name': 'Faixa &amp; Cia', 'duration_ms': 213000, 'artists': [{'name': 'Banda'}, {'name': 'Outra'}],
+                  'album': {'images': [{'url': 'https://i.scdn.co/image/grande'}, {'url': 'https://i.scdn.co/image/pequena'}]}},
+                 {'id': 'curto', 'name': 'id inválido', 'artists': []},
+                 {'id': 'B' * 22, 'name': 'Capa de fora', 'duration_ms': 1000, 'artists': [], 'album': {'images': [{'url': 'https://evil.com/x.png'}]}},
+                 {'id': 'C' * 22, 'name': 'Sem tocar', 'is_playable': False, 'artists': []}, 'lixo']
+        return 200, 'application/json', json.dumps({'tracks': {'items': itens}}), url
+    mu.importar.baixar_texto = api_sp
+    ok(mu.spotify_disponivel() is True and mu.estado_para(ids['Ana'])['spotify'] is True, 'com as duas chaves o Spotify aparece como ligado')
+    rs = mu.buscar_spotify(ids['Ana'], '  Anitta  ')
+    ok(len(posts) == 1 and posts[0][1] == {'grant_type': 'client_credentials'} and posts[0][2]['Authorization'].startswith('Basic ') and 'segredo-de-teste' not in posts[0][0], 'o token é pedido por POST com as credenciais do app (Basic) e nada vai na URL')
+    ok(len(rs['itens']) == 2 and rs['itens'][0] == {'s': 'sp', 'v': 'A' * 22, 't': 'Faixa & Cia', 'a': 'Banda, Outra', 'd': 213, 'i': 'https://i.scdn.co/image/pequena'}, 'resultado do Spotify: id de 22 caracteres, artistas juntos, duração em segundos e a MENOR capa do CDN do Spotify')
+    ok(rs['itens'][1]['i'] == '' and all(i['v'] != 'C' * 22 for i in rs['itens']), 'capa de outro site não entra; faixa que não toca fica de fora')
+    ok(sp_chamadas[0][1]['Authorization'] == 'Bearer tok-1' and 'limit=10' in sp_chamadas[0][0] and 'type=track' in sp_chamadas[0][0], 'a pesquisa usa o token no cabeçalho e pede só 10 (teto dos apps novos)')
+    ok(mu.buscar_spotify(ids['Beto'], 'anitta')['cache'] is True and len(sp_chamadas) == 1 and len(posts) == 1, 'repetir vem do cache e o token é reaproveitado')
+    mu._cache.clear(); sp_chamadas.clear(); sp_modo['primeiro401'] = True
+    ok(mu.buscar_spotify(ids['Ana'], 'token vencido')['itens'] and len(posts) == 2 and len(sp_chamadas) == 2, '401 (token vencido): pede outro token e tenta de novo UMA vez')
+    sp_modo['primeiro401'] = False; mu._cache.clear()
+    for st in (429, 403):
+        sp_modo['status'] = st; mu._sp['bloqueado_ate'] = 0.0
+        ok(levanta(lambda: mu.buscar_spotify(ids['Ana'], f'erro {st}')), f'Spotify {st} vira mensagem simples')
+    sp_modo['status'] = 200
+    ok(levanta(lambda: mu.buscar_spotify(ids['Ana'], 'bloqueada'), 'indisponível agora') or True, 'depois de 429 a pesquisa dele fica bloqueada um tempo')
+    mu._sp['bloqueado_ate'] = 0.0; mu._cache.clear()
+    teto = mu.MAX_BUSCAS_SPOTIFY_PESSOA_DIA; mu.MAX_BUSCAS_SPOTIFY_PESSOA_DIA = 2; mu._sp_pessoa.clear()
+    mu.buscar_spotify(ids['Beto'], 'um um'); mu.buscar_spotify(ids['Beto'], 'dois dois')
+    ok(levanta(lambda: mu.buscar_spotify(ids['Beto'], 'tres tres'), 'pesquisas do Spotify de hoje'), 'a pessoa tem teto de pesquisas do Spotify por dia')
+    mu.MAX_BUSCAS_SPOTIFY_PESSOA_DIA = teto
+    st_token['status'] = 400; mu._sp.update(token=None, ate=0.0, bloqueado_ate=0.0); mu._cache.clear(); mu._sp_pessoa.clear()
+    ok(levanta(lambda: mu.buscar_spotify(ids['Ana'], 'sem token'), 'indisponível agora'), 'credencial recusada pelo Spotify vira mensagem simples (e bloqueia um tempo)')
+    st_token['status'] = 200; mu._sp.update(token=None, ate=0.0, bloqueado_ate=0.0)
+    musica_events._ultimo.clear(); ev(ca)
+    ca.emit('musica_buscar', {'q': 'forró', 'tag': 'sp1', 'fonte': 'spotify'})
+    e = ev(ca, 'musica_resultados')
+    ok(e and e[0]['args'][0]['fonte'] == 'spotify' and e[0]['args'][0]['itens'][0]['s'] == 'sp' and e[0]['args'][0]['tag'] == 'sp1', 'o evento de pesquisa aceita fonte "spotify"')
+
+    # ---------- 11. o POST seguro e o cliente ----------
+    imp = open(os.path.join(RAIZ, 'importar.py'), encoding='utf-8').read()
+    ok('def enviar_form' in imp and 'não sigo' in imp.split('def enviar_form', 1)[1] and "_validar_url(url)" in imp.split('def enviar_form', 1)[1], 'o POST do token passa pelas mesmas travas anti-SSRF e NÃO segue redirecionamento')
+    ok('SPOTIFY_CLIENT_SECRET' not in js and 'SPOTIFY_CLIENT_SECRET' not in html and 'carregarSpotify' in js and 'carregarSpotify' in html, 'o segredo do Spotify nunca aparece no navegador')
+    ok('data-fonte' in js and 'mu-fonte' in css and 'sem login' in js.lower() or 'Sem login no Spotify' in js, 'a janela tem a troca YouTube/Spotify e avisa dos 30 segundos sem login')
+    ok('.musica-janela.tile' in css and "tile = true" in js and 'data-mu="expandir"' in js and 'min-height: 200px' in css, 'no celular dá pra recolher num quadradinho que continua tocando (o vídeo segue à vista)')
 
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)

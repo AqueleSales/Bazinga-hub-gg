@@ -8,8 +8,9 @@
 const Musica = (() => {
     'use strict';
     let ctx = null, janela = null, yt = null, ytPronto = false, pendente = null, seqToca = 0;
+    let sp = null, spPronto = false, spUri = null, spFim = false, spPos = 0, fonte = 'yt', tile = false;        // sp = player do Spotify; tile = recolhida (celular)
     let fila = [], idx = -1, aberta = false, mini = false, aba = 'buscar', tocando = false, repetir = false, aleatorio = false, errosSeguidos = 0;
-    let estado = { disponivel: null, restantes: null }, resultados = [], resMeta = { origem: '' }, status = ['', ''], tagAtual = '', seqBusca = 0, timerBusca = null, soMusica = true;
+    let estado = { disponivel: null, restantes: null, spotify: false }, resultados = [], resMeta = { origem: '' }, status = ['', ''], tagAtual = '', seqBusca = 0, timerBusca = null, soMusica = true;
     let pos = null, arrasto = null, adicionando = new Set();
     const MAX_FILA = 100;
     const CH_FILA = 'pnt_musica_fila', CH_POS = 'pnt_musica_pos', CH_OPC = 'pnt_musica_opc';
@@ -21,9 +22,14 @@ const Musica = (() => {
     const capaUrl = (v) => `https://i.ytimg.com/vi/${v}/mqdefault.jpg`;
     const celular = () => window.matchMedia(MOBILE).matches;
     const dur = (s) => { s = Number(s); if (!isFinite(s) || s <= 0) return ''; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = Math.floor(s % 60); return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
-    const capa = (v) => (idOk(v) ? `<img class="mu-capa" src="${capaUrl(v)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '<span class="mu-capa vazia"><i class="fa-solid fa-music"></i></span>');
-    const limpo = (it) => ({ v: it.v, t: String(it.t || '').slice(0, 100), a: String(it.a || '').slice(0, 60), d: Number(it.d) > 0 ? Number(it.d) : null });
-    const valido = (it) => it && typeof it === 'object' && idOk(it.v);
+    const RE_SP = /^[A-Za-z0-9]{22}$/;
+    const ehSp = (it) => !!it && it.s === 'sp';
+    const imgSp = (u) => typeof u === 'string' && /^https:\/\/i\.scdn\.co\//.test(u) && u.length <= 200;
+    const capaDe = (it) => (ehSp(it) ? (imgSp(it.i) ? it.i : '') : (idOk(it.v) ? capaUrl(it.v) : ''));
+    const capa = (it) => { const u = capaDe(it); return u ? `<img class="mu-capa" src="${T(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '<span class="mu-capa vazia"><i class="fa-solid fa-music"></i></span>'; };
+    const limpo = (it) => { const o = { v: it.v, t: String(it.t || '').slice(0, 100), a: String(it.a || '').slice(0, 60), d: Number(it.d) > 0 ? Number(it.d) : null }; if (ehSp(it)) { o.s = 'sp'; if (imgSp(it.i)) o.i = it.i; } return o; };
+    const valido = (it) => !!it && typeof it === 'object' && (ehSp(it) ? RE_SP.test(it.v || '') : idOk(it.v));
+    const mesmo = (a, b) => !!a && !!b && a.v === b.v && ehSp(a) === ehSp(b);
 
     // ---------------------------------------------------------------------
     // guardar no navegador (conveniência: a fila e a posição da janela)
@@ -50,7 +56,8 @@ const Musica = (() => {
         janela.id = 'musica-janela'; janela.className = 'musica-janela'; janela.hidden = true;
         janela.setAttribute('role', 'dialog'); janela.setAttribute('aria-label', 'Música');
         janela.innerHTML = `<div class="mu-topo"><i class="fa-solid fa-music"></i><b>Música</b><span class="mu-esp"></span>
-                <button type="button" class="mu-ic" data-mu="mini" title="Só o player" aria-label="Minimizar"><i class="fa-solid fa-window-minimize"></i></button>
+                <button type="button" class="mu-ic" data-mu="expandir" title="Abrir a pesquisa e a fila" aria-label="Expandir"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+                <button type="button" class="mu-ic" data-mu="mini" title="Recolher (a música continua)" aria-label="Recolher"><i class="fa-solid fa-window-minimize"></i></button>
                 <button type="button" class="mu-ic" data-mu="fechar" title="Fechar (a música para)" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
             <div class="mu-player" hidden><div class="mu-yt"></div></div>
             <div class="mu-agora" hidden><div class="mu-agora-t"><b></b><small></small></div>
@@ -62,12 +69,13 @@ const Musica = (() => {
             <div class="mu-corpo">
                 <nav class="mu-abas"><button type="button" data-aba="buscar" class="on">Pesquisar</button><button type="button" data-aba="fila">Fila <span class="mu-n" data-n="fila"></span></button><button type="button" data-aba="playlist">Minha playlist</button></nav>
                 <section data-sec="buscar">
+                    <div class="mu-fonte" hidden><button type="button" data-fonte="yt" class="on">YouTube</button><button type="button" data-fonte="sp">Spotify</button></div>
                     <form class="mu-busca" autocomplete="off"><input type="search" id="mu-q" maxlength="300" placeholder="Pesquisar música ou colar link do YouTube" aria-label="Pesquisar música"><button type="submit" class="mu-ic" aria-label="Pesquisar"><i class="fa-solid fa-magnifying-glass"></i></button></form>
-                    <label class="mu-opc"><input type="checkbox" id="mu-so"> <span>Só música</span></label>
+                    <label class="mu-opc"><input type="checkbox" id="mu-so"> <span>Só música</span></label><p class="mu-aviso-sp" hidden>Sem login no Spotify neste aparelho, cada música toca só 30 segundos (regra do Spotify). Entre no Spotify no navegador pra ouvir inteira.</p>
                     <p class="mu-status" role="status"></p><div class="mu-lote" hidden></div><ul class="mu-lista" data-lista="res"></ul></section>
                 <section data-sec="fila" hidden><div class="mu-lote" data-lote="fila"></div><ul class="mu-lista" data-lista="fila"></ul></section>
                 <section data-sec="playlist" hidden><div class="mu-lote" data-lote="playlist"></div><ul class="mu-lista" data-lista="playlist"></ul></section>
-                <p class="mu-termos">Pesquisa e player do YouTube (serviço de terceiros). Ao usar, você aceita os <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">Termos de Serviço do YouTube</a>.</p></div>`;
+                <p class="mu-termos">Pesquisa e player do YouTube e do Spotify (serviços de terceiros). Ao usar, você aceita os <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">Termos de Serviço do YouTube</a>.</p></div>`;
         document.body.appendChild(janela);
         $('#mu-so').checked = soMusica;
         janela.addEventListener('click', aoClicar);
@@ -108,11 +116,13 @@ const Musica = (() => {
         const q = $('#mu-q'); if (q && !celular() && aba === 'buscar' && !mini) setTimeout(() => q.focus(), 60);
     }
     function fechar() {
+        tile = false;
         pararTudo();
         aberta = false; if (janela) janela.hidden = true;
         marcarBotao();
     }
-    const alternar = () => { if (aberta) fechar(); else abrir(); };
+    const alternar = () => { if (aberta && tile) { tile = false; desenharAbas(); } else if (aberta) fechar(); else abrir(); };
+    const playerVisivel = () => !!janela && !!$('.mu-player') && !$('.mu-player').hidden;
 
     function marcarBotao() {
         const b = document.getElementById('btn-musica');
@@ -128,13 +138,13 @@ const Musica = (() => {
 
     function linha(it, acoes, classe, i, padrao) {
         const sub = [it.a, dur(it.d)].filter(Boolean).join(' · ');
-        return `<li class="mu-it ${classe || ''}" data-mu-linha="${padrao}" data-i="${i}">${capa(it.v)}<span class="mu-it-t"><b>${T(it.t || 'Música do YouTube')}</b><small>${T(sub)}</small></span><span class="mu-it-bt">${acoes}</span><span class="mu-eq" aria-hidden="true"><i></i><i></i><i></i></span></li>`;
+        return `<li class="mu-it ${classe || ''}" data-mu-linha="${padrao}" data-i="${i}">${capa(it)}<span class="mu-it-t"><b>${T(it.t || 'Música do YouTube')}</b><small>${T(sub)}</small></span><span class="mu-it-bt">${acoes}</span><span class="mu-eq" aria-hidden="true"><i></i><i></i><i></i></span></li>`;
     }
 
     function desenharStatus() {
         const s = $('.mu-status'); if (!s) return;
         let txt = status[0], tipo = status[1];
-        if (!txt && estado.disponivel === false) { txt = 'A pesquisa por nome ainda não foi ligada neste servidor. Cole o link de uma música ou playlist do YouTube.'; tipo = 'a'; }
+        if (!txt && estado.disponivel === false && fonte === 'yt') { txt = 'A pesquisa por nome ainda não foi ligada neste servidor. Cole o link de uma música ou playlist do YouTube.'; tipo = 'a'; }
         s.textContent = txt; s.className = 'mu-status' + (tipo ? ' ' + tipo : '');
     }
 
@@ -142,8 +152,8 @@ const Musica = (() => {
         const ul = $('[data-lista="res"]'), lote = $('[data-sec="buscar"] .mu-lote');
         if (!ul) return;
         ul.innerHTML = resultados.map((it, i) => linha(it,
-            acao('res-tocar', i, 'fa-play', 'Tocar agora') + acao('res-fila', i, 'fa-list-ol', 'Adicionar à fila') + acao('res-lista', i, adicionando.has(it.v) ? 'fa-circle-notch fa-spin' : 'fa-compact-disc', 'Adicionar à playlist do meu perfil'),
-            fila[idx] && fila[idx].v === it.v ? 'atual' : '', i, 'res-tocar')).join('');
+            acao('res-tocar', i, 'fa-play', 'Tocar agora') + acao('res-fila', i, 'fa-list-ol', 'Adicionar à fila') + (ehSp(it) ? '' : acao('res-lista', i, adicionando.has(it.v) ? 'fa-circle-notch fa-spin' : 'fa-compact-disc', 'Adicionar à playlist do meu perfil')),
+            mesmo(fila[idx], it) ? 'atual' : '', i, 'res-tocar')).join('');
         const tudo = resMeta.origem === 'playlist' && resultados.length > 1;
         lote.hidden = !tudo;
         lote.innerHTML = tudo ? `<button type="button" class="mu-bt" data-mu="res-tudo-tocar"><i class="fa-solid fa-play"></i> Tocar tudo</button><button type="button" class="mu-bt" data-mu="res-tudo-fila"><i class="fa-solid fa-list-ol"></i> Adicionar tudo à fila</button>` : '';
@@ -176,13 +186,13 @@ const Musica = (() => {
         ul.innerHTML = p.faixas.length ? p.faixas.map((f, i) => {
             const it = { v: f.v, t: f.t || (f.x ? 'Música indisponível' : 'Música do YouTube'), a: f.a || (f.l ? 'playlist' : ''), d: null };
             if (!idOk(f.v)) return `<li class="mu-it" data-i="${i}"><span class="mu-capa vazia"><i class="fa-solid fa-compact-disc"></i></span><span class="mu-it-t"><b>${T(f.t || 'Playlist do YouTube')}</b><small>${T([f.a, 'playlist inteira'].filter(Boolean).join(' · '))}</small></span><span class="mu-it-bt">${acao('pl-abrir', i, 'fa-folder-open', 'Ver as músicas dessa playlist')}${acao('pl-tira', i, 'fa-xmark', 'Tirar da playlist', 'perigo')}</span></li>`;
-            return linha(it, acao('pl-tocar-uma', i, 'fa-play', 'Tocar agora') + acao('pl-fila-uma', i, 'fa-list-ol', 'Adicionar à fila') + acao('pl-tira', i, 'fa-xmark', 'Tirar da playlist', 'perigo'), fila[idx] && fila[idx].v === f.v ? 'atual' : '', i, 'pl-tocar-uma');
+            return linha(it, acao('pl-tocar-uma', i, 'fa-play', 'Tocar agora') + acao('pl-fila-uma', i, 'fa-list-ol', 'Adicionar à fila') + acao('pl-tira', i, 'fa-xmark', 'Tirar da playlist', 'perigo'), mesmo(fila[idx], { v: f.v }) ? 'atual' : '', i, 'pl-tocar-uma');
         }).join('') : `<li class="mu-vazio">${p.existe ? 'A sua playlist está vazia.' : 'Você ainda não tem uma playlist no perfil.'} Pesquise e toque em <i class="fa-solid fa-compact-disc"></i> pra guardar aqui (e mostrar no seu perfil).</li>`;
     }
 
     function desenharAgora() {
         const caixa = $('.mu-agora'), it = fila[idx];
-        const visivel = !!it && (yt || tocando || fila.length);
+        const visivel = !!it && (yt || sp || tocando || fila.length);
         caixa.hidden = !visivel;
         if (it) { caixa.querySelector('b').textContent = it.t || 'Música do YouTube'; caixa.querySelector('small').textContent = [it.a, `${idx + 1} de ${fila.length}`].filter(Boolean).join(' · '); }
         const play = caixa.querySelector('[data-mu="play"] i'); if (play) play.className = 'fa-solid ' + (tocando ? 'fa-pause' : 'fa-play');
@@ -196,8 +206,13 @@ const Musica = (() => {
         janela.querySelectorAll('.mu-abas button').forEach((b) => b.classList.toggle('on', b.dataset.aba === aba));
         janela.querySelectorAll('[data-sec]').forEach((s) => { s.hidden = s.dataset.sec !== aba; });
         const n = $('[data-n="fila"]'); if (n) n.textContent = fila.length ? `(${fila.length})` : '';
-        janela.classList.toggle('mini', mini && !!$('.mu-player') && !$('.mu-player').hidden);
-        if (mini && ($('.mu-player') || {}).hidden) { mini = false; janela.classList.remove('mini'); }
+        janela.classList.toggle('mini', mini && playerVisivel());
+        if (mini && !playerVisivel()) { mini = false; janela.classList.remove('mini'); }
+        if (tile && !playerVisivel()) tile = false;
+        janela.classList.toggle('tile', tile);
+        const f = $('.mu-fonte'); if (f) { f.hidden = !estado.spotify; f.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.fonte === fonte)); }
+        const so = $('.mu-opc'); if (so) so.hidden = fonte === 'sp';
+        const av = $('.mu-aviso-sp'); if (av) av.hidden = fonte !== 'sp';
     }
 
     function desenharTudo() {
@@ -216,7 +231,7 @@ const Musica = (() => {
         clearTimeout(timerBusca);
         const minha = tagAtual;
         timerBusca = setTimeout(() => { if (tagAtual === minha) { status = ['O servidor demorou pra responder. Tente de novo.', 'e']; desenharStatus(); } }, 20000);
-        ctx.emitir('musica_buscar', { q: txt, so_musica: soMusica, tag: tagAtual });
+        ctx.emitir('musica_buscar', { q: txt, so_musica: soMusica, tag: tagAtual, fonte: fonte === 'sp' ? 'spotify' : 'youtube' });
     }
 
     function aoResultados(d) {
@@ -237,14 +252,14 @@ const Musica = (() => {
         clearTimeout(timerBusca);
         status = [(d && d.msg) || 'Não consegui pesquisar agora.', 'e']; desenharStatus();
     }
-    function aoEstado(d) { estado = { disponivel: !!(d && d.disponivel), restantes: d ? d.restantes : null }; desenharStatus(); }
+    function aoEstado(d) { estado = { disponivel: !!(d && d.disponivel), restantes: d ? d.restantes : null, spotify: !!(d && d.spotify) }; desenharStatus(); if (janela) desenharAbas(); }
 
     // ---------------------------------------------------------------------
     // a fila (do navegador)
     // ---------------------------------------------------------------------
     function juntar(it) {
         if (!valido(it)) return false;
-        if (fila.some((x) => x.v === it.v)) return 'ja';
+        if (fila.some((x) => mesmo(x, it))) return 'ja';
         if (fila.length >= MAX_FILA) { ctx.toast(`A fila aceita até ${MAX_FILA} músicas.`, 'warning'); return false; }
         fila.push(limpo(it)); return true;
     }
@@ -252,7 +267,7 @@ const Musica = (() => {
 
     function tocarAgora(it) {
         if (!valido(it)) return;
-        const ja = fila.findIndex((x) => x.v === it.v);
+        const ja = fila.findIndex((x) => mesmo(x, it));
         if (ja >= 0) { tocarIndice(ja); return; }
         if (fila.length >= MAX_FILA) { ctx.toast(`A fila aceita até ${MAX_FILA} músicas.`, 'warning'); return; }
         const p = idx >= 0 ? idx + 1 : fila.length;                       // entra logo depois da que toca: a fila continua depois dela
@@ -272,7 +287,7 @@ const Musica = (() => {
         fila.splice(i, 1);
         if (!fila.length) { idx = -1; pararTudo(); filaMudou(); return; }
         if (i < idx) idx--;
-        if (eraAtual) { idx = Math.min(i, fila.length - 1); if (yt || tocando) { filaMudou(); tocarIndice(idx); return; } }
+        if (eraAtual) { idx = Math.min(i, fila.length - 1); if (yt || sp || tocando) { filaMudou(); tocarIndice(idx); return; } }
         filaMudou();
     }
     function mover(i, d) {
@@ -286,6 +301,15 @@ const Musica = (() => {
     // ---------------------------------------------------------------------
     // o player (iframe oficial do YouTube, sempre à vista)
     // ---------------------------------------------------------------------
+    function destruirYt() {
+        if (yt) { try { yt.destroy(); } catch (e) { const f = $('.mu-yt iframe'); if (f) f.remove(); } }
+        yt = null; ytPronto = false; pendente = null;
+    }
+    function destruirSp() {
+        if (sp) { try { sp.destroy(); } catch (e) { /* já saiu */ } }
+        sp = null; spPronto = false; spUri = null; spFim = false;
+    }
+
     async function tocarIndice(i) {
         const it = fila[i];
         if (!it) return;
@@ -295,6 +319,8 @@ const Musica = (() => {
         const player = $('.mu-player'); player.hidden = false;
         desenharTudo();
         const meu = ++seqToca;
+        if (ehSp(it)) { await tocarSpotify(it, meu); sessaoMidia(); return; }
+        destruirSp(); $('.mu-yt').classList.remove('sp');
         let api;
         try { api = await ctx.carregarYt(); } catch (e) { ctx.toast('Não consegui carregar o player do YouTube agora. Tente de novo.', 'warning'); return; }
         if (meu !== seqToca || !aberta) return;                       // outra troca (ou fechar) aconteceu enquanto o script baixava
@@ -311,6 +337,32 @@ const Musica = (() => {
             try { yt.loadVideoById(it.v); } catch (e) { /* o player caiu: o próximo toque recria */ }
         } else pendente = it.v;
         sessaoMidia();
+    }
+
+    /** Spotify: player embutido OFICIAL (à vista). Música inteira só com login no Spotify neste aparelho; sem login toca 30 s e a fila segue pra próxima. */
+    async function tocarSpotify(it, meu) {
+        destruirYt();
+        let api;
+        try { api = await ctx.carregarSpotify(); } catch (e) { ctx.toast('Não consegui carregar o player do Spotify agora. Tente de novo.', 'warning'); return; }
+        if (meu !== seqToca || !aberta) return;
+        const uri = `spotify:track:${it.v}`;
+        spFim = false; spUri = uri;
+        const cont = $('.mu-yt'); cont.classList.add('sp');
+        if (sp) { try { sp.loadUri(uri); sp.play(); } catch (e) { /* o player caiu: o próximo toque recria */ } return; }
+        const alvo = document.createElement('div'); cont.replaceChildren(alvo);
+        api.createController(alvo, { uri, width: '100%', height: 152 }, (ctrl) => {
+            if (meu !== seqToca || !aberta || !janela || !cont.isConnected) { try { ctrl.destroy(); } catch (e) { /* ignora */ } return; }
+            sp = ctrl;
+            ctrl.addListener('ready', () => { spPronto = true; try { if (spUri && spUri !== uri) ctrl.loadUri(spUri); ctrl.play(); } catch (e) { /* o navegador pediu um toque no player */ } });
+            ctrl.addListener('playback_update', (ev) => {
+                const d = ev && ev.data; if (!d) return;
+                spPos = d.position || 0;
+                if (!d.isPaused) spFim = false;
+                tocando = !d.isPaused && !d.isBuffering ? true : (d.isBuffering && !d.isPaused);
+                if (d.duration > 0 && d.isPaused && d.position >= d.duration - 800 && !spFim) { spFim = true; tocando = false; proxima(true); return; }
+                desenharAgora(); desenharFila(); desenharResultados(); desenharPlaylist();
+            });
+        });
     }
 
     function aoEstadoPlayer(e) {
@@ -343,30 +395,37 @@ const Musica = (() => {
         tocarIndice(n);
     }
     function anterior() {
+        if (ehSp(fila[idx])) { if (sp && (spPos > 4000 || idx <= 0)) { try { sp.seek(0); } catch (e) { /* ignora */ } } else tocarIndice(Math.max(idx - 1, 0)); return; }
         let t = 0; try { t = yt && ytPronto ? yt.getCurrentTime() : 0; } catch (e) { t = 0; }
         if (t > 4 || idx <= 0) { if (yt && ytPronto) { try { yt.seekTo(0, true); } catch (e) { /* ignora */ } } else if (fila.length) tocarIndice(Math.max(idx, 0)); return; }
         tocarIndice(idx - 1);
     }
     function tocarPausar() {
         if (!fila.length) return;
+        if (ehSp(fila[idx])) {
+            if (!sp) { tocarIndice(idx); return; }
+            if (!tocando) ctx.pararPerfil();
+            try { sp.togglePlay(); } catch (e) { /* player ainda subindo */ }
+            return;
+        }
         if (!yt) { tocarIndice(idx >= 0 ? idx : 0); return; }
         if (!tocando) ctx.pararPerfil();                              // voltar a tocar também silencia o player do cartão de perfil
         try { if (tocando) yt.pauseVideo(); else yt.playVideo(); } catch (e) { /* player ainda subindo */ }
     }
-    function pausar() { try { if (yt && ytPronto && tocando) yt.pauseVideo(); } catch (e) { /* ignora */ } }
+    function pausar() { try { if (yt && ytPronto && tocando) yt.pauseVideo(); if (sp && tocando) sp.pause(); } catch (e) { /* ignora */ } }
 
     function pararTudo() {
         seqToca++;
-        if (yt) { try { yt.destroy(); } catch (e) { const f = $('.mu-yt iframe'); if (f) f.remove(); } }
-        yt = null; ytPronto = false; pendente = null; tocando = false; errosSeguidos = 0; mini = false;
-        if (janela) { const p = $('.mu-player'); p.hidden = true; $('.mu-yt').replaceChildren(); janela.classList.remove('mini', 'tocando'); desenharAgora(); }
+        destruirYt(); destruirSp();
+        tocando = false; errosSeguidos = 0; mini = false; tile = false;
+        if (janela) { const p = $('.mu-player'); p.hidden = true; const c = $('.mu-yt'); c.replaceChildren(); c.classList.remove('sp'); janela.classList.remove('mini', 'tocando', 'tile'); desenharAgora(); }
     }
 
     function sessaoMidia() {                                          // teclas de mídia e tela de bloqueio do celular
         if (!('mediaSession' in navigator)) return;
         try {
             const it = fila[idx];
-            navigator.mediaSession.metadata = it ? new MediaMetadata({ title: it.t || 'Música do YouTube', artist: it.a || '', artwork: idOk(it.v) ? [{ src: capaUrl(it.v), sizes: '320x180', type: 'image/jpeg' }] : [] }) : null;
+            navigator.mediaSession.metadata = it ? new MediaMetadata({ title: it.t || 'Música', artist: it.a || '', artwork: capaDe(it) ? [{ src: capaDe(it), sizes: '320x180', type: 'image/jpeg' }] : [] }) : null;
             navigator.mediaSession.setActionHandler('nexttrack', () => proxima(false));
             navigator.mediaSession.setActionHandler('previoustrack', anterior);
             navigator.mediaSession.setActionHandler('play', tocarPausar);
@@ -392,6 +451,8 @@ const Musica = (() => {
     function aoMudarPlaylist() { if (aberta) desenharPlaylist(); }
 
     function aoClicar(e) {
+        const fonte_ = e.target.closest('[data-fonte]');
+        if (fonte_) { fonte = fonte_.dataset.fonte === 'sp' && estado.spotify ? 'sp' : 'yt'; resultados = []; resMeta = { origem: '' }; status = ['', '']; desenharAbas(); desenharStatus(); desenharResultados(); const q = $('#mu-q'); if (q) q.placeholder = fonte === 'sp' ? 'Pesquisar música no Spotify' : 'Pesquisar música ou colar link do YouTube'; return; }
         const aba_ = e.target.closest('[data-aba]');
         if (aba_) { aba = aba_.dataset.aba; if (aba === 'playlist' && ctx.minhas() === null) ctx.listarConexoes(); desenharAbas(); desenharFila(); desenharPlaylist(); return; }
         const b = e.target.closest('[data-mu]');
@@ -402,7 +463,8 @@ const Musica = (() => {
         const res = resultados[i], perfil = filaDoPerfil(), pf = perfil && perfil.faixas[i];
         switch (nome) {
             case 'fechar': fechar(); break;
-            case 'mini': mini = !mini; desenharAbas(); break;
+            case 'mini': if (celular() && playerVisivel()) tile = true; else mini = !mini; desenharAbas(); break;      // no celular recolhe num quadradinho que continua tocando
+            case 'expandir': tile = false; desenharAbas(); break;
             case 'play': tocarPausar(); break;
             case 'prox': proxima(false); break;
             case 'ant': anterior(); break;
