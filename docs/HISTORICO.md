@@ -50,6 +50,14 @@ Nome: nasceu como "BazingaCord/Bazinga Hub", virou **Panteão** (30/09) e depois
 - **Rodada 22** Estúdio de efeitos sem código, Explorar servidores (o mar de barquinhos), conserto do `/admin` (bloqueador de anúncio) e o primeiro plano da IA (ver `docs/`).
 - **Rodada 23** (13/10) passe da **Odisseia** (10 cantos, mitologia grega, efeitos feitos no Estúdio) e plano do **Guardião** reescrito: visível, gatilho local, texto ao Gemini, revisão humana.
 
+## Fase 7: mapa social e conexões do perfil (13/10)
+- **Rodada 24** mapa social: "Localizar no mapa" no botão direito do amigo, lista de amigos e de servidores ao alcance (botão no web, 5 bolinhas no celular) e **radar de estranhos**
+  (opt-in recíproco, desligado por padrão, vulto anônimo com ruído de posição, nunca amigo/colega/bloqueado/Fantasma).
+- **Rodada 24** **Conexões do perfil**: a pessoa só cola o link (GitHub, YouTube, Spotify, Twitch, Instagram, Amazon, site, loja do Bazar...) e o cartão vem pronto, **sem editor** (mudou algo,
+  muda no site oficial). A setinha do cartão vira a segunda face. Spotify e YouTube viram **toca-discos** (player oficial só carrega no "Ouvir"). LinkedIn não é lido pelo link (termos do site):
+  a pessoa solta o PDF do perfil e o currículo aparece (leitura por cabeçalhos; IA opcional).
+- **Rodada 24** Estúdio com gráficos e lista de pessoas; apagar temporada do passe ficou rápido e sem erro (trava + escrita em lote).
+
 ## Lições que custaram caro (resumo)
 1. Sem Alembic: coluna nova precisa de `ALTER` (`atualizar_banco.py`) além do boot que cria sozinho.
 2. Escrita no banco sempre em `comitar_com_retry` (Neon acorda e falha a 1ª query).

@@ -205,6 +205,17 @@ def mapa_para_cliente():
     return _cache_mapa
 
 
+def difundir():
+    """Avisa TODOS os conectados da lista atual de efeitos (evento `efeitos_custom`). Salvar/apagar chamam isto sozinhos: antes só a tela de
+    Efeitos do admin avisava, então efeito criado por outro caminho (o modelo "Deuses" do passe) ficava em branco nas telas já abertas
+    até alguém recarregar. Nunca derruba quem chamou."""
+    try:
+        from . import socketio
+        socketio.emit('efeitos_custom', mapa_para_cliente())
+    except Exception as ex:
+        print(f"[EFEITOS] não consegui avisar os conectados: {ex}")
+
+
 def listar():
     return [para_json(e) for e in com_retry(lambda: EfeitoCustom.query.order_by(EfeitoCustom.criado_em.desc()).all())]
 
@@ -231,6 +242,7 @@ def salvar(dados):
     e = comitar_com_retry(preparar)
     _registrar(e)
     _invalidar()
+    difundir()
     return eid
 
 
@@ -255,3 +267,4 @@ def apagar(eid):
     comitar_com_retry(preparar)
     _desregistrar(tipo, eid)
     _invalidar()
+    difundir()

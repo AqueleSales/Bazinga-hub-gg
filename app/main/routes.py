@@ -19,7 +19,7 @@ from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, m
 from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..importar import baixar_imagem_externa, ErroImportar
 from ..novidades import novidade_atual, novidades_para_cliente
-from ..events import sala_servidor, servidor_para_json, servidores_para_json, _estado_inventario
+from ..events import sala_servidor, sala_pessoal, servidor_para_json, servidores_para_json, _estado_inventario
 from ..passe import titulo_publico
 from ..explorar import TEMAS_EXPLORAR
 from ..efeitos import mapa_para_cliente as efeitos_custom_mapa
@@ -70,7 +70,7 @@ def usuario_da_sessao():
 
 # O teto global (5 MB, config.py) barrava um GIF de 6-10 MB ANTES de a rota rodar - o aviso falava
 # em "5 MB" mesmo a rota aceitando 10. Essas duas rotas têm teto próprio, só na requisição delas.
-_TETO_POR_ROTA = {'/api/gif/recortar': 12 * 1024 * 1024, '/api/video/animar': 16 * 1024 * 1024}
+_TETO_POR_ROTA = {'/api/gif/recortar': 12 * 1024 * 1024, '/api/video/animar': 16 * 1024 * 1024, '/api/conexoes/importar-cv': 6 * 1024 * 1024}
 
 
 @main_bp.before_request
@@ -880,6 +880,38 @@ def importar_imagem():
         print(f"[ERRO IMPORTAR IMAGEM] {type(e).__name__}: {e}")
         return jsonify({'error': 'Não consegui baixar essa imagem agora. Tente de novo ou envie o arquivo.'}), 502
     return Response(dados, mimetype=mime, headers={'Cache-Control': 'no-store'})
+
+
+# Importar o PDF do LinkedIn ("Salvar como PDF") pra conexão do LinkedIn do perfil: o currículo é lido e PUBLICADO na hora (sem editor; pra mudar algo a
+# pessoa muda no LinkedIn e solta o PDF de novo). Com `ia=1` e GEMINI_API_KEY configurada, a leitura é feita por IA (o texto vai pro Google: a tela avisa).
+_ultimo_cv = {}
+
+
+@main_bp.route("/api/conexoes/importar-cv", methods=["POST"])
+def importar_cv():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Acesso negado'}), 401
+    agora = time.time()
+    if agora - _ultimo_cv.get(session['user_id'], 0) < 8:
+        return jsonify({'error': 'Calma - espere alguns segundos e tente de novo.'}), 429
+    _ultimo_cv[session['user_id']] = agora
+    arq = request.files.get('arquivo')
+    if not arq:
+        return jsonify({'error': 'Escolha o PDF do seu LinkedIn.'}), 400
+    dados = arq.stream.read(5 * 1024 * 1024 + 1)
+    try:
+        from .. import conexoes as _cx
+        from ..conexoes_events import carga_do_dono
+        pessoa = com_retry(lambda: Person.query.get(session['user_id']))
+        cv, fonte, avisos = _cx.importar_cv_automatico(pessoa, request.form.get('conexao_id'), dados, usar_ia=request.form.get('ia') in ('1', 'true'))
+        socketio.emit('conexoes', carga_do_dono(pessoa.id), to=sala_pessoal(pessoa.id))     # todas as abas da pessoa já veem o cartão pronto (regra 6)
+    except _cx.ErroConexao as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        print(f"[ERRO IMPORTAR CV] {type(e).__name__}: {e}")
+        return jsonify({'error': 'Não consegui ler esse PDF agora. Tente de novo mais tarde.'}), 500
+    return jsonify({'ok': True, 'fonte': fonte, 'avisos': avisos,
+                    'resumo': {'nome': cv['nome'], 'experiencias': len(cv['experiencias']), 'formacao': len(cv['formacao']), 'competencias': len(cv['competencias'])}}), 200, {'Cache-Control': 'no-store'}
 
 
 @main_bp.route("/api/novidades")

@@ -78,6 +78,9 @@ class Person(db.Model):
     localizacao_ativa = db.Column(db.Boolean, nullable=True)
     # Permite a posição aproximada por IP quando o aparelho não consegue achar a sua (só vale com a localização ligada).
     localizacao_ip = db.Column(db.Boolean, nullable=True)
+    # "Radar de pessoas por perto" (Configurações > Geral): sinais ANÔNIMOS e aproximados de quem também ligou. NULL/False = desligado (padrão),
+    # por isso anulável (o boot cria a coluna sem DEFAULT). Reciprocidade: só vê quem aparece. Ver events.mapa_radar_pedir.
+    radar_estranhos = db.Column(db.Boolean, nullable=True)
     # Tema visual (ids em utils.TEMAS_VALIDOS: dark/light/amoled, os predefinidos e 'custom') - também na conta, pelo mesmo motivo.
     tema = db.Column(db.String(20), default='dark', nullable=False)
     # Só vale com tema == 'custom': JSON {base, cor, img, escuro, painel} já validado (utils.tema_custom_valido). Anulável: o boot cria a coluna sem DEFAULT.
@@ -115,6 +118,9 @@ class Person(db.Model):
     moldura = db.Column(db.String(24), nullable=True)
     # Título equipado (id de `Titulo`, posse 'titulo:<id>'). Aparece no cartão ao lado do @ e dos pronomes. Anulável.
     titulo_id = db.Column(db.String(24), nullable=True)
+    # Quantas conexões (links de outras plataformas) a pessoa tem no perfil. Só serve pra o cartão saber se mostra a setinha SEM ir ao banco
+    # (os dados ficam na tabela `conexao`). Anulável: o boot cria a coluna sem DEFAULT; NULL = 0.
+    conexoes_qtd = db.Column(db.Integer, nullable=True)
     # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
     # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
     equipados = db.Column(db.Text, nullable=True)
@@ -803,4 +809,23 @@ class EfeitoCustom(db.Model):
     descricao = db.Column(db.String(120), nullable=True)
     raridade = db.Column(db.String(10), nullable=False, default='epico')
     receita = db.Column(db.Text, nullable=False)
+    criado_em = db.Column(db.DateTime, default=br_now)
+
+
+# ==========================================
+# CONEXÕES DO PERFIL (Rodada 24): links pra outras plataformas (GitHub, LinkedIn/currículo, YouTube, Twitch, Spotify, sites, loja do Bazar...).
+# O que foi buscado fica em `dados` (JSON limitado); o cartão de perfil mostra isso na "outra face". Regra e segurança em app/conexoes.py.
+# A tabela nasce pelo create_all (sem ALTER); `person.conexoes_qtd` é a coluna nova.
+# ==========================================
+class Conexao(db.Model):
+    __tablename__ = 'conexao'
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    ordem = db.Column(db.Integer, nullable=False, default=0)
+    tipo = db.Column(db.String(16), nullable=False)          # github | linkedin | youtube | twitch | spotify | instagram | tiktok | x | steam | ifood | amazon | olx | bazar | site
+    url = db.Column(db.String(320), nullable=True)           # sempre https, já normalizada (o tipo 'bazar' não tem)
+    titulo = db.Column(db.String(90), nullable=True)         # o nome mostrado (@usuario, nome da loja...)
+    dados = db.Column(db.Text, nullable=True)                # JSON do que foi buscado (github, currículo, oembed...), até ~24 KB
+    atualizado_em = db.Column(db.DateTime, nullable=True)    # quando os dados foram buscados (o cache vale por horas)
+    erro = db.Column(db.String(140), nullable=True)          # por que a última busca falhou (só o dono vê)
     criado_em = db.Column(db.DateTime, default=br_now)

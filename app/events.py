@@ -483,7 +483,8 @@ def handle_connect():
         # `temas`: o tema do computador e o do celular; cada aparelho pega o seu (ver utils.tema_do_aparelho)
         emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'temas': {a: _dados_do_tema(usuario, a) for a in APARELHOS},
                                          'localizacao_ativa': localizacao_ligada(usuario),
-                                         'localizacao_ip': usuario.localizacao_ip is not False})
+                                         'localizacao_ip': usuario.localizacao_ip is not False,
+                                         'radar_estranhos': usuario.radar_estranhos is True})
 
         # Bônus diário: a primeira conexão do dia paga XP e mantém a sequência.
         # Em try próprio: falhar aqui não pode derrubar presença/amigos abaixo.
@@ -561,6 +562,7 @@ def handle_disconnect():
     # call pro resto da sessão de todo mundo.
     centros_mapa.pop(request.sid, None)
     fontes_mapa.pop(request.sid, None)
+    _radar_ts.pop(request.sid, None)
     _explorar_ts.pop(request.sid, None)
     call_info = _call_por_sid.pop(request.sid, None)
     if call_info and _meta_call.get(call_info, {}).get('sid') == request.sid:
@@ -1936,6 +1938,150 @@ def mapa_explorar(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível explorar o mapa: {e}'})
 
 
+# ---------- RADAR DE PESSOAS POR PERTO (Rodada 24) ----------
+# Sinais ANÔNIMOS e APROXIMADOS de gente que o servidor não mostra de outro jeito (nem amigo, nem do mesmo servidor: esses já têm pino).
+# Desenho pensado pra não virar ferramenta de perseguição:
+#   * os DOIS lados precisam ter ligado a opção (padrão desligada): quem não aparece não vê (reciprocidade);
+#   * Modo Fantasma, localização desligada, posição só por IP/suspeita ou sinal velho = não aparece e não vê;
+#   * sem nome, sem foto, sem id: só um ponto. A posição leva ruído de ±100 m e é encaixada numa grade de ~200 m (refeito a cada pedido);
+#   * só dentro do círculo pequeno (RAIO_NOTAS_M), no máximo RADAR_MAX sinais, no máximo 1 pedido a cada RADAR_INTERVALO_S por aba;
+#   * quem bloqueou (ou foi bloqueado) não entra.
+RADAR_INTERVALO_S = 15
+RADAR_GRADE_M = 200
+RADAR_RUIDO_M = 100
+RADAR_MAX = 12
+RADAR_RAIO_M = RAIO_NOTAS_M   # só dentro do círculo pequeno
+_radar_ts = {}   # sid -> ts do último pedido
+
+
+def _posicao_borrada(lat, lng):
+    """Ruído de ±RADAR_RUIDO_M e depois o CENTRO da célula de ~RADAR_GRADE_M onde o ponto caiu."""
+    import random
+    from math import cos, radians, floor
+    m_lat = 1 / 111000.0
+    m_lng = 1 / (111000.0 * max(0.2, cos(radians(lat))))
+    lat += random.uniform(-RADAR_RUIDO_M, RADAR_RUIDO_M) * m_lat
+    lng += random.uniform(-RADAR_RUIDO_M, RADAR_RUIDO_M) * m_lng
+    passo_lat, passo_lng = RADAR_GRADE_M * m_lat, RADAR_GRADE_M * m_lng
+    return (floor(lat / passo_lat) + 0.5) * passo_lat, (floor(lng / passo_lng) + 0.5) * passo_lng
+
+
+@socketio.on('pedir_efeitos')
+def pedir_efeitos(dados=None):
+    """Reenvia os efeitos do Estúdio pra quem perdeu o aviso (aba aberta enquanto o admin criava um efeito). Em cache: zero query."""
+    if usuario_logado():
+        emit('efeitos_custom', efeitos_custom_mapa())
+
+
+@socketio.on('mapa_radar_pedir')
+def mapa_radar_pedir(dados=None):
+    """O cliente (com o radar ligado) pergunta a cada ~20 s quem está por perto. Responde `mapa_radar` {ativo, motivo?, blips:[{lat,lng}], grade_m}."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    agora = time.time()
+    if agora - _radar_ts.get(request.sid, 0) < RADAR_INTERVALO_S - 2:
+        return
+    _radar_ts[request.sid] = agora
+
+    def pausado(motivo):
+        emit('mapa_radar', {'ativo': False, 'motivo': motivo, 'blips': [], 'grade_m': RADAR_GRADE_M})
+
+    if usuario.radar_estranhos is not True:
+        return pausado('desligado')
+    if not localizacao_ligada(usuario):
+        return pausado('sem_localizacao')
+    if usuario.ghost_mode:
+        return pausado('fantasma')   # quem quer ver precisa poder ser visto
+    centro = centros_mapa.get(request.sid)
+    if not centro or fontes_mapa.get(request.sid, 'aparelho') != 'aparelho':
+        return pausado('sem_posicao')
+    try:
+        amigos, colegas, _srv = com_retry(lambda: contatos_do_mapa(usuario))
+        conhecidos = amigos | colegas | {usuario.id}
+        candidatos = []
+        for uid, p in list(ultimas_posicoes.items()):
+            if uid in conhecidos or not p.get('_radar') or agora - p.get('_t', 0) > POSICAO_VALE_SEGUNDOS:
+                continue
+            if distancia_m(centro[0], centro[1], p['lat'], p['lng']) <= RADAR_RAIO_M:
+                candidatos.append((uid, p))
+        blips = []
+        if candidatos:
+            ids = [u for u, _p in candidatos]
+            linhas = com_retry(lambda: Friendship.query.filter(
+                Friendship.status == 'blocked',
+                or_(and_(Friendship.requester_id == usuario.id, Friendship.addressee_id.in_(ids)),
+                    and_(Friendship.addressee_id == usuario.id, Friendship.requester_id.in_(ids)))).all())
+            bloqueados = {f.addressee_id if f.requester_id == usuario.id else f.requester_id for f in linhas}
+            for uid, p in candidatos:
+                if uid in bloqueados:
+                    continue
+                la, ln = _posicao_borrada(p['lat'], p['lng'])
+                blips.append({'lat': round(la, 5), 'lng': round(ln, 5)})
+            blips = blips[:RADAR_MAX]
+        emit('mapa_radar', {'ativo': True, 'blips': blips, 'grade_m': RADAR_GRADE_M})
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MAPA RADAR] {e}")
+
+
+@socketio.on('alternar_radar_estranhos')
+def alternar_radar_estranhos(dados=None):
+    """Liga/desliga o radar de pessoas por perto na conta. Valor explícito (duas abas não se anulam); todas as abas acompanham."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        ativo = bool((dados or {}).get('ativo'))
+
+        def preparar():
+            usuario.radar_estranhos = ativo
+
+        comitar_com_retry(preparar)
+        p = ultimas_posicoes.get(usuario.id)
+        if p is not None:
+            p['_radar'] = ativo
+        emit('preferencias_carregadas', {'radar_estranhos': ativo}, to=sala_pessoal(usuario.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ALTERNAR RADAR] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível mudar o radar de pessoas: {e}'})
+
+
+@socketio.on('mapa_servidor_previa')
+def mapa_servidor_previa(dados=None):
+    """Prévia (a mesma do Explorar) de um servidor PLANTADO no mapa, dentro do alcance de quem pede. Só olhar: entrar continua
+    sendo `entrar_servidor_pin` (que exige a posição do aparelho)."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    if not localizacao_ligada(usuario):
+        emit('erro_bazinga', {'msg': MSG_LOCALIZACAO_DESLIGADA})
+        return
+    try:
+        from . import explorar as _explorar
+        try:
+            server_id = int((dados or {}).get('server_id'))
+        except (TypeError, ValueError):
+            return
+        pino = com_retry(lambda: MapServer.query.filter_by(server_id=server_id).first())
+        if not pino or pino.oculta or (pino.expires_at and pino.expires_at <= br_now()):
+            emit('erro_bazinga', {'msg': 'Esse servidor não está mais plantado no mapa.'})
+            return
+        if not _exigir_posicao():
+            return
+        if not _dentro_do_alcance((pino.lat, pino.lng), RAIO_SERVIDORES_M):
+            emit('erro_bazinga', {'msg': 'Esse servidor está fora do seu alcance.'})
+            return
+        p = _explorar.previa(usuario, server_id, liberado=True)
+        p['pino'] = {'vagas': pino.max_tickets or None, 'lotado': bool(pino.max_tickets and p['membros'] >= pino.max_tickets)}
+        emit('mapa_servidor_previa', p)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO MAPA SERVIDOR PREVIA] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível abrir a prévia: {e}'})
+
+
 def _validar_nota_texto(dados):
     return (dados.get('texto') or '').strip()[:LIM_NOTA]
 
@@ -2338,7 +2484,8 @@ def atualizar_localizacao(dados):
             'lat': pos[0],
             'lng': pos[1]
         }
-        ultimas_posicoes[usuario.id] = dict(payload, _t=time.time())
+        # `_radar`: a pessoa ligou o "radar de pessoas por perto" (só quem também ligou aparece pra quem liga; ver mapa_radar_pedir)
+        ultimas_posicoes[usuario.id] = dict(payload, _t=time.time(), _radar=usuario.radar_estranhos is True)
         for sala in _salas_da_posicao(usuario):
             emit('posicao_amigo_atualizada', payload, to=sala, include_self=False)
     except Exception as e:
@@ -2928,7 +3075,8 @@ def obter_perfil(dados):
             'nivel': nivel, 'titulo': titulo_do_nivel(nivel), 'patente': patente_do_nivel(nivel),
             'badges': badges, 'equipados': equipados_da_pessoa(alvo), 'titulo_perfil': titulo_publico(alvo.titulo_id),
             'eh_amigo': amigo, 'pedido_pendente': pendente, 'sou_eu': sou_eu,
-            'tem_loja': loja_publica_id is not None, 'loja_id': loja_publica_id
+            'tem_loja': loja_publica_id is not None, 'loja_id': loja_publica_id,
+            'conexoes_qtd': int(alvo.conexoes_qtd or 0)
         })
     except Exception as e:
         db.session.rollback()
@@ -4061,3 +4209,7 @@ from . import passe_events  # noqa: E402,F401
 
 # Explorar servidores (o mar de barquinhos): handlers em outro arquivo, também no FIM (importa daqui).
 from . import explorar_events  # noqa: E402,F401
+
+
+# Conexões do perfil (links de outras plataformas, currículo, GitHub): handlers em outro arquivo, também no FIM (importa daqui).
+from . import conexoes_events  # noqa: E402,F401

@@ -271,6 +271,12 @@ def atualizar_banco():
             add_column_se_nao_existir("server", "publico BOOLEAN")
             add_column_se_nao_existir("server", "tema_explorar VARCHAR(20)")
 
+            # 33. Radar de pessoas por perto (Rodada 24): opção na conta, desligada por padrão (NULL = desligado).
+            add_column_se_nao_existir("person", "radar_estranhos BOOLEAN")
+
+            # 34. Conexões do perfil (Rodada 24): a tabela `conexao` nasce pelo create_all; só a contagem na pessoa entra aqui.
+            add_column_se_nao_existir("person", "conexoes_qtd INTEGER")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

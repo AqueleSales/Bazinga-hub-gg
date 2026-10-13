@@ -91,13 +91,14 @@ def lista(usuario, busca='', tema='', seed=''):
             'temas': [{'id': t[0], 'nome': t[1], 'icone': t[2], 'cor': t[3], 'qtd': contagem_por_tema.get(t[0], 0)} for t in TEMAS_EXPLORAR], 'seed': seed}
 
 
-def previa(usuario, server_id):
-    """Prévia SEGURA de um servidor público (ou de um em que a pessoa já está): sem mensagens, sem membros nominais, sem canal privado."""
+def previa(usuario, server_id, liberado=False):
+    """Prévia SEGURA de um servidor público (ou de um em que a pessoa já está): sem mensagens, sem membros nominais, sem canal privado.
+    `liberado` = quem chama JÁ conferiu que a pessoa pode ver (servidor plantado no mapa e dentro do alcance dela)."""
     s = com_retry(lambda: Server.query.get(int(server_id)))
     if not s:
         raise ErroExplorar('Esse servidor não existe mais.')
     meu = eh_membro(usuario, s.id)
-    if not s.publico and not meu:
+    if not s.publico and not meu and not liberado:
         raise ErroExplorar('Esse servidor não está aberto a visitas.')
     membros = com_retry(lambda: _contagem([s.id])).get(s.id, 0)
     canais = com_retry(lambda: Channel.query.filter_by(server_id=s.id, is_private=False, channel_type='text').order_by(Channel.position, Channel.id).limit(12).all())

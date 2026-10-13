@@ -218,10 +218,22 @@ const Passe = (() => {
         }, true);
     }
 
+    // Efeito do Estúdio na trilha que este navegador ainda não conhece (a tela ficou aberta enquanto o admin criava o efeito): a prévia sairia
+    // em branco. O servidor também avisa todo mundo quando salva, mas isto cobre a aba que perdeu o aviso. No máximo 1 pedido a cada 15 s.
+    let pediuEfeitosEm = 0;
+    function precisaDeEfeitos() {
+        if (!ctx || !S || !S.niveis || typeof Efeitos === 'undefined' || Date.now() - pediuEfeitosEm < 15000) return;
+        const falta = S.niveis.some((l) => ['gratis', 'premium'].some((t) => {
+            const r = l[t], it = r && r.item;
+            return it && it.tema === 'estudio' && !Efeitos.tem(it.valor);
+        }));
+        if (falta) { pediuEfeitosEm = Date.now(); ctx.emitir('pedir_efeitos', {}); }
+    }
+
     return {
         iniciar,
         abrir() { ctx && ctx.emitir('passe_pedir', {}); },
-        receber(d) { S = d; desenhar(); },
+        receber(d) { S = d; precisaDeEfeitos(); desenhar(); },
         /** O XP mudou (qualquer fonte): se a aba do passe está à vista, pede o estado de novo (com respiro). */
         xpMudou() { if (!ctx || !visivel()) return; clearTimeout(timerXp); timerXp = setTimeout(() => ctx.emitir('passe_pedir', {}), 1200); },
         resgatado(r) {

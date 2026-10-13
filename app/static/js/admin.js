@@ -38,11 +38,31 @@
             const b = document.createElement('button');
             b.className = 'es-btn ' + (a.classe || '');
             b.textContent = a.texto;
-            b.addEventListener('click', async () => { if (a.fn) { const r = await a.fn(fundo); if (r === false) return; } fechar(); });
+            // Enquanto a ação roda os botões ficam travados: apagar/aplicar modelo levam alguns segundos e um 2º clique rodava a operação DUAS vezes.
+            b.addEventListener('click', async () => {
+                if (b.disabled) return;
+                if (a.fn) {
+                    const botoes = [...barra.querySelectorAll('button')], rotulo = b.textContent;
+                    botoes.forEach((x) => { x.disabled = true; });
+                    b.textContent = 'Aguarde...';
+                    let r;
+                    try { r = await a.fn(fundo); } catch (e) { r = false; }
+                    if (r === false) { botoes.forEach((x) => { x.disabled = false; }); b.textContent = rotulo; return; }
+                }
+                fechar();
+            });
             barra.appendChild(b);
         });
         document.body.appendChild(fundo);
         return { fundo, fechar };
+    }
+
+    // Roda uma ação demorada num botão: trava, mostra "Aguarde..." e destrava no fim (evita clique duplo rodar duas vezes).
+    async function trabalhando(btn, fn) {
+        if (btn.disabled) return;
+        const rotulo = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Aguarde...';
+        try { return await fn(); } finally { btn.disabled = false; btn.textContent = rotulo; }
     }
 
     function confirmar(texto, aoConfirmar, rotulo) {
@@ -68,16 +88,141 @@
     }));
 
     // ------------------------------------------------------------
-    // visão geral
+    // visão geral: números, gráficos por dia, nível das pessoas e a lista de pessoas
     // ------------------------------------------------------------
+    const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
+    const diaCurto = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
+    const diaLongo = (d) => new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    const fotoOk = (u) => /^(https:\/\/|\/)/.test(u || '');          // foto de perfil: só https ou caminho do site
+
+    function especGraficos(g) {
+        const dias = g.dias;
+        return {
+            contas: {
+                tipo: 'colunas', titulo: 'Novas contas por dia', unidade: 'contas',
+                sub: `Últimos ${dias} dias · ${fmt(g.novas_periodo)} no período` + (g.contas_sem_data ? ` · ${fmt(g.contas_sem_data)} contas antigas não têm data de entrada e ficam de fora` : ''),
+                vazio: 'Nenhuma conta nova nesse período.',
+                serie: g.contas_por_dia.map((d) => ({ chave: d.dia, rotulo: diaCurto(d.dia), dica: diaLongo(d.dia), valor: d.n })),
+                tabela: { cabecalho: ['Dia', 'Novas contas'], linhas: g.contas_por_dia.map((d) => [diaLongo(d.dia), d.n]) },
+            },
+            mensagens: {
+                tipo: 'linha', titulo: 'Mensagens por dia', unidade: 'mensagens',
+                sub: `Últimos ${dias} dias · canais e mensagens diretas somados`,
+                serie: g.mensagens_por_dia.map((d) => ({ chave: d.dia, rotulo: diaCurto(d.dia), dica: diaLongo(d.dia), valor: d.n, detalhe: [`Canais: ${fmt(d.canais)}`, `Diretas: ${fmt(d.dms)}`] })),
+                tabela: { cabecalho: ['Dia', 'Mensagens', 'Canais', 'Diretas'], linhas: g.mensagens_por_dia.map((d) => [diaLongo(d.dia), d.n, d.canais, d.dms]) },
+            },
+            niveis: {
+                tipo: 'barrasH', titulo: 'Pessoas por nível de conta', unidade: 'pessoas',
+                sub: 'O nível da conta cresce com o XP de tudo que a pessoa faz no app',
+                serie: g.niveis.map((f) => ({ rotulo: 'Nível ' + f.faixa, dica: 'nível ' + f.faixa, valor: f.n })),
+                tabela: { cabecalho: ['Nível', 'Pessoas'], linhas: g.niveis.map((f) => ['Nível ' + f.faixa, f.n]) },
+            },
+        };
+    }
+
+    function pintarTiles(g) {
+        const itens = [
+            ['Pessoas cadastradas', fmt(g.pessoas), g.contas_sem_data ? `${fmt(g.contas_sem_data)} sem data de entrada` : ''],
+            ['Online agora', fmt(g.online_agora), 'conectadas neste momento'],
+            ['Novas em 7 dias', fmt(g.novas_7d), ''],
+            ['Mensagens hoje', fmt(g.mensagens_hoje), 'canais e diretas'],
+            ['Servidores', fmt(g.servidores), `${fmt(g.servidores_publicos)} no Explorar`],
+            ['Lojas no Bazar', fmt(g.lojas), ''],
+            ['Temporada ativa', g.temporada ? g.temporada.nome : 'nenhuma', g.temporada ? `${fmt(g.jogando_temporada)} jogando` : ''],
+            ['Administradores', fmt(g.admins.length), g.admins.map((a) => '@' + a.username).join(', ')],
+        ];
+        $('#g-tiles').innerHTML = itens.map(([rot, val, sub]) => `<div class="es-num"><span>${esc(rot)}</span><b>${esc(val)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`).join('');
+    }
+
+    function pintarTemporada(g) {
+        const c = $('#g-temp');
+        if (!g.temporada) {
+            c.innerHTML = '<div class="es-g-topo"><div><h2>Temporada ativa</h2><small>Nenhuma temporada ativa agora.</small></div></div><p class="es-temp-sub">Crie ou ative uma em <a href="#passe">Passe de Batalha</a>.</p>';
+            return;
+        }
+        const pct = g.pessoas ? Math.min(100, Math.round((g.jogando_temporada / g.pessoas) * 100)) : 0;
+        c.innerHTML = `<div class="es-g-topo"><div><h2>Temporada ativa</h2><small>${esc(g.temporada.nome)}</small></div></div>
+            <div class="es-temp-num">${fmt(g.jogando_temporada)}<span class="es-temp-sub"> de ${fmt(g.pessoas)} pessoas já jogam</span></div>
+            <div class="es-medidor" role="img" aria-label="${pct}% das pessoas já ganharam XP na temporada"><i style="width:${pct}%"></i></div>
+            <div class="es-temp-sub">${pct}% das contas · ${fmt(g.premium_temporada)} com a trilha Premium liberada</div>`;
+    }
+
     async function vGeral() {
-        const g = await api('/geral');
-        main.innerHTML = `<h1>Visão geral</h1><p class="es-sub">O estúdio de quem cria o app. Aqui você define o passe, os títulos e as missões; o resto das áreas (cosméticos, Armazém, Bazar, denúncias...) entra nas próximas etapas.</p>
-            <div class="es-grade-3">
-                <div class="es-num"><b>${g.pessoas}</b><span>pessoas cadastradas</span></div>
-                <div class="es-num"><b>${g.temporada ? esc(g.temporada.nome) : 'nenhuma'}</b><span>temporada ativa</span></div>
-                <div class="es-num"><b>${g.admins.length}</b><span>administradores</span></div>
-            </div>`;
+        E.dias = E.dias || 30; E.q = ''; E.pag = 1; E.ordem = 'recentes';
+        const g = await api('/geral?dias=' + E.dias);
+        main.innerHTML = `<h1>Visão geral</h1>
+            <p class="es-sub">Como o app está agora: quantas pessoas, quem entrou, quanto se conversa e quem são elas. O resto das áreas (cosméticos, Armazém, Bazar, denúncias...) entra nas próximas etapas.</p>
+            <div class="es-grade-3 es-tiles" id="g-tiles"></div>
+            <div class="es-filtros"><span>Período dos gráficos</span>
+                <div class="es-seg" id="g-dias" role="group" aria-label="Período dos gráficos">${[7, 30, 90].map((d) => `<button type="button" data-d="${d}" aria-pressed="${d === E.dias}">${d} dias</button>`).join('')}</div></div>
+            <div class="es-graficos" id="g-viz">
+                <section class="es-cartao" id="g-contas"></section><section class="es-cartao" id="g-msgs"></section>
+                <section class="es-cartao" id="g-niveis"></section><section class="es-cartao" id="g-temp"></section>
+            </div>
+            <section class="es-cartao" id="g-pessoas">
+                <h2>Pessoas</h2>
+                <p class="es-dado-pessoal"><i class="fa-solid fa-user-shield"></i> Dados pessoais (nome, @ e e-mail): só você, como administrador, vê esta lista. Use só pra gerir o app.</p>
+                <div class="es-pessoas-barra">
+                    <div class="es-campo largo"><label for="gp-busca">Buscar</label><input id="gp-busca" type="search" maxlength="80" placeholder="Nome, @conta ou e-mail" autocomplete="off"></div>
+                    <div class="es-campo"><label for="gp-ordem">Ordem</label><select id="gp-ordem"><option value="recentes">Mais recentes</option><option value="nome">Nome (A a Z)</option><option value="nivel">Maior nível</option></select></div>
+                </div>
+                <div class="es-rolagem-x" id="gp-tabela"><div class="es-vazio">Carregando...</div></div>
+                <div class="es-paginas" id="gp-paginas"></div>
+            </section>`;
+        pintarTiles(g);
+        pintarTemporada(g);
+        const spec = especGraficos(g);
+        E.graf = { contas: Graficos.montar($('#g-contas'), spec.contas), mensagens: Graficos.montar($('#g-msgs'), spec.mensagens), niveis: Graficos.montar($('#g-niveis'), spec.niveis) };
+
+        $('#g-dias').addEventListener('click', async (ev) => {
+            const b = ev.target.closest('button[data-d]');
+            if (!b || +b.dataset.d === E.dias) return;
+            E.dias = +b.dataset.d;
+            $('#g-dias').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(+x.dataset.d === E.dias)));
+            $('#g-viz').classList.add('carregando');          // os gráficos seguem na tela, só esmaecem enquanto os números novos chegam
+            try {
+                const novo = await api('/geral?dias=' + E.dias), sp = especGraficos(novo);
+                Graficos.atualizar(E.graf.contas, sp.contas); Graficos.atualizar(E.graf.mensagens, sp.mensagens);
+                E.graf.contas.closest('section').querySelector('small').textContent = sp.contas.sub;
+                E.graf.mensagens.closest('section').querySelector('small').textContent = sp.mensagens.sub;
+            } catch (e) { /* toast já mostrado */ } finally { $('#g-viz').classList.remove('carregando'); }
+        });
+
+        let timer = null;
+        $('#gp-busca').addEventListener('input', (ev) => { clearTimeout(timer); timer = setTimeout(() => { E.q = ev.target.value.trim(); E.pag = 1; carregarPessoas(); }, 300); });
+        $('#gp-ordem').addEventListener('change', (ev) => { E.ordem = ev.target.value; E.pag = 1; carregarPessoas(); });
+        $('#g-pessoas').addEventListener('click', (ev) => {
+            const cp = ev.target.closest('[data-copiar]');
+            if (cp) { navigator.clipboard.writeText(cp.dataset.copiar).then(() => toast('E-mail copiado.', 'ok'), () => toast('Não consegui copiar.', 'erro')); return; }
+            const pg = ev.target.closest('[data-pag]');
+            if (pg && !pg.disabled) { E.pag = +pg.dataset.pag; carregarPessoas(); }
+        });
+        await carregarPessoas();
+    }
+
+    async function carregarPessoas() {
+        const alvo = $('#gp-tabela');
+        if (!alvo) return;
+        alvo.style.opacity = '.55';
+        let d;
+        try { d = await api(`/pessoas/lista?q=${encodeURIComponent(E.q)}&pagina=${E.pag}&ordem=${encodeURIComponent(E.ordem)}`); } catch (e) { alvo.style.opacity = ''; return; }
+        if (!$('#gp-tabela')) return;                       // trocou de tela enquanto carregava
+        E.pag = d.pagina;
+        const linhas = d.pessoas.map((p) => {
+            const foto = fotoOk(p.avatar) ? `<img src="${esc(p.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : esc((p.nome || '?').trim().charAt(0).toUpperCase());
+            return `<tr><td><div class="es-pessoa"><span class="es-av">${foto}</span><b>${esc(p.nome)}</b></div></td>
+                <td>${p.username ? '@' + esc(p.username) : '<span class="es-g-vazio" style="padding:0">sem @</span>'}</td>
+                <td><span class="es-email">${esc(p.email)}${p.email ? ` <button type="button" class="es-copiar" data-copiar="${esc(p.email)}" title="Copiar e-mail" aria-label="Copiar o e-mail de ${esc(p.nome)}"><i class="fa-regular fa-copy"></i></button>` : ''}</span></td>
+                <td>${p.criado_em ? esc(p.criado_em) : '<span class="es-sub" style="margin:0">conta antiga</span>'}</td>
+                <td class="num">${fmt(p.nivel)}</td>
+                <td><span class="es-status ${p.online ? 'on' : ''}"><i></i>${p.online ? 'Online' : 'Offline'}</span></td></tr>`;
+        }).join('');
+        alvo.style.opacity = '';
+        alvo.innerHTML = d.pessoas.length
+            ? `<table class="es-tabela"><thead><tr><th>Pessoa</th><th>@ da conta</th><th>E-mail</th><th>Entrou em</th><th class="num">Nível</th><th>Agora</th></tr></thead><tbody>${linhas}</tbody></table>`
+            : `<div class="es-vazio">${E.q ? 'Ninguém encontrado com essa busca.' : 'Nenhuma pessoa ainda.'}</div>`;
+        $('#gp-paginas').innerHTML = `<span>${fmt(d.total)} ${d.total === 1 ? 'pessoa' : 'pessoas'}${E.q ? ' na busca' : ''} · página ${d.pagina} de ${d.paginas}</span>
+            <div><button type="button" class="es-btn mini" data-pag="${d.pagina - 1}" ${d.pagina <= 1 ? 'disabled' : ''}>Anterior</button><button type="button" class="es-btn mini" data-pag="${d.pagina + 1}" ${d.pagina >= d.paginas ? 'disabled' : ''}>Próxima</button></div>`;
     }
 
     // ------------------------------------------------------------
@@ -304,26 +449,26 @@
             if (E.tid) await carregarRecs();
             desenharPasse();
         });
-        $('#p-nova').addEventListener('click', async () => {
+        $('#p-nova').addEventListener('click', (ev) => trabalhando(ev.currentTarget, async () => {
             try {
                 const r = await api('/passe/temporada', 'POST', { nome: 'Nova temporada', tema: 'neutro', niveis: 100, xp_por_nivel: 800, catchup_dias: 14, catchup_pct: 50 });
                 E.tid = r.id; toast('Temporada criada. Ajuste e salve.', 'ok'); vPasse();
             } catch (e) { /* toast já mostrado */ }
-        });
-        $('#p-modelo-criar').addEventListener('click', async () => {
+        }));
+        $('#p-modelo-criar').addEventListener('click', (ev) => trabalhando(ev.currentTarget, async () => {
             try { const r = await api('/passe/modelo', 'POST', {}); E.tid = r.id; E.cat = null; toast('Modelo "Deuses" criado (inativo). Revise e ative.', 'ok'); vPasse(); } catch (e) { /* toast */ }
-        });
+        }));
         if (!t) return;
-        $('#t-salvar').addEventListener('click', async () => {
+        $('#t-salvar').addEventListener('click', (ev) => trabalhando(ev.currentTarget, async () => {
             const corpo = {
                 id: t.id, nome: $('#t-nome').value, subtitulo: $('#t-sub').value, tema: $('#t-tema').value, niveis: +$('#t-niveis').value,
                 xp_por_nivel: +$('#t-xp').value, inicio: $('#t-ini').value, fim: $('#t-fim').value, catchup_dias: +$('#t-cdias').value, catchup_pct: +$('#t-cpct').value, capitulos: $('#t-caps').value, capitulo_niveis: +$('#t-capn').value,
             };
             try { await api('/passe/temporada', 'POST', corpo); toast('Temporada salva.', 'ok'); E.mudancas.clear(); vPasse(); } catch (e) { /* toast */ }
-        });
-        $('#t-ativar').addEventListener('click', async () => {
+        }));
+        $('#t-ativar').addEventListener('click', (ev) => trabalhando(ev.currentTarget, async () => {
             try { await api(`/passe/temporada/${t.id}/ativar`, 'POST', { ativa: !t.ativa }); toast(t.ativa ? 'Temporada encerrada.' : 'Temporada ativa. Já vale pra todo mundo.', 'ok'); vPasse(); } catch (e) { /* toast */ }
-        });
+        }));
         $('#t-modelo').addEventListener('click', () => confirmar('Aplicar o modelo "Deuses" apaga TODAS as recompensas desta temporada e coloca as 100 do modelo. Continuar?', async () => {
             try { const r = await api(`/passe/temporada/${t.id}/modelo`, 'POST', {}); toast(`Modelo aplicado (${r.qtd} recompensas).`, 'ok'); E.cat = null; await catalogo(); vPasse(); } catch (e) { return false; }
         }, 'Aplicar'));

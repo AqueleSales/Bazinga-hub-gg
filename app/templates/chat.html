@@ -2936,6 +2936,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/titulos.css') }}?v={{ titulos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/efeitos.css') }}?v={{ efeitos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/explorar.css') }}?v={{ explorar_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mapa_social.css') }}?v={{ mapa_social_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/conexoes.css') }}?v={{ conexoes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 </head>
@@ -3164,6 +3166,8 @@
                         <button class="btn btn-primary" style="background-color: var(--green-color); padding: 6px 12px; font-weight: 600;" onclick="abrirModalServidor('create')">
                             <i class="fa-solid fa-location-dot"></i> Plantar Servidor
                         </button>
+                        <button class="btn ms-bt" id="btn-mapa-amigos" type="button" title="Ver onde seus amigos estão no mapa"><i class="fa-solid fa-user-group"></i><span class="ms-rot"> Amigos no mapa</span></button>
+                        <button class="btn ms-bt" id="btn-mapa-servidores" type="button" title="Servidores plantados no seu alcance"><i class="fa-solid fa-tower-broadcast"></i><span class="ms-rot"> Servidores perto</span></button>
                         <div class="conv-barra" id="conv-barra" title="Entrar num servidor com um link ou código de convite">
                             <i class="fa-solid fa-ticket"></i>
                             <input type="text" id="radar-convite-input" placeholder="Link ou código de convite" maxlength="200" autocomplete="off" spellcheck="false">
@@ -4417,6 +4421,7 @@
                 <div class="set-tab-group">
                     <div class="set-tab-header">Configurações de Usuário</div>
                     <div class="set-tab active" data-target="set-perfil">Meu Perfil</div>
+                    <div class="set-tab" data-target="set-conexoes">Conexões</div>
                     <div class="set-tab" data-target="set-inventario">Inventário</div>
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
                     <div class="set-tab-header">Configurações do App</div>
@@ -4554,6 +4559,28 @@
                     <div class="pf-barra" id="pf-barra"><button type="button" class="pf-barra-desc" id="pf-descartar">Descartar</button><button type="button" class="pf-barra-salvar" id="pf-salvar">Salvar</button></div>
                 </div>
 
+                <!-- ABA: CONEXÕES (links de outras plataformas; a "outra face" do cartão de perfil). Desenhada por static/js/conexoes.js -->
+                <div class="set-section" id="set-conexoes" style="max-width: 1000px;">
+                    <h2 class="set-title">Conexões</h2>
+                    <div class="pf-layout">
+                        <div class="pf-controles">
+                            <div class="pf-bloco">
+                                <div class="pf-bloco-tit">Seus links <span class="cx-contagem" id="cx-contagem"></span></div>
+                                <p class="cx-aba-info">Cole o link do seu <b>GitHub, YouTube, Twitch, Spotify, Instagram, TikTok, X, Steam, iFood, Amazon, OLX</b> ou da sua <b>loja/site</b> (Shopify, Wix, domínio próprio) e pronto: o cartão se monta sozinho, sem você editar nada. Pra mudar alguma coisa, mude no site oficial: o Pantheon atualiza sozinho. Quem abrir o seu perfil vê uma setinha ao lado do cartão e vira pra ver tudo, com rolagem, e o app sempre pergunta antes de abrir um link fora dele.</p>
+                                <div id="cx-lista"><div class="cx-vazio">Carregando...</div></div>
+                                <button type="button" class="cx-bt" id="cx-bazar" style="align-self:flex-start;"><i class="fa-solid fa-store"></i> Adicionar a minha loja do Bazar</button>
+                                <label class="cx-ia" id="cx-ia-linha" hidden><input type="checkbox" id="cx-ia"> <span>Usar IA pra ler o PDF do LinkedIn <small>(o texto do PDF é enviado ao Google pra ler melhor; só marque se concordar)</small></span></label>
+                                <p class="cx-aba-info"><b>LinkedIn:</b> o LinkedIn proíbe qualquer app de ler um perfil pelo link (nem a IA consegue abrir). O jeito mais direto: no seu perfil do LinkedIn clique em <b>Mais &gt; Salvar como PDF</b>, depois cole o link do LinkedIn aqui e use o botão <b>Importar o PDF do LinkedIn</b>. O currículo aparece na hora, sem editor; pra mudar algo, mude no LinkedIn e importe de novo.</p>
+                            </div>
+                        </div>
+                        <div class="pf-previa">
+                            <button type="button" class="pf-previa-x" aria-label="Voltar"><i class="fa-solid fa-xmark"></i></button>
+                            <span class="control-label">Pré-visualização</span>
+                            <div id="cx-cartao"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ABA: INVENTÁRIO (insígnias, enfeites exclusivos e livres, patentes; desenhado por Cosm.renderInventario) -->
                 <div class="set-section" id="set-inventario" style="max-width: 1000px;">
                     <h2 class="set-title">Inventário</h2>
@@ -4580,6 +4607,13 @@
                         <div class="toggle-switch tg-app" id="tg-loc-ip"></div>
                     </div>
                     <p id="loc-estado" style="color: var(--text-muted); font-size: 13px; margin: -8px 0 16px;"></p>
+                    <div class="discord-toggle" id="tg-radar-linha">
+                        <div>
+                            <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Radar de pessoas por perto</h4>
+                            <p style="color: var(--text-muted); font-size: 14px;">A cada ~20 segundos, um sinal <b>anônimo</b> (sem nome nem foto) pisca no círculo pequeno do mapa onde tem alguém por perto. A posição é <b>aproximada</b> (~200 m). Funciona nos dois sentidos: <b>só vê quem também aparece</b>, então ligar te deixa visível pra quem também ligou. Não vale com o Modo Fantasma ligado nem sem a localização do aparelho. Desligado por padrão.</p>
+                        </div>
+                        <div class="toggle-switch tg-app" id="tg-radar"></div>
+                    </div>
                     <p class="loc-aviso" id="loc-aviso" style="font-size: 13px; color: var(--yellow-color); margin: 0 0 16px;">
                         Com a localização desligada você não consegue comprar nem vender, plantar servidor, deixar ou copiar notas, e não aparece (nem vê) o radar de amigos.
                     </p>
@@ -4854,6 +4888,8 @@
     <script src="{{ url_for('static', filename='js/passe.js') }}?v={{ passe_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/efeitos.js') }}?v={{ efeitos_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/explorar.js') }}?v={{ explorar_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/mapa_social.js') }}?v={{ mapa_social_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script>
@@ -7501,6 +7537,7 @@
         // plantar, nota e radar quando está desligada; aqui só evitamos pedir à toa e explicamos o porquê.
         let localizacaoAtiva = "{{ 0 if usuario_atual.localizacao_ativa is sameas false else 1 }}" === "1";
         let localizacaoIp = "{{ 0 if usuario_atual.localizacao_ip is sameas false else 1 }}" === "1";
+        let radarEstranhos = "{{ 1 if usuario_atual.radar_estranhos is sameas true else 0 }}" === "1";   // radar de pessoas por perto: na conta, desligado por padrão
         let origemPosicao = '', lugarPorIp = '', rastreio = null;   // rastreio = { iniciar(), parar() }, criado dentro do initMap
         let modoExplorar = null, marcadorExplorar = null, faixaExplorar = null, timerExplorar = null;   // "explorar": olhar o mapa em outro lugar, só leitura
         // `presenca` = a ação precisa da posição do APARELHO (GPS/Wi-Fi): plantar, deixar nota, copiar nota. Posição só por IP ou
@@ -8187,6 +8224,7 @@
                 myMapMarker.bindPopup("<div style='text-align:center;'><b>Você está aqui!</b><br><span style='color:var(--text-muted); font-size:12px;'>Monitorando o radar...</span></div>");
                 bazingaMap.setView([lat, lng], 16);
                 ultimoCentroPedido = null;   // primeira posição: pede os arredores já
+                if (typeof MapaSocial !== 'undefined') MapaSocial.aoTerPosicao();
             } else {
                 // Já existe: Apenas desliza o pino para a nova coordenada
                 myMapMarker.setLatLng([lat, lng]);
@@ -8234,7 +8272,7 @@
 
         // Rolagem limitada: dá pra explorar o alcance dos servidores e só.
         function aplicarLimitesDoMapa(lat, lng) {
-            if (!bazingaMap) return;
+            if (!bazingaMap || (typeof MapaSocial !== 'undefined' && MapaSocial.ocupado())) return;   // olhando um amigo/servidor lá longe: não puxa de volta
             const lado = raioServidoresM * 2.3;
             bazingaMap.setMaxBounds(L.latLng(lat, lng).toBounds(lado));
             bazingaMap.options.maxBoundsViscosity = 1.0;
@@ -9668,6 +9706,15 @@
             if(!e.target.closest('.context-menu') && !e.target.closest('.btn-msg-more')) document.getElementById('msg-context-menu').style.display = 'none';
         });
 
+        // CONEXÕES DO PERFIL: static/js/conexoes.js. O contexto nasce AQUI (antes do 1º htmlCartao) com atalhos preguiçosos pro que vem depois.
+        Conexoes.iniciar({
+            emitir: (n, d) => socket.emit(n, d), esc, escUrl, toast: (m, t) => showToast(m, t),
+            confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
+            escolherImagem: (cfg) => abrirSeletorMidia(cfg), subir: (f) => uploadMidia(f),
+            abrirLoja: (id) => { fecharCartao(); settingsModal.classList.remove('active'); document.getElementById('btn-mercado').click(); document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click(); Bazar.abrirLojaDe(id); },
+            aoMudarMinhas: (lista) => { perfilMeu.conexoes_qtd = lista.length; if (typeof pintarPrevia === 'function') pintarPrevia(); if (!Conexoes.tocando()) { pintarPreviaConexoes(); if (cartaoAberto && Number(cartaoAberto.id) === Number(currentUserId)) pintarCartao(); } },
+        });
+
         // 5. PERFIL: cartão (popup + pré-visualização), edição e status de presença
         // ------------------------------------------------------------------
         // UM renderizador de cartão (htmlCartao) serve o popup de quem clica e a
@@ -9700,7 +9747,8 @@
             titulo: {{ patente_inicial.nome_completo|tojson }},
             patente: {{ patente_inicial|tojson }},
             badges: {{ badges_iniciais|tojson }},
-            equipados: {{ inventario_inicial.equipados|tojson }}
+            equipados: {{ inventario_inicial.equipados|tojson }},
+            conexoes_qtd: {{ (usuario_atual.conexoes_qtd or 0)|tojson }}
         };
 
         // ---- Catálogos (ids validados no servidor: utils.ESTILOS_NOME/PLACAS/MOLDURAS) ----
@@ -9932,6 +9980,7 @@
                     ${lista}
                 </div>
                 ${Cosm.htmlEfeitoPerfil(efs.efeito_perfil)}
+                ${(!pf.restrito && Number(pf.conexoes_qtd) > 0) ? Conexoes.htmlSeta(pf) : ''}
             </div>`;
         }
 
@@ -9942,6 +9991,12 @@
 
         function perfilMeuParaCartao() {
             return { ...perfilMeu, sou_eu: true, emoji: perfilMeu.status === 'custom' ? perfilMeu.status_emoji : '' };
+        }
+        // As conexões que a segunda face mostra: as MINHAS vêm de Conexoes.minhas() (null = ainda carregando); as dos outros chegam por conexoes_do_perfil.
+        function dadosDaFace() {
+            if (!cartaoAberto) return null;
+            if (Number(cartaoAberto.id) === Number(currentUserId)) return Conexoes.minhas() ? { lista: Conexoes.minhas() } : null;
+            return cartaoAberto.conexoes || null;
         }
 
         function posicionarCartao() {
@@ -9968,9 +10023,12 @@
         function pintarCartao() {
             if (!cartaoAberto) return;
             const d = cartaoAberto.dados;
+            const naFace = cartaoAberto.face === 'conexoes';
+            userPopout.classList.toggle('largo', !!(d && naFace));
             userPopout.innerHTML = d
-                ? htmlCartao(d, 'popout')
+                ? (naFace ? Conexoes.htmlFace(d, dadosDaFace(), 'popout') : htmlCartao(d, 'popout'))
                 : `<div class="pc"><div class="pc-banner banner-animado"></div><div class="pc-corpo" style="padding-top:40px;color:var(--text-muted);">Carregando perfil...</div></div>`;
+            if (cartaoAberto.voltando) { userPopout.firstElementChild?.classList.add('pc-voltando'); cartaoAberto.voltando = false; }
             emojificar(userPopout);
             posicionarCartao();
         }
@@ -9986,6 +10044,8 @@
         }
 
         function fecharCartao() {
+            Conexoes.parar();                                       // fechou o cartão: o player (Spotify/YouTube) da face das conexões para junto
+            userPopout.classList.remove('largo');
             userPopout.style.display = 'none';
             popoutOverlay.style.display = 'none';
             cartaoAberto = null;
@@ -9995,6 +10055,19 @@
             if (!cartaoAberto || Number(cartaoAberto.id) !== Number(d.id)) return;
             cartaoAberto.dados = d;
             pintarCartao();
+        });
+        socket.on('conexoes', (d) => {
+            Conexoes.receber(d);                                    // (também avisa aoMudarMinhas: repinta as prévias e o meu cartão)
+            if (document.getElementById('set-conexoes')) pintarPreviaConexoes();
+        });
+        socket.on('conexoes_salvas', () => Conexoes.aoSalvar());
+        socket.on('conexoes_erro', (d) => Conexoes.erro(d.msg, d.indice));
+        socket.on('conexoes_do_perfil', (d) => {
+            Conexoes.definirRegistro(d);
+            if (!cartaoAberto || Number(cartaoAberto.id) !== Number(d.usuario_id)) return;
+            const mudou = JSON.stringify(d.lista) !== JSON.stringify((cartaoAberto.conexoes || {}).lista);
+            cartaoAberto.conexoes = d;
+            if (cartaoAberto.face === 'conexoes' && mudou && !Conexoes.tocando()) pintarCartao();      // (não repinta por cima de uma música tocando)
         });
 
         popoutOverlay.addEventListener('click', fecharCartao);
@@ -10021,6 +10094,18 @@
         }
 
         userPopout.addEventListener('click', (e) => {
+            if (Conexoes.aoClicar(e)) return;                       // abrir link/loja de dentro da face das conexões
+            const virar = e.target.closest('[data-acao="conexoes"], [data-acao="voltar-cartao"]');
+            if (virar && cartaoAberto) {
+                e.stopPropagation();
+                if (virar.dataset.acao === 'conexoes') {
+                    cartaoAberto.face = 'conexoes';
+                    if (Number(cartaoAberto.id) === Number(currentUserId)) { if (Conexoes.minhas() === null) socket.emit('conexoes_listar', {}); }
+                    else if (!cartaoAberto.conexoes) socket.emit('conexoes_do_perfil', { usuario_id: cartaoAberto.id });
+                } else { cartaoAberto.face = ''; cartaoAberto.voltando = true; }
+                pintarCartao();
+                return;
+            }
             const item = e.target.closest('[data-acao]');
             if (!item) {
                 if (!e.target.closest('.pc-menu-wrap')) document.getElementById('pc-menu')?.classList.remove('aberto');
@@ -10211,6 +10296,7 @@
 
         document.querySelectorAll('.set-tab[data-target]').forEach(tab => {
             tab.addEventListener('click', () => {
+                Conexoes.parar();                                   // saiu da aba: o player da prévia das conexões para
                 document.querySelectorAll('.set-tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.set-section').forEach(s => s.classList.remove('active'));
                 tab.classList.add('active');
@@ -10247,14 +10333,37 @@
             return u ? `<img src="${u}" alt="">` : esc((perfilMeu.nome || '?')[0].toUpperCase());
         }
 
+        // Cada prévia das Configurações (Meu Perfil e Conexões) tem a sua face: o clique na setinha vira o cartão, igual ao popup de quem olha.
+        const faceDasPrevias = { perfil: false, conexoes: false };
+        function pintarPreviaConexoes() {
+            const alvo = document.getElementById('cx-cartao');
+            if (!alvo) return;
+            const pf = { ...perfilMeu, ...rascunho, nome: rascunho.nome || perfilMeu.nome, sou_eu: true, emoji: perfilMeu.status === 'custom' ? rascunho.status_emoji : '' };
+            alvo.innerHTML = faceDasPrevias.conexoes ? Conexoes.htmlFace(pf, Conexoes.minhas() ? { lista: Conexoes.minhas() } : null, 'previa') : htmlCartao(pf, 'previa');
+            emojificar(alvo);
+        }
+        [['pf-cartao', 'perfil', () => pintarPrevia()], ['cx-cartao', 'conexoes', () => pintarPreviaConexoes()]].forEach(([id, chave, repintar]) => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (Conexoes.aoClicar(e)) return;
+                const v = e.target.closest('[data-acao="conexoes"], [data-acao="voltar-cartao"]');
+                if (!v) return;
+                faceDasPrevias[chave] = v.dataset.acao === 'conexoes';
+                if (faceDasPrevias[chave] && Conexoes.minhas() === null) socket.emit('conexoes_listar', {});
+                repintar();
+                if (!faceDasPrevias[chave]) document.getElementById(id).firstElementChild?.classList.add('pc-voltando');
+            });
+        });
+        document.querySelector('.set-tab[data-target="set-conexoes"]').addEventListener('click', () => { Conexoes.abrirAba(); pintarPreviaConexoes(); });
+
         function pintarPrevia() {
             const cartao = document.getElementById('pf-cartao');
             if (!cartao) return;
-            cartao.innerHTML = htmlCartao({
+            const pfPrevia = {
                 ...perfilMeu, ...rascunho,
                 nome: rascunho.nome || perfilMeu.nome, sou_eu: true,
                 emoji: perfilMeu.status === 'custom' ? rascunho.status_emoji : ''
-            }, 'previa');
+            };
+            cartao.innerHTML = faceDasPrevias.perfil ? Conexoes.htmlFace(pfPrevia, Conexoes.minhas() ? { lista: Conexoes.minhas() } : null, 'previa') : htmlCartao(pfPrevia, 'previa');
             emojificar(cartao);
 
             // amostras clicáveis
@@ -10736,6 +10845,22 @@
         socket.on('explorar_erro', (d) => { Explorar.erro(d.msg); const c = document.getElementById('cfg-explorar-on'); const srv = servidorAtivo(); if (c && srv) c.checked = !!srv.publico; });
         socket.on('explorar_definido', (d) => showToast(d.publico ? 'Seu servidor agora aparece no Explorar.' : 'Seu servidor saiu do Explorar.', 'success'));
         socket.on('entrou_por_convite', () => Explorar.entrou());
+        // MAPA SOCIAL (localizar amigo, listas de amigos/servidores no alcance, radar de pessoas): static/js/mapa_social.js só desenha e mexe no mapa.
+        MapaSocial.iniciar({
+            emitir: (n, d) => socket.emit(n, d), esc, escUrl, toast: (m, t) => showToast(m, t),
+            mapa: () => bazingaMap, eu: () => myMapMarker, pinos: () => mapMarkers, servidores: () => serverMarkersAtivos,
+            amigos: () => (typeof amizades !== 'undefined' && amizades.amigos) || [], distancia: (a, b, c, d) => calcularDistanciaMetros(a, b, c, d),
+            soltarLimites: () => { if (bazingaMap) { bazingaMap.setMaxBounds([[-85, -180], [85, 180]]); bazingaMap.setMinZoom(10); } },
+            restaurarLimites: () => { if (myMapMarker) { const p = myMapMarker.getLatLng(); aplicarLimitesDoMapa(p.lat, p.lng); } },
+            irParaRadar: () => { if (vistaAtual !== 'home') switchMainView('home'); },
+            explorando: () => !!modoExplorar, sairDoExplorar: () => sairDoExplorar(),
+            mapaVisivel: () => vistaAtual === 'home',
+        });
+        socket.on('mapa_radar', (d) => MapaSocial.receberRadar(d));
+        socket.on('mapa_servidor_previa', (p) => Explorar.previaMapa(p, (id) => socket.emit('entrar_servidor_pin', { server_id: id })));
+        document.getElementById('btn-mapa-amigos').addEventListener('click', () => MapaSocial.abrirAmigos());
+        document.getElementById('btn-mapa-servidores').addEventListener('click', () => MapaSocial.abrirServidores());
+        if (radarEstranhos) MapaSocial.ligarRadar(true);
         const cfgExplorar = () => {
             const srv = servidorAtivo(), on = document.getElementById('cfg-explorar-on');
             if (!srv || !souDonoDoServidor(srv)) return;
@@ -11672,6 +11797,9 @@
             const marcar = (id, ligado) => document.getElementById(id)?.classList.toggle('active', !!ligado);
             marcar('tg-loc', localizacaoAtiva);
             marcar('tg-loc-ip', localizacaoAtiva && localizacaoIp);
+            marcar('tg-radar', radarEstranhos);
+            const linhaRadar = document.getElementById('tg-radar-linha');
+            if (linhaRadar) linhaRadar.style.opacity = localizacaoAtiva ? '' : '.45';
             marcar('tg-som', somLigado());
             marcar('tg-aviso', avisoLigado());
             const linhaIp = document.getElementById('tg-loc-ip-linha');
@@ -11701,6 +11829,7 @@
         }
 
         socket.on('preferencias_carregadas', (prefs) => {
+            if (typeof prefs.radar_estranhos === 'boolean') { radarEstranhos = prefs.radar_estranhos; MapaSocial.ligarRadar(radarEstranhos); }
             if (typeof prefs.localizacao_ip === 'boolean') localizacaoIp = prefs.localizacao_ip;
             if (typeof prefs.localizacao_ativa !== 'boolean') { atualizarAbaGeral(); return; }
             const mudou = prefs.localizacao_ativa !== localizacaoAtiva;
@@ -11731,6 +11860,13 @@
             } else {
                 socket.emit('alternar_localizacao', { ativa: true });
             }
+        });
+        document.getElementById('tg-radar').addEventListener('click', () => {
+            if (radarEstranhos) { socket.emit('alternar_radar_estranhos', { ativo: false }); return; }
+            if (!localizacaoAtiva) { showToast('Ligue a localização primeiro.', 'info'); return; }
+            openConfirmModal('Ligar o radar de pessoas por perto?',
+                'Sinais anônimos e aproximados (~200 m) de quem também ligou vão piscar no seu mapa, e você também passa a piscar no mapa deles, sem nome nem foto. Não funciona com o Modo Fantasma ligado. Dá pra desligar quando quiser.',
+                () => socket.emit('alternar_radar_estranhos', { ativo: true }));
         });
         document.getElementById('tg-loc-ip').addEventListener('click', () => {
             if (!localizacaoAtiva) { showToast('Ligue a localização primeiro.', 'info'); return; }
@@ -14145,6 +14281,7 @@
             menuContato.innerHTML = `
                 <button data-mc="perfil"><i class="fa-regular fa-id-card"></i> Ver perfil</button>
                 <button data-mc="msg"><i class="fa-solid fa-message"></i> Enviar mensagem</button>
+                ${amigo ? `<button data-mc="localizar"><i class="fa-solid fa-location-crosshairs"></i> Localizar no mapa</button>` : ''}
                 <button data-mc="id"><i class="fa-regular fa-copy"></i> Copiar ID</button>
                 ${(c.username || (amigoObj && amigoObj.username)) ? `<button data-mc="arroba"><i class="fa-solid fa-at"></i> Copiar @usuário</button>` : ''}
                 <hr>
@@ -14171,6 +14308,7 @@
             const acao = b.dataset.mc;
             if (acao === 'perfil') abrirCartao(id, cartaoDaDM(id) || document.getElementById('radar-header-title'));
             else if (acao === 'msg') abrirDMDe(id);
+            else if (acao === 'localizar') MapaSocial.localizar(id, nome);
             else if (acao === 'id') copiarTexto(id, 'ID copiado.');
             else if (acao === 'arroba') copiarTexto('@' + user, 'Nome da conta copiado.');
             else if (acao === 'silenciar') socket.emit('silenciar_contato', { alvo_id: id, ativo: !amizades.silenciados.includes(id) });
@@ -14968,6 +15106,8 @@
         <button class="fab-op" data-a="fantasma" type="button" title="Modo Fantasma"><i class="fa-solid fa-ghost"></i></button>
         <button class="fab-op" data-a="nota" type="button" title="Deixar nota"><i class="fa-solid fa-comment-dots"></i></button>
         <button class="fab-op" data-a="servidor" type="button" title="Plantar servidor"><i class="fa-solid fa-location-dot"></i></button>
+        <button class="fab-op" data-a="amigos" type="button" title="Amigos no mapa"><i class="fa-solid fa-user-group"></i></button>
+        <button class="fab-op" data-a="servidores" type="button" title="Servidores perto"><i class="fa-solid fa-tower-broadcast"></i></button>
         <button class="fab-main" type="button" aria-label="Ações do mapa"><i class="fa-solid fa-plus"></i></button>
     </div>
     <div id="mob-voce">
@@ -15222,9 +15362,9 @@
             fab.style.left = fab.style.right = fab.style.top = fab.style.bottom = 'auto';
             if (canto[0] === 'b') fab.style.bottom = b + 'px'; else fab.style.top = t + 'px';
             if (canto[1] === 'r') fab.style.right = M + 'px'; else fab.style.left = M + 'px';
-            // leque: 3 ícones a 0°, 45° e 90° apontando pra dentro da tela
-            const sx = canto[1] === 'r' ? -1 : 1, sy = canto[0] === 'b' ? -1 : 1, R = 76;
-            [0, 45, 90].forEach((ang, i) => {
+            // leque: N ícones espalhados de 0° a 90° apontando pra dentro da tela (3 -> 5: o raio cresce pra os de 44px não se encostarem)
+            const sx = canto[1] === 'r' ? -1 : 1, sy = canto[0] === 'b' ? -1 : 1, R = ops.length > 3 ? 118 : 76;
+            ops.map((_, i) => (ops.length > 1 ? (90 / (ops.length - 1)) * i : 0)).forEach((ang, i) => {
                 const rad = ang * Math.PI / 180;
                 ops[i].style.setProperty('--dx', (sx * Math.cos(rad) * R) + 'px');
                 ops[i].style.setProperty('--dy', (sy * Math.sin(rad) * R) + 'px');
@@ -15235,7 +15375,8 @@
             main.querySelector('i').className = 'fa-solid ' + (v ? 'fa-xmark' : 'fa-plus');
             if (v) {
                 const g = document.getElementById('btn-toggle-ghost');
-                ops[0].dataset.on = g && /:\s*ON/i.test(g.textContent) ? '1' : '0';
+                const op = ops.find((o) => o.dataset.a === 'fantasma');
+                if (op) op.dataset.on = g && /:\s*ON/i.test(g.textContent) ? '1' : '0';
             }
         }
         // arrastar (>8px) vs. tocar
@@ -15264,6 +15405,8 @@
             const a = b.dataset.a;
             if (a === 'fantasma') { const g = document.getElementById('btn-toggle-ghost'); if (g) g.click(); }
             else if (a === 'nota') abrirModalNota('create');
+            else if (a === 'amigos') MapaSocial.abrirAmigos();
+            else if (a === 'servidores') MapaSocial.abrirServidores();
             else abrirModalServidor('create');
         }));
         document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#mob-fab')) abrir(false); }, true);

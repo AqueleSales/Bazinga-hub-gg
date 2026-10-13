@@ -472,7 +472,7 @@ def salvar_temporada(dados, tid=None):
     saida = {}
 
     def preparar():
-        t = PasseTemporada.query.get(tid) if tid else None
+        t = _travar_temporada(tid) if tid else None
         if tid and not t:
             raise ErroPasse('Temporada não encontrada.')
         if not t:
@@ -492,6 +492,13 @@ def salvar_temporada(dados, tid=None):
     return saida['id']
 
 
+def _travar_temporada(tid):
+    """Busca a temporada TRAVANDO a linha (SELECT ... FOR UPDATE no Postgres; o SQLite ignora). Apagar, aplicar modelo e salvar
+    recompensas mexem em ~200 linhas e levam alguns segundos no Neon: sem a trava, dois pedidos juntos (clique duplo, duas abas) se
+    atropelavam e davam "chave duplicada" ou "ainda referenciada" (a 2ª operação esperava a 1ª terminar em vez de brigar com ela)."""
+    return PasseTemporada.query.filter_by(id=tid).with_for_update().first()
+
+
 def ativar_temporada(tid, ativa=True):
     """Ativa (desativando as outras) ou encerra uma temporada."""
     def preparar():
@@ -509,15 +516,17 @@ def ativar_temporada(tid, ativa=True):
 def apagar_temporada(tid):
     """Só apaga temporada SEM progresso de ninguém (senão perderia o histórico do que as pessoas pegaram)."""
     def preparar():
-        t = PasseTemporada.query.get(tid)
+        t = _travar_temporada(tid)
         if not t:
             raise ErroPasse('Temporada não encontrada.')
         if t.ativa:
             raise ErroPasse('Encerre a temporada antes de apagar.')
         if PassePessoa.query.filter(PassePessoa.temporada_id == tid, PassePessoa.xp > 0).first() or PasseResgate.query.filter_by(temporada_id=tid).first():
             raise ErroPasse('Essa temporada já tem gente jogando. Encerre em vez de apagar.')
-        PassePessoa.query.filter_by(temporada_id=tid).delete()
-        PasseRecompensa.query.filter_by(temporada_id=tid).delete()
+        # Em massa e na ordem certa (filhas antes da mãe), sem sincronizar a sessão: é um DELETE por tabela, não um por linha.
+        PassePessoa.query.filter_by(temporada_id=tid).delete(synchronize_session=False)
+        PasseRecompensa.query.filter_by(temporada_id=tid).delete(synchronize_session=False)
+        db.session.flush()
         db.session.delete(t)
 
     comitar_com_retry(preparar)
@@ -572,23 +581,32 @@ def salvar_recompensas(tid, lista, substituir=False):
         raise ErroPasse('Lista de recompensas inválida.')
 
     def preparar():
-        t = PasseTemporada.query.get(tid)
+        t = _travar_temporada(tid)
         if not t:
             raise ErroPasse('Temporada não encontrada.')
         validas = [_validar_recompensa(r, t.niveis) for r in lista]
+        # o ÚLTIMO valor de cada (nível, trilha) vence: lista com repetido não pode estourar a chave única
+        finais = {(n, trilha): (tipo, valor, qtd) for n, trilha, tipo, valor, qtd in validas}
         if substituir:
-            PasseRecompensa.query.filter_by(temporada_id=tid).delete()
+            PasseRecompensa.query.filter_by(temporada_id=tid).delete(synchronize_session=False)
             db.session.flush()
-        for n, trilha, tipo, valor, qtd in validas:
-            atual = PasseRecompensa.query.filter_by(temporada_id=tid, nivel=n, trilha=trilha).first()
+            existentes = {}
+        else:
+            # UMA consulta pra temporada inteira (antes era uma por recompensa: ~200 idas ao Neon e a tela "travava")
+            existentes = {(r.nivel, r.trilha): r for r in PasseRecompensa.query.filter_by(temporada_id=tid).all()}
+        novas = []   # dicts: vão num INSERT em lote só (executemany), não 200 INSERTs um por um
+        for (n, trilha), (tipo, valor, qtd) in finais.items():
+            atual = existentes.get((n, trilha))
             if tipo is None:
                 if atual:
                     db.session.delete(atual)
                 continue
-            if not atual:
-                atual = PasseRecompensa(temporada_id=tid, nivel=n, trilha=trilha)
-                db.session.add(atual)
-            atual.tipo, atual.valor, atual.quantidade = tipo, valor, qtd
+            if atual:
+                atual.tipo, atual.valor, atual.quantidade = tipo, valor, qtd
+            else:
+                novas.append({'temporada_id': tid, 'nivel': n, 'trilha': trilha, 'tipo': tipo, 'valor': valor, 'quantidade': qtd})
+        if novas:
+            db.session.execute(PasseRecompensa.__table__.insert(), novas)
 
     comitar_com_retry(preparar)
     invalidar_cache()
@@ -653,8 +671,9 @@ def modelo_deuses(tid):
     """Preenche a temporada `tid` com o modelo "Deuses" (apaga as recompensas que tinha): 10 cantos de 10 níveis, com um prêmio forte no
     fim de cada um. Cria os títulos e os efeitos do Estúdio que faltam."""
     from .cosmeticos import CATALOGO as C
+    ja_tem = {x[0] for x in db.session.query(Titulo.id).all()}
     for t in TITULOS_MODELO:
-        if not Titulo.query.get(t['id']):
+        if t['id'] not in ja_tem:
             salvar_titulo(t)
     _criar_efeitos_modelo()
     existe = lambda i: i in C

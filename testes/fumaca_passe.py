@@ -368,6 +368,32 @@ with app.app_context():
     ok('X-Requested-With' in adm_js and 'innerHTML' in adm_js and adm_js.count('esc(') > 40, 'admin.js manda o cabeçalho anti-forja e escapa o que desenha')
     ok(re.search(r'(?<!\w)eval\(|document\.write', adm_js + js) is None, 'Sem eval/document.write no admin e no passe')
 
+    # ---------- 10. apagar / aplicar modelo (bug de produção: lento + clique duplo = chave duplicada / "ainda referenciada") ----------
+    # O SQLite NÃO impõe chave estrangeira por padrão e o Postgres impõe: ligamos aqui pra o teste valer de verdade.
+    from sqlalchemy import event as _ev
+    from sqlalchemy.engine import Engine as _Eng
+    consultas = {'n': 0}
+    def _conta(conn, cur, st, params, ctx, many): consultas['n'] += 1
+    _ev.listen(_Eng, 'before_cursor_execute', _conta)
+    db.session.execute(db.text('PRAGMA foreign_keys=ON')); db.session.commit()
+    t_novo = passe.salvar_temporada({'nome': 'Modelo teste', 'tema': 'deuses', 'niveis': 100, 'xp_por_nivel': 800})
+    passe.modelo_deuses(t_novo)                       # 1ª vez cria títulos e efeitos
+    consultas['n'] = 0
+    passe.modelo_deuses(t_novo)
+    ok(consultas['n'] < 40, f'Aplicar o modelo usa poucas consultas (cada uma é uma ida ao Neon): {consultas["n"]}')
+    ok(PasseRecompensa.query.filter_by(temporada_id=t_novo).count() == 200, 'O modelo grava as 200 recompensas')
+    consultas['n'] = 0
+    passe.apagar_temporada(t_novo)
+    ok(consultas['n'] < 15, f'Apagar a temporada usa poucas consultas: {consultas["n"]}')
+    ok(PasseTemporada.query.get(t_novo) is None and PasseRecompensa.query.filter_by(temporada_id=t_novo).count() == 0, 'Apagar remove as recompensas e depois a temporada (com chave estrangeira ligada)')
+    t_rep = passe.salvar_temporada({'nome': 'Repetido', 'tema': 'deuses', 'niveis': 10, 'xp_por_nivel': 100})
+    passe.salvar_recompensas(t_rep, [{'nivel': 1, 'trilha': 'gratis', 'tipo': 'moeda', 'quantidade': 5}, {'nivel': 1, 'trilha': 'gratis', 'tipo': 'moeda', 'quantidade': 9}])
+    ok([(r.nivel, r.quantidade) for r in PasseRecompensa.query.filter_by(temporada_id=t_rep)] == [(1, 9)], 'Lista com o mesmo nível/trilha repetido não estoura a chave única (o último vale)')
+    passe.salvar_recompensas(t_rep, [{'nivel': 1, 'trilha': 'gratis', 'tipo': None}])
+    ok(PasseRecompensa.query.filter_by(temporada_id=t_rep).count() == 0, 'Slot vazio apaga a recompensa')
+    _ev.remove(_Eng, 'before_cursor_execute', _conta)
+    ok('trabalhando(' in adm_js and "b.textContent = 'Aguarde...'" in adm_js, 'admin.js trava o botão enquanto a operação roda (sem clique duplo)')
+
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)
 sys.exit(1 if falhas else 0)

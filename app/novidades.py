@@ -9,6 +9,14 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 24, 'data': '13/10/2026', 'titulo': 'Conexões no perfil, radar no mapa e painel do Estúdio',
+        'itens': [
+            {'icone': 'fa-link', 'titulo': 'Conexões no perfil', 'texto': 'Em Configurações > Conexões, cole o link do seu GitHub, YouTube, Spotify, Twitch, Instagram, site ou da sua loja do Bazar e o cartão já vem pronto. Não tem edição: se mudar algo, mude na página oficial e o Pantheon atualiza. No cartão de perfil, a setinha ao lado vira o cartão para as conexões. Spotify e YouTube viram um toca-discos que só carrega o player quando você aperta Ouvir. Pro LinkedIn, solte o PDF do seu perfil e o currículo aparece.'},
+            {'icone': 'fa-satellite-dish', 'titulo': 'Radar de pessoas por perto', 'texto': 'Opcional e desligado por padrão (Configurações > Geral): de tempos em tempos o radar mostra um vulto apagado de quem está por perto, sem nome e sem lugar exato. Quem usa o Modo Fantasma nunca aparece. Também dá pra localizar um amigo no mapa pelo botão direito, ver a lista de amigos no mapa e os servidores ao seu alcance.'},
+            {'icone': 'fa-chart-column', 'titulo': 'Estúdio com gráficos', 'texto': 'O painel de admin ganhou gráficos e a lista de quem usa o app. Apagar uma temporada do passe ficou rápido e confiável.'},
+        ],
+    },
+    {
         'id': 23, 'data': '12/10/2026', 'titulo': 'Explorar servidores e efeitos novos',
         'itens': [
             {'icone': 'fa-compass', 'titulo': 'Explorar servidores', 'texto': 'No "+" da barra de servidores agora tem o Explorar: um mar de barquinhos, um por servidor (quanto maior o barco, mais gente a bordo). Veja a prévia, entre, procure por tema ou peça pra ser surpreendido. Quer aparecer lá? Donos ligam em Configurações do servidor.'},

@@ -1675,19 +1675,25 @@ body.mt-aberta { overflow: hidden; }
     background-size: 100% 100% !important; background-repeat: no-repeat !important; animation: none !important;
 }
 
-/* trirreme: um barco de velas ao entardecer cruzando o mar */
-.banner-anim-trirreme { background-color: #14324f; background-repeat: no-repeat, no-repeat, no-repeat, repeat-x, repeat-x, no-repeat;
+/* trirreme: um barco de velas ao entardecer cruzando o mar.
+   O barco é UMA imagem (SVG em data-URI) com `background-size: auto 88%`: ele escala com a ALTURA da faixa (a 1ª versão era feita de blocos de
+   tamanho fixo em px, então em prévia baixa a vela ocupava a faixa toda e o casco sumia). Ordem das camadas: barco, 2 fileiras de onda, céu e mar. */
+.banner-anim-trirreme { background-color: #14324f; background-repeat: no-repeat, repeat-x, repeat-x, no-repeat;
     background-image:
-        linear-gradient(to top right, #efe3bd 49%, transparent 50%),
-        linear-gradient(#5a3a1a, #5a3a1a),
-        linear-gradient(#3a2411, #3a2411),
+        url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 80'><g stroke='%233a2411' stroke-width='1.8' stroke-linecap='round'><path d='M28 62 L20 78'/><path d='M44 63 L38 79'/><path d='M60 64 L57 79'/><path d='M76 63 L75 78'/><path d='M92 62 L93 77'/></g><rect x='58' y='5' width='3.4' height='54' fill='%233a2411'/><rect x='28' y='9' width='64' height='3.4' rx='1.7' fill='%233a2411'/><path d='M30 12 H90 C92 26 91 40 88 51 Q60 57 32 51 C29 40 28 26 30 12Z' fill='%23efe3bd'/><path d='M30.6 28 H89.4 V35 H30.2Z' fill='%23c0392b'/><path d='M5 54 H115 C113 66 100 70 90 70 H30 C18 70 8 64 5 54Z' fill='%235a3a1a'/><path d='M5 54 C0 50 1 44 5 41' fill='none' stroke='%235a3a1a' stroke-width='3' stroke-linecap='round'/><path d='M12 59 H108' stroke='%23d9a441' stroke-width='1.6'/></svg>"),
         radial-gradient(ellipse 16px 7px at 50% 100%, transparent 62%, rgba(255, 255, 255, .28) 66% 74%, transparent 78%),
         radial-gradient(ellipse 16px 7px at 50% 100%, transparent 62%, rgba(255, 255, 255, .16) 66% 74%, transparent 78%),
         linear-gradient(180deg, #2a3560 0 38%, #d9824a 38% 46%, #1a5a86 46%);
-    background-size: 46px 52px, 62px 8px, 3px 56px, 32px 16px, 32px 16px, 100% 100%;
-    background-position: 14% 22%, 12% 80%, 22% 44%, 0 100%, 16px 86%, 0 0;
-    animation: faixaTrirreme 26s linear infinite; }
-@keyframes faixaTrirreme { from { background-position: -80px 22%, -90px 80%, -64px 44%, 0 100%, 16px 86%, 0 0; } to { background-position: 760px 22%, 750px 80%, 774px 44%, -32px 100%, -16px 86%, 0 0; } }
+    background-size: auto 88%, 32px 16px, 32px 16px, 100% 100%;
+    background-position: 50% 85%, 0 100%, 16px 86%, 0 0;
+    animation: faixaTrirreme 5s linear infinite; }
+/* o barco FICA no meio e balança; o mar corre atrás dele (a 1ª versão cruzava 900 px em 26 s: em prévia pequena a faixa passava mais da metade do tempo sem barco) */
+@keyframes faixaTrirreme {
+    0%   { background-position: 50% 85%, 0 100%, 16px 86%, 0 0; }
+    25%  { background-position: 50% 100%, -8px 100%, 8px 86%, 0 0; }
+    50%  { background-position: 50% 85%, -16px 100%, 0 86%, 0 0; }
+    75%  { background-position: 50% 70%, -24px 100%, -8px 86%, 0 0; }
+    100% { background-position: 50% 85%, -32px 100%, -16px 86%, 0 0; } }
 
 .ne-bronze { font-family: Georgia, 'Times New Roman', serif; font-weight: 800; letter-spacing: .3px; color: transparent !important; -webkit-background-clip: text; background-clip: text; -webkit-text-stroke: .3px rgba(40, 20, 0, .55);
     background-image: linear-gradient(100deg, #8a5a2b 0 30%, #f0c48a 45%, #b9783a 55%, #8a5a2b 70% 100%); background-size: 280% auto; animation: neBronze 7s linear infinite; }

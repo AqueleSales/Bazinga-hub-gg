@@ -69,8 +69,8 @@ def _validar_url(url):
     return host, (partes.path or '/') + ('?' + partes.query if partes.query else '')
 
 
-def _pedir(host, ip, caminho):
-    """Um GET na mão: conecta no IP já validado e confere o certificado contra o nome do site. Devolve (status, cabecalhos, corpo, trecho_lido)."""
+def _pedir(host, ip, caminho, aceita='image/*,text/html;q=0.5,*/*;q=0.1', extra=None, ua=None):
+    """Um GET na mão: conecta no IP já validado e confere o certificado contra o nome do site. Devolve (pool, resposta)."""
     import certifi
     import urllib3
     pool = urllib3.HTTPSConnectionPool(
@@ -78,7 +78,7 @@ def _pedir(host, ip, caminho):
         timeout=urllib3.Timeout(connect=5, read=8), retries=False, maxsize=1)
     try:
         resp = pool.urlopen('GET', caminho, redirect=False, retries=False, preload_content=False, assert_same_host=False,
-                            headers={'Host': host, 'User-Agent': _UA, 'Accept': 'image/*,text/html;q=0.5,*/*;q=0.1', 'Accept-Encoding': 'identity'})
+                            headers={'Host': host, 'User-Agent': ua or _UA, 'Accept': aceita, 'Accept-Encoding': 'identity', **(extra or {})})
     except urllib3.exceptions.SSLError:
         pool.close()
         raise ErroImportar('O certificado desse site não é confiável.')
@@ -160,3 +160,65 @@ def _conferir_imagem(dados):
     if largura * altura > 40_000_000:
         raise ErroImportar('Imagem grande demais (mais de 40 megapixels).')
     return dados, FORMATOS_OK[formato]
+
+
+# ---------------------------------------------------------------------
+# TEXTO (página/JSON) de um endereço público: usado pelas Conexões do perfil (GitHub, oEmbed do Spotify/YouTube, título e imagem de um site).
+# Mesmas defesas da imagem: https/443, só domínio, todos os IPs públicos, conexão no IP validado, redirecionamento validado a cada salto.
+# ---------------------------------------------------------------------
+LIMITE_TEXTO_BYTES = 600 * 1024
+_UA_CONEXAO = 'Mozilla/5.0 (compatible; PantheonConexoes/1.0)'
+_TIPOS_TEXTO = ('text/html', 'application/xhtml+xml', 'application/json', 'text/plain', 'text/xml', 'application/xml', 'application/ld+json')
+
+
+def baixar_texto(url, aceita='text/html,application/json;q=0.9,*/*;q=0.1', limite=LIMITE_TEXTO_BYTES, extra=None, saltos=MAX_SALTOS):
+    """GET de um endereço https público e devolve (status, tipo_de_conteudo, texto, endereco_final). Só lê tipos de TEXTO (HTML/JSON/XML);
+    imagem, PDF ou binário viram ErroImportar. Não levanta pra status 404/403 (devolve o status: quem chamou decide)."""
+    atual = url
+    for _ in range(saltos + 1):
+        host, caminho = _validar_url(atual)
+        ip = _ip_publico_de(host)
+        pool, resp = _pedir(host, ip, caminho, aceita=aceita, extra=extra, ua=_UA_CONEXAO)
+        try:
+            if resp.status in (301, 302, 303, 307, 308):
+                destino = resp.headers.get('Location')
+                if not destino:
+                    raise ErroImportar('O link redireciona pra lugar nenhum.')
+                atual = urljoin(atual, destino)
+                continue
+            tipo = (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+            if resp.status != 200:
+                return resp.status, tipo, '', atual
+            if tipo not in _TIPOS_TEXTO:
+                raise ErroImportar('Esse endereço não devolveu uma página.')
+            corpo, _passou = _ler(resp, limite)       # passou do limite: usa só o começo (o que a gente procura vem no <head>)
+            carga = (resp.headers.get('Content-Type') or '')
+            codificacao = 'utf-8'
+            m = re.search(r'charset=([\w-]+)', carga, re.I)
+            if m:
+                codificacao = m.group(1)
+            try:
+                return 200, tipo, corpo.decode(codificacao, 'ignore'), atual
+            except LookupError:
+                return 200, tipo, corpo.decode('utf-8', 'ignore'), atual
+        finally:
+            resp.release_conn()
+            pool.close()
+    raise ErroImportar('O link redireciona demais.')
+
+
+def metadados_da_pagina(html, base):
+    """{titulo, descricao, imagem, site} que a página declara (og:/twitter:/<title>/description). Tudo texto simples, já sem entidades HTML."""
+    meta = {}
+    for tag in _RE_META.findall(html[:200_000]):
+        attrs = {m.group(1).lower(): unescape(m.group(2) if m.group(2) is not None else m.group(3)) for m in _RE_ATRIBUTO.finditer(tag)}
+        chave = (attrs.get('property') or attrs.get('name') or '').lower()
+        if chave and attrs.get('content') and chave not in meta:
+            meta[chave] = attrs['content'].strip()
+    titulo = meta.get('og:title') or meta.get('twitter:title')
+    if not titulo:
+        m = re.search(r'<title[^>]*>(.*?)</title>', html[:200_000], re.I | re.S)
+        titulo = unescape(re.sub(r'\s+', ' ', m.group(1))).strip() if m else ''
+    imagem = meta.get('og:image') or meta.get('og:image:url') or meta.get('twitter:image') or meta.get('twitter:image:src') or ''
+    return {'titulo': titulo, 'descricao': meta.get('og:description') or meta.get('twitter:description') or meta.get('description') or '',
+            'imagem': urljoin(base, imagem) if imagem else '', 'site': meta.get('og:site_name') or ''}

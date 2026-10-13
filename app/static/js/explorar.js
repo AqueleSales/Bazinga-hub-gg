@@ -3,7 +3,7 @@
    Contexto (Explorar.iniciar): { emitir, esc, escUrl, toast }. Tudo que vem do servidor passa por esc()/escUrl() antes do innerHTML.
    Animação: só `transform` (os barcos navegam por translateX e balançam por rotate), pausa ao passar o mouse e com a aba escondida. */
 const Explorar = (() => {
-    let ctx = null, S = null, seed = '', tema = '', busca = '', timer = null, previa = null;
+    let ctx = null, S = null, seed = '', tema = '', busca = '', timer = null, previa = null, previaAvulsa = false;
     const $ = (s, r) => (r || document).querySelector(s);
     const raiz = () => document.getElementById('explorar-modal');
     const num = (n) => Number(n || 0).toLocaleString('pt-BR');
@@ -75,12 +75,16 @@ const Explorar = (() => {
     // ---------------------------------------------------------------------
     // PRÉVIA (sem mensagens, sem membros nominais, sem canal privado: vem assim do servidor)
     // ---------------------------------------------------------------------
-    function fecharPrevia() { document.getElementById('ex-previa')?.remove(); previa = null; }
+    function fecharPrevia() { document.getElementById('ex-previa')?.remove(); previa = null; previaAvulsa = false; }
 
-    function mostrarPrevia(p) {
+    // `op` (opcional) = prévia AVULSA, aberta fora da janela do Explorar (servidor plantado no mapa): { entrar(p), voltar }.
+    function mostrarPrevia(p, op) {
         fecharPrevia();
         previa = p;
+        previaAvulsa = !!op;
         const t = ((S && S.temas) || []).find((x) => x.id === p.tema);
+        const pino = p.pino || null, lotado = !!(pino && pino.lotado);
+        const vagasTxt = pino ? (pino.vagas ? `${num(p.membros)}/${num(pino.vagas)} vagas` : 'sem limite de vagas') : '';
         const m = document.createElement('div');
         m.id = 'ex-previa'; m.className = 'ex-previa-fundo';
         m.innerHTML = `<div class="ex-previa" role="dialog" aria-modal="true" aria-label="${ctx.esc(p.nome)}">
@@ -88,19 +92,20 @@ const Explorar = (() => {
             <button type="button" class="ex-x" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
             <div class="ex-previa-corpo">
                 <div class="ex-previa-topo">${iconeHtml(p, 72)}<div><h3>${ctx.esc(p.nome)}</h3>
-                    <div class="ex-previa-meta"><span><i class="fa-solid fa-user-group"></i> ${num(p.membros)} ${p.membros === 1 ? 'membro' : 'membros'}</span>${t ? `<span style="--c:${ctx.esc(t.cor)}"><i class="fa-solid ${ctx.esc(t.icone)}"></i> ${ctx.esc(t.nome)}</span>` : ''}<span><i class="fa-solid fa-sailboat"></i> ${ROTULO_PORTE[p.porte]}</span></div></div></div>
+                    <div class="ex-previa-meta"><span><i class="fa-solid fa-user-group"></i> ${num(p.membros)} ${p.membros === 1 ? 'membro' : 'membros'}</span>${t ? `<span style="--c:${ctx.esc(t.cor)}"><i class="fa-solid ${ctx.esc(t.icone)}"></i> ${ctx.esc(t.nome)}</span>` : ''}${pino ? `<span><i class="fa-solid fa-location-dot"></i> ${ctx.esc(vagasTxt)}</span>` : `<span><i class="fa-solid fa-sailboat"></i> ${ROTULO_PORTE[p.porte]}</span>`}</div></div></div>
                 <p class="ex-previa-desc">${ctx.esc(p.descricao || 'Sem descrição.')}</p>
                 <div class="ex-previa-info">${p.dono ? `<span><i class="fa-solid fa-crown"></i> ${ctx.esc(p.dono)}</span>` : ''}${p.desde ? `<span><i class="fa-regular fa-calendar"></i> desde ${ctx.esc(p.desde)}</span>` : ''}</div>
                 ${p.canais && p.canais.length ? `<div class="ex-canais"><small>Canais de texto abertos</small>${p.canais.map((c) => `<span># ${ctx.esc(c)}</span>`).join('')}${p.canais_voz ? `<span><i class="fa-solid fa-volume-high"></i> ${Number(p.canais_voz)} de voz</span>` : ''}</div>` : ''}
-                <p class="ex-aviso">Aqui você só vê o que é público. Não dá pra ler mensagens antes de entrar.</p>
-                <div class="ex-previa-acoes"><button type="button" class="ex-btn" data-fechar>Voltar ao mar</button>
-                    <button type="button" class="ex-btn primario" id="ex-entrar">${p.meu ? '<i class="fa-solid fa-arrow-right"></i> Abrir meu servidor' : '<i class="fa-solid fa-anchor"></i> Entrar'}</button></div>
+                <p class="ex-aviso">${op ? 'Aqui você só vê o que é público. Pra entrar de verdade você precisa estar perto do pino.' : 'Aqui você só vê o que é público. Não dá pra ler mensagens antes de entrar.'}</p>
+                <div class="ex-previa-acoes"><button type="button" class="ex-btn" data-fechar>${op ? 'Voltar ao mapa' : 'Voltar ao mar'}</button>
+                    <button type="button" class="ex-btn primario" id="ex-entrar" ${lotado && !p.meu ? 'disabled' : ''}>${p.meu ? '<i class="fa-solid fa-arrow-right"></i> Abrir meu servidor' : lotado ? '<i class="fa-solid fa-lock"></i> Sem mais ingressos' : (op ? '<i class="fa-solid fa-door-open"></i> Entrar no servidor' : '<i class="fa-solid fa-anchor"></i> Entrar')}</button></div>
             </div></div>`;
-        raiz().appendChild(m);
+        if (op) m.classList.add('avulsa');
+        (op ? document.body : raiz()).appendChild(m);
         m.addEventListener('mousedown', (e) => { if (e.target === m) fecharPrevia(); });
         m.querySelector('.ex-x').addEventListener('click', fecharPrevia);
         m.querySelector('[data-fechar]').addEventListener('click', fecharPrevia);
-        m.querySelector('#ex-entrar').addEventListener('click', () => { ctx.emitir('explorar_entrar', { server_id: p.id }); });
+        m.querySelector('#ex-entrar').addEventListener('click', () => { if (op) { fecharPrevia(); op.entrar(p); } else ctx.emitir('explorar_entrar', { server_id: p.id }); });
     }
 
     // ---------------------------------------------------------------------
@@ -152,7 +157,9 @@ const Explorar = (() => {
         });
         document.addEventListener('keydown', (e) => {
             const r = raiz();
-            if (e.key !== 'Escape' || !r || r.style.display !== 'flex') return;
+            if (e.key !== 'Escape') return;
+            if (previaAvulsa && previa) { e.stopImmediatePropagation(); fecharPrevia(); return; }   // prévia aberta pelo mapa
+            if (!r || r.style.display !== 'flex') return;
             e.stopImmediatePropagation();
             if (previa) fecharPrevia(); else fechar();
         }, true);
@@ -165,6 +172,8 @@ const Explorar = (() => {
         abrir() { seed = String(Math.floor(Math.random() * 1e6)); tema = ''; busca = ''; casca(); pedir(); },
         receber(d) { S = d; desenhar(); },
         previa(p) { if (raiz() && raiz().style.display === 'flex') mostrarPrevia(p); },
+        /** Prévia de um servidor PLANTADO no mapa (aberta fora da janela do Explorar). `entrar(id)` é o que o botão faz. */
+        previaMapa(p, entrar) { mostrarPrevia(p, { entrar: (x) => entrar(x.id) }); },
         erro(msg) { ctx.toast(msg, 'warning'); },
         entrou() { fechar(); },
     };

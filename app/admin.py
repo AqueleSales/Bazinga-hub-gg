@@ -15,7 +15,7 @@ from functools import wraps
 from flask import Blueprint, abort, jsonify, render_template, request, session
 from sqlalchemy import or_
 
-from . import passe, efeitos, explorar
+from . import passe, efeitos, explorar, admin_dados
 from .bazar import eh_admin, ids_dos_admins, definir_admin
 from .cosmeticos import CATALOGO, ROTULO_TIPO, RARIDADES
 from .models import db, Person, Posse
@@ -106,13 +106,37 @@ def pessoas(pessoa):
 @admin_bp.route('/api/geral')
 @so_admin
 def geral(pessoa):
+    """Números e séries da Visão geral. `?dias=7|30|90` escolhe a janela dos gráficos por dia (os outros números são de agora)."""
+    try:
+        dias = int(request.args.get('dias') or 30)
+    except ValueError:
+        dias = 30
     snap = passe.temporada_ativa()
     admins = com_retry(lambda: Person.query.filter(Person.id.in_(ids_dos_admins() or [0])).all())
-    return jsonify({
-        'pessoas': com_retry(lambda: Person.query.count()),
+    try:
+        dados = admin_dados.resumo(dias)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ADMIN GERAL] {e}")
+        return jsonify({'erro': f'Não foi possível montar os números: {e}'}), 500
+    dados.update({
         'temporada': {'id': snap['id'], 'nome': snap['nome'], 'fim': snap['fim'].isoformat() if snap['fim'] else None} if snap else None,
         'admins': [{'id': p.id, 'nome': p.name, 'username': p.username or ''} for p in admins],
     })
+    return jsonify(dados), 200, {'Cache-Control': 'no-store'}
+
+
+@admin_bp.route('/api/pessoas/lista')
+@so_admin
+def pessoas_lista(pessoa):
+    """Todas as contas (nome, @, e-mail, nível, online), 25 por página, com busca e ordem. DADO PESSOAL: só admin, nunca em cache."""
+    try:
+        dados = admin_dados.lista_pessoas(request.args.get('q'), request.args.get('pagina'), request.args.get('ordem'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ADMIN PESSOAS] {e}")
+        return jsonify({'erro': f'Não foi possível listar as pessoas: {e}'}), 500
+    return jsonify(dados), 200, {'Cache-Control': 'no-store'}
 
 
 @admin_bp.route('/api/admins', methods=['POST'])
@@ -260,12 +284,7 @@ def missoes(pessoa):
 # ------------------------------------------------------------
 # Estúdio de efeitos (app/efeitos.py): receitas validadas, efeito entra no catálogo e é avisado a todo mundo conectado
 # ------------------------------------------------------------
-def _avisar_efeitos():
-    from . import socketio
-    try:
-        socketio.emit('efeitos_custom', efeitos.mapa_para_cliente())
-    except Exception as e:
-        print(f"[ERRO ADMIN: avisar efeitos] {e}")
+# (efeitos.salvar/apagar já avisam todo mundo sozinhos: efeitos.difundir)
 
 
 def _tratar_efeito(fn):
@@ -296,7 +315,6 @@ def efeitos_salvar(pessoa):
 
     def fazer():
         eid = efeitos.salvar(d)
-        _avisar_efeitos()
         return {'id': eid}
     return _tratar_efeito(fazer)
 
@@ -306,7 +324,6 @@ def efeitos_salvar(pessoa):
 def efeitos_apagar(pessoa, eid):
     def fazer():
         efeitos.apagar(eid)
-        _avisar_efeitos()
     return _tratar_efeito(fazer)
 
 
