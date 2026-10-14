@@ -52,7 +52,9 @@ SALDO_ANA = PM + PK + 400
 
 TEMAS_LOJA = [t for t, d in cos.TEMAS.items() if d.get('loja')]
 ok(len(TEMAS_LOJA) >= 7, f'Há {len(TEMAS_LOJA)} temas à venda')
-CSS = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'static', 'css', 'cosmeticos.css'), encoding='utf-8').read()
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _arte
+CSS = _arte.css_todo()          # cosmeticos.css + todo cosm_*.css (temas à mão e os gerados por tools/cosm/gerar.js)
 JS_LOJA = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'static', 'js', 'loja.js'), encoding='utf-8').read()
 BASICOS = [t for t in TEMAS_LOJA if cos.TEMAS[t].get('sem_pacote')]
 for t in TEMAS_LOJA:
@@ -60,7 +62,20 @@ for t in TEMAS_LOJA:
         itens_b = [d for d in vendaveis.values() if d['tema'] == t]
         ok(itens_b and all(d['raridade'] == 'comum' and d['animado'] is False and d['preco'] == cos.PRECOS['comum'][d['tipo']] for d in itens_b), f'Tema {t}: só itens comuns, sem animação, com preço da tabela')
         continue
-    its = {tp: C.get(f'{tp}:{t}') for tp in ('moldura', 'nome', 'placa', 'faixa')}
+    if cos.TEMAS[t].get('gerado'):
+        # tema GERADO (tools/cosm): vale o critério dos genéricos do plano: 6+ itens, 3 dos 4 visuais, pelo menos um efeito, preço da tabela, pacote só se tem 4+ itens
+        itens_t = [d for d in vendaveis.values() if d['tema'] == t and d['tipo'] != 'pacote']
+        tipos_t = {d['tipo'] for d in itens_t}
+        ok(len(itens_t) >= 6, f'Tema gerado {t}: tem 6 itens ou mais ({len(itens_t)})')
+        ok(len(tipos_t & {'moldura', 'nome', 'placa', 'faixa'}) >= 3, f'Tema gerado {t}: tem pelo menos 3 dos 4 visuais ({sorted(tipos_t & {"moldura", "nome", "placa", "faixa"})})')
+        ok(bool(tipos_t & {'efeito_avatar', 'efeito_perfil'}), f'Tema gerado {t}: tem efeito de avatar ou de perfil')
+        ok(all(d['preco'] == cos.PRECOS[d['raridade']][d['tipo']] for d in itens_t), f'Tema gerado {t}: cada preço vem da tabela PRECOS')
+        ok(cos.TEMAS[t].get('categoria') in cos.IDS_CATEGORIA, f'Tema gerado {t}: categoria válida')
+        if f'pacote:{t}' in C:
+            soma_g = sum(C[f'{tp}:{v}']['preco'] for tp, v in cos.PACOTES[t].items())
+            ok(C[f'pacote:{t}']['preco'] < soma_g, f'Tema gerado {t}: o pacote é mais barato que a soma dos itens')
+        continue
+    its = {tp: next((d for d in vendaveis.values() if d['tema'] == t and d['tipo'] == tp), None) for tp in ('moldura', 'nome', 'placa', 'faixa')}   # o id do item pode ser diferente do id do tema (Gosma Negra no tema Simbionte)
     ok(all(its.values()), f'Tema {t}: tem moldura, nome, placa e faixa')
     ok(all(d['preco'] == cos.PRECOS[d['raridade']][d['tipo']] for d in vendaveis.values() if d['tema'] == t and d['tipo'] != 'pacote'), f'Tema {t}: cada preço vem da tabela PRECOS (raridade x tipo)')
     entregues = {f'{tp}:{v}' for tp, v in cos.PACOTES[t].items()}
@@ -69,7 +84,7 @@ for t in TEMAS_LOJA:
     ok(C[f'pacote:{t}']['preco'] == esperado and esperado < soma, f'Tema {t}: pacote = soma ({soma}) com {int(cos.DESCONTO_PACOTE * 100)}% de desconto, arredondado ({esperado})')
     ok({'moldura', 'nome', 'placa', 'faixa'} <= set(cos.PACOTES[t]), f'Tema {t}: o pacote equipa pelo menos os 4 visuais')
     ok(C[f'pacote:{t}']['raridade'] == max((its[tp]['raridade'] for tp in its), key=lambda r: cos.ORDEM_RARIDADE[r]), f'Tema {t}: o pacote tem a raridade dos visuais')
-    for classe in (f'.moldura-{t}::before', f'.ne-{t}', f'.placa-{t}', f'.user-profile-bar.placa-{t}', f'.banner-anim-{t}'):
+    for classe in (f".moldura-{its['moldura']['valor']}::before", f".ne-{its['nome']['valor']}", f".placa-{its['placa']['valor']}", f".user-profile-bar.placa-{its['placa']['valor']}", f".banner-anim-{its['faixa']['valor']}"):
         ok(classe in CSS, f'Tema {t}: o CSS tem {classe} (item sem CSS aparece "vazio" pra quem compra)')
     if cos.TEMAS[t].get('sem_hero'):
         continue

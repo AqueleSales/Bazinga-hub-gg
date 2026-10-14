@@ -70,8 +70,11 @@ def dia_em_que_junta(linhas, valor):
 def main():
     pacotes = [d for d in cos.CATALOGO.values() if d.get('pacote_loja')]
     avulsos = [d for d in cos.CATALOGO.values() if d.get('preco') and d['tipo'] != 'pacote']
-    # pacote "normal" = os temas de raridade rara (4 itens); pacote "premium" = os temas épicos com efeitos (11 itens)
-    pacote = max(d['preco'] for d in pacotes if d['raridade'] == 'raro')
+    # pacote "normal" = o mais barato dos temas de raridade rara (os 4 visuais, sem efeitos); "completo" = o mais caro (os temas gerados
+    # da Rodada 27 que trazem também efeitos de avatar, perfil, fala, radar, chat, som e pin: só informativo, não entra nas regras);
+    # pacote "premium" = os temas épicos com efeitos (11 itens)
+    pacote = min(d['preco'] for d in pacotes if d['raridade'] == 'raro')
+    completo = max(d['preco'] for d in pacotes if d['raridade'] == 'raro')
     epico = max(d['preco'] for d in pacotes if d['raridade'] == 'epico')
     lendario = max(d['preco'] for d in pacotes if d['raridade'] == 'lendario')
     barato = min(d['preco'] for d in avulsos) if avulsos else 250
@@ -85,7 +88,7 @@ def main():
         print(f'{nome:9}' + ''.join(f'{str(r[nome][d - 1][2]) + " / " + str(r[nome][d - 1][3]):>14}' for d in dias_mostrados))
 
     print('\nEm quantos DIAS cada perfil junta (sem gastar nada antes) o valor de:')
-    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), (f'pacote premium ({epico})', epico), (f'pacote lendário ({lendario})', lendario)]
+    degraus = [(f'1 item barato ({barato})', barato), ('2 itens avulsos (900)', 900), (f'1 pacote ({pacote})', pacote), (f'2 pacotes ({2 * pacote})', 2 * pacote), (f'pacote raro completo ({completo})', completo), (f'pacote premium ({epico})', epico), (f'pacote lendário ({lendario})', lendario)]
     print(f"{'':26}" + ''.join(f'{n:>10}' for n in PERFIS))
     for rot, valor in degraus:
         print(f'{rot:26}' + ''.join(f'{(dia_em_que_junta(r[n], valor) or ">90"):>10}' for n in PERFIS))

@@ -53,6 +53,8 @@ const Cosm = (() => {
         h += `<radialGradient id="bdg-flash-r"><stop offset="0" stop-color="#ff3b4a" stop-opacity=".95"/><stop offset=".55" stop-color="#ff1a2b" stop-opacity=".35"/><stop offset="1" stop-color="#ff1a2b" stop-opacity="0"/></radialGradient>`;
         h += `<radialGradient id="bdg-flash-v"><stop offset="0" stop-color="#5dff8a" stop-opacity=".0"/><stop offset=".7" stop-color="#3dff7a" stop-opacity=".45"/><stop offset="1" stop-color="#3dff7a" stop-opacity="0"/></radialGradient>`;
         h += `<linearGradient id="bdg-fusao" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff9d2e"/><stop offset=".5" stop-color="#f06ab8"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>`;
+        // "Gosma": borra e corta o alfa de volta, então as bolhas pretas se fundem como um líquido (efeito de avatar Simbionte)
+        h += `<filter id="sim-goo" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="b"/><feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10"/></filter>`;
         return `<svg id="cosm-defs" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false"><defs>${h}</defs></svg>`;
     }
 
@@ -537,8 +539,19 @@ const Cosm = (() => {
     const EFEITOS_AVATAR = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga', 'relampago'];
     const EFEITOS_PERFIL = ['gogeta', 'sasuke', 'cyber', 'eldoria', 'arcade', 'gojo', 'sukuna', 'mahoraga', 'olimpo', 'tempestade'];
 
+    // Temas novos (static/js/cosm_temas.js) registram aqui os efeitos que precisam de HTML gerado por código: id -> função que devolve o HTML.
+    // `ids` = ids dos efeitos que só viram classe CSS (fala, radar, chat, som, pin, servidor).
+    const EXTRA = { avatar: {}, perfil: {}, sons: {} };
+    function registrarTema(t) {
+        Object.assign(EXTRA.avatar, t.avatar || {});
+        Object.assign(EXTRA.perfil, t.perfil || {});
+        Object.assign(EXTRA.sons, t.sons || {});        // sons por "receita" (notas e ruídos), tocados por tocarReceita()
+        Object.entries(t.ids || {}).forEach(([tipo, lista]) => { (IDS_EFEITO[tipo] = IDS_EFEITO[tipo] || []).push(...lista); });
+    }
+
     function htmlEfeitoAvatar(id) {
         if (typeof Efeitos !== 'undefined' && Efeitos.tem(id, 'efeito_avatar')) return Efeitos.htmlAvatar(id);   // efeito criado no Estúdio (receita JSON)
+        if (idOk(id) && EXTRA.avatar[id]) return EXTRA.avatar[id]();
         if (!EFEITOS_AVATAR.includes(id)) return '';
         if (id === 'sasuke') return '<i class="ef-av ef-av-sasuke" aria-hidden="true"></i>';   // olho brilhante: só CSS (anel que acende em vermelho)
         if (id === 'gojo') return '<i class="ef-av ef-av-gojo" aria-hidden="true"><b class="gj-g"><i class="gj-azul"></i><b class="gj-v"><i class="gj-verm"></i></b><i class="gj-roxo"></i></b></i>';
@@ -550,6 +563,7 @@ const Cosm = (() => {
     // "do nada" em lugares diferentes.
     function htmlEfeitoPerfil(id) {
         if (typeof Efeitos !== 'undefined' && Efeitos.tem(id, 'efeito_perfil')) return Efeitos.htmlPerfil(id);   // efeito criado no Estúdio (receita JSON)
+        if (idOk(id) && EXTRA.perfil[id]) return EXTRA.perfil[id]();
         if (!EFEITOS_PERFIL.includes(id)) return '';
         if (id === 'sasuke') {
             const caminhos = ['M12 0 L7 22 L15 24 L6 52 L16 54 L4 96', 'M10 0 L14 18 L6 30 L13 46 L5 70',
@@ -737,8 +751,39 @@ const Cosm = (() => {
             return true;
         } catch (e) { return false; }
     }
+    // Som de uma receita gerada (tools/cosm): { notas:[{t,f,f2?,d,tipo?,v?}], ruidos:[{t,d,f,f2?,filtro?,v?,q?}], total }. Tudo sintetizado, nada de arquivo.
+    function tocarReceita(r, ctx, destino) {
+        const t0 = ctx.currentTime;
+        const mestre = ctx.createGain();
+        mestre.gain.value = 0.2;
+        mestre.connect(destino || ctx.destination);
+        (r.notas || []).forEach((n) => {
+            const o = ctx.createOscillator(), g = ctx.createGain(), ini = t0 + n.t, v = Math.max(.02, n.v === undefined ? .6 : n.v);
+            o.type = n.tipo || 'sine';
+            o.frequency.setValueAtTime(n.f, ini);
+            if (n.f2) o.frequency.exponentialRampToValueAtTime(n.f2, ini + n.d);
+            g.gain.setValueAtTime(0.0001, ini);
+            g.gain.exponentialRampToValueAtTime(v, ini + Math.min(.02, n.d / 3));
+            g.gain.exponentialRampToValueAtTime(0.0001, ini + n.d);
+            o.connect(g); g.connect(mestre); o.start(ini); o.stop(ini + n.d + .03);
+        });
+        (r.ruidos || []).forEach((n) => {
+            const len = Math.max(1, Math.floor(ctx.sampleRate * (n.d + .05))), buf = ctx.createBuffer(1, len, ctx.sampleRate), dados = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) dados[i] = Math.random() * 2 - 1;
+            const fonte = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(), ini = t0 + n.t, v = Math.max(.02, n.v === undefined ? .5 : n.v);
+            fonte.buffer = buf; fl.type = n.filtro || 'bandpass'; fl.Q.value = n.q || 1.2;
+            fl.frequency.setValueAtTime(n.f, ini);
+            if (n.f2) fl.frequency.exponentialRampToValueAtTime(n.f2, ini + n.d);
+            g.gain.setValueAtTime(0.0001, ini);
+            g.gain.exponentialRampToValueAtTime(v, ini + Math.min(.02, n.d / 3));
+            g.gain.exponentialRampToValueAtTime(0.0001, ini + n.d);
+            fonte.connect(fl); fl.connect(g); g.connect(mestre); fonte.start(ini); fonte.stop(ini + n.d + .05);
+        });
+        return r.total || 1;
+    }
     function somEntrada(id, ctx, destino) {
         if (!IDS_EFEITO.som.includes(id) || !ctx) return 0;
+        if (EXTRA.sons[id]) return tocarReceita(EXTRA.sons[id], ctx, destino);
         if (ARQ_SOM[id] && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext) && tocarArquivoSom(id)) return 2;
         const t0 = ctx.currentTime;
         const mestre = ctx.createGain();
@@ -1537,5 +1582,5 @@ const Cosm = (() => {
 
     return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, svgBadge3D, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
         renderInventario, previaItem, svgOlho: olhoHumanoSvg, svgMarcasSukuna: marcasSukunaSvg, svgTimao: timaoSvg, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
-        mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, _passo: passoCanvas };
+        mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, registrarTema, _passo: passoCanvas };
 })();

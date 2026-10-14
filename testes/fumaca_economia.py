@@ -23,20 +23,33 @@ def ok(cond, msg):
 
 
 # ---------- 0. todo item do catálogo tem id seguro e arte (CSS/JS) ----------
-RAIZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'static')
-CSS = open(os.path.join(RAIZ, 'css', 'cosmeticos.css'), encoding='utf-8').read()
-JS_COSM = open(os.path.join(RAIZ, 'js', 'cosmeticos.js'), encoding='utf-8').read()
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _arte
+RAIZ = _arte.ESTATICO
+CSS = _arte.css_todo()          # cosmeticos.css + todo cosm_*.css (base, temas à mão e os GERADOS por tools/cosm/gerar.js)
+JS_COSM = _arte.js_cosm()
+JS_TEMAS = _arte.js_temas()     # cosm_temas.js (à mão)
+GERADOS = _arte.ids_registrados_gerados()   # {'avatar': {ids}, 'perfil': {...}, 'fala': {...}...} lido dos cosm_<cat>.js gerados
 
 
-def lista_js(trecho):
-    """['a', 'b'] de `NOME: ['a', 'b']` ou `const NOME = ['a', 'b']` no cosmeticos.js."""
+def lista_js(trecho, tipo_temas=None):
+    """['a', 'b'] de `NOME: ['a', 'b']` ou `const NOME = ['a', 'b']` no cosmeticos.js, mais o que os temas novos registram em cosm_temas.js
+    (`const AVATAR = { id: fn }`, `const PERFIL = { id: fn }` e `const IDS = { fala: ['a'], ... }`)."""
     m = re.search(trecho + r"\s*\[([^\]]*)\]", JS_COSM)
-    return set(re.findall(r"'([a-z_]+)'", m.group(1))) if m else set()
+    ids = set(re.findall(r"'([a-z_]+)'", m.group(1))) if m else set()
+    ids |= GERADOS.get(tipo_temas, set())
+    if tipo_temas in ('avatar', 'perfil'):
+        mt = re.search(r"const " + tipo_temas.upper() + r" = \{([^}]*)\}", JS_TEMAS)
+        ids |= set(re.findall(r"\b([a-z_]+):", mt.group(1))) if mt else set()
+    elif tipo_temas:
+        mt = re.search(r"\b" + tipo_temas + r":\s*\[([^\]]*)\]", JS_TEMAS)
+        ids |= set(re.findall(r"'([a-z_]+)'", mt.group(1))) if mt else set()
+    return ids
 
 
-REGISTRO_JS = {'efeito_avatar': lista_js(r'const EFEITOS_AVATAR =\s*'), 'efeito_perfil': lista_js(r'const EFEITOS_PERFIL =\s*'),
-               'efeito_fala': lista_js(r'\bfala:'), 'efeito_radar': lista_js(r'\bradar:'), 'efeito_chat': lista_js(r'\bchat:'),
-               'som_call': lista_js(r'\bsom:'), 'pin_nota': lista_js(r'\bpin:'), 'efeito_servidor': lista_js(r'\bservidor:')}
+REGISTRO_JS = {'efeito_avatar': lista_js(r'const EFEITOS_AVATAR =\s*', 'avatar'), 'efeito_perfil': lista_js(r'const EFEITOS_PERFIL =\s*', 'perfil'),
+               'efeito_fala': lista_js(r'\bfala:', 'fala'), 'efeito_radar': lista_js(r'\bradar:', 'radar'), 'efeito_chat': lista_js(r'\bchat:', 'chat'),
+               'som_call': lista_js(r'\bsom:', 'som'), 'pin_nota': lista_js(r'\bpin:', 'pin'), 'efeito_servidor': lista_js(r'\bservidor:', 'servidor')}
 CSS_DO_TIPO = {'moldura': ['.moldura-{v}::before'], 'placa': ['.placa-{v}', '.user-profile-bar.placa-{v}'], 'nome': ['.ne-{v}'], 'faixa': ['.banner-anim-{v}'],
                'efeito_avatar': ['.ef-av-{v}'], 'efeito_perfil': ['.ef-pf-{v}'], 'efeito_fala': ['.fala-{v}'], 'efeito_radar': ['.radar-{v}'],
                'efeito_chat': ['.chat-ef-{v}'], 'pin_nota': ['.pin-{v}'], 'efeito_servidor': ['.sv-ef-{v}']}
@@ -48,6 +61,16 @@ for iid, d in cos.CATALOGO.items():
         ok(modelo.format(v=d['valor']) in CSS, f'{iid}: o CSS tem {modelo.format(v=d["valor"])}')
     if d['tipo'] in REGISTRO_JS:
         ok(d['valor'] in REGISTRO_JS[d['tipo']], f'{iid}: o id está registrado em cosmeticos.js ({d["tipo"]})')
+
+# o CSS/JS dos temas GERADOS tem que estar em dia com tools/cosm/temas (senão alguém mexeu num e esqueceu de rodar `node tools/cosm/gerar.js`)
+_ger = _arte.gerador_atualizado()
+if _ger is None:
+    print('AVISO: node não encontrado: não conferi se os temas gerados estão em dia (rode node tools/cosm/gerar.js --check)')
+else:
+    ok(_ger[0], f'Os arquivos gerados (cosm_*.css/js e cosm_gen.json) estão em dia com tools/cosm/temas {_ger[1]}')
+_gen = _arte.gerado()
+ok(all(i['tema'] in {t['id'] for t in _gen['temas']} for i in _gen['itens']), 'Todo item gerado pertence a um tema gerado')
+ok(set(_gen['arquivos']) <= {t['categoria'] for t in _gen['temas']}, 'Só há arquivo gerado de categoria que tem tema')
 
 with app.app_context():
     db.create_all()
@@ -402,6 +425,25 @@ with app.app_context():
     ok(m_card is not None and 'grid-template-rows: minmax(0, 1fr)' in m_card.group(0) and 'max-height' in m_card.group(0),
        'Modal do Armazém: a linha da grade é limitada pela altura máxima (sem isso a coluna da direita não rolava e cortava o botão de comprar)')
     ok(re.search(r'\.arm-modal-lado \.arm-compra \{[^}]*position: sticky[^}]*bottom: 0', LOJA_CSS) is not None, 'Modal do Armazém: preço e botão de comprar ficam grudados embaixo, à vista')
+
+    # ---- Rodada 26: editor de perfil (efeito de avatar ao lado da moldura + carrossel do efeito de perfil) e a CAIXA PADRÃO do efeito ----
+    CHAT = open(os.path.join(RAIZ, '..', 'templates', 'chat.html'), encoding='utf-8').read()
+    ok('id="pf-efeito-av-btn"' in CHAT and "abrirCatalogo('efeito_avatar')" in CHAT and "catTipo === 'efeito_avatar'" in CHAT,
+       'Perfil: o efeito de avatar tem o seu quadradinho ao lado da moldura e abre o catálogo de prévias')
+    ok('id="pf-efeitos-lista"' in CHAT and 'class="efc"' in CHAT and 'class="pf-efeito' not in CHAT and "d.tipo === 'efeito_perfil' || d.tipo === 'efeito_avatar'" not in CHAT,
+       'Perfil: "Efeito de perfil" virou carrossel só de efeitos de CARTÃO (os de foto saíram dali)')
+    ok('width: 340px' in CHAT and 'height: 440px' in CHAT and 'transform: scale(var(--kk))' in CHAT,
+       'Carrossel: cada cartão é desenhado no tamanho real do cartão de perfil e reduzido (o efeito aparece igual ao do cartão de verdade)')
+    # caixa padrão: nenhum efeito de avatar pode se espalhar além de 40% da foto (o padrão é 30%; o do cartão do Gogeta chega a 40%)
+    insets = []
+    for m in re.finditer(r'([^{}]*)\{([^{}]*)\}', CSS):      # regra por regra, numa passada só (o CSS gerado é enorme e minificado)
+        if '.ef-av' not in m.group(1):
+            continue
+        mi = re.search(r'(?<![\w-])inset:\s*(-?[\d.]+)%', m.group(2))
+        if mi:
+            insets.append((m.group(1), float(mi.group(1))))
+    ok(insets and all(-40 <= v <= 50 for _, v in insets), f"Efeito de avatar: toda regra \"inset\" fica dentro da caixa padrão (de -40% a 50%: positivo encolhe a peça): {len(insets)} regras")
+    ok('.cat-palco' in CHAT and 'height: 96px' in CHAT, 'Catálogo: a prévia usa o palco padrão (cabe a caixa do efeito sem cortar)')
 
 print()
 print('FALHAS:', 'nenhuma' if not falhas else falhas)

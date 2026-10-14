@@ -70,6 +70,39 @@ def create_app():
         if request.endpoint != 'static' and 'user_id' in session and not session.permanent:
             session.permanent = True
 
+    # Compressão (gzip) dos arquivos estáticos de texto: os temas gerados (cosm_<categoria>.css/js) somam alguns MB crus mas comprimem ~8x.
+    # O servidor de arquivos do Flask não comprime; sem isto o 1º carregamento no celular baixaria tudo cru. Guarda o resultado em memória
+    # (chave = caminho + data do arquivo), então comprime uma vez só por deploy.
+    import gzip as _gzip
+    _cache_gz = {}
+    _TIPOS_GZ = ('text/css', 'text/javascript', 'application/javascript', 'application/json', 'image/svg+xml', 'text/plain')
+
+    @app.after_request
+    def _comprimir_estatico(resp):
+        try:
+            if (request.method != 'GET' or resp.status_code != 200 or not request.path.startswith('/static/') or resp.headers.get('Content-Encoding')
+                    or 'gzip' not in (request.headers.get('Accept-Encoding') or '') or (resp.mimetype or '') not in _TIPOS_GZ):
+                return resp
+            chave = (request.path, resp.headers.get('ETag') or resp.headers.get('Last-Modified') or '')
+            dados = _cache_gz.get(chave)
+            if dados is None:
+                resp.direct_passthrough = False
+                bruto = resp.get_data()
+                if len(bruto) < 2048:
+                    return resp
+                dados = _gzip.compress(bruto, 6)
+                if len(_cache_gz) > 400:
+                    _cache_gz.clear()
+                _cache_gz[chave] = dados
+            resp.direct_passthrough = False
+            resp.set_data(dados)
+            resp.headers['Content-Encoding'] = 'gzip'
+            resp.headers['Content-Length'] = str(len(dados))
+            resp.headers.add('Vary', 'Accept-Encoding')
+        except Exception as e:      # compressão é só otimização: nunca derruba um arquivo estático
+            print(f'[GZIP ESTATICO] {e}')
+        return resp
+
     from . import events
     from .novidades import novidade_atual
 
@@ -95,8 +128,12 @@ def create_app():
 
     @app.context_processor
     def _injetar_marca():
-        return {'app_nome': APP_NOME, 'moeda_nome': MOEDA_NOME, 'moeda_sigla': MOEDA_SIGLA,
-                'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js'),
+        from .cosmeticos import GERADO
+        # temas gerados (tools/cosm/gerar.js): um par css/js por categoria, cada um com a própria versão (?v=) pro navegador nunca servir arquivo velho
+        cosm_gen = [{'cat': c, 'css_v': _versao_estatico(f'css/cosm_{c}.css'), 'js_v': _versao_estatico(f'js/cosm_{c}.js')} for c in GERADO.get('arquivos', [])]
+        return {'cosm_gen': cosm_gen, 'cosm_base_css_v': _versao_estatico('css/cosm_base.css'),
+                'app_nome': APP_NOME, 'moeda_nome': MOEDA_NOME, 'moeda_sigla': MOEDA_SIGLA,
+                'cosm_css_v': _versao_estatico('css/cosmeticos.css'), 'cosm_js_v': _versao_estatico('js/cosmeticos.js'), 'cosm_temas_css_v': _versao_estatico('css/cosm_temas.css'), 'cosm_temas_js_v': _versao_estatico('js/cosm_temas.js'),
                 'loja_css_v': _versao_estatico('css/loja.css'), 'loja_js_v': _versao_estatico('js/loja.js'),
                 'bazar_css_v': _versao_estatico('css/bazar.css'), 'bazar_js_v': _versao_estatico('js/bazar.js'),
                 'titulos_css_v': _versao_estatico('css/titulos.css'), 'efeitos_js_v': _versao_estatico('js/efeitos.js'), 'efeitos_css_v': _versao_estatico('css/efeitos.css'), 'explorar_css_v': _versao_estatico('css/explorar.css'), 'mapa_social_css_v': _versao_estatico('css/mapa_social.css'), 'mapa_social_js_v': _versao_estatico('js/mapa_social.js'), 'conexoes_css_v': _versao_estatico('css/conexoes.css'), 'conexoes_js_v': _versao_estatico('js/conexoes.js'), 'explorar_js_v': _versao_estatico('js/explorar.js'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'), 'admin_graficos_js_v': _versao_estatico('js/admin_graficos.js'),

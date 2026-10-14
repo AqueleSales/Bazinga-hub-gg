@@ -222,6 +222,7 @@ vão ser refeitos depois com conteúdo novo. O resto da lista da rodada de teste
 - [ ] Decidir a **paleta geral** do app; trocar sons/arte de **DBZ, Naruto e JJK** por criações originais antes de qualquer loja comercial; assinatura de código do instalador; Electron e PWA sem teste ao vivo.
 **Loja / conteúdo**
 - [ ] 10 temas de jogo/anime (arte original que evoca): Brawlhalla, LoL, SNK, JoJo-like, Umamusume, Rematch, Roblox-like, Marvel Rivals-like, Blue Lock-like, TF2-like.
+- [ ] **TODOS OS TEMAS (pedido do dono, 13/10/2026: "é para fazer TODOS MESMO TODOS")**: plano mestre, regras, checklist e conceito de cada tema em **`docs/PLANO_TEMAS.md`** (e o checklist vivo no topo do `CLAUDE.md`). Grupos: A) os 10 de jogo/anime; B) JJK chama azul, Homem-Aranha, Venom, DC/Marvel; C) genéricos (fofos, básicos, emo, assustadores, banais, sazonais). Feito até agora: só o **Simbionte** (6 itens, símbolo ainda aproximado). Começar pelo Passo 0 (infra: categoria no Armazém, arquivo por categoria, kit de ícones, prévias que não nascem vazias).
 - [ ] Recalibrar `PRECOS` com **dados reais** de uso (`calibrar_precos.py` usa perfis supostos).
 - [ ] Desconto de lojas parceiras (só se houver parceria); títulos de temporada e Battle Pass 1–100 próprio (separado do nível).
 **Bazar (o que sobrou depois da Rodada 18)**

@@ -19,7 +19,7 @@ from datetime import timedelta
 from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 
-from .cosmeticos import CATALOGO, TEMAS, PACOTES, COLECOES, ROTULO_TIPO, RARIDADES, posses_da_pessoa
+from .cosmeticos import CATALOGO, TEMAS, PACOTES, COLECOES, ROTULO_TIPO, RARIDADES, CATEGORIAS, posses_da_pessoa
 from .models import db, br_now, Person, Posse, MovimentoDrc, LojaEstoque
 from .utils import comitar_com_retry, MISSOES
 
@@ -161,8 +161,11 @@ def _reservar_unidade(item_id, lim, agora):
 # COLEÇÃO: comprar itens do Armazém (os pacotes não contam, só o que eles entregam) desbloqueia prêmios que não se vendem
 # ==========================================
 def itens_comprados(person_id):
-    """Quantos itens avulsos a pessoa JÁ comprou no Armazém (origem 'loja', fora os pacotes)."""
-    return Posse.query.filter(Posse.person_id == person_id, Posse.origem == 'loja', ~Posse.item_id.like('pacote:%')).count()
+    """Quantos itens avulsos a pessoa JÁ comprou no Armazém (origem 'loja', fora os pacotes).
+    Os COMUNS (as cores lisas dos Básicos, 120 a 180 DRC) não contam: com mais de cem itens baratos, a coleção viraria um atalho
+    pros prêmios épicos."""
+    ids = [r[0] for r in db.session.query(Posse.item_id).filter(Posse.person_id == person_id, Posse.origem == 'loja', ~Posse.item_id.like('pacote:%')).all()]
+    return sum(1 for i in ids if (CATALOGO.get(i) or {}).get('raridade') != 'comum')
 
 
 def _conceder_premios(pessoa_id, posses_apos):
@@ -310,15 +313,18 @@ def vitrine_para_json(pessoa, posses=None):
         pacote_id = f'pacote:{tid}'
         temas.append({
             'id': tid, 'nome': t['nome'], 'cor': t['cor'], 'cores': t['cores'], 'icone': t['icone'], 'lema': t['lema'],
-            'premium': bool(t.get('premium')), 'sem_hero': bool(t.get('sem_hero')),
+            'premium': bool(t.get('premium')), 'sem_hero': bool(t.get('sem_hero')), 'categoria': t.get('categoria'),
             'desc': t['desc'], 'pacote': pacote_id if _a_venda(pacote_id) else None, 'itens': avulsos,
             'preco_soma': total, 'preco_pacote': (CATALOGO.get(pacote_id) or {}).get('preco'),
+            # o id do item de cada slot visual (o id do item pode ser diferente do id do tema): a prévia do tema usa isto
+            'visuais': {tp: v for tp, v in PACOTES.get(tid, {}).items() if tp in ('moldura', 'nome', 'placa', 'faixa', 'efeito_avatar', 'efeito_perfil')},
         })
     return {
         'saldo': pessoa.bazinga_coins or 0,
         'temas': temas, 'itens': itens,
         'prateleiras': [{'tipo': t, 'titulo': n} for t, n in PRATELEIRAS],
         'grupos': [{'id': g, 'titulo': n} for g, n, _ in GRUPOS],
+        'categorias': [dict(c, n=sum(1 for t in temas if t['categoria'] == c['id'])) for c in CATEGORIAS if any(t['categoria'] == c['id'] for t in temas)],
         'raridades': RARIDADES,
         'destaques': [x for x in DESTAQUES if TEMAS.get(x['tema'], {}).get('loja')],
         'reliquia': {'item_id': reliquia, 'desconto': int(DESCONTO_RELIQUIA * 100), 'termina_em': segundos_ate_trocar(agora)} if reliquia else None,

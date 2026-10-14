@@ -9,6 +9,24 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 27, 'data': '14/10/2026', 'titulo': 'Mais de cem temas novos no Armazém',
+        'itens': [
+            {'icone': 'fa-shapes', 'titulo': 'Armazém por categorias', 'texto': 'O Armazém agora se divide em Anime, Jogos, Quadrinhos, Esportes, Fofos, Sombrio, Dia a dia, Fantasia, Básicos e Datas Especiais. Clique numa categoria, ou filtre por tipo, tema, raridade e animação.'},
+            {'icone': 'fa-heart', 'titulo': 'Fofos, emo, terror e dia a dia', 'texto': 'Gatinhos, docinhos, nuvens, coelhinhos e mais; Emo Noite, Coração Partido, Gótico e Vampiro; Sangue, Fantasmas, Fita VHS, Ocultismo e outros sustos; Café, Praia, Synthwave, Quadro-negro e muito mais. Cada tema tem moldura, nome, placa, faixa e efeitos próprios.'},
+            {'icone': 'fa-bolt', 'titulo': 'Jogos, anime e heróis', 'texto': 'Valhalla, Neo Arena, Fortaleza, Tijolos e os reinos do Hextech; Aventura Bizarra (parar o tempo, vento dourado, areia, platina), Derby, Ego e Chama Azul; Teia, Multiverso, Gotham, Krypton, Stark, Escudo, Trovão, Wakanda e muitos outros heróis. Tudo em arte original.'},
+            {'icone': 'fa-gift', 'titulo': 'Datas especiais', 'texto': 'Natal, Ano Novo, Aniversário, Dia dos Namorados, Carnaval, Páscoa, Halloween e Festa Junina, com efeitos que ocupam o cartão inteiro.'},
+            {'icone': 'fa-circle', 'titulo': 'Básicos com todas as cores', 'texto': 'Todas as cores lisas, vivas, pastel e escuras, mais listras, xadrez, bolinhas, zigue-zague, quadriculado e degradês. Baratos e parados. Eles não contam para a Coleção do Armazém.'},
+        ],
+    },
+    {
+        'id': 26, 'data': '13/10/2026', 'titulo': 'Efeitos do perfil mais fáceis de escolher e o tema Simbionte',
+        'itens': [
+            {'icone': 'fa-wand-magic-sparkles', 'titulo': 'Efeito de avatar ao lado da moldura', 'texto': 'Em Configurações > Meu Perfil, o efeito da foto ganhou o seu quadradinho ao lado da moldura: clique e veja cada efeito que você tem rodando na sua foto antes de escolher.'},
+            {'icone': 'fa-layer-group', 'titulo': 'Efeito de perfil em carrossel', 'texto': 'Os efeitos que cobrem o cartão inteiro agora são um carrossel de cartões de exemplo: passe pelos que você tem, veja o efeito em ação e equipe o que mais gostar.'},
+            {'icone': 'fa-spider', 'titulo': 'Tema Simbionte no Armazém', 'texto': 'Gosma preta, olhos brancos e a aranha no peito: moldura, nome, placa, faixa e dois efeitos. No efeito de avatar, a gosma come a sua foto, mostra o símbolo e recua em tentáculos vivos.'},
+        ],
+    },
+    {
         'id': 25, 'data': '13/10/2026', 'titulo': 'Música no Pantheon e playlist no perfil',
         'itens': [
             {'icone': 'fa-music', 'titulo': 'Música', 'texto': 'Novo botão Música na barra lateral (no celular, em Você): pesquise uma música, toque, monte a sua fila e ouça enquanto usa o app. Dá pra colar um link de música ou playlist do YouTube e do YouTube Music, e guardar as que você gosta na playlist do seu perfil. O som vem do player do YouTube, que fica sempre à vista.'},

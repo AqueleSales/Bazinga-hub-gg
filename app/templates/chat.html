@@ -1850,17 +1850,55 @@
         .pf-mini-av { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: var(--brand-color); align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0; }
         .pf-mini-av img { width: 100%; height: 100%; object-fit: cover; }
 
-        .pf-efeitos { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-        .pf-efeito { position: relative; padding: 14px 12px; border-radius: 12px; border: 1px solid var(--glass-borda); background: rgba(255,255,255,.03); display: flex; flex-direction: column; gap: 2px; }
-        .pf-efeito i { position: absolute; right: 10px; top: 10px; font-size: 12px; color: var(--text-muted); }
-        .pf-efeito b { font-size: 13px; color: var(--text-header); }
-        .pf-efeito small { font-size: 11px; color: var(--text-muted); font-weight: 700; }
-        .pf-efeito.bloqueado { opacity: .6; }
-        button.pf-efeito { cursor: pointer; text-align: left; font: inherit; color: inherit; transition: transform .12s, border-color .12s, background-color .12s; }
-        button.pf-efeito:hover { transform: translateY(-2px); border-color: var(--brand-color); }
-        .pf-efeito.ativo { border-color: var(--brand-color); background: rgba(88,101,242,.14); }
-        .pf-efeito.ativo i { color: var(--green-color); }
-        .pf-efeito.vazio { grid-column: 1 / -1; opacity: .85; }
+        /* ---- Avatar / moldura / efeito: três quadradinhos lado a lado ---- */
+        .pf-slots { align-items: flex-start; gap: 16px; }
+        .pf-slot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .pf-slot small { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+        .pf-efav { width: 40px; height: 40px; }                       /* 40 x 1,6 = 64 px: a caixa padrão do efeito cabe folgada no quadradinho de 72 */
+        #pf-efeito-av-btn { position: relative; overflow: hidden; }
+        .pf-efav-ico { position: absolute; right: 5px; bottom: 5px; width: 18px; height: 18px; border-radius: 50%; background: var(--brand-color); color: #fff; font-size: 9px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-primary); z-index: 3; }
+
+        /* ---- CAIXA PADRÃO DO EFEITO DE AVATAR ----
+           Todo efeito de avatar mora num quadrado de 160% da foto (o `.ef-av` tem inset -30%): efeito novo tem que caber ali.
+           O "palco" das prévias reserva exatamente essa caixa (foto de 52 px => 83 px, com folga num palco de 96 px),
+           então nada passa da borda do cartãozinho nem é cortado. */
+        .cat-palco { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 96px; }
+        .cat-palco .pf-tile-av, .cat-palco .inv-av-ef { width: 52px; height: 52px; }
+        .cat-grade.efeitos { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
+        /* as prévias do catálogo só animavam sob o mouse; aqui a animação é o ponto da escolha */
+        #pf-catalogo .cat-grade.efeitos *:not(:hover) { animation-play-state: running; }
+
+        /* ---- Efeito de perfil: carrossel de cartões de exemplo (mesma ideia do carrossel de "Plantar servidor") ----
+           Cada cartão é desenhado no TAMANHO REAL do cartão de perfil (340 x 440) e reduzido com `transform: scale`,
+           então o efeito aparece igualzinho ao do cartão de verdade. O JS só define --k (centro) e --ks (vizinhos). */
+        .efc { --k: .3; --ks: .19; display: flex; flex-direction: column; gap: 10px; min-width: 0; outline: none; }
+        .efc-palco { display: flex; align-items: center; gap: 2px; padding: 12px 4px; border-radius: 12px; background: var(--bg-tertiary); border: 1px solid var(--glass-borda); }
+        .efc-seta { flex: none; width: 28px; height: 64px; border: 0; background: none; color: var(--text-muted); font-size: 18px; cursor: pointer; transition: color .15s, transform .15s; }
+        .efc-seta:hover { color: #fff; transform: scale(1.18); }
+        .efc-trilho { position: relative; flex: 1; min-width: 0; height: calc(440px * var(--k) + 6px); overflow: hidden; touch-action: pan-y; user-select: none; }
+        .efc-slot { --kk: var(--k); position: absolute; top: 50%; left: 50%; display: block; padding: 0; border: 0; background: none; width: calc(340px * var(--kk)); height: calc(440px * var(--kk)); border-radius: calc(22px * var(--kk)); cursor: pointer; color: inherit; font: inherit; }
+        .efc-slot.centro { transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--brand-color), 0 6px 22px rgba(0,0,0,.45); animation: efcEntra .28s ease; }
+        .efc-slot.lado { --kk: var(--ks); opacity: .5; filter: saturate(.55); transition: opacity .18s, filter .18s; }
+        .efc-slot.lado:hover { opacity: .95; filter: none; }
+        .efc-slot.esq { transform: translate(calc(-50% - (340px * (var(--k) + var(--ks)) / 2 + 10px)), -50%); }
+        .efc-slot.dir { transform: translate(calc(-50% + (340px * (var(--k) + var(--ks)) / 2 + 10px)), -50%); }
+        .efc-slot.sem { visibility: hidden; pointer-events: none; }
+        .efc-card { position: absolute; left: 0; top: 0; width: 340px; height: 440px; transform-origin: 0 0; transform: scale(var(--kk)); border-radius: 22px; overflow: hidden; background: linear-gradient(165deg, #2a2d36, #15161a); pointer-events: none; }
+        .efc-card .ef-pf { border-radius: 22px; }
+        .efc-nenhum { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; border-radius: inherit; border: 1.5px dashed rgba(255,255,255,.28); background: rgba(255,255,255,.03); font-size: 11px; font-weight: 700; color: var(--text-muted); pointer-events: none; }
+        .efc-eq { position: absolute; top: 5px; right: 5px; z-index: 4; width: 20px; height: 20px; border-radius: 50%; background: var(--green-color); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(0,0,0,.45); }
+        .efc-pontos { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
+        .efc-pontos i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.2); transition: background-color .15s, transform .15s; }
+        .efc-pontos i.on { background: var(--brand-color); transform: scale(1.3); }
+        .efc-info { display: flex; align-items: center; gap: 10px; }
+        .efc-info > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+        .efc-info b { font-size: 13px; color: var(--text-header); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .efc-info small { font-size: 11px; font-weight: 700; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .efc-btn { flex: none; padding: 7px 14px; font-size: 12px; }
+        .efc-vazio { display: flex; flex-direction: column; gap: 2px; padding: 14px 12px; border-radius: 12px; border: 1px solid var(--glass-borda); background: rgba(255,255,255,.03); opacity: .85; }
+        .efc-vazio b { font-size: 13px; color: var(--text-header); }
+        .efc-vazio small { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+        @keyframes efcEntra { from { opacity: .55; filter: brightness(1.3); } to { opacity: 1; filter: none; } }
 
         .pf-presenca button.larga { grid-column: 1 / -1; }
         .pf-presenca button small { margin-left: auto; font-size: 11px; color: var(--text-muted); font-weight: 600; }
@@ -2932,6 +2970,10 @@
     </style>
 <!-- Cosméticos (patentes, insígnias, popover orb, inventário, laboratório): depois do <style> acima, pra ganhar por ordem -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cosm_base.css') }}?v={{ cosm_base_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cosm_temas.css') }}?v={{ cosm_temas_css_v }}">
+{% for g in cosm_gen %}<link rel="stylesheet" href="{{ url_for('static', filename='css/cosm_' ~ g.cat ~ '.css') }}?v={{ g.css_v }}">
+{% endfor %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loja.css') }}?v={{ loja_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/titulos.css') }}?v={{ titulos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/efeitos.css') }}?v={{ efeitos_css_v }}">
@@ -4469,12 +4511,22 @@
                             </div>
 
                             <div class="pf-bloco">
-                                <div class="pf-bloco-tit">Avatar e moldura</div>
-                                <div class="pf-linha">
-                                    <button type="button" class="pf-av-btn" id="pf-av-btn" title="Mudar foto"><span class="pf-av" id="pf-av"></span><span class="pf-av-lapis"><i class="fa-solid fa-pen"></i></span></button>
-                                    <button type="button" class="pf-tile quadrado" id="pf-moldura-btn" title="Moldura do avatar" aria-label="Moldura do avatar"><span class="pf-tile-av" id="pf-moldura-amostra"></span></button>
+                                <div class="pf-bloco-tit">Avatar, moldura e efeito</div>
+                                <div class="pf-linha pf-slots">
+                                    <div class="pf-slot">
+                                        <button type="button" class="pf-av-btn" id="pf-av-btn" title="Mudar foto"><span class="pf-av" id="pf-av"></span><span class="pf-av-lapis"><i class="fa-solid fa-pen"></i></span></button>
+                                        <small>Foto</small>
+                                    </div>
+                                    <div class="pf-slot">
+                                        <button type="button" class="pf-tile quadrado" id="pf-moldura-btn" title="Moldura do avatar" aria-label="Moldura do avatar"><span class="pf-tile-av" id="pf-moldura-amostra"></span></button>
+                                        <small>Moldura</small>
+                                    </div>
+                                    <div class="pf-slot">
+                                        <button type="button" class="pf-tile quadrado" id="pf-efeito-av-btn" title="Efeito do avatar" aria-label="Efeito do avatar"><span class="inv-av-ef pf-efav" id="pf-efeito-av-amostra"></span></button>
+                                        <small>Efeito</small>
+                                    </div>
                                 </div>
-                                <span class="pf-dica">Clique na foto pra trocar: imagem, GIF ou uma sugestão da nossa busca.</span>
+                                <span class="pf-dica">Clique na foto pra trocar: imagem, GIF ou uma sugestão da nossa busca. A moldura é o anel; o efeito é a animação em volta da foto (só aparecem os que você tem).</span>
                             </div>
 
                             <div class="pf-bloco">
@@ -4498,9 +4550,9 @@
                                     <span class="pf-dica">A barrinha que aparece atrás do seu nome nas listas de membros, DMs e ao lado do microfone.</span>
                                 </div>
                                 <div class="pf-grupo">
-                                    <span class="control-label">Efeitos de perfil</span>
-                                    <div class="pf-efeitos" id="pf-efeitos-lista"></div>
-                                    <span class="pf-dica">Animações que rodam por cima do cartão e em volta da sua foto. Clique num efeito que você tem pra equipar (de novo pra tirar). Os outros estão no Armazém.</span>
+                                    <span class="control-label">Efeito de perfil</span>
+                                    <div class="efc" id="pf-efeitos-lista"></div>
+                                    <span class="pf-dica">Animação que roda por cima do cartão inteiro. Passe pelos que você tem e escolha um (o cartão ao lado já mostra). Os outros estão no Armazém.</span>
                                 </div>
                             </div>
 
@@ -4890,6 +4942,9 @@
     <div id="dm-contato-menu" class="dm-contato-menu" style="display:none;"></div>
 
     <script src="{{ url_for('static', filename='js/cosmeticos.js') }}?v={{ cosm_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/cosm_temas.js') }}?v={{ cosm_temas_js_v }}"></script>
+    {% for g in cosm_gen %}<script src="{{ url_for('static', filename='js/cosm_' ~ g.cat ~ '.js') }}?v={{ g.js_v }}"></script>
+    {% endfor %}
     <script src="{{ url_for('static', filename='js/loja.js') }}?v={{ loja_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/passe.js') }}?v={{ passe_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/efeitos.js') }}?v={{ efeitos_js_v }}"></script>
@@ -10404,6 +10459,7 @@
             const mo = document.getElementById('pf-moldura-amostra');
             mo.className = 'pf-tile-av ' + classeMoldura(rascunho.moldura);
             mo.innerHTML = avatarMini();
+            pintarEfeitoAvatarAmostra();   // a foto mudou: o quadradinho do efeito acompanha (só redesenha se algo mudou)
 
             document.getElementById('pf-av').innerHTML = avatarMini();
 
@@ -10596,7 +10652,14 @@
             } else if (catTipo === 'placa') {
                 corpo.innerHTML = `<div class="cat-grade larga">${PLACAS.concat(exclusivosDe('placa')).map(o => `<button class="cat-tile ${(rascunho.placa || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-placa-linha ${classePlaca(o.id)}"><span class="pf-mini-av">${avatarMini()}</span>${nome}</span><small>${o.nome}</small></button>`).join('')}</div>`;
             } else if (catTipo === 'moldura') {
-                corpo.innerHTML = `<div class="cat-grade">${MOLDURAS.concat(exclusivosDe('moldura')).map(o => `<button class="cat-tile ${(rascunho.moldura || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="pf-tile-av ${classeMoldura(o.id)}">${avatarMini()}</span><small>${o.nome}</small></button>`).join('')}</div>`;
+                corpo.innerHTML = `<div class="cat-grade">${MOLDURAS.concat(exclusivosDe('moldura')).map(o => `<button class="cat-tile ${(rascunho.moldura || 'nenhuma') === o.id ? 'sel' : ''}" data-id="${o.id}"><span class="cat-palco"><span class="pf-tile-av ${classeMoldura(o.id)}">${avatarMini()}</span></span><small>${o.nome}</small></button>`).join('')}</div>`;
+            } else if (catTipo === 'efeito_avatar') {
+                const meus = meusEfeitos('efeito_avatar'), eq = efeitoEquipado('efeito_avatar');
+                corpo.innerHTML = `<div class="cat-grade efeitos">
+                        <button class="cat-tile ${!eq ? 'sel' : ''}" data-efeito=""><span class="cat-palco"><span class="pf-tile-av">${avatarMini()}</span></span><small>Nenhum</small></button>
+                        ${meus.map(d => `<button class="cat-tile ${eq === d.valor ? 'sel' : ''}" data-efeito="${esc(d.valor)}" title="${esc(d.desc || '')}"><span class="cat-palco"><span class="inv-av-ef">${Cosm.htmlEfeitoAvatar(d.valor)}<span class="inv-av-img">${avatarMini()}</span></span></span><small>${esc(d.nome)}</small></button>`).join('')}
+                    </div>
+                    ${meus.length ? '' : '<p class="pf-dica">Você ainda não tem efeitos de avatar. Eles vêm nos temas premium do Armazém e nos prêmios do passe.</p>'}`;
             } else if (catTipo === 'tema') {
                 const atual = rascunho.perfil_tema || '';
                 corpo.innerHTML = `
@@ -10629,6 +10692,7 @@
                 estilo: ['Estilo do nome exibido', 'O jeito que o seu nome aparece no cartão, nas listas e na barra.'],
                 placa: ['Placa de identificação', 'A barrinha atrás do seu nome nas listas de membros, DMs e ao lado do microfone.'],
                 moldura: ['Moldura do avatar', 'Um anel animado em volta da sua foto. Mais molduras chegam com o Battle Pass e a loja.'],
+                efeito_avatar: ['Efeito do avatar', 'Uma animação em volta da sua foto, junto com a moldura. Só aparecem os que você tem; os outros estão no Armazém e nos prêmios do passe.'],
                 tema: ['Tema do perfil', 'Gradiente, cor sólida ou uma foto/GIF de fundo pro seu cartão.']
             }[tipo];
             document.getElementById('pfc-titulo').textContent = info[0];
@@ -10640,6 +10704,7 @@
         document.getElementById('pfc-corpo').addEventListener('click', (e) => {
             const tile = e.target.closest('.cat-tile');
             if (!tile) return;
+            if (catTipo === 'efeito_avatar') { pedirEfeito('efeito_avatar', tile.dataset.efeito || ''); return; }   // equipa direto; o servidor responde e o catálogo se redesenha
             if (tile.dataset.tema !== undefined) rascunho.perfil_tema = tile.dataset.tema;
             else if (catTipo === 'estilo') rascunho.nome_estilo = tile.dataset.id === 'padrao' ? '' : tile.dataset.id;
             else if (catTipo === 'placa') rascunho.placa = tile.dataset.id === 'nenhuma' ? '' : tile.dataset.id;
@@ -10772,28 +10837,122 @@
             return eq;
         }
 
-        // Configurações > Meu Perfil > Efeitos de perfil: os efeitos de cartão e de foto que a pessoa TEM (a posse é do servidor; clicar só pede pra equipar/tirar)
+        // ---------- Configurações > Meu Perfil: efeito de AVATAR (quadradinho ao lado da moldura) e efeito de PERFIL (carrossel) ----------
+        // A posse é do servidor: clicar só PEDE pra equipar/tirar (o servidor confere e responde com `inventario` + `perfil_atualizado`,
+        // que redesenha tudo daqui). Efeito de avatar = animação em volta da foto; efeito de perfil = animação por cima do cartão inteiro.
+        const meusEfeitos = (tipo) => ((inventario && inventario.catalogo) || []).filter(d => d.tipo === tipo);
+        const efeitoEquipado = (tipo) => ((inventario && inventario.equipados) || {})[tipo] || null;
+        function pedirEfeito(tipo, valor) {            // valor vazio = tirar
+            if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
+            if (valor) socket.emit('equipar_item', { item_id: `${tipo}:${valor}` });
+            else socket.emit('desequipar_item', { tipo });
+        }
+
+        function pintarEfeitoAvatarAmostra() {
+            const el = document.getElementById('pf-efeito-av-amostra');
+            if (!el) return;
+            const v = efeitoEquipado('efeito_avatar');
+            const chave = `${v || ''}|${perfilMeu.avatar || ''}|${(perfilMeu.nome || '?')[0]}`;
+            if (el.dataset.chave === chave) return;      // nada mudou: não reinicia a animação
+            el.dataset.chave = chave;
+            el.innerHTML = `${v ? Cosm.htmlEfeitoAvatar(v) : ''}<span class="inv-av-img">${avatarMini()}</span>`;
+            const btn = document.getElementById('pf-efeito-av-btn');
+            btn.classList.toggle('tem-efeito', !!v);
+            btn.querySelector('.pf-efav-ico')?.remove();
+            if (!v) btn.insertAdjacentHTML('beforeend', '<span class="pf-efav-ico"><i class="fa-solid fa-wand-magic-sparkles"></i></span>');
+        }
+
+        // Carrossel do efeito de perfil. Posição 0 = "Sem efeito"; guarda o efeito em foco (e não o índice) pra não pular quando a lista muda.
+        let efcFoco = null;
+        function efcLista() { return [null, ...meusEfeitos('efeito_perfil')]; }
+        function efcIndice(lista) { const i = lista.findIndex(d => (d ? d.valor : '') === (efcFoco || '')); return i < 0 ? 0 : i; }
+        function efcMover(dir) {
+            const lista = efcLista();
+            if (lista.length < 2) return;
+            const d = lista[(efcIndice(lista) + dir + lista.length) % lista.length];
+            efcFoco = d ? d.valor : '';
+            desenharCarrosselDeEfeitos();
+        }
+        function efcAjustar() {
+            const el = document.getElementById('pf-efeitos-lista');
+            const palco = el && el.querySelector('.efc-palco');
+            if (!palco || !palco.clientWidth) return;
+            const util = palco.clientWidth - 2 * 30 - 8;                 // sem as duas setas
+            const c = Math.max(84, Math.min(150, util * .6));             // largura do cartão central (px); os vizinhos espiam pelas laterais
+            el.style.setProperty('--k', (c / 340).toFixed(4));
+            el.style.setProperty('--ks', (c * .62 / 340).toFixed(4));
+        }
+        function efcCartao(d) {
+            return d ? `<span class="efc-card"><i class="efc-fundo"></i>${Cosm.htmlEfeitoPerfil(d.valor)}</span>` : '<span class="efc-nenhum">Sem efeito</span>';
+        }
         function desenharEfeitosDoEditor() {
+            pintarEfeitoAvatarAmostra();
+            try { if (catEl.style.display === 'flex' && catTipo === 'efeito_avatar') renderCatalogo(); } catch (_) { /* catálogo ainda não existe */ }
+            desenharCarrosselDeEfeitos();
+        }
+        function desenharCarrosselDeEfeitos() {
             const el = document.getElementById('pf-efeitos-lista');
             if (!el) return;
-            const eq = (inventario && inventario.equipados) || {};
-            const meus = ((inventario && inventario.catalogo) || []).filter(d => d.tipo === 'efeito_perfil' || d.tipo === 'efeito_avatar');
+            const meus = meusEfeitos('efeito_perfil');
             if (!meus.length) {
-                el.innerHTML = '<div class="pf-efeito vazio"><b>Você ainda não tem efeitos de perfil</b><small>Os temas premium do Armazém trazem um por tema.</small></div>';
+                el.innerHTML = '<div class="efc-vazio"><b>Você ainda não tem efeitos de perfil</b><small>Os temas premium do Armazém e os prêmios do passe trazem um por tema.</small></div>';
                 return;
             }
-            el.innerHTML = meus.map(d => {
-                const on = eq[d.tipo] === d.valor;
-                return `<button type="button" class="pf-efeito ${on ? 'ativo' : ''}" data-id="${esc(d.id)}" data-tipo="${esc(d.tipo)}"><i class="fa-solid ${on ? 'fa-circle-check' : 'fa-wand-sparkles'}"></i><b>${esc(d.nome)}</b><small>${d.tipo === 'efeito_perfil' ? 'Cartão' : 'Foto'}${on ? ' · equipado' : ''}</small></button>`;
-            }).join('');
+            const lista = efcLista(), n = lista.length, eq = efeitoEquipado('efeito_perfil');
+            if (efcFoco === null) efcFoco = eq || '';                    // 1ª pintura: começa no que está equipado
+            const i = efcIndice(lista), d = lista[i];
+            const esq = lista[(i - 1 + n) % n], dir = lista[(i + 1) % n];
+            const slot = (item, cls, vaga) => {
+                if (vaga) return '<span class="efc-slot lado sem"></span>';
+                const dentro = item ? eq === item.valor : !eq;
+                const alvo = cls === 'centro' ? '' : ` data-ir="${cls === 'esq' ? -1 : 1}"`;
+                return `<button type="button" class="efc-slot ${cls === 'centro' ? 'centro' : 'lado ' + cls}"${alvo} aria-label="${esc(item ? item.nome : 'Sem efeito')}">${efcCartao(item)}${item && dentro ? '<span class="efc-eq"><i class="fa-solid fa-check"></i></span>' : ''}</button>`;
+            };
+            const nome = d ? d.nome : 'Sem efeito';
+            const tema = d && d.tema ? (((inventario.temas || {})[d.tema] || {}).nome || '') : '';
+            const sub = d ? [tema, ({ lendario: 'Lendário', epico: 'Épico', raro: 'Raro', comum: 'Comum', unico: 'Único' })[d.raridade] || ''].filter(Boolean).join(' · ') : 'O cartão fica limpo, sem animação';
+            const equipado = d ? eq === d.valor : !eq;
+            const rotulo = d ? (equipado ? 'Tirar' : 'Equipar') : 'Tirar o efeito';
+            el.tabIndex = 0;
+            el.innerHTML = `
+                <div class="efc-palco">
+                    <button type="button" class="efc-seta" data-mover="-1" aria-label="Efeito anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                    <div class="efc-trilho">${slot(esq, 'esq', n < 3)}${slot(d, 'centro')}${slot(dir, 'dir')}</div>
+                    <button type="button" class="efc-seta" data-mover="1" aria-label="Próximo efeito"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                ${n <= 14 ? `<div class="efc-pontos">${lista.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>` : ''}
+                <div class="efc-info"><div><b>${esc(nome)}</b><small>${esc(sub)}</small></div>
+                    <button type="button" class="btn ${!d && !eq ? '' : 'btn-primary'} efc-btn" data-equipar="1" ${!d && !eq ? 'disabled' : ''}>${rotulo}</button></div>`;
+            efcAjustar();
         }
-        document.getElementById('pf-efeitos-lista')?.addEventListener('click', (e) => {
-            const b = e.target.closest('button.pf-efeito');
-            if (!b) return;
-            if (!socket.connected) { showToast('Sem conexão - tente de novo em instantes.', 'error'); return; }
-            if (b.classList.contains('ativo')) socket.emit('desequipar_item', { tipo: b.dataset.tipo });
-            else socket.emit('equipar_item', { item_id: b.dataset.id });
-        });
+        (function ligarCarrosselDeEfeitos() {
+            const el = document.getElementById('pf-efeitos-lista');
+            if (!el) return;
+            const alternar = () => {
+                const d = efcLista()[efcIndice(efcLista())];
+                pedirEfeito('efeito_perfil', d && efeitoEquipado('efeito_perfil') !== d.valor ? d.valor : null);
+            };
+            el.addEventListener('click', (e) => {
+                if (e.target.closest('[data-mover]')) { efcMover(Number(e.target.closest('[data-mover]').dataset.mover)); return; }
+                const lado = e.target.closest('.efc-slot[data-ir]');
+                if (lado) { efcMover(Number(lado.dataset.ir)); return; }
+                if (e.target.closest('.efc-slot.centro') || e.target.closest('[data-equipar]')) alternar();
+            });
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') { e.preventDefault(); efcMover(-1); }
+                else if (e.key === 'ArrowRight') { e.preventDefault(); efcMover(1); }
+            });
+            let x0 = null;                                                // arrastar de lado (celular e mouse)
+            el.addEventListener('pointerdown', (e) => { if (e.target.closest('.efc-trilho')) x0 = e.clientX; });
+            el.addEventListener('pointerup', (e) => {
+                if (x0 === null) return;
+                const dx = e.clientX - x0; x0 = null;
+                if (Math.abs(dx) > 40) { efcMover(dx < 0 ? 1 : -1); el._arrastou = true; setTimeout(() => { el._arrastou = false; }, 0); }
+            });
+            el.addEventListener('click', (e) => { if (el._arrastou) e.stopPropagation(); }, true);
+            if (window.ResizeObserver) new ResizeObserver(() => efcAjustar()).observe(el);
+        })();
+        document.getElementById('pf-efeito-av-btn')?.addEventListener('click', () => abrirCatalogo('efeito_avatar'));
 
         function desenharInventario() {
             const raiz = document.getElementById('inv-raiz');
@@ -12845,7 +13004,7 @@
             const av = card.querySelector('.video-avatar');
             if (av) {
                 trocarClasse(av, 'moldura-', classeMoldura(v.moldura));
-                av.querySelectorAll('.ef-av').forEach(e => e.remove());
+                av.querySelectorAll('.ef-av, .ef-av-sobre').forEach(e => e.remove());
                 const ef = (v.equipados || {}).efeito_avatar;
                 av.classList.toggle('com-ef', !!ef);
                 if (ef) av.insertAdjacentHTML('afterbegin', Cosm.htmlEfeitoAvatar(ef));
@@ -12862,7 +13021,7 @@
             const meuAv = document.getElementById('my-avatar-placeholder');
             if (!meuAv) return;
             meuAv.className = 'video-avatar ' + classeMoldura(perfilMeu.moldura);
-            meuAv.querySelectorAll('.ef-av').forEach(e => e.remove());
+            meuAv.querySelectorAll('.ef-av, .ef-av-sobre').forEach(e => e.remove());
             const ef = (perfilMeu.equipados || {}).efeito_avatar;
             meuAv.classList.toggle('com-ef', !!ef);
             if (ef) meuAv.insertAdjacentHTML('afterbegin', Cosm.htmlEfeitoAvatar(ef));

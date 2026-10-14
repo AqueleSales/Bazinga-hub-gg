@@ -14,10 +14,10 @@ const Loja = (() => {
     let estado = null;        // último payload 'loja'
     let raiz = null;
     let filtro = 'todos';         // tema ('todos' = qualquer)
-    let ftipo = 'todos', frar = 'todos', fanim = 'todos', ordem = 'padrao';   // tipo (grupo), raridade, animação, ordem
+    let ftipo = 'todos', frar = 'todos', fanim = 'todos', ordem = 'padrao', fcat = 'todos';   // tipo (grupo), raridade, animação, ordem, categoria do tema
     const CHAVE_FILTROS = 'pnt_arm_filtros';
-    try { const f = JSON.parse(localStorage.getItem(CHAVE_FILTROS) || '{}'); ftipo = f.tipo || 'todos'; frar = f.rar || 'todos'; fanim = f.anim || 'todos'; ordem = f.ordem || 'padrao'; } catch (e) {}
-    const salvarFiltros = () => { try { localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ tipo: ftipo, rar: frar, anim: fanim, ordem })); } catch (e) {} };
+    try { const f = JSON.parse(localStorage.getItem(CHAVE_FILTROS) || '{}'); ftipo = f.tipo || 'todos'; frar = f.rar || 'todos'; fanim = f.anim || 'todos'; ordem = f.ordem || 'padrao'; fcat = f.cat || 'todos'; } catch (e) {}
+    const salvarFiltros = () => { try { localStorage.setItem(CHAVE_FILTROS, JSON.stringify({ tipo: ftipo, rar: frar, anim: fanim, ordem, cat: fcat })); } catch (e) {} };
     let heroIdx = 0, heroTimer = null;
     let aberto = null;        // id do item no modal
     let comprando = null, comprandoTimer = null;
@@ -58,12 +58,16 @@ const Loja = (() => {
         if (!idOk(tid)) return '';
         const av = ctx.avatarHtml(), nome = esc(ctx.nome());
         const t = temaDe(tid);
+        // o id do item de cada slot pode ser diferente do id do tema (Gosma Negra no tema Simbionte, "Patinhas" no tema Gatinhos...): o servidor manda `visuais`
+        const v = (t && t.visuais) || {};
+        const ok = (x) => (idOk(x) ? x : '');
+        const faixa = ok(v.faixa || tid), moldura = ok(v.moldura || tid), nomeE = ok(v.nome || tid), placa = ok(v.placa || tid);
         return `<div class="arm-perfil" style="${estiloTema(t)}">
-            <div class="arm-perfil-faixa banner-anim-${tid}"></div>
+            <div class="arm-perfil-faixa ${faixa ? 'banner-anim-' + faixa : ''}"></div>
             <div class="arm-perfil-corpo">
-                <span class="pf-tile-av moldura-${tid}">${av}</span>
-                <span class="cat-nome ne-${tid}">${nome}</span>
-                <span class="pf-placa-linha placa-${tid}"><span class="pf-mini-av">${av}</span><span>${nome}</span></span>
+                <span class="pf-tile-av ${moldura ? 'moldura-' + moldura : ''}">${av}</span>
+                <span class="cat-nome ${nomeE ? 'ne-' + nomeE : ''}">${nome}</span>
+                <span class="pf-placa-linha ${placa ? 'placa-' + placa : ''}"><span class="pf-mini-av">${av}</span><span>${nome}</span></span>
                 <small>Assim fica o seu perfil</small>
             </div>
         </div>`;
@@ -275,10 +279,10 @@ const Loja = (() => {
         </button>`;
     }
 
-    function htmlPrateleira(titulo, itens) {
+    function htmlPrateleira(titulo, itens, mais) {
         if (!itens.length) return '';
         return `<section class="arm-prat">
-            <div class="arm-prat-topo"><h3>${esc(titulo)}</h3><span class="n">${itens.length}</span>
+            <div class="arm-prat-topo"><h3>${esc(titulo)}</h3><span class="n">${mais ? mais.n : itens.length}</span>${mais ? `<button type="button" class="arm-vertudo" data-acao="tipo" data-tipo="${esc(mais.g)}">Ver todos <i class="fa-solid fa-arrow-right"></i></button>` : ''}
                 <div class="setas"><button type="button" class="arm-seta" data-acao="rolar" data-dir="-1" aria-label="Voltar"><i class="fa-solid fa-chevron-left"></i></button><button type="button" class="arm-seta" data-acao="rolar" data-dir="1" aria-label="Avançar"><i class="fa-solid fa-chevron-right"></i></button></div>
             </div>
             <div class="arm-trilho">${itens.map(htmlCard).join('')}</div>
@@ -317,18 +321,22 @@ const Loja = (() => {
     const ORDENS = [['padrao', 'Padrão'], ['menor', 'Menor preço'], ['maior', 'Maior preço'], ['raridade', 'Mais raros']];
     const ANIMS = [['todos', 'Todos'], ['sim', 'Animados'], ['nao', 'Sem animação']];
     const raridadeDe = (id) => (estado.raridades || []).find((r) => r.id === id);
-    const filtrando = () => filtro !== 'todos' || ftipo !== 'todos' || frar !== 'todos' || fanim !== 'todos' || ordem !== 'padrao' || !!norm(busca).trim();
+    const filtrando = () => filtro !== 'todos' || ftipo !== 'todos' || frar !== 'todos' || fanim !== 'todos' || ordem !== 'padrao' || fcat !== 'todos' || !!norm(busca).trim();
+    const categoriaDe = (id) => (estado.categorias || []).find((c) => c.id === id);
+    const catDoItem = (i) => { const t = temaDe(i.tema); return t ? t.categoria : null; };
 
     function htmlChips() {
         const contagem = (g) => estado.itens.filter((i) => i.grupo === g).length;
         const chip = (id, nome) => `<button type="button" class="arm-chip ${ftipo === id ? 'on' : ''}" data-acao="tipo" data-tipo="${esc(id)}">${esc(nome)}${id === 'todos' ? '' : `<em>${contagem(id)}</em>`}</button>`;
         const sel = (rotulo, chave, opcoes, atual) => `<label class="arm-sel"><span>${rotulo}</span><select data-filtro="${chave}">${opcoes.map(([v, n]) => `<option value="${esc(v)}" ${v === atual ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
-        const temas = [['todos', 'Todos os temas']].concat((estado.temas || []).map((t) => [t.id, t.nome + (t.premium ? ' ★' : '')]));
+        const cats = [['todos', 'Todas as categorias']].concat((estado.categorias || []).map((c) => [c.id, `${c.nome} (${c.n})`]));
+        const dosTemas = (estado.temas || []).filter((t) => fcat === 'todos' || t.categoria === fcat).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        const temas = [['todos', fcat === 'todos' ? 'Todos os temas' : 'Todos desta categoria']].concat(dosTemas.map((t) => [t.id, t.nome + (t.premium ? ' ★' : '')]));
         const raridades = [['todos', 'Todas']].concat((estado.raridades || []).map((r) => [r.id, r.nome]));
         return `<div class="arm-barra">
             <div class="arm-tipos">${chip('todos', 'Tudo')}${(estado.grupos || []).map((g) => chip(g.id, g.titulo)).join('')}</div>
             <div class="arm-filtros">
-                ${sel('Tema', 'tema', temas, filtro)}${sel('Raridade', 'rar', raridades, frar)}${sel('Animação', 'anim', ANIMS, fanim)}${sel('Ordenar', 'ordem', ORDENS, ordem)}
+                ${sel('Categoria', 'cat', cats, fcat)}${sel('Tema', 'tema', temas, filtro)}${sel('Raridade', 'rar', raridades, frar)}${sel('Animação', 'anim', ANIMS, fanim)}${sel('Ordenar', 'ordem', ORDENS, ordem)}
                 <label class="arm-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="arm-busca" maxlength="40" placeholder="Buscar item ou tema..." value="${esc(busca)}"></label>
                 <button type="button" class="arm-limpar" data-acao="limpar" ${filtrando() ? '' : 'hidden'}><i class="fa-solid fa-xmark"></i> Limpar filtros</button>
                 <button type="button" class="arm-extrato" data-acao="extrato" title="Tudo que você ganhou e gastou. ${esc(ctx.sigla)} só se ganha subindo de nível e cumprindo missões."><i class="fa-solid fa-receipt"></i> Extrato de ${esc(ctx.sigla)}</button>
@@ -342,7 +350,8 @@ const Loja = (() => {
     const norm = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     function bate(i, q) {
         const t = temaDe(i.tema);
-        return [i.nome, i.desc, i.rotulo, t && t.nome].some((x) => norm(x).includes(q));
+        const c = t && categoriaDe(t.categoria);
+        return [i.nome, i.desc, i.rotulo, t && t.nome, c && c.nome].some((x) => norm(x).includes(q));
     }
 
     // ---------------------------------------------------------------------
@@ -380,7 +389,7 @@ const Loja = (() => {
         </button>`;
         return `<section class="arm-colecao">
             <div class="arm-col-topo"><div><h3>Coleção do Armazém</h3><p>${prox
-                ? `Cada item que você compra aqui conta. Faltam <b>${moeda(prox.faltam)}</b> pra ganhar <b>${esc(prox.item.nome)}</b>.`
+                ? `Cada item que você compra aqui conta (menos os Básicos, que são lisos e baratos). Faltam <b>${moeda(prox.faltam)}</b> pra ganhar <b>${esc(prox.item.nome)}</b>.`
                 : 'Você completou a coleção inteira. Que estante!'}</p></div>
                 <div class="arm-col-num"><b>${moeda(c.comprados)}</b><small>itens comprados</small></div></div>
             <div class="arm-col-barra" role="progressbar" aria-valuemin="0" aria-valuemax="${ultima}" aria-valuenow="${Math.min(c.comprados, ultima)}"><i style="width:${pct}%"></i>${c.premios.map((p) => `<span class="marco ${p.ganho ? 'ganho' : ''}" style="left:${Math.round((p.meta / ultima) * 100)}%"><em>${p.meta}</em></span>`).join('')}</div>
@@ -389,11 +398,47 @@ const Loja = (() => {
     }
 
     const pesoRar = (i) => (estado.raridades || []).findIndex((r) => r.id === i.raridade);
+
+    // ---- tema como cartão (a home e as páginas de categoria): a prévia é o perfil da pessoa com o tema aplicado ----
+    function htmlTemaCard(t) {
+        const pk = t.pacote ? itemDe(t.pacote) : null;
+        const tem = t.itens.filter((id) => (itemDe(id) || {}).possui).length;
+        const preco = t.itens.length ? Math.min(...t.itens.map((id) => (itemDe(id) || {}).preco_final || 1e9)) : 0;
+        return `<button type="button" class="arm-tema-card" data-acao="ver-tema" data-tema="${esc(t.id)}" style="${estiloTema(t)}" aria-label="${esc(t.nome)}">
+            <div class="arm-tema-prev">${miniPerfil(t.id)}</div>
+            <div class="arm-tema-info"><h4><i class="fa-solid ${esc(t.icone)}"></i> ${esc(t.nome)}${t.premium ? ' ★' : ''}</h4>
+                <small>${t.itens.length} itens${tem ? ` · ${tem} seus` : ''}${pk && !pk.possui ? ` · pacote ${moeda(pk.preco_final)}` : (preco && preco < 1e9 ? ` · a partir de ${moeda(preco)}` : '')}</small></div>
+        </button>`;
+    }
+    function htmlSecaoTemas(cat, temas, limite) {
+        if (!temas.length) return '';
+        const mostrados = limite ? temas.slice(0, limite) : temas;
+        return `<section class="arm-prat arm-temas"><div class="arm-prat-topo"><h3><i class="fa-solid ${esc(cat.icone)}"></i> ${esc(cat.nome)}</h3><span class="n">${temas.length}</span>
+            ${limite && temas.length > limite ? `<button type="button" class="arm-vertudo" data-acao="ver-cat" data-cat="${esc(cat.id)}">Ver todos <i class="fa-solid fa-arrow-right"></i></button>` : ''}</div>
+            <div class="arm-grade-temas">${mostrados.map(htmlTemaCard).join('')}</div></section>`;
+    }
+    // sorteio do dia (mesma ordem o dia inteiro): as prateleiras da home mostram só uma amostra, e a amostra muda a cada dia
+    function amostraDoDia(lista, n, sal) {
+        let h = 0;
+        for (const ch of new Date().toDateString() + sal) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+        const rnd = () => { h = (Math.imul(h ^ (h >>> 15), 2246822507) + 0x9e3779b9) >>> 0; return h / 4294967296; };
+        const a = lista.slice();
+        for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; }
+        return a.slice(0, n);
+    }
+    const PRATELEIRA_MAX = 14;
+
     function corpoHtml() {
         const t = filtro === 'todos' ? null : temaDe(filtro);
         const q = norm(busca).trim();
+        // página de categoria: só escolheu a categoria (sem tema, tipo, busca...) -> mostra os temas dela
+        if (fcat !== 'todos' && !t && ftipo === 'todos' && frar === 'todos' && fanim === 'todos' && ordem === 'padrao' && !q) {
+            const c = categoriaDe(fcat);
+            const dela = (estado.temas || []).filter((x) => x.categoria === fcat).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            return c ? htmlSecaoTemas(c, dela, 0) : '<div class="arm-vazio">Categoria vazia.</div>';
+        }
         if (filtrando()) {
-            let achados = estado.itens.filter((i) => (!t || i.tema === t.id) && (ftipo === 'todos' || i.grupo === ftipo) && (frar === 'todos' || i.raridade === frar)
+            let achados = estado.itens.filter((i) => (!t || i.tema === t.id) && (fcat === 'todos' || catDoItem(i) === fcat) && (ftipo === 'todos' || i.grupo === ftipo) && (frar === 'todos' || i.raridade === frar)
                 && (fanim === 'todos' || (fanim === 'sim') === !!i.animado) && (!q || bate(i, q)));
             if (ordem === 'menor') achados.sort((a, b) => a.preco_final - b.preco_final);
             else if (ordem === 'maior') achados.sort((a, b) => b.preco_final - a.preco_final);
@@ -406,7 +451,14 @@ const Loja = (() => {
         }
         let corpo = htmlReliquia() + htmlColecao();
         corpo += htmlPrateleira('Edição limitada', estado.itens.filter((i) => i.limitado));
-        for (const g of (estado.grupos || [])) corpo += htmlPrateleira(g.id === 'pacote' ? 'Pacotes' : g.titulo, estado.itens.filter((i) => i.grupo === g.id && !i.limitado));
+        // os temas, por categoria (cada cartão abre o tema inteiro)
+        for (const c of (estado.categorias || [])) corpo += htmlSecaoTemas(c, (estado.temas || []).filter((x) => x.categoria === c.id).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')), 8);
+        // e uma amostra do dia de cada tipo de item (o resto está nos filtros)
+        for (const g of (estado.grupos || [])) {
+            const todos = estado.itens.filter((i) => i.grupo === g.id && !i.limitado);
+            const lista = todos.length > PRATELEIRA_MAX ? amostraDoDia(todos, PRATELEIRA_MAX, g.id) : todos;
+            corpo += htmlPrateleira(g.id === 'pacote' ? 'Pacotes' : g.titulo, lista, todos.length > lista.length ? { g: g.id, n: todos.length } : null);
+        }
         return corpo || '<div class="arm-vazio">Nada por aqui ainda. Volte em breve!</div>';
     }
 
@@ -704,10 +756,11 @@ const Loja = (() => {
             switch (b.dataset.acao) {
                 case 'tema': filtro = b.dataset.tema; render(); break;
                 case 'tipo': ftipo = b.dataset.tipo; salvarFiltros(); render(); break;
-                case 'limpar': filtro = 'todos'; ftipo = 'todos'; frar = 'todos'; fanim = 'todos'; ordem = 'padrao'; busca = ''; salvarFiltros(); render(); break;
+                case 'limpar': filtro = 'todos'; ftipo = 'todos'; frar = 'todos'; fanim = 'todos'; ordem = 'padrao'; fcat = 'todos'; busca = ''; salvarFiltros(); render(); break;
+                case 'ver-cat': fcat = b.dataset.cat; filtro = 'todos'; ftipo = 'todos'; salvarFiltros(); render(); { const r = raiz.closest('.market-content'); if (r) r.scrollTo({ top: 0 }); } break;
                 case 'abrir': abrirItem(b.dataset.item); break;
                 case 'extrato': ctx.emitir('listar_movimentos'); break;
-                case 'ver-tema': filtro = b.dataset.tema; ftipo = 'todos'; frar = 'todos'; fanim = 'todos'; render(); { const r = raiz.closest('.market-content'); if (r) r.scrollTo({ top: 0, behavior: reduzMov() ? 'auto' : 'smooth' }); } break;
+                case 'ver-tema': filtro = b.dataset.tema; ftipo = 'todos'; frar = 'todos'; fanim = 'todos'; { const tt = temaDe(filtro); if (tt && fcat !== 'todos') fcat = tt.categoria; } render(); { const r = raiz.closest('.market-content'); if (r) r.scrollTo({ top: 0, behavior: reduzMov() ? 'auto' : 'smooth' }); } break;
                 case 'slide': irPara(Number(b.dataset.i)); break;
                 case 'hero-seta': irPara(heroIdx + Number(b.dataset.dir)); break;
                 case 'rolar': { const tr = b.closest('.arm-prat').querySelector('.arm-trilho'); tr.scrollBy({ left: Number(b.dataset.dir) * tr.clientWidth * 0.85, behavior: 'smooth' }); break; }
@@ -717,7 +770,9 @@ const Loja = (() => {
         raiz.addEventListener('change', (e) => {
             const f = e.target.dataset && e.target.dataset.filtro;
             if (!f) return;
-            if (f === 'tema') filtro = e.target.value; else if (f === 'rar') frar = e.target.value; else if (f === 'anim') fanim = e.target.value; else if (f === 'ordem') ordem = e.target.value;
+            if (f === 'cat') { fcat = e.target.value; const tt = temaDe(filtro); if (tt && fcat !== 'todos' && tt.categoria !== fcat) filtro = 'todos'; }
+            else if (f === 'tema') { filtro = e.target.value; const tt = temaDe(filtro); if (tt && fcat !== 'todos' && tt.categoria !== fcat) fcat = tt.categoria; }
+            else if (f === 'rar') frar = e.target.value; else if (f === 'anim') fanim = e.target.value; else if (f === 'ordem') ordem = e.target.value;
             salvarFiltros(); render();
         });
         setInterval(atualizarContagens, 30000);

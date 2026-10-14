@@ -35,9 +35,11 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 | `app/cosmeticos.py` | Catálogo de itens exclusivos, **posse**, patentes (nível → ícone), insígnias e slots equipados (ver "Rodada 5") |
 | `app/static/js/cosmeticos.js` | Ícones SVG das patentes/insígnias, popover "orb", inventário e efeitos (objeto global `Cosm`) |
 | `app/static/css/cosmeticos.css` | Animações das patentes, inventário e o laboratório (Gogeta/Sasuke/Fusão) |
+| `app/static/js/cosm_temas.js` / `css/cosm_temas.css` | **Arte dos temas novos** (Simbionte...): tentáculos, gosma, SVG animado como fundo, efeito por cima da foto (ver Rodada 26 e `docs/ARTE_TEMAS.md`) |
 | `app/passe.py` / `app/passe_events.py` | **Passe de Batalha de temporada** (XP do passe, resgate, 100 níveis x 2 trilhas) e **títulos**; dados editados no /admin (ver Rodada 21) |
 | `app/efeitos.py` / `static/js/efeitos.js` | **Estúdio de efeitos**: receita JSON -> motor no navegador (ver Rodada 22 e `docs/ESTUDIO_EFEITOS.md`) |
 | `app/explorar.py` / `explorar_events.py` / `static/js/explorar.js` | **Explorar servidores** (o mar de barquinhos, prévia segura, entrar sem convite) |
+| `tools/cosm/` / `app/cosm_gen.json` / `app/static/{css,js}/cosm_<categoria>.*` | **Gerador dos temas de cosméticos (Rodada 27)**: `node tools/cosm/gerar.js` lê `tools/cosm/temas/*.js` e escreve o CSS, o JS e o catálogo de cada categoria (os gerados são COMMITADOS). Receita na Rodada 27 |
 | `docs/` | `HISTORICO.md` (toda a história), `ESTUDIO_EFEITOS.md`, `PLANO_IA.md` (plano da IA, só plano) |
 | `app/admin.py` / `templates/admin.html` / `static/js/admin.js` | **Estúdio** (`/admin`, só admin): passe, títulos, missões, administradores |
 | `static/js/passe.js` / `css/passe.css` / `css/titulos.css` | Página do passe (objeto global `Passe`) e estilo dos títulos |
@@ -61,6 +63,15 @@ onde os usuários "plantam" servidores e deixam notas geolocalizadas.
 ---
 
 # ONDE RETOMAR (leia isto primeiro numa conversa nova)
+
+## TAREFA DOS TEMAS DE COSMÉTICOS: FEITA em 14/10/2026 (Rodada 27); sobram só as ressalvas (pedido do dono: "é para fazer TODOS MESMO TODOS")
+
+**Estado**: os 10 de jogo e anime, os adiados (Chama Azul, Homem-Aranha, DC, Marvel), os fofos, os Básicos completos, emo/gótico/punk, os assustadores, o dia a dia e as datas especiais foram produzidos: **113 temas e ~1040 itens**, todos pelo gerador `tools/cosm/` (ver **Rodada 27**).
+O checklist com cada tema está em **`docs/PLANO_TEMAS.md` §5** (tudo `[x]`, o Simbionte `[~]`) e o que **NÃO ficou 100%** em §7. Regras do dono que continuam valendo pra qualquer tema novo: arte de alta qualidade desenhada POR CÓDIGO (nada de sprite, logo ou áudio de terceiros; nos de jogo/anime é "arte original que só evoca"),
+ampla variedade, itens vendidos separados (pacote opcional), efeito de avatar pode passar por cima da foto, **mão/rosto/personagem só com imagem de referência salva em `docs/refs/<tema>/`**, não parar pra perguntar o que o plano já responde, suíte verde, entrada nova no topo de `app/novidades.py`.
+**Pendências principais**: o símbolo da aranha do Simbionte (aproximação: o dono precisa salvar a imagem num arquivo pra decalcar), prévias de ciclo longo dos efeitos FEITOS À MÃO (Invasão Negra, domínios do JJK) que ainda nascem vazias, medir desempenho com tantos temas (o `chat.html` carrega todos os `cosm_*`), elos do LoL, ver tudo no monitor/celular/call/tema claro do dono e ouvir os sons.
+
+**Rodada 26 (13/10/2026, NÃO commitada): editor de perfil (efeito de avatar ao lado da moldura + carrossel de efeito de perfil), caixa padrão do efeito, efeito POR CIMA da foto e tema Simbionte (6 itens).** Ver "Rodada 26" (antes de "Convenções") e **`docs/ARTE_TEMAS.md`** (leia antes de criar tema). **Pendente: o símbolo da aranha precisa da imagem de referência salva em arquivo pra decalcar; faltam os outros temas (Homem-Aranha, JoJo, os 10 de jogo/anime, genéricos).** Arquivos novos: `static/js/cosm_temas.js`, `static/css/cosm_temas.css`, `testes/qa_itens.py`, `docs/ARTE_TEMAS.md`. Novidade 26 já está em `novidades.py`. Sem coluna/tabela nova.
 
 **Rodada 25 (13/10/2026, NÃO commitada): (A) playlist de músicas no perfil ("fila" das Conexões, link do YouTube/YouTube Music) e (B) Música: janela com pesquisa, player e fila (botão Música na barra lateral).** Ver a seção "Rodada 25" (antes de "Convenções"). **Pra a pesquisa por nome funcionar em produção: criar a chave `YOUTUBE_API_KEY` no Render (passo a passo na parte B); sem ela só funciona colar link.** Sem coluna/tabela nova; novidade 25 já está em `novidades.py`. Não testado: pesquisa com chave real e som em celular de verdade.
 
@@ -2366,7 +2377,81 @@ Pedido: colar link serve pra MOSTRAR no perfil, mas pra quem quer ouvir faltava 
 - **Não testado**: pesquisa com chave de verdade (formato real das respostas conferido só pela documentação), cota real, som em celular de verdade, desktop (Electron) com o player, 2 pessoas reais, janela em tela muito pequena com a call aberta.
 - **Ideias que ficaram de fora** (decidir com o dono): "ouvindo agora" no perfil (só dá pra saber o que toca DENTRO do app), pesquisa de álbum/artista (`type=playlist,channel`), biblioteca pessoal e curtidas do YT Music (exige login Google com escopo `youtube.readonly` + verificação do Google, e a API de dados nem sempre entrega as curtidas do Music), ouvir junto com amigos na call, e a **opção A** (embutir `music.youtube.com` no app do Windows como o painel do Opera: só no desktop e o Google costuma barrar o login dentro do Electron; só vale se a B não bastar).
 
+## Rodada 26 de 13/10/2026 — editor de perfil (efeito de avatar + carrossel de efeito de perfil), caixa padrão do efeito e tema Simbionte
+
+Pedido do dono: (1) separar o que é foto do que é cartão no editor de perfil; (2) arte dos temas "IGUAL" ao que se reconhece, de ampla variedade, itens vendidos separados (pacote opcional);
+(3) começar pelo Simbionte/Venom, JoJo e Homem-Aranha. Guia da arte: **`docs/ARTE_TEMAS.md`** (leia antes de criar tema). Suíte inteira passa. Visto na pane (editor em 800/1100/375 px, galeria de QA, chat); nada no Neon, nada com 2 pessoas reais.
+
+### Editor de perfil (Configurações > Meu Perfil)
+- **"Avatar, moldura e efeito"**: três quadradinhos (Foto, Moldura, **Efeito**). O quadradinho do **efeito de avatar** (`#pf-efeito-av-btn`, `abrirCatalogo('efeito_avatar')`) abre o mesmo modal da moldura com o avatar da pessoa
+  animado em cada efeito que ela TEM + "Nenhum"; clicar **equipa direto** (`equipar_item`/`desequipar_item`: a posse é conferida no servidor, a tela só muda quando o servidor responde com `inventario`).
+  `pedirEfeito(tipo, valor)`, `meusEfeitos(tipo)`, `efeitoEquipado(tipo)` e `pintarEfeitoAvatarAmostra()` (só redesenha se mudou) moram no `chat.html`.
+- **"Efeito de perfil"** (só efeito de CARTÃO; os de foto saíram dali) virou um **carrossel** como o de "Plantar servidor": cartões de exemplo VAZIOS com só o efeito rodando, o do meio maior, os vizinhos espiando e esmaecidos,
+  setas, pontinhos, arrastar de lado, setas do teclado, e embaixo nome/tema/raridade + botão Equipar/Tirar. Posição 0 = "Sem efeito". Cada cartão é desenhado no **tamanho real do cartão (340 x 440)** e reduzido com `transform: scale(var(--kk))`
+  (`--k` centro e `--ks` vizinhos, calculados por `efcAjustar()` conforme a largura da coluna), então o efeito sai igual ao do cartão de verdade; o canvas dos efeitos (`passoCanvas`) mede por `getBoundingClientRect`, que já devolve o tamanho reduzido.
+  O foco do carrossel guarda o ID do efeito (não o índice), então equipar não faz a lista pular.
+- **Caixa padrão do efeito de avatar** = quadrado de 160% da foto. As prévias usam um "palco" fixo (`.cat-palco`, 96 px, foto de 52) e o quadradinho do perfil tem foto de 40 px. A moldura passou a usar o mesmo palco.
+  Brilho pode passar um pouco da caixa; forma dura não. O `fumaca_economia.py` confere que nenhuma regra `.ef-av-*` tem `inset` fora de -40%..0.
+- O catálogo do modal só anima sob o mouse (regra de performance); o do efeito de avatar liga a animação (`#pf-catalogo .cat-grade.efeitos`).
+
+### Arquivos novos e o gancho
+`static/js/cosm_temas.js` (global `CosmTemas`) e `static/css/cosm_temas.css`: arte dos temas novos, fora do `cosmeticos.*`. O JS registra os efeitos em `Cosm.registrarTema({ avatar, perfil, ids })` (gancho em `cosmeticos.js`: `EXTRA`, `registrarTema`,
+`htmlEfeitoAvatar`/`htmlEfeitoPerfil` consultam antes das listas fixas). O teste de economia lê os ids dos dois arquivos; os de loja leem os dois CSS e acham os 4 visuais do tema pelo campo `tema` (o id do item pode ser diferente do id do tema).
+`testes/qa_itens.py` gera a galeria de olho (não é teste). **O service worker guarda `/static` pela URL**: página de teste sem `?v=` novo mostra arquivo velho.
+
+### Efeito POR CIMA da foto (novo)
+Um efeito de avatar pode devolver dois elementos: `.ef-av` (atrás da foto, caixa de 160%) e `.ef-av-sobre` (por cima, presa ao círculo da foto, `z-index: 2`, `overflow: hidden`). Quem insere/remove o efeito ao vivo (`chat.html`, dois lugares) remove os dois.
+Nas mensagens a peça "sobre" fica escondida (CSS) e os tentáculos ficam parados.
+
+### Tema Simbionte (`simbionte`, loja, `sem_hero`; 6 itens + Pacote Simbionte 3100 DRC)
+Moldura **Gosma Negra** (anel preto com borda ondulada e bolhas: máscara SVG em `--sim-anel`, reflexo branco que corre), nome **Simbionte** (preto com contorno branco que respira), placa **Olhos Brancos** (dois olhos que abrem e piscam, `--sim-olhos`),
+faixa **Invasão** (SVG animado inteiro em `--sim-faixa`: tentáculos, aranha ao fundo, olhos), efeito de avatar **Simbionte** (lendário: 9 tentáculos ondulando atrás da foto; a cada 16 s a gosma cresce da borda, COME a foto, o símbolo aparece e ela recua),
+efeito de perfil **Invasão Negra** (lendário: tentáculos entram pelas bordas do cartão, a aranha pisca, eles recuam; ciclo de 18 s).
+Peças reaproveitáveis: `tentaculo()` (cadeia de segmentos aninhados), filtro `#sim-goo` (gosma: blur + alfa multiplicado, aplicar DENTRO do SVG), SVG como imagem de fundo por variável (roda a animação CSS de dentro). Detalhes em `docs/ARTE_TEMAS.md`.
+- **O símbolo da aranha ainda NÃO é o certo.** A 1ª tentativa (de memória) saiu uma aranha de inseto e o dono riu; a 2ª foi reconstruída olhando a referência que ele colou no chat (corpo grosso em forma de bala, cabeça com dois chifrinhos, 4 pernas por lado como asas),
+  mas a imagem **não foi salva em arquivo**, então é aproximação. Pra ficar IGUAL: o dono salva a imagem numa pasta do projeto e eu decalco (contornar, simplificar, espelhar) e troco a constante `SIM_SIMBOLO` em `cosm_temas.js`.
+- Pegadinhas: (1) `[class*="moldura-"]::before` tem regras de contexto MAIS específicas com máscara própria (tile do perfil e mensagem): a gosma repete a máscara nelas; (2) `.user-profile-bar[class*="placa-"]` força `animation`/`background-size`: a placa usa `!important` nos dois seletores
+  (e na barra do usuário os olhos ficam antes dos ícones, `calc(100% - 132px)`); (3) contorno claro por segmento deixava "vértebra" em cada junta: usar um `drop-shadow` no conjunto; (4) `heredoc` de shell com `\U` quebra string Python: patch por arquivo (`Write`) e strings cruas.
+
+### O que NÃO foi feito (retomar daqui, ver BACKLOG)
+- **(Plano completo e checklist: `docs/PLANO_TEMAS.md`; é a TAREFA PERMANENTE do topo deste arquivo.)** **Os outros 12 temas "restantes"** (10 de jogo/anime do BACKLOG + Homem-Aranha e chama azul do JJK) e os genéricos (fofo, emo, futevôlei): só o Simbionte está pronto. Ordem combinada: Homem-Aranha (teia, sentido de aranha), JoJo (letras "ゴゴゴ" por cima da foto,
+  Parar o Tempo, Giorno, Iggy), depois o resto. **Regra do dono: arte IGUAL e de alta qualidade, ampla variedade (não só os mais famosos), itens vendidos separados (pacote opcional, nem todo tema precisa ter todos os tipos).**
+  Mão, rosto e personagem só com imagem de referência para decalcar (ver `docs/ARTE_TEMAS.md`).
+- Arte do carrossel do Armazém (`ARTES` em `loja.js`) e slide (`DESTAQUES`) do Simbionte (hoje `sem_hero`); efeitos de fala/radar/chat/som/pin/servidor do tema (não pedidos); o efeito de perfil "Invasão Negra" ainda não teve medição de desempenho com vários cartões.
+- Depois do deploy: nada de coluna/tabela nova. Anunciar com a novidade 26 (já está em `novidades.py`).
+
 ---
+
+## Rodada 27 de 13/10 a 14/10/2026: o gerador de temas (113 temas, ~1040 itens), categorias e o Armazém por categorias
+
+Pedido do dono: "é para fazer TODOS MESMO TODOS" (plano em `docs/PLANO_TEMAS.md`, técnica em `docs/ARTE_TEMAS.md`). À mão não escalava, então os temas saem de um **gerador em Node** (`tools/cosm/`, Node 24; o deploy NÃO tem node, por isso os arquivos gerados são commitados).
+Suíte inteira verde, `calibrar_precos.py` com as regras de ouro OK. Visto em tiras de 800 px (`testes/qa_itens.py`); **não** visto: celular, call, tema claro, som, desempenho real, Neon.
+
+### Como funciona
+- **Especificação** em `tools/cosm/temas/*.js`: cada arquivo exporta uma lista de `tema({ id, pre, nome, cat, cor, cores, icone (Font Awesome 6.4), lema, desc, premium, pal, itens:[...] })`. `pre` = prefixo único do id dos itens (2 a 6 letras); id de item = `<pre>_<slug(nome)>` truncado em 24 (`[a-z_]`: **sem dígito**, por isso o tema Y2K é `milenio`);
+  `{id:'...'}` fixa. Temas genéricos usam `G({...})` de `temas/_generico.js` (arquivos que começam com `_` o gerador pula). `existente: true` só **acrescenta itens a um tema feito à mão** (Simbionte, Básicos).
+- **Gerar**: `node tools/cosm/gerar.js` escreve `app/static/css/cosm_<categoria>.css`, `app/static/js/cosm_<categoria>.js` (registra HTML de efeito de avatar/perfil, ids por slot e receitas de som via `Cosm.registrarTema`) e `app/cosm_gen.json` (catálogo lido por `cosmeticos.py::_carregar_gerado`, que cria os itens com preço de `PRECOS`). `--check` não escreve e sai 1 se estiver desatualizado:
+  o `fumaca_economia.py` chama isso (`testes/_arte.py`). **Mexeu em `tools/cosm`? Rode o gerador e commite os gerados.** Categorias (`CATEGORIAS` em `dsl.js` e `cosmeticos.py`): anime, jogos, quadrinhos, esporte, fofo, sombrio, cotidiano, fantasia, basico, sazonal.
+- **Peças** (todas em `tools/cosm/`): `icones.js` + `icones_extra.js` (~240 ícones SVG de 100x100 em função da paleta `{m,a,d,l,o,w}`; ícone novo = `ICONES.nome = (p) => ...` inserido ANTES de `ICONES.grao = ` em `icones_extra.js`), `padroes.js` (`anelDeIcones`, `anelDeForma`, `ladrilho`, `cena.*` com céu, nuvens, estrelas, pinheiros, terreno, skyline...),
+  `kit.js` (`M` moldura: t `icones|forma|grad|liso|svg`; `N` nome; `Pl` placa; `F` faixa com camadas `longe`/`perto` pan|pisca|flutua|respira), `efeitos_kit.js` (`EA` efeito de avatar com camadas orbita, anel, halo, faiscas, sobe, topo, orelhas, asas, aura e as peças POR CIMA da foto `sobre`: pingos, neve, teia, rachadura, brilho, vinheta, glitch, scan, cai; `EP` efeito de perfil: cai, sobe, deriva, pisca, cantos, neblina, flash, chuva, borda, clima, ondas),
+  `extras_kit.js` (`FALA`, `RADAR`, `CHAT`, `PIN`, `SERV`, `SOM`). Arte única = camada `{k:'raw', html, css}` com `$ID`/`$C` e `fase()`/`var(--ef-prev,0)` (ver abaixo). `base.js` tem `uri()`, que **valida o SVG** (atributo repetido ou aspa aberta deixam a imagem INTEIRA em branco: já aconteceu com a xícara).
+- **Armazém por categorias** (`loja.py`/`loja.js`/`loja.css`): o payload manda `categorias` (com contagem) e cada tema leva `categoria` e `visuais` (a miniatura de perfil do tema); filtro por categoria, páginas de categoria, vitrine de temas e **prateleiras com amostra do dia** (`amostraDoDia`) em vez de despejar 1000 itens. O `chat.html` carrega `cosm_base.css` e um `<link>`/`<script>` por categoria gerada (contexto `cosm_gen`).
+  O `app/__init__.py` liga **gzip** nos estáticos de texto (o CSS gerado vai de ~2,5 MB a ~350 KB). Preços: `PRECOS['raro']` ganhou os slots de efeito (avatar 380, perfil 550, fala 220, radar 200, chat 220, som 150, pin 200, servidor 380); pacote = soma dos itens menos 30%.
+- **Prévias começam no auge**: `cosm_base.css` define `--ef-prev: 1` nas prévias (Armazém, inventário, editor) e os efeitos de ciclo longo usam `animation-delay: calc(var(--ef-prev,0) * <ponto> * -<dur>)`. Os feitos à mão antes (Invasão Negra, domínios do JJK) ainda NÃO foram adaptados.
+- **Coleção**: `loja.itens_comprados` **não conta itens comuns** (os Básicos custam 120 a 180 DRC e são mais de cem: contariam como atalho pros prêmios épicos). As metas 4/12/24 ficaram.
+- **Básicos** (`temas/basicos.js`, `existente`): 22 cores (vivas, pastel, escuras) x aro/letra/fita/fundo, 22 placas de padrão (listras, xadrez, bolinhas, zigue-zague, quadriculado, ondas), 16 degradês e 12 faixas de padrão. Todos comuns e parados (`animado: false`).
+
+### QA (receita)
+`python testes/qa_itens.py <pasta do script>` gera `qa_itens.html` (galeria: moldura, nome, placa, faixa, avatar, cartão); `?temas=a,b,c&t=3` escolhe temas e congela a linha do tempo em 3 s; servidor de teste fora do repo (receita no `docs/PLANO_TEMAS.md` §8; porta 5064, rotas `/debug-login/<nome>` e `/debug-pag/<arq>`).
+**Reinicie o servidor Python quando mudar `cosmeticos.py`/`loja.py`** (ele lê `cosm_gen.json` no import); o service worker guarda `/static` pela URL (use `?v=` novo). Mostre 3 temas por captura.
+
+### Armadilhas desta rodada (já custaram caro)
+1. Duas regras-base do `cosm_base.css` tinham especificidade maior que a das camadas e **ignoravam** `inset`/`display` delas (a camada `topo` do avatar nunca ficava centrada; `display:flex` no cartão virava coluna): agora são `:where(...)` (especificidade zero). Camada nova pode ajustar `inset` e `display` sem `!important`.
+2. SVG em data-URI: nunca aspas dentro de atributo (o `uri()` troca `"` por `'`), nem atributo repetido; para texto use `font-family='monospace'` sem aspas internas.
+3. Teste que varre o CSS gerado com regex tem que ser **linear**: o CSS é minificado em poucas linhas gigantes e `[^{}\n]*...` virou quadrático (o `fumaca_economia.py` levou 5 minutos). Divida por regra (`([^{}]*)\{([^{}]*)\}`).
+4. Contraste: nome em degradê escuro some no fundo escuro do app (e claro some no tema claro): clareie o degradê e ponha contorno do contraste. Efeito de perfil por cima do cartão cobre o texto: não ponha disco opaco grande no meio (a lua e o sol dos efeitos ficam no canto ou na base).
+5. Contador em CSS puro: `@property --x { syntax:'<integer>' }` + `counter-reset` + `steps()` (Fita VHS, Academia). Chuvisco: `feTurbulence` num SVG data-URI como imagem de fundo que só se desloca em `steps()`.
+6. Mensagem de commit/push: os gerados (`cosm_*.css/js`, `cosm_gen.json`) mudam muito; commitar junto com a especificação.
 
 # Convenções
 

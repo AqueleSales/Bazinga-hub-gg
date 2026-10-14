@@ -1,0 +1,95 @@
+/* ==========================================================================
+   TEMAS NOVOS (Rodada 26). Carregado DEPOIS de cosmeticos.css. A parte que precisa de HTML gerado por código fica em js/cosm_temas.js.
+
+   Regras que valem pra tudo aqui (aprendidas a duras penas, ver CLAUDE.md "Rolagem pesada"):
+     * só `transform` e `opacity` se mexem (vão pra GPU); `background-position`/`filter` animados custam repintura;
+     * efeito de avatar mora na CAIXA PADRÃO (160% da foto): o `.ef-av` já nasce com inset -30%;
+     * nada de classe começando com `ad-`/`ads-` (bloqueador de anúncio esconde).
+   ========================================================================== */
+
+/* ---------- peça "por cima da foto" do efeito de avatar (irmã do .ef-av): presa ao círculo da foto ---------- */
+.ef-av-sobre { position: absolute; inset: 0; z-index: 2; border-radius: 50%; overflow: hidden; pointer-events: none; }
+.ef-av-sobre svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ==========================================================================
+   SIMBIONTE (gosma preta, olhos brancos e o símbolo da aranha)
+   ========================================================================== */
+/* efeito de avatar: tentáculos atrás da foto + gosma por cima dela (ciclo de 16 s: ~4 s calmo, a gosma come a foto, mostra o símbolo e recua) */
+.ef-av-simbionte svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
+.ef-av-simbionte { filter: drop-shadow(0 0 1.1px rgba(176, 190, 255, .85)); }   /* contorno claro contínuo em volta dos tentáculos pretos */
+.sim-tent .sb { stroke: #07070c; stroke-linecap: round; }
+.sim-tent .s { transform-origin: 0 0; animation: simOnda 3.4s ease-in-out infinite alternate; animation-delay: var(--d); }
+@keyframes simOnda { from { transform: rotate(calc(var(--c) - var(--a))); } to { transform: rotate(calc(var(--c) + var(--a))); } }
+.sim-tent .ext { transform-origin: 0 0; animation: simEstica 16s ease-in-out infinite; }
+@keyframes simEstica { 0%, 6% { transform: scale(1); } 24% { transform: scale(1.5); } 30%, 48% { transform: scale(1.25); } 72%, 100% { transform: scale(1); } }
+
+/* a gosma: 0-8% calmo · 8-28% cresce da borda e come a foto · 28-46% foto toda preta, o símbolo aparece · 46-72% recua pra borda · 72-100% calmo */
+.sim-gosma .b { fill: #040407; transform-box: fill-box; transform-origin: 50% 50%; transform: scale(0); animation: simCome 16s ease-in-out infinite; animation-delay: var(--d); }
+@keyframes simCome { 0%, 8% { transform: scale(0); } 28%, 46% { transform: scale(2.1); } 72%, 100% { transform: scale(0); } }
+.sim-gosma .b.c { animation-name: simComeC; }     /* o miolo cresce depois e recua antes: a foto some inteira só no meio do ciclo */
+@keyframes simComeC { 0%, 18% { transform: scale(0); } 30%, 44% { transform: scale(3.2); } 56%, 100% { transform: scale(0); } }
+.sim-gosma .sim-sim { fill: #fff; transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; animation: simSimbolo 16s ease-in-out infinite; }
+@keyframes simSimbolo { 0%, 29% { opacity: 0; transform: scale(.8); } 34%, 42% { opacity: 1; transform: scale(1); } 48%, 100% { opacity: 0; transform: scale(1.06); } }
+
+/* moldura "Gosma Negra": anel preto e brilhante com a borda ondulada e três bolhas (máscara gerada em js/cosm_temas.js -> --sim-anel).
+   O anel gira devagar e um reflexo branco corre por ele. Os `inset` por contexto copiam os do Gojo/Sukuna (ver "RODADA 16" em cosmeticos.css). */
+.moldura-gosma::before { background: radial-gradient(circle at 30% 24%, #4a5071 0, #14151f 32%, #040407 70%); -webkit-mask: var(--sim-anel) center / 100% 100% no-repeat; mask: var(--sim-anel) center / 100% 100% no-repeat;
+    filter: drop-shadow(0 0 1.7px rgba(176, 190, 255, .95)); animation: gosmaGira 24s linear infinite; }
+@keyframes gosmaGira { to { transform: rotate(360deg); } }
+.moldura-gosma::after { content: ''; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; z-index: 2;
+    background: conic-gradient(from var(--bp-angulo), transparent 0 64%, rgba(255, 255, 255, .85) 68%, transparent 73% 100%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px), #000 calc(100% - 2px), transparent calc(100% - 1px)); mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px), #000 calc(100% - 2px), transparent calc(100% - 1px));
+    animation: bpGira 5.5s linear infinite; }
+/* as regras de contexto do chat.html (tile do perfil e mensagem) trazem máscara própria, mais específica: repete a máscara da gosma nelas */
+.pf-tile-av.moldura-gosma::before, .message .chat-avatar.moldura-gosma::before { -webkit-mask: var(--sim-anel) center / 100% 100% no-repeat; mask: var(--sim-anel) center / 100% 100% no-repeat; }
+.pf-tile-av.moldura-gosma::after { inset: -5px; }
+.message .chat-avatar.moldura-gosma::after { inset: -4px; }
+.video-avatar.moldura-gosma::after { inset: -6px; }
+.message .chat-avatar.moldura-gosma::before { filter: none; animation: none; }
+
+/* nome: letras pretas de contorno branco; o brilho respira e, de vez em quando, estoura */
+.ne-simbionte { color: #08080d !important; -webkit-text-stroke: 1.1px #f3f5ff; paint-order: stroke fill; font-weight: 800; letter-spacing: .4px; animation: neSim 6s ease-in-out infinite; }
+@keyframes neSim { 0%, 68%, 100% { text-shadow: 0 0 4px rgba(190, 200, 255, .35); } 76% { text-shadow: 0 0 11px rgba(255, 255, 255, .95), 0 0 2px #fff; } 88% { text-shadow: 0 0 5px rgba(190, 200, 255, .5); } }
+
+/* placa: gosma preta com os dois olhos brancos (imagem animada em --sim-olhos) e um reflexo que passa */
+.placa-olhos, .user-profile-bar.placa-olhos {
+    background-color: #050508 !important;
+    background-image: var(--sim-olhos), linear-gradient(100deg, transparent 38%, rgba(190, 200, 255, .17) 50%, transparent 62%), radial-gradient(120% 150% at 14% 0, #1a1c2c, #050508 62%) !important;
+    background-size: auto 60%, 260% 100%, 100% 100% !important;
+    background-position: right 14px center, 140% 0, 0 0 !important;
+    background-repeat: no-repeat !important;
+    animation: placaSim 8s ease-in-out infinite !important;
+}
+/* na barra do usuário (ao lado dos ícones) os olhos ficam menores e antes dos ícones */
+.user-profile-bar.placa-olhos { background-size: auto 40%, 260% 100%, 100% 100% !important; background-position: calc(100% - 132px) center, 140% 0, 0 0 !important; animation-name: placaSimBarra !important; }
+@keyframes placaSimBarra { 0%, 34% { background-position: calc(100% - 132px) center, 140% 0, 0 0; } 72%, 100% { background-position: calc(100% - 132px) center, -40% 0, 0 0; } }
+@keyframes placaSim { 0%, 34% { background-position: right 14px center, 140% 0, 0 0; } 72%, 100% { background-position: right 14px center, -40% 0, 0 0; } }
+
+/* faixa "Invasão": a imagem inteira (tentáculos, aranha, olhos) é um SVG animado gerado em js/cosm_temas.js -> --sim-faixa */
+.banner-anim-invasao { background: #030306 var(--sim-faixa) center bottom / cover no-repeat; animation: none; }
+
+/* efeito de perfil "Invasão Negra" (cartão 340 x 440). Ciclo de 18 s: os tentáculos crescem das bordas (0-26%), seguram e a aranha pisca (26-60%),
+   recuam (60-80%) e o cartão descansa até o fim. Só transform/opacity. */
+.ef-pf-invasao svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 1.6px rgba(176, 190, 255, .8)); }
+.ef-pf-invasao .sb { stroke: #07070c; stroke-linecap: round; }
+.ef-pf-invasao .s { transform-origin: 0 0; animation: simOnda 3.4s ease-in-out infinite alternate; animation-delay: var(--d); }
+.ef-pf-invasao .ext { transform-origin: 0 0; transform: scale(.001); animation: invCresce 18s ease-in-out infinite; animation-delay: var(--e); }
+@keyframes invCresce { 0%, 3% { transform: scale(.001); } 26%, 60% { transform: scale(1); } 80%, 100% { transform: scale(.001); } }
+.ef-pf-invasao .inv-sim { fill: #fff; opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: invSim 18s ease-in-out infinite; }
+@keyframes invSim { 0%, 34% { opacity: 0; transform: scale(.9); } 40%, 50% { opacity: .6; transform: scale(1); } 57%, 100% { opacity: 0; transform: scale(1.05); } }
+.ef-pf-invasao .inv-vinheta { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 6, 0) 40%, rgba(0, 0, 6, .7) 100%); animation: invVinheta 18s ease-in-out infinite; }
+@keyframes invVinheta { 0%, 4% { opacity: 0; } 28%, 58% { opacity: 1; } 80%, 100% { opacity: 0; } }
+
+/* nas mensagens (dezenas de fotos na tela) o efeito fica quieto: só os tentáculos, parados */
+.message .ef-sobre-simbionte { display: none; }
+.message .ef-av-simbionte .s { animation: none; transform: rotate(var(--c)); }
+.message .ef-av-simbionte .ext { animation: none; }
+.message .ef-av-simbionte { filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .ef-pf-invasao .s, .ef-pf-invasao .ext, .ef-pf-invasao .inv-sim, .ef-pf-invasao .inv-vinheta, .moldura-gosma::before, .moldura-gosma::after, .ne-simbionte, .placa-olhos { animation: none !important; }
+    .ef-pf-invasao .ext { transform: scale(1); }
+    .sim-tent .s { animation: none; transform: rotate(var(--c)); }
+    .sim-tent .ext, .sim-gosma .b, .sim-gosma .sim-sim { animation: none !important; }
+    .ef-sobre-simbionte { display: none; }
+}

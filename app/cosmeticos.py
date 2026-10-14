@@ -66,12 +66,40 @@ TEMAS = {
     'arcade': {'nome': 'Arcade 8-bit', 'cor': '#ffd23f', 'loja': True, 'cores': ['#ff4fa3', '#ffd23f'], 'icone': 'fa-gamepad', 'premium': True,
                'lema': 'Insira uma moeda para continuar.',
                'desc': 'Pixels, corações de vida, moedas girando, chuva de pixels e o som de uma moeda coletada.'},
+    # ---- Rodada 26: cultura pop (arte própria, desenhada por código; ver docs/ARTE_TEMAS.md). A arte que precisa de HTML mora em js/cosm_temas.js e o CSS em css/cosm_temas.css. ----
+    'simbionte': {'nome': 'Simbionte', 'cor': '#c9cfe6', 'loja': True, 'sem_hero': True, 'cores': ['#0a0a10', '#dfe3f5'], 'icone': 'fa-spider',
+                  'lema': 'Nós somos um só.',
+                  'desc': 'Gosma preta, olhos brancos e a aranha no peito: o simbionte come a sua foto, mostra o símbolo e recua em tentáculos vivos.'},
     # ---- Temporada 1 do Passe de Batalha (itens que SÓ saem do passe: não têm preço, não vão pra vitrine do Armazém) ----
     'deuses': {'nome': 'Deuses', 'cor': '#d4a24c', 'desc': 'Temporada 1 do passe: do mármore ao trovão. Itens exclusivos da temporada.'},
     # ---- Fora dos temas da vitrine (sem chip nem pacote): edições limitadas à venda e recompensas de coleção ----
     'edicao': {'nome': 'Edição Limitada', 'cor': '#ffcc33', 'desc': 'Acaba por prazo ou por estoque. Quando acabar, acabou.'},
     'colecao': {'nome': 'Coleção', 'cor': '#c0c8d6', 'desc': 'Prêmios de quem coleciona o Armazém. Não se compram: se conquistam.'},
 }
+
+# Categorias do Armazém (Rodada 27): cada tema da loja pertence a uma. O filtro "Categoria" e as seções da vitrine usam isto.
+CATEGORIAS = [
+    {'id': 'anime', 'nome': 'Anime e Mangá', 'icone': 'fa-bolt'},
+    {'id': 'jogos', 'nome': 'Jogos', 'icone': 'fa-gamepad'},
+    {'id': 'quadrinhos', 'nome': 'Quadrinhos e Heróis', 'icone': 'fa-mask'},
+    {'id': 'esporte', 'nome': 'Esportes', 'icone': 'fa-futbol'},
+    {'id': 'fofo', 'nome': 'Fofos', 'icone': 'fa-heart'},
+    {'id': 'sombrio', 'nome': 'Sombrio e Terror', 'icone': 'fa-ghost'},
+    {'id': 'cotidiano', 'nome': 'Dia a dia', 'icone': 'fa-mug-hot'},
+    {'id': 'fantasia', 'nome': 'Fantasia e Ficção', 'icone': 'fa-wand-sparkles'},
+    {'id': 'basico', 'nome': 'Básicos', 'icone': 'fa-circle'},
+    {'id': 'sazonal', 'nome': 'Datas Especiais', 'icone': 'fa-gift'},
+]
+IDS_CATEGORIA = tuple(c['id'] for c in CATEGORIAS)
+_CATEGORIA_DOS_ANTIGOS = {
+    'gojo': 'anime', 'sukuna': 'anime', 'mahoraga': 'anime', 'dualidade': 'anime', 'manga': 'anime',
+    'relojoaria': 'fantasia', 'cyber': 'fantasia', 'eldoria': 'fantasia',
+    'cubos': 'jogos', 'mira': 'jogos', 'arcade': 'jogos',
+    'batida': 'cotidiano', 'quadra': 'esporte', 'basicos': 'basico', 'simbionte': 'quadrinhos',
+}
+for _tid, _cat in _CATEGORIA_DOS_ANTIGOS.items():
+    TEMAS[_tid]['categoria'] = _cat
+
 
 # ==========================================
 # PATENTES (substituem Novato/Explorador/...)
@@ -254,7 +282,10 @@ RARIDADES = [
 ORDEM_RARIDADE = {r['id']: i for i, r in enumerate(RARIDADES)}
 PRECOS = {
     'comum': {'nome': 120, 'placa': 120, 'faixa': 150, 'moldura': 180},
-    'raro':  {'nome': 350, 'placa': 350, 'faixa': 450, 'moldura': 550},
+    'raro':  {'nome': 350, 'placa': 350, 'faixa': 450, 'moldura': 550,
+              # temas gerados (Rodada 27): efeitos "raros" custam menos que os dos temas premium (épicos)
+              'efeito_avatar': 380, 'efeito_perfil': 550, 'efeito_fala': 220, 'efeito_radar': 200,
+              'efeito_chat': 220, 'som_call': 150, 'pin_nota': 200, 'efeito_servidor': 380},
     'epico': {'nome': 600, 'placa': 600, 'faixa': 750, 'moldura': 900,
               # temas "premium" (com efeitos): cada slot de efeito tem o seu preço
               'efeito_avatar': 450, 'efeito_perfil': 700, 'efeito_fala': 300, 'efeito_radar': 250,
@@ -376,6 +407,14 @@ _tema_premium('arcade', [
     ('efeito_servidor', 'Servidor Arcade', 'O ícone do servidor pisca em cores de fliperama (barra, cabeçalho e mapa).'),
 ])
 
+# ---- Rodada 26: tema Simbionte (preto, branco e o símbolo da aranha). Cada item se vende separado; o pacote leva os 4 visuais e os 2 efeitos. ----
+_item_loja('moldura', 'gosma', 'Gosma Negra', 'Um anel de gosma preta e brilhante, com bolhas e um reflexo que escorre em volta da foto.', 'simbionte', 'epico')
+_item_loja('nome', 'simbionte', 'Simbionte', 'Letras pretas de contorno branco que respiram: de vez em quando o brilho estoura, como a gosma acordando.', 'simbionte', 'epico')
+_item_loja('placa', 'olhos', 'Olhos Brancos', 'Gosma preta com dois olhos brancos e afiados que abrem, olham o seu nome e piscam.', 'simbionte', 'epico')
+_item_loja('faixa', 'invasao', 'Invasão', 'Tentáculos pretos se mexendo no escuro, com a aranha branca ao fundo e dois olhos que abrem de vez em quando.', 'simbionte', 'epico')
+_item_loja('efeito_avatar', 'simbionte', 'Simbionte', 'Tentáculos vivos em volta da foto. De tempos em tempos a gosma preta come a foto inteira, o símbolo branco da aranha aparece e ela recua pra borda.', 'simbionte', 'lendario')
+_item_loja('efeito_perfil', 'invasao', 'Invasão Negra', 'Tentáculos entram pelas bordas do cartão, tomam tudo e recuam, com a aranha branca piscando no meio. Some, espera uns segundos e recomeça.', 'simbionte', 'lendario')
+
 # ---- JJK: três temas lendários (12 itens cada: 4 visuais, 7 efeitos e o efeito de servidor) ----
 _tema_premium('gojo', [
     ('moldura', 'Infinito', 'Um anel de luz e, por fora, uma onda azul que se aproxima do avatar e nunca encosta.'),
@@ -466,7 +505,49 @@ _pacote_loja('gojo', 'Pacote Gojo', 'O tema Gojo completo: 4 visuais e 7 efeitos
 _pacote_loja('sukuna', 'Pacote Sukuna', 'O tema Sukuna completo: 4 visuais e 7 efeitos (avatar, perfil, fala, radar, chat, som e pin), equipados de uma vez.')
 _pacote_loja('mahoraga', 'Pacote Mahoraga', 'O tema Mahoraga completo: 4 visuais e 7 efeitos (avatar, perfil, fala, radar, chat, som e pin), equipados de uma vez.')
 _pacote_loja('jjk', 'Combo JJK: Gojo × Sukuna', 'O melhor dos dois lados no mesmo perfil: o Infinito e o som do Gojo, a aura, o nome em chamas e o domínio do Sukuna. Equipa 11 itens misturados.')
+_pacote_loja('simbionte', 'Pacote Simbionte', 'Gosma Negra, o nome, a placa de olhos brancos, a faixa Invasão e os dois efeitos (avatar e perfil), equipados de uma vez.')
 _pacote_loja('arcade', 'Pacote Arcade 8-bit', 'O tema Arcade 8-bit completo: 4 visuais e 7 efeitos (avatar, perfil, fala, radar, chat, som e pin), equipados de uma vez.')
+
+
+# ---- Rodada 27: temas GERADOS por tools/cosm/gerar.js (a especificação vive lá; aqui só se lê o app/cosm_gen.json que ele escreve) ----
+def _carregar_gerado():
+    import os
+    caminho = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cosm_gen.json')
+    if not os.path.isfile(caminho):
+        return {'arquivos': [], 'temas': [], 'itens': []}
+    with open(caminho, encoding='utf-8') as f:
+        dados = json.load(f)
+    for t in dados['temas']:
+        if t.get('existente'):          # estende um tema feito à mão (só ganha itens novos; o tema, o pacote e a vitrine já existem)
+            if t['id'] not in TEMAS:
+                raise ValueError(f"tema gerado marcado como existente não existe: {t['id']}")
+            continue
+        if t['id'] in TEMAS:
+            raise ValueError(f"tema gerado repete um tema existente: {t['id']}")
+        if t['categoria'] not in IDS_CATEGORIA:
+            raise ValueError(f"tema gerado {t['id']}: categoria desconhecida {t['categoria']}")
+        TEMAS[t['id']] = {'nome': t['nome'], 'cor': t['cor'], 'loja': True, 'gerado': True, 'categoria': t['categoria'], 'cores': t['cores'],
+                          'icone': t['icone'], 'lema': t['lema'], 'desc': t['desc'], 'premium': bool(t.get('premium')),
+                          'sem_hero': t.get('sem_hero', True), 'sem_pacote': bool(t.get('sem_pacote'))}
+    for i in dados['itens']:
+        chave = f"{i['tipo']}:{i['id']}"
+        if chave in CATALOGO:
+            raise ValueError(f'item gerado repete um item existente: {chave}')
+        _item_loja(i['tipo'], i['id'], i['nome'], i['desc'], i['tema'], i['raridade'], animado=i.get('animado', True))
+    por_tema = {}
+    for i in dados['itens']:
+        por_tema.setdefault(i['tema'], set()).add(i['tipo'])
+    for t in dados['temas']:
+        if t.get('existente'):
+            continue
+        if len(por_tema.get(t['id'], ())) >= 4 and not t.get('sem_pacote'):
+            _pacote_loja(t['id'], f"Pacote {t['nome']}", f"O tema {t['nome']} completo, equipado de uma vez.")
+        else:
+            TEMAS[t['id']]['sem_pacote'] = True
+    return dados
+
+
+GERADO = _carregar_gerado()
 
 
 def _pacote(tema):
