@@ -347,6 +347,7 @@ class DirectMessage(db.Model):
     attachment_name = db.Column(db.String(255), nullable=True)
     lida = db.Column(db.Boolean, default=False)
     reply_to_id = db.Column(db.Integer, nullable=True)   # ver Message.reply_to_id
+    edited_at = db.Column(db.DateTime, nullable=True)    # NULL = nunca editada (também é o que as DMs antigas têm)
 
     sender = db.relationship('Person', foreign_keys=[sender_id])
     receiver = db.relationship('Person', foreign_keys=[receiver_id])

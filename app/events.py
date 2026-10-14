@@ -3850,6 +3850,98 @@ def on_enviar_mensagem_direta(data):
         emit('erro_bazinga', {'msg': f'Não foi possível enviar a DM: {e}'})
 
 
+# Editar/apagar na DM tem handler PRÓPRIO: o id de uma DirectMessage não é o de uma Message (tabelas diferentes, a numeração se
+# cruza). Quando a DM usava `editar_mensagem`/`apagar_mensagem`, o servidor procurava aquele id entre as mensagens de CANAL: dava
+# "só pode editar as suas próprias" (era de outra pessoa) ou, pior, editava/apagava uma mensagem sua de um servidor.
+def _mensagem_direta_propria(usuario, dados, acao):
+    """A DM que a pessoa quer mexer, só se for dela (quem recebeu não edita nem apaga a mensagem do outro). None = nada a fazer."""
+    try:
+        msg_id = int(dados.get('msg_id')) if isinstance(dados, dict) else 0
+    except (TypeError, ValueError):
+        return None
+    msg = com_retry(lambda: DirectMessage.query.get(msg_id)) if msg_id > 0 else None
+    if not msg:
+        return None          # já apagada (a tela dela se acerta sozinha) ou id inventado
+    if msg.sender_id != usuario.id:
+        emit('erro_bazinga', {'msg': f'Você só pode {acao} as suas próprias mensagens.'})
+        return None
+    return msg
+
+
+def _salas_da_dm(autor_id, outro_id, rel):
+    """Quem recebe o aviso de edição/exclusão: quem mexeu e, a menos que tenha fechado/recusado a conversa, a outra ponta."""
+    salas = {sala_pessoal(autor_id)}
+    if not (rel and rel.status == 'pending' and oculta_pra(rel, outro_id)):
+        salas.add(sala_pessoal(outro_id))
+    return salas
+
+
+@socketio.on('editar_mensagem_direta')
+def editar_mensagem_direta(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        msg = _mensagem_direta_propria(usuario, dados, 'editar')
+        if not msg:
+            return
+        texto = (dados.get('texto') or '').strip()[:2000]
+        if not texto and not msg.attachment_url:
+            return
+
+        # Mesmas regras de quem manda mensagem: bloqueio corta, e quem não é amigo não manda link (senão era só editar pra burlar).
+        outro_id = msg.receiver_id
+        destinatario = com_retry(lambda: Person.query.get(outro_id))
+        rel = None if outro_id == usuario.id else com_retry(lambda: relacao_entre(usuario.id, outro_id))
+        if not destinatario or not com_retry(lambda: pode_trocar_dm(usuario, destinatario, rel)):
+            emit('erro_bazinga', {'msg': 'Não dá pra editar essa mensagem agora.'})
+            return
+        eh_amigo = outro_id == usuario.id or bool(rel and rel.status == 'accepted')
+        if not eh_amigo and texto_tem_link(texto):
+            emit('erro_bazinga', {'msg': f'Links só entre amigos. Peça amizade a {destinatario.name} primeiro.'})
+            return
+        if texto == (msg.content or ''):
+            return
+
+        def preparar():
+            msg.content = texto           # '' (e não None) quando só sobra o anexo: a coluna do Neon pode ser NOT NULL
+            msg.edited_at = br_now()
+
+        comitar_com_retry(preparar)
+        payload = {'msg_id': msg.id, 'texto': msg.content or '', 'editada': True}
+        for sala in _salas_da_dm(usuario.id, outro_id, rel):
+            emit('mensagem_direta_editada', payload, to=sala)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO EDITAR DM] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível editar a mensagem: {e}'})
+
+
+@socketio.on('apagar_mensagem_direta')
+def apagar_mensagem_direta(dados):
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    try:
+        msg = _mensagem_direta_propria(usuario, dados, 'apagar')
+        if not msg:
+            return
+        msg_id, outro_id = msg.id, msg.receiver_id
+        rel = None if outro_id == usuario.id else com_retry(lambda: relacao_entre(usuario.id, outro_id))
+
+        def preparar():
+            db.session.delete(msg)
+
+        comitar_com_retry(preparar)
+        # Apagar tira a bolha da tela das duas pontas (a mensagem some pra todo mundo, como no canal).
+        for sala in _salas_da_dm(usuario.id, outro_id, rel):
+            emit('mensagem_direta_apagada', {'msg_id': msg_id}, to=sala)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO APAGAR DM] {e}")
+        emit('erro_bazinga', {'msg': f'Não foi possível apagar a mensagem: {e}'})
+
+
 @socketio.on('marcar_dm_lida')
 def marcar_dm_lida(dados):
     """A pessoa abriu a conversa: zera o contador de não lidas (em todas as abas dela)."""

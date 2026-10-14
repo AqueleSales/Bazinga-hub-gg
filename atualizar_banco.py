@@ -277,6 +277,9 @@ def atualizar_banco():
             # 34. Conexões do perfil (Rodada 24): a tabela `conexao` nasce pelo create_all; só a contagem na pessoa entra aqui.
             add_column_se_nao_existir("person", "conexoes_qtd INTEGER")
 
+            # 35. Editar mensagem de DM: guarda quando foi editada pra marcar "(editada)" (NULL = nunca editada).
+            add_column_se_nao_existir("direct_message", "edited_at TIMESTAMP")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

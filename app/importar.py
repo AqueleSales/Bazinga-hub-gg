@@ -171,9 +171,10 @@ _UA_CONEXAO = 'Mozilla/5.0 (compatible; PantheonConexoes/1.0)'
 _TIPOS_TEXTO = ('text/html', 'application/xhtml+xml', 'application/json', 'text/plain', 'text/xml', 'application/xml', 'application/ld+json')
 
 
-def baixar_texto(url, aceita='text/html,application/json;q=0.9,*/*;q=0.1', limite=LIMITE_TEXTO_BYTES, extra=None, saltos=MAX_SALTOS):
+def baixar_texto(url, aceita='text/html,application/json;q=0.9,*/*;q=0.1', limite=LIMITE_TEXTO_BYTES, extra=None, saltos=MAX_SALTOS, corpo_em_erro=False):
     """GET de um endereço https público e devolve (status, tipo_de_conteudo, texto, endereco_final). Só lê tipos de TEXTO (HTML/JSON/XML);
-    imagem, PDF ou binário viram ErroImportar. Não levanta pra status 404/403 (devolve o status: quem chamou decide)."""
+    imagem, PDF ou binário viram ErroImportar. Não levanta pra status 404/403 (devolve o status: quem chamou decide).
+    `corpo_em_erro`: nos status diferentes de 200 devolve também o começo do corpo (2 KB), que as APIs usam pra explicar o motivo do erro."""
     atual = url
     for _ in range(saltos + 1):
         host, caminho = _validar_url(atual)
@@ -188,6 +189,9 @@ def baixar_texto(url, aceita='text/html,application/json;q=0.9,*/*;q=0.1', limit
                 continue
             tipo = (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
             if resp.status != 200:
+                if corpo_em_erro:
+                    corpo_erro, _passou = _ler(resp, 2048)
+                    return resp.status, tipo, corpo_erro.decode('utf-8', 'ignore'), atual
                 return resp.status, tipo, '', atual
             if tipo not in _TIPOS_TEXTO:
                 raise ErroImportar('Esse endereço não devolveu uma página.')

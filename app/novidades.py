@@ -9,6 +9,14 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 28, 'data': '14/10/2026', 'titulo': 'Editar e apagar mensagens nas DMs',
+        'itens': [
+            {'icone': 'fa-pen', 'titulo': 'Editar mensagem na DM funciona', 'texto': 'Antes, editar uma mensagem na conversa direta dava erro. Agora você edita (duplo clique ou no lápis) e o outro lado vê o "(editada)" na hora.'},
+            {'icone': 'fa-trash', 'titulo': 'Apagar mensagem na DM', 'texto': 'Só quem escreveu apaga, e a mensagem some da conversa pra vocês dois.'},
+            {'icone': 'fa-face-smile', 'titulo': 'Reagir e fixar ficam só nos canais', 'texto': 'Na DM esses dois botões saíram do menu: eles nunca tiveram onde guardar a reação da conversa direta.'},
+        ],
+    },
+    {
         'id': 27, 'data': '14/10/2026', 'titulo': 'Mais de cem temas novos no Armazém',
         'itens': [
             {'icone': 'fa-shapes', 'titulo': 'Armazém por categorias', 'texto': 'O Armazém agora se divide em Anime, Jogos, Quadrinhos, Esportes, Fofos, Sombrio, Dia a dia, Fantasia, Básicos e Datas Especiais. Clique numa categoria, ou filtre por tipo, tema, raridade e animação.'},

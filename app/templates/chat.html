@@ -996,6 +996,7 @@
 
         .context-menu.nao-sou-autor .autor-only { display: none; }
         .context-menu.nao-posso-apagar .apagar-only { display: none; }
+        #msg-context-menu.em-dm .so-canal { display: none !important; }   /* DM: sem reagir nem fixar (só existem em canal) */
 
         /* ==========================================
            CALENDÁRIO DO SERVIDOR
@@ -4249,11 +4250,11 @@
 
     <div id="msg-context-menu" class="context-menu">
         <div class="context-menu-item" id="ctx-reply">Responder <i class="fa-solid fa-reply"></i></div>
-        <div id="ctx-rapidas"><button type="button">❤️</button><button type="button">🔥</button><button type="button">😂</button><button type="button">👍</button><button type="button">🎉</button><button type="button">😮</button></div>
-        <div class="context-menu-item" id="ctx-react">Reagir <i class="fa-solid fa-face-smile"></i></div>
+        <div id="ctx-rapidas" class="so-canal"><button type="button">❤️</button><button type="button">🔥</button><button type="button">😂</button><button type="button">👍</button><button type="button">🎉</button><button type="button">😮</button></div>
+        <div class="context-menu-item so-canal" id="ctx-react">Reagir <i class="fa-solid fa-face-smile"></i></div>
         <div class="context-menu-item autor-only" id="ctx-edit">Editar mensagem <i class="fa-solid fa-pen"></i></div>
         <div class="context-menu-separator"></div>
-        <div class="context-menu-item" id="ctx-pin">Fixar mensagem <i class="fa-solid fa-thumbtack"></i></div>
+        <div class="context-menu-item so-canal" id="ctx-pin">Fixar mensagem <i class="fa-solid fa-thumbtack"></i></div>
         <div class="context-menu-item" id="ctx-copy">Copiar texto <i class="fa-solid fa-copy"></i></div>
         <div class="context-menu-item" id="ctx-copy-link">Copiar link do anexo <i class="fa-solid fa-link"></i></div>
         <div class="context-menu-item" id="ctx-copy-id">Copiar ID da mensagem <i class="fa-solid fa-hashtag"></i></div>
@@ -8852,9 +8853,9 @@
         }
 
         // Barra de ações que aparece no hover (reagir / editar / 3 pontinhos)
-        function htmlDasAcoes(souAutor) {
+        function htmlDasAcoes(souAutor, ehDM) {
             return `<div class="msg-actions">
-                        <button class="msg-action-btn btn-msg-react" title="Reagir"><i class="fa-regular fa-face-smile"></i></button>
+                        ${ehDM ? '' : `<button class="msg-action-btn btn-msg-react" title="Reagir"><i class="fa-regular fa-face-smile"></i></button>`}
                         ${souAutor ? `<button class="msg-action-btn btn-msg-edit" title="Editar"><i class="fa-solid fa-pen"></i></button>` : ''}
                         <button class="msg-action-btn btn-msg-reply" title="Responder (Alt + clique)"><i class="fa-solid fa-reply"></i></button>
                         <button class="msg-action-btn btn-msg-more" title="Mais"><i class="fa-solid fa-ellipsis"></i></button>
@@ -8925,7 +8926,7 @@
                 ? `<span class="msg-editada">(editada)</span>` : '';
             const anexoHtml = htmlDoAnexo(extras.anexo_url, extras.anexo_tipo, extras.anexo_nome, !!extras.animar);
             const reacoesHtml = htmlDasReacoes(id, extras.reacoes);
-            const acoesHtml = htmlDasAcoes(souAutor);
+            const acoesHtml = htmlDasAcoes(souAutor, container.id === 'dm-messages-container');
 
             // Link de convite do próprio site vira cartão animado (e some do texto); o resto da mensagem segue igual.
             const codigosConvite = codigosDeConvite(texto);
@@ -9230,6 +9231,8 @@
             return {
                 el: el,
                 id: el.getAttribute('data-msg-id'),
+                // DM e canal têm tabelas (e numeração) diferentes: o id de uma DM NUNCA pode ir pros eventos de canal.
+                dm: !!el.closest('#dm-messages-container'),
                 souAutor: el.getAttribute('data-sou-autor') === '1',
                 anexo: el.getAttribute('data-anexo') || null,
                 texto: el.getAttribute('data-texto') ?? (el.querySelector('.message-text')?.innerText.replace(/\(editada\)$/, '').trim() || '')
@@ -9287,6 +9290,7 @@
         function iniciarEdicao(el) {
             const dados = dadosDaMensagem(el);
             if (!dados || !dados.souAutor) return;
+            if (!Number(dados.id)) { showToast('Espere a mensagem terminar de enviar pra editar.', 'info'); return; }   // bolha otimista ainda sem id do servidor
 
             const alvo = el.querySelector('.message-text');
             const conteudo = el.querySelector('.message-content');
@@ -9306,7 +9310,8 @@
             input.focus();
             input.setSelectionRange(input.value.length, input.value.length);
 
-            const encerrar = () => { caixa.remove(); if (alvo) alvo.style.display = ''; };
+            let encerrada = false;   // remover a caixa focada dispara o blur, que chamava isto de novo (erro "node to be removed is no longer a child")
+            const encerrar = () => { if (encerrada) return; encerrada = true; caixa.remove(); if (alvo) alvo.style.display = ''; };
 
             input.addEventListener('keydown', (ev) => {
                 if (ev.key === 'Escape') { ev.preventDefault(); encerrar(); }
@@ -9314,7 +9319,7 @@
                     ev.preventDefault();
                     const novo = converterMencoes(input.value.trim());
                     if (novo && novo !== dados.texto) {
-                        socket.emit('editar_mensagem', { msg_id: Number(dados.id), texto: novo });
+                        socket.emit(dados.dm ? 'editar_mensagem_direta' : 'editar_mensagem', { msg_id: Number(dados.id), texto: novo });
                     }
                     encerrar();
                 }
@@ -9332,8 +9337,9 @@
 
             const menu = document.getElementById('msg-context-menu');
             menu.classList.toggle('nao-sou-autor', !dados.souAutor);
-            // Apagar: o autor sempre pode; o dono do servidor também.
-            const podeApagar = dados.souAutor || souDonoDoServidor(servidorAtivo());
+            menu.classList.toggle('em-dm', dados.dm);       // reagir e fixar só existem em canal (não há tabela disso pra DM)
+            // Apagar: o autor sempre pode; o dono do servidor também (menos na DM: lá só o autor).
+            const podeApagar = dados.souAutor || (!dados.dm && souDonoDoServidor(servidorAtivo()));
             menu.classList.toggle('nao-posso-apagar', !podeApagar);
             document.getElementById('ctx-copy-link').style.display = dados.anexo ? 'flex' : 'none';
             document.getElementById('ctx-copy').style.display = dados.texto ? 'flex' : 'none';
@@ -9399,7 +9405,7 @@
         // confirma com 'reacoes_atualizadas' e esse evento sobrescreve - então se algo falhar, a tela se corrige sozinha.
         function reagirOtimista(msgId, emoji) {
             socket.emit('reagir_mensagem', { msg_id: Number(msgId), emoji: emoji });
-            const msg = document.querySelector(`.message[data-msg-id="${Number(msgId)}"]`);
+            const msg = document.querySelector(`#messages-container .message[data-msg-id="${Number(msgId)}"]`);   // reação só existe em canal
             const caixa = msg && msg.querySelector('.msg-reacoes');
             if (!caixa) return;
             const atuais = [...caixa.querySelectorAll('.msg-reacao')].map(el => ({
@@ -9416,15 +9422,16 @@
 
         // ---------- REAÇÕES VINDAS DO SERVIDOR ----------
         socket.on('reacoes_atualizadas', function(dados) {
-            const msg = document.querySelector(`.message[data-msg-id="${dados.msg_id}"]`);
+            const msg = document.querySelector(`#messages-container .message[data-msg-id="${Number(dados.msg_id)}"]`);
             if (!msg) return;
             const antiga = msg.querySelector('.msg-reacoes');
             if (!antiga) return;
             antiga.outerHTML = htmlDasReacoes(dados.msg_id, dados.reacoes);
         });
 
-        socket.on('mensagem_editada', function(dados) {
-            const msg = document.querySelector(`.message[data-msg-id="${dados.msg_id}"]`);
+        // O id de canal e o de DM são de tabelas diferentes e se repetem: cada evento só mexe no seu container.
+        function aplicarMensagemEditada(container, dados) {
+            const msg = document.querySelector(`${container} .message[data-msg-id="${Number(dados.msg_id)}"]`);
             if (!msg) return;
             let p = msg.querySelector('.message-text');
             if (!p) {
@@ -9435,7 +9442,9 @@
             msg.setAttribute('data-texto', dados.texto || '');
             p.innerHTML = `${htmlTexto(dados.texto)}<span class="msg-editada">(editada)</span>`;
             p.style.display = '';
-        });
+        }
+        socket.on('mensagem_editada', (dados) => aplicarMensagemEditada('#messages-container', dados));
+        socket.on('mensagem_direta_editada', (dados) => aplicarMensagemEditada('#dm-messages-container', dados));
 
         // ---------- LIGHTBOX ----------
         function abrirLightbox(url, tipo) {
@@ -9716,7 +9725,7 @@
         });
 
         socket.on('mensagem_fixada', (dados) => {
-            const msgEl = document.querySelector(`.message[data-msg-id="${dados.msg_id}"]`);
+            const msgEl = document.querySelector(`#messages-container .message[data-msg-id="${Number(dados.msg_id)}"]`);
             if (msgEl) msgEl.classList.toggle('fixada', dados.fixada);
             showToast(dados.fixada ? "Mensagem fixada!" : "Mensagem desfixada.", "success");
             if (document.getElementById('painel-fixadas').style.display === 'flex') {
@@ -9751,14 +9760,20 @@
             // O backend recusa apagar mensagem dos outros, e sumir o elemento
             // antes da confirmação mentia pro usuário.
             const id = msgAlvoId;
+            const dm = !!(msgAlvo && msgAlvo.closest('#dm-messages-container'));
             fecharMenuMensagem();
             if (!id) return;
-            openConfirmModal("Apagar mensagem?", "Ela some pra todo mundo do canal.",
-                () => socket.emit('apagar_mensagem', { msg_id: Number(id) }));
+            if (!Number(id)) { showToast('Espere a mensagem terminar de enviar pra apagar.', 'info'); return; }
+            openConfirmModal("Apagar mensagem?", dm ? "Ela some da conversa, pra vocês dois." : "Ela some pra todo mundo do canal.",
+                () => socket.emit(dm ? 'apagar_mensagem_direta' : 'apagar_mensagem', { msg_id: Number(id) }));
         });
 
         socket.on('mensagem_apagada', function(dados) {
-            const msgEl = document.querySelector(`.message[data-msg-id="${dados.msg_id}"]`);
+            const msgEl = document.querySelector(`#messages-container .message[data-msg-id="${dados.msg_id}"]`);
+            if(msgEl) msgEl.remove();
+        });
+        socket.on('mensagem_direta_apagada', function(dados) {
+            const msgEl = document.querySelector(`#dm-messages-container .message[data-msg-id="${Number(dados.msg_id)}"]`);
             if(msgEl) msgEl.remove();
         });
 
@@ -15729,7 +15744,8 @@
             if (btn) { e.stopPropagation(); responderA(btn.closest('.message')); return; }
             const cit = e.target.closest && e.target.closest('.msg-citacao[data-reply-id]');
             if (cit) {
-                const alvo = document.querySelector('.message[data-msg-id="' + Number(cit.dataset.replyId) + '"]');
+                const raiz = cit.closest('#dm-messages-container, #messages-container') || document;   // o id de DM e o de canal se repetem: procura só na conversa da citação
+                const alvo = raiz.querySelector('.message[data-msg-id="' + Number(cit.dataset.replyId) + '"]');
                 if (alvo) { alvo.scrollIntoView({ block: 'center', behavior: 'smooth' }); alvo.classList.remove('destaque-resp'); void alvo.offsetWidth; alvo.classList.add('destaque-resp'); }
                 else showToast('Essa mensagem é mais antiga: role o histórico pra cima pra achar.', 'info');
                 return;

@@ -393,11 +393,22 @@ def buscar_spotify(pessoa_id, texto):
         for tentativa in (0, 1):
             tok = _token_spotify(renovar=bool(tentativa))
             try:
-                st, _tp, txt, _ = importar.baixar_texto(url, aceita='application/json', extra={'Authorization': f'Bearer {tok}'})
+                st, _tp, txt, _ = importar.baixar_texto(url, aceita='application/json', extra={'Authorization': f'Bearer {tok}'}, corpo_em_erro=True)
             except ErroImportar:
                 raise ErroMusica('O Spotify não respondeu agora. Tente de novo daqui a pouco.')
             if st != 401:
                 break                                                    # 401 = token vencido: pega outro e tenta uma vez
+    if st == 403 and 'premium' in (txt or '').lower():
+        # Um app do Spotify em modo de desenvolvimento só pesquisa se a conta DONA do app (a que criou as chaves) tiver Premium ativo.
+        # Não adianta tentar de novo daqui a pouco: bloqueia um tempo, não gasta a cota da pessoa e deixa o motivo no log do servidor.
+        print('[MUSICA] o Spotify recusou a pesquisa: a conta dona do app (developer.spotify.com/dashboard) precisa ter Premium ativo '
+              '(depois de ativar, pode levar algumas horas). Resposta: ' + ' '.join((txt or '').split())[:200])
+        _bloquear_spotify(1800)
+        with _trava:
+            d = _sp_pessoa.get(pessoa_id)
+            if d and d[1] > 0:
+                d[1] -= 1
+        raise ErroMusica('A pesquisa do Spotify está fora do ar por enquanto. A do YouTube continua funcionando.')
     if st == 429:
         _bloquear_spotify(300)
     if st != 200:

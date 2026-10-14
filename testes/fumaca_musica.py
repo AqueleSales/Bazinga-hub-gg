@@ -1,7 +1,7 @@
 """Rodada 25 (parte B): Música. Pesquisa pela API do YouTube (SIMULADA: não há chave real aqui), cache, cota (unidades por dia, teto por pessoa, bloqueio
 quando o Google responde 403/429/400), colar link de música/playlist (sem cota), eventos, 'adicionar à playlist do perfil' e o que o código promete
 (chave só no cabeçalho, player sempre visível, termos do YouTube)."""
-import os, sys, json, re
+import os, sys, json, re, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 import app.config as c
@@ -329,7 +329,7 @@ with app.app_context():
         if sp_modo['primeiro401'] and len(sp_chamadas) == 1:
             return 401, '', '', url
         if sp_modo['status'] != 200:
-            return sp_modo['status'], '', '', url
+            return sp_modo['status'], '', sp_modo.get('corpo', ''), url
         itens = [{'id': 'A' * 22, 'name': 'Faixa &amp; Cia', 'duration_ms': 213000, 'artists': [{'name': 'Banda'}, {'name': 'Outra'}],
                   'album': {'images': [{'url': 'https://i.scdn.co/image/grande'}, {'url': 'https://i.scdn.co/image/pequena'}]}},
                  {'id': 'curto', 'name': 'id inválido', 'artists': []},
@@ -350,7 +350,15 @@ with app.app_context():
     for st in (429, 403):
         sp_modo['status'] = st; mu._sp['bloqueado_ate'] = 0.0
         ok(levanta(lambda: mu.buscar_spotify(ids['Ana'], f'erro {st}')), f'Spotify {st} vira mensagem simples')
-    sp_modo['status'] = 200
+    # 403 "Active premium subscription required for the owner of the app": a conta dona do app no painel do Spotify está sem Premium.
+    # Não é "tente mais tarde": mensagem própria, bloqueio de ~30 min, não gasta a cota da pessoa e o motivo vai pro log.
+    sp_modo['status'] = 403; sp_modo['corpo'] = '{"error":"Active premium subscription required for the owner of the app."}'
+    mu._sp['bloqueado_ate'] = 0.0; mu._cache.clear(); mu._sp_pessoa.clear(); sp_chamadas.clear()
+    ok(levanta(lambda: mu.buscar_spotify(ids['Ana'], 'sem premium'), 'fora do ar'), '403 por falta de Premium do dono do app tem mensagem própria (YouTube segue funcionando)')
+    ok(mu._sp['bloqueado_ate'] > time.time() + 1500 and mu._sp_pessoa[ids['Ana']][1] == 0, 'esse erro bloqueia ~30 min e não gasta a cota de pesquisas da pessoa')
+    n_chamadas = len(sp_chamadas)
+    ok(levanta(lambda: mu.buscar_spotify(ids['Beto'], 'outra coisa')) and len(sp_chamadas) == n_chamadas, 'bloqueado, as próximas pesquisas nem chegam no Spotify')
+    sp_modo['status'] = 200; sp_modo['corpo'] = ''; mu._sp['bloqueado_ate'] = 0.0; mu._cache.clear()
     ok(levanta(lambda: mu.buscar_spotify(ids['Ana'], 'bloqueada'), 'indisponível agora') or True, 'depois de 429 a pesquisa dele fica bloqueada um tempo')
     mu._sp['bloqueado_ate'] = 0.0; mu._cache.clear()
     teto = mu.MAX_BUSCAS_SPOTIFY_PESSOA_DIA; mu.MAX_BUSCAS_SPOTIFY_PESSOA_DIA = 2; mu._sp_pessoa.clear()

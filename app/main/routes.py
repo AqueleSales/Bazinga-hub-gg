@@ -709,6 +709,7 @@ def get_dms(target_id):
             'anexo_url': msg.attachment_url,
             'anexo_tipo': msg.attachment_type,
             'anexo_nome': msg.attachment_name,
+            'editada': msg.edited_at is not None,
             'hora': formatar_data(msg.timestamp),
             'cor': msg.sender.role.color if msg.sender.role else '#5865F2'
         })
