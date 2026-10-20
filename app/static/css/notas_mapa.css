@@ -1,0 +1,64 @@
+/* Respostas e reações nas notas do mapa (Rodada 29). Visual chapado: sem degradê, sem vidro; a cor de acento é a da própria nota (--note-color).
+   Só transform/opacity em movimento (e só em transição curta). O balão minimizado esconde tudo (`.geo-note-bubble.minimized *`). */
+.geo-note-bubble:not(.minimized) { min-width: 284px; }
+.geo-note-bubble .nota-thread { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .18); min-width: 0; cursor: default; }
+.geo-note-bubble .nota-thread:empty { display: none; }
+.geo-note-wrapper .nota-thread, .geo-note-wrapper .nota-thread * { user-select: text; -webkit-user-select: text; }
+
+/* reações */
+.nota-thread .nt-reacoes { display: flex; flex-wrap: wrap; gap: 3px; }
+.nota-thread .nt-r { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 30px; height: 26px; padding: 0 6px; border: 1.5px solid rgba(255, 255, 255, .2); border-radius: 13px;
+    background: rgba(0, 0, 0, .28); color: #fff; font: 800 11px/1 inherit; cursor: pointer; transition: transform .12s ease, background-color .12s ease, border-color .12s ease; }
+.nota-thread .nt-r .nt-e { font-size: 13px; line-height: 1; }
+.nota-thread .nt-r .nt-e img.emoji { width: 14px; height: 14px; vertical-align: middle; }
+.nota-thread .nt-r.vazio { opacity: .55; }
+.nota-thread .nt-r:hover { opacity: 1; background: rgba(0, 0, 0, .5); transform: translateY(-1px); }
+.nota-thread .nt-r.minha { opacity: 1; background: var(--note-color, var(--brand-color)); border-color: #fff; }
+.nota-thread .nt-r:focus-visible, .nota-thread .nt-bt:focus-visible, .nota-thread .nt-envia:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+/* respostas: embaixo da nota, em ordem */
+.nota-thread .nt-respostas { display: flex; flex-direction: column; gap: 5px; max-height: 124px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; scrollbar-width: thin; }
+.nota-thread .nt-respostas[hidden], .nota-thread .nt-form[hidden], .nota-thread .nt-aviso[hidden] { display: none; }
+.nota-thread .nt-resp { background: rgba(0, 0, 0, .28); border-left: 3px solid rgba(255, 255, 255, .28); border-radius: 4px 9px 9px 4px; padding: 5px 8px 6px; }
+.nota-thread .nt-resp.amigo { border-left-color: var(--green-color, #23a559); }
+.nota-thread .nt-resp.minha { border-left-color: #fff; background: rgba(0, 0, 0, .42); }
+.nota-thread .nt-cab { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 10.5px; font-weight: 800; }
+.nota-thread .nt-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.nota-thread .nt-tag { flex: none; padding: 1px 5px; border-radius: 8px; background: #fff; color: #111; font-size: 8.5px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
+.nota-thread .nt-amigo { flex: none; font-size: 9px; color: var(--green-color, #23a559); }
+.nota-thread .nt-quando { margin-left: auto; flex: none; opacity: .6; font-size: 9.5px; font-weight: 700; }
+.nota-thread .nt-bt { flex: none; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #fff; opacity: .55; font-size: 10px; cursor: pointer; }
+.nota-thread .nt-bt:hover { opacity: 1; background: rgba(255, 255, 255, .16); }
+.nota-thread .nt-bt[data-a="denunciar"]:hover { background: var(--red-color, #da373c); }
+.nota-thread .nt-txt { margin-top: 2px; font-size: 12.5px; font-weight: 600; line-height: 1.35; word-break: break-word; }
+
+/* escrever */
+.nota-thread .nt-form { display: flex; gap: 4px; }
+.nota-thread .nt-form input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 1.5px solid rgba(255, 255, 255, .25); border-radius: 15px; background: rgba(0, 0, 0, .35); color: #fff; font: 600 12.5px/1 inherit; outline: none; }
+.nota-thread .nt-form input::placeholder { color: rgba(255, 255, 255, .55); }
+.nota-thread .nt-form input:focus { border-color: #fff; }
+.nota-thread .nt-form input:read-only { opacity: .6; }
+.nota-thread .nt-envia { flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: var(--note-color, var(--brand-color)); color: #fff; font-size: 12px; cursor: pointer; transition: transform .12s ease; }
+.nota-thread .nt-envia:hover { transform: scale(1.1); }
+.nota-thread.enviando .nt-envia { opacity: .5; pointer-events: none; }
+.nota-thread .nt-aviso { font-size: 10.5px; font-weight: 700; line-height: 1.35; opacity: .75; }
+.nota-thread .nt-aviso i { margin-right: 3px; font-size: 9.5px; }
+
+/* seletor "Quem pode responder" do modal da nota */
+#note-respostas-modo { flex-wrap: wrap; }
+.nota-resp-dica { margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--text-muted); }
+
+/* caixa de entrada: aviso de resposta */
+.ib-ico.nota { background: #0e9f9a; }
+
+@media (max-width: 720px) {
+    .geo-note-bubble:not(.minimized) { min-width: 276px; max-width: calc(100vw - 40px); }
+    .nota-thread .nt-r { min-width: 32px; height: 32px; padding: 0 5px; }
+    .nota-thread .nt-form input { height: 36px; font-size: 16px; }   /* 16px: o iPhone não dá zoom sozinho ao focar */
+    .nota-thread .nt-envia { width: 36px; height: 36px; }
+    .nota-thread .nt-bt { width: 28px; height: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .nota-thread .nt-r, .nota-thread .nt-envia { transition: none; }
+}
+body.rolando .nota-thread * { transition: none !important; }

@@ -656,7 +656,7 @@ const Bazar = (() => {
     }
 
     function secaoModeracao() {
-        const TIPO = { loja: 'Loja', produto: 'Produto', nota: 'Nota do mapa', servidor: 'Servidor do mapa', usuario: 'Pessoa' };
+        const TIPO = { loja: 'Loja', produto: 'Produto', nota: 'Nota do mapa', resposta: 'Resposta de nota', servidor: 'Servidor do mapa', usuario: 'Pessoa' };
         if (moderacao === null) return '<div class="bz-vazio"><i class="fa-solid fa-spinner fa-spin"></i>Carregando...</div>';
         return `<p style="margin:0 0 12px;color:var(--text-muted);font-size:13.5px">Denúncias ainda não revisadas. "Restaurar" dispensa as denúncias e devolve o item; "Remover" derruba.</p>
             <div class="bz-lista">${moderacao.map((f) => `<div class="bz-mod ${f.alvo.oculta ? 'oculta' : ''}">

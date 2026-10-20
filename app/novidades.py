@@ -9,6 +9,14 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 29, 'data': '19/10/2026', 'titulo': 'Responder e reagir nas notas do mapa',
+        'itens': [
+            {'icone': 'fa-comment-dots', 'titulo': 'Responda uma nota', 'texto': 'Chegou perto de uma nota? Abra o balão e escreva embaixo dela. As respostas aparecem em ordem e a resposta de um amigo ganha o selo de amigo. Quem deixou a nota recebe um aviso na caixa de entrada.'},
+            {'icone': 'fa-face-smile', 'titulo': 'Reaja com um toque', 'texto': 'Seis reações (coração, risada, joinha, fogo, surpresa e tristeza). Só o total aparece: ninguém sabe quem reagiu.'},
+            {'icone': 'fa-user-lock', 'titulo': 'Você escolhe quem responde', 'texto': 'Ao deixar ou editar uma nota, marque se respondem todos, só os seus amigos ou ninguém. No modo "só amigos" as respostas só aparecem pra você e seus amigos. Dá pra apagar qualquer resposta na sua nota e denunciar as que passarem do limite.'},
+        ],
+    },
+    {
         'id': 28, 'data': '14/10/2026', 'titulo': 'Editar e apagar mensagens nas DMs',
         'itens': [
             {'icone': 'fa-pen', 'titulo': 'Editar mensagem na DM funciona', 'texto': 'Antes, editar uma mensagem na conversa direta dava erro. Agora você edita (duplo clique ou no lápis) e o outro lado vê o "(editada)" na hora.'},

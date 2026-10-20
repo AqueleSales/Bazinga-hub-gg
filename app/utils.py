@@ -830,6 +830,18 @@ MAX_NOTAS_ATIVAS_POR_PESSOA = 20
 DENUNCIAS_PARA_OCULTAR = 3
 MOTIVOS_DENUNCIA = ('+18', 'assedio', 'spam', 'ilegal', 'outro')
 
+# Respostas e reações nas notas do mapa (Rodada 29; a regra toda mora em notas_mapa.py).
+# Quem pode responder é escolha do AUTOR da nota. Mudar o padrão aqui vale pra toda nota que ainda não escolheu (coluna NULL).
+MODOS_RESPOSTA_NOTA = ('todos', 'amigos', 'ninguem')
+RESPOSTAS_PADRAO = 'todos'
+# Reações de emoji da nota: lista FECHADA (o servidor recusa o resto e manda esta lista ao cliente, que não tem cópia própria).
+REACOES_NOTA = ('❤️', '😂', '👍', '🔥', '😮', '😢')
+
+
+def modo_resposta_da_nota(n):
+    modo = getattr(n, 'respostas_modo', None)
+    return modo if modo in MODOS_RESPOSTA_NOTA else RESPOSTAS_PADRAO
+
 
 def distancia_m(lat1, lng1, lat2, lng2):
     """Distância em metros entre dois pontos (haversine)."""
@@ -911,13 +923,14 @@ def garantir_username(usuario):
     comitar_com_retry(preparar)
 
 
-def dados_do_mapa_perto(lat, lng, amigos_ids=None):
+def dados_do_mapa_perto(lat, lng, amigos_ids=None, viewer_id=None):
     """Notas e servidores plantados dentro do raio de quem está olhando.
 
     Só o que está perto sai do servidor (privacidade); o resto nem chega ao
     navegador. Itens expirados ou escondidos por denúncia ficam de fora.
     Nota de AMIGO aparece no alcance grande (o mesmo dos servidores): senão duas pessoas a 5 km uma da outra
     nunca viam as notas uma da outra, mesmo sendo amigas.
+    `viewer_id` (quem olha) deixa a nota levar as respostas que ELE pode ver e as reações dele; sem ele, só as respostas abertas a todos.
     """
     from math import cos, radians
     from sqlalchemy import or_, and_
@@ -945,8 +958,12 @@ def dados_do_mapa_perto(lat, lng, amigos_ids=None):
             and_(GeoNote.expires_at == None, GeoNote.timestamp > agora - timedelta(hours=24))),   # noqa: E711
         or_(GeoNote.oculta == None, GeoNote.oculta == False),            # noqa: E711,E712
     ).options(joinedload(GeoNote.author)).all()
-    notas = [nota_para_json(n, agora) for n in notas_db
-             if distancia_m(lat, lng, n.lat, n.lng) <= (RAIO_SERVIDORES_M if n.author_id in amigos_ids else RAIO_NOTAS_M)]
+    notas_vistas = [n for n in notas_db
+                    if distancia_m(lat, lng, n.lat, n.lng) <= (RAIO_SERVIDORES_M if n.author_id in amigos_ids else RAIO_NOTAS_M)]
+    notas = [nota_para_json(n, agora) for n in notas_vistas]
+    if notas_vistas:
+        from . import notas_mapa
+        notas_mapa.anexar(notas, notas_vistas, viewer_id, amigos_ids)
 
     a, b, c, d = caixa(RAIO_SERVIDORES_M)
     servers_db = MapServer.query.filter(
@@ -958,7 +975,8 @@ def dados_do_mapa_perto(lat, lng, amigos_ids=None):
                if distancia_m(lat, lng, s.lat, s.lng) <= RAIO_SERVIDORES_M]
 
     return {'notas': notas, 'servers': servers,
-            'raio_notas_m': RAIO_NOTAS_M, 'raio_servidores_m': RAIO_SERVIDORES_M}
+            'raio_notas_m': RAIO_NOTAS_M, 'raio_servidores_m': RAIO_SERVIDORES_M,
+            'reacoes_permitidas': list(REACOES_NOTA)}
 
 
 def nota_para_json(n, agora=None):
@@ -975,7 +993,8 @@ def nota_para_json(n, agora=None):
         'id': n.id, 'lat': n.lat, 'lng': n.lng, 'texto': n.text,
         'autor': n.author.name if n.author else '???', 'autor_id': n.author_id,
         'cor': n.color, 'icone': n.icone, 'restante_s': restante,
-        'pin': equipados_da_pessoa(n.author).get('pin_nota') if n.author else None
+        'pin': equipados_da_pessoa(n.author).get('pin_nota') if n.author else None,
+        'respostas_modo': modo_resposta_da_nota(n)
     }
 
 

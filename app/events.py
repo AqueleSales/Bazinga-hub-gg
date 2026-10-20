@@ -9,7 +9,7 @@ import re
 import time
 from . import socketio, APP_VERSAO
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
-                     GeoNote, MapServer, Reaction, Invite, Event, Friendship,
+                     GeoNote, GeoNoteResposta, GeoNoteReacao, MapServer, Reaction, Invite, Event, Friendship,
                      Denuncia, Notificacao, Silenciado, BazarLoja, BazarProduto, server_members, channel_members)
 from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
@@ -23,6 +23,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
 from . import loja as armazem
+from .notas_mapa import modo_valido as modo_resposta_valido
 from .passe import titulo_publico
 from .efeitos import mapa_para_cliente as efeitos_custom_mapa
 from .bazar import contar_pendencias as bazar_pendencias
@@ -1892,7 +1893,7 @@ def mapa_pedir_arredores(dados):
     centros_mapa[request.sid] = pos
     try:
         amigos, colegas, _srv = com_retry(lambda: contatos_do_mapa(usuario))
-        d = com_retry(lambda: dados_do_mapa_perto(pos[0], pos[1], amigos))
+        d = com_retry(lambda: dados_do_mapa_perto(pos[0], pos[1], amigos, viewer_id=usuario.id))
         d['centro'] = {'lat': pos[0], 'lng': pos[1]}
         emit('mapa_arredores', d)
         # E onde cada amigo/colega está agora (sem esperar a pessoa se mexer).
@@ -1926,7 +1927,7 @@ def mapa_explorar(dados):
         return
     _explorar_ts[request.sid] = agora
     try:
-        d = com_retry(lambda: dados_do_mapa_perto(pos[0], pos[1], None))
+        d = com_retry(lambda: dados_do_mapa_perto(pos[0], pos[1], None, viewer_id=usuario.id))
         d['centro'] = {'lat': pos[0], 'lng': pos[1]}
         d['explorando'] = True
         emit('mapa_arredores', d)
@@ -2128,7 +2129,8 @@ def criar_geonote(dados):
             GeoNote.query.filter(GeoNote.expires_at != None, GeoNote.expires_at < agora - timedelta(days=1)).delete()  # noqa: E711
             nota = GeoNote(
                 lat=pos[0], lng=pos[1], text=texto, color=cor, icone=icone,
-                author_id=usuario.id, duration_hours=duracao, expires_at=expira_em
+                author_id=usuario.id, duration_hours=duracao, expires_at=expira_em,
+                respostas_modo=modo_resposta_valido(dados.get('respostas_modo'))
             )
             db.session.add(nota)
             return nota
@@ -2162,6 +2164,8 @@ def editar_geonote(dados):
                 nota.color = dados.get('cor') or nota.color
             if 'icone' in dados:
                 nota.icone = (dados.get('icone') or '').strip()[:16] or None
+            if 'respostas_modo' in dados:
+                nota.respostas_modo = modo_resposta_valido(dados.get('respostas_modo'))
 
         comitar_com_retry(preparar)
         _emitir_perto('geonote_editada', nota_para_json(nota), nota.lat, nota.lng, RAIO_NOTAS_M, tambem_sid=request.sid)
@@ -2185,6 +2189,9 @@ def apagar_geonote(dados):
         nota_id = nota.id
 
         def preparar():
+            # Respostas e reações vão embora com a nota (o banco também faz ON DELETE CASCADE; aqui é explícito pra valer em qualquer banco).
+            GeoNoteResposta.query.filter_by(note_id=nota_id).delete(synchronize_session=False)
+            GeoNoteReacao.query.filter_by(note_id=nota_id).delete(synchronize_session=False)
             db.session.delete(nota)
 
         comitar_com_retry(preparar)
@@ -2237,7 +2244,8 @@ def copiar_geonote(dados):
 
         def preparar():
             copia = GeoNote(lat=pos[0], lng=pos[1], text=nota.text, color=nota.color, icone=nota.icone,
-                            author_id=usuario.id, duration_hours=horas, expires_at=agora + timedelta(hours=horas))
+                            author_id=usuario.id, duration_hours=horas, expires_at=agora + timedelta(hours=horas),
+                            respostas_modo=nota.respostas_modo)   # as respostas e reações NÃO se copiam: a cópia nasce limpa
             db.session.add(copia)
             return copia
 
@@ -2363,7 +2371,7 @@ def denunciar(dados):
 
     tipo = (dados or {}).get('tipo')
     motivo = (dados or {}).get('motivo')
-    if tipo not in ('nota', 'servidor', 'usuario', 'loja', 'produto') or motivo not in MOTIVOS_DENUNCIA:
+    if tipo not in ('nota', 'servidor', 'usuario', 'loja', 'produto', 'resposta') or motivo not in MOTIVOS_DENUNCIA:
         emit('erro_bazinga', {'msg': 'Denúncia inválida.'})
         return
     try:
@@ -2372,14 +2380,15 @@ def denunciar(dados):
         return
 
     try:
-        modelo = {'nota': GeoNote, 'servidor': MapServer, 'usuario': Person, 'loja': BazarLoja, 'produto': BazarProduto}[tipo]
+        modelo = {'nota': GeoNote, 'servidor': MapServer, 'usuario': Person, 'loja': BazarLoja, 'produto': BazarProduto,
+                  'resposta': GeoNoteResposta}[tipo]
         alvo = com_retry(lambda: modelo.query.get(alvo_id))
         if not alvo:
             emit('erro_bazinga', {'msg': 'Isso já não existe mais.'})
             return
         if tipo == 'usuario':
             dono_id = alvo.id
-        elif tipo == 'nota':
+        elif tipo in ('nota', 'resposta'):
             dono_id = alvo.author_id
         elif tipo == 'produto':
             dono_id = alvo.loja.owner_id
@@ -2410,6 +2419,8 @@ def denunciar(dados):
         if escondeu['v']:
             if tipo in ('loja', 'produto'):
                 emit('bazar_mudou', {'loja_id': alvo_id if tipo == 'loja' else None}, broadcast=True)
+            elif tipo == 'resposta':
+                emit('geonote_resposta_apagada', {'id': alvo_id, 'note_id': alvo.note_id}, broadcast=True)
             else:
                 emit('geonote_apagada' if tipo == 'nota' else 'servidor_mapa_apagado', {'id': alvo_id}, broadcast=True)
         print(f"[DENUNCIA] {usuario.name} denunciou {tipo} #{alvo_id} ({motivo})")
@@ -4306,3 +4317,7 @@ from . import explorar_events  # noqa: E402,F401
 # Conexões do perfil (links de outras plataformas, currículo, GitHub): handlers em outro arquivo, também no FIM (importa daqui).
 from . import conexoes_events  # noqa: E402,F401
 from . import musica_events  # noqa: E402,F401
+
+
+# Respostas e reações nas notas do mapa (Rodada 29): handlers em outro arquivo, também no FIM (importa daqui centros_mapa, _emitir_perto...).
+from . import notas_mapa_events  # noqa: E402,F401

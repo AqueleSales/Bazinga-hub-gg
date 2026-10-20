@@ -2980,6 +2980,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/efeitos.css') }}?v={{ efeitos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/explorar.css') }}?v={{ explorar_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mapa_social.css') }}?v={{ mapa_social_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notas_mapa.css') }}?v={{ notas_mapa_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conexoes.css') }}?v={{ conexoes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
@@ -3625,6 +3626,16 @@
                         <button class="q-btn active" data-time="24">1 Dia</button>
                         <button class="q-btn" data-time="168">7 Dias</button>
                     </div>
+                </div>
+
+                <div>
+                    <span class="control-label">Quem pode responder</span>
+                    <div class="modal-btn-group" id="note-respostas-modo" role="group" aria-label="Quem pode responder a esta nota">
+                        <button type="button" class="q-btn active" data-modo="todos">Todos</button>
+                        <button type="button" class="q-btn" data-modo="amigos">Só amigos</button>
+                        <button type="button" class="q-btn" data-modo="ninguem">Desligado</button>
+                    </div>
+                    <p class="nota-resp-dica">Quem estiver no alcance da nota pode reagir. As respostas aparecem embaixo da nota; as de amigos ganham um selo.</p>
                 </div>
 
                 <div>
@@ -4951,6 +4962,7 @@
     <script src="{{ url_for('static', filename='js/efeitos.js') }}?v={{ efeitos_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/explorar.js') }}?v={{ explorar_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/mapa_social.js') }}?v={{ mapa_social_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/notas_mapa.js') }}?v={{ notas_mapa_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
@@ -7807,9 +7819,16 @@
         });
 
         // Modal de NOTA
-        function abrirModalNota(modo, id = null, txt = "", cor = "#5865F2", icone = "💬") {
+        function definirModoRespostasNota(modo) {
+            document.querySelectorAll('#note-respostas-modo .q-btn').forEach(b => b.classList.toggle('active', b.dataset.modo === (modo || 'todos')));
+        }
+        function lerModoRespostasNota() {
+            return document.querySelector('#note-respostas-modo .q-btn.active')?.dataset.modo || 'todos';
+        }
+        function abrirModalNota(modo, id = null, txt = "", cor = "#5865F2", icone = "💬", respostasModo = 'todos') {
             if (modo === 'create' && !exigirLocalizacao(true)) return;
             document.getElementById('note-modal').style.display = 'flex';
+            definirModoRespostasNota(modo === 'create' ? 'todos' : respostasModo);
             definirIconeNota(modo === 'create' ? '💬' : icone);
             document.getElementById('note-duration-group').style.display = modo === 'create' ? '' : 'none';
             const rotuloDuracao = document.getElementById('note-duration-group').previousElementSibling;
@@ -7962,7 +7981,7 @@
             if (mode === 'note') {
                 const texto = document.getElementById('note-text-input').value;
                 if (typeof socket !== 'undefined' && socket.connected) {
-                    socket.emit('editar_geonote', { id: editingItemId, texto: texto, cor: selectedNoteColor, icone: notaIcone });
+                    socket.emit('editar_geonote', { id: editingItemId, texto: texto, cor: selectedNoteColor, icone: notaIcone, respostas_modo: lerModoRespostasNota() });
                 }
             } else {
                 const vagasNum = lerValorLimite('server-tickets-input', 'server-tickets-unlimited-btn');
@@ -8083,7 +8102,7 @@
                     // notas não sumiam com o tempo. Agora vai junto.
                     const duracao = parseInt(document.querySelector('#note-duration-group .q-btn.active')?.dataset.time) || 24;
                     if(typeof socket !== 'undefined' && socket.connected) {
-                        socket.emit('criar_geonote', { lat: e.latlng.lat, lng: e.latlng.lng, texto: texto, cor: selectedNoteColor, icone: notaIcone, duracao: duracao });
+                        socket.emit('criar_geonote', { lat: e.latlng.lat, lng: e.latlng.lng, texto: texto, cor: selectedNoteColor, icone: notaIcone, duracao: duracao, respostas_modo: lerModoRespostasNota() });
                         showToast("Salvando nota no banco...", "info");
                     } else {
                         showToast("Sem conexão com o servidor. Recarregue a página e tente de novo.", "error");
@@ -8413,7 +8432,11 @@
             geoNotesAtivas.filter(n => !idsNotas.has(n.id)).forEach(n => removerDoMapa('nota', n.id));
             const idsSrv = new Set((servers || []).map(s => s.id));
             serverMarkersAtivos.filter(s => !idsSrv.has(s.id)).forEach(s => removerDoMapa('servidor', s.id));
-            (notas || []).forEach(n => { if (!geoNotesAtivas.some(x => x.id === n.id)) renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.cor || '#5865F2', n.autor_id, n); });
+            (notas || []).forEach(n => {
+                const ja = geoNotesAtivas.find(x => x.id === n.id);
+                if (ja) NotasMapa.sincronizar(ja, n);   // o servidor é a verdade das respostas e reações (andou 150 m, reconectou...)
+                else renderizarGeoNote(n.id, n.lat, n.lng, n.texto, n.autor, n.cor || '#5865F2', n.autor_id, n);
+            });
             (servers || []).forEach(s => {
                 if (serverMarkersAtivos.some(x => x.id === s.id)) return;
                 renderizarServidorMapa(s.id, s.lat, s.lng, s.name, s.owner, s.vagas || 'ilimitado', s.online || 1, s.server_id, s.owner_id, s.icon_url, s);
@@ -8436,12 +8459,15 @@
             if (!bolha) return;
             clearTimeout(nota.timerAberta);
             bolha.classList.remove('minimized');
+            elevarNota(nota, true);
+            NotasMapa.pintar(nota);
             const tempo = bolha.querySelector('.nota-tempo'); if (tempo) tempo.textContent = 'expira em ' + textoRestante(nota.venceEm);
             const fechar = () => {
                 if (nota.fixaAberta) return;
                 const wrap = nota.marker.getElement()?.querySelector('.geo-note-wrapper');
                 if (wrap && wrap.matches(':hover')) { nota.timerAberta = setTimeout(fechar, 1500); return; }   // mouse em cima: espera
                 bolha.classList.add('minimized');
+                elevarNota(nota, false);
             };
             nota.timerAberta = setTimeout(fechar, ms);
         }
@@ -8451,6 +8477,7 @@
             const bolha = el?.querySelector('.geo-note-bubble'), wrap = el?.querySelector('.geo-note-wrapper');
             nota.fixaAberta = false; clearTimeout(nota.timerAberta);
             if (bolha) bolha.classList.add('minimized');
+            elevarNota(nota, false);
             // tira o mouse "de cima" por um instante, senão o hover reabre na hora
             if (wrap) { wrap.style.pointerEvents = 'none'; setTimeout(() => { wrap.style.pointerEvents = ''; }, 450); }
         }
@@ -8498,7 +8525,7 @@
             const venceEm = extras && extras.restante_s != null ? Date.now() + extras.restante_s * 1000 : null;
             const acoesHtml = isDono
                 ? `<div class="nota-acoes">
-                       <button title="Editar" onclick="event.stopPropagation(); abrirModalNota('edit', ${Number(id)}, ${escJs(texto)}, ${escJs(cor)}, ${escJs(icone)})"><i class="fa-solid fa-pen"></i></button>
+                       <button title="Editar" onclick="event.stopPropagation(); abrirModalNota('edit', ${Number(id)}, ${escJs(texto)}, ${escJs(cor)}, ${escJs(icone)}, ${escJs((extras && extras.respostas_modo) || 'todos')})"><i class="fa-solid fa-pen"></i></button>
                        <button class="perigo" title="Apagar" onclick="event.stopPropagation(); apagarItem('note', ${Number(id)})"><i class="fa-solid fa-trash"></i></button>
                    </div>`
                 : `<div class="nota-acoes">
@@ -8519,6 +8546,7 @@
                             <span>${esc(texto)}</span>
                             <span style="font-size:9px; opacity:0.6; font-weight:800; margin-top:4px; text-transform:uppercase;">De: ${esc(autor)}</span>
                             <span class="nota-tempo">${venceEm ? 'expira em ' + esc(textoRestante(venceEm)) : ''}</span>
+                            ${NotasMapa.esqueleto()}
                             ${acoesHtml}
                         </div>
                     </div>
@@ -8529,9 +8557,13 @@
             // Joga no radar! (texto/cor guardados para redesenhar na edição)
             const nota = { id: id, lat: lat, lng: lng, marker: marker, texto: texto, cor: cor, autor: autor,
                            autorId: autorId, icone: icone, venceEm: venceEm, perto: false, fixaAberta: false,
-                           pin: (extras && extras.pin) || null };
+                           pin: (extras && extras.pin) || null,
+                           // respostas e reações (Rodada 29): o servidor manda o que ESTA pessoa pode ver (notas_mapa.py)
+                           modo: (extras && extras.respostas_modo) || 'todos', respostas: (extras && extras.respostas) || [],
+                           reacoes: (extras && extras.reacoes) || [], minhas: (extras && extras.minhas) || [] };
             geoNotesAtivas.push(nota);
             emojificar(marker.getElement() || document.createElement('div'));
+            NotasMapa.montar(nota);
 
             // clique no balão = deixa aberto (até apertar o X vermelho)
             const el = marker.getElement();
@@ -8543,6 +8575,9 @@
                         // Abre só por clique (ou sozinha, ao chegar perto) e fica aberta até apertar o X vermelho.
                         nota.fixaAberta = true; clearTimeout(nota.timerAberta);
                         b.classList.remove('minimized');
+                        elevarNota(nota, true);
+                        NotasMapa.pintar(nota);
+                        garantirNotaVisivel(nota);
                         const tempo = b.querySelector('.nota-tempo'); if (tempo) tempo.textContent = 'expira em ' + textoRestante(nota.venceEm);
                     }
                 });
@@ -8556,6 +8591,29 @@
                     }
                 }
             }
+        }
+
+        // Deixa a nota aberta (até apertar o X) e traz pra dentro da tela: o balão com conversa é alto e cresce pra cima.
+        function garantirNotaVisivel(nota) {
+            try {
+                if (!bazingaMap) return;
+                const b = nota.marker.getElement()?.querySelector('.geo-note-bubble');
+                const h = b ? b.offsetHeight : 330;   // o balão cresce pra cima: reserva a altura REAL dele acima do pino
+                bazingaMap.panInside(nota.marker.getLatLng(), { paddingTopLeft: [164, h + 56], paddingBottomRight: [164, 60] });
+            } catch (e) {}
+        }
+        function abrirNotaFixa(nota) {
+            const b = nota.marker.getElement()?.querySelector('.geo-note-bubble');
+            if (!b) return;
+            nota.fixaAberta = true; clearTimeout(nota.timerAberta);
+            b.classList.remove('minimized');
+            elevarNota(nota, true);
+            NotasMapa.pintar(nota);
+            const tempo = b.querySelector('.nota-tempo'); if (tempo) tempo.textContent = 'expira em ' + textoRestante(nota.venceEm);
+        }
+        // O balão aberto (com a conversa) tem que ficar por cima do meu marcador (zIndexOffset 1000) e das outras notas.
+        function elevarNota(nota, sobe) {
+            try { nota.marker.setZIndexOffset(sobe ? 2000 : 0); } catch (e) {}
         }
 
         function minimizarNotaPorId(id) {
@@ -8732,6 +8790,7 @@
                 if (modoExplorar && !d.explorando) return;   // resposta velha do meu entorno chegando durante a exploração
                 if (d.raio_notas_m) raioNotasM = d.raio_notas_m;
                 if (d.raio_servidores_m) raioServidoresM = d.raio_servidores_m;
+                NotasMapa.definirReacoes(d.reacoes_permitidas);
                 if (!d.explorando && myMapMarker) { const p = myMapMarker.getLatLng(); desenharRaios(p.lat, p.lng); aplicarLimitesDoMapa(p.lat, p.lng); }
                 sincronizarMapa(d.notas, d.servers);
             });
@@ -8768,9 +8827,13 @@
             socket.on('geonote_editada', function(dados) {
                 const nota = geoNotesAtivas.find(n => n.id === dados.id);
                 if (!nota) return;
+                const fixa = nota.fixaAberta;
                 removerDoMapa('nota', dados.id);
                 renderizarGeoNote(dados.id, nota.lat, nota.lng, dados.texto, nota.autor, dados.cor, nota.autorId,
-                                  { icone: dados.icone, restante_s: dados.restante_s, pin: nota.pin });
+                                  { icone: dados.icone, restante_s: dados.restante_s, pin: nota.pin, respostas_modo: dados.respostas_modo,
+                                    respostas: nota.respostas, reacoes: nota.reacoes, minhas: nota.minhas });
+                const nova = geoNotesAtivas.find(n => n.id === dados.id);
+                if (nova && fixa) abrirNotaFixa(nova);   // quem estava lendo/respondendo continua com a nota aberta
             });
 
             socket.on('servidor_mapa_editado', function(dados) {
@@ -8789,6 +8852,11 @@
             });
 
             socket.on('geonote_apagada', function(dados) { removerDoMapa('nota', dados.id); });
+            // Respostas e reações das notas (Rodada 29): notas_mapa_events.py
+            socket.on('geonote_resposta', (d) => NotasMapa.receberResposta(d));
+            socket.on('geonote_reacoes', (d) => NotasMapa.receberReacoes(d));
+            socket.on('geonote_resposta_apagada', (d) => NotasMapa.respostaApagada(d));
+            socket.on('geonote_erro', (d) => NotasMapa.erro(d));
             socket.on('servidor_mapa_apagado', function(dados) { removerDoMapa('servidor', dados.id); });
 
             // --- EVENTOS DE DM (CONEXÕES DIRETAS) ---
@@ -11054,6 +11122,24 @@
             irParaRadar: () => { if (vistaAtual !== 'home') switchMainView('home'); },
             explorando: () => !!modoExplorar, sairDoExplorar: () => sairDoExplorar(),
             mapaVisivel: () => vistaAtual === 'home',
+        });
+        // NOTAS DO MAPA: respostas e reações (static/js/notas_mapa.js só desenha; quem pode, o alcance e os limites são do servidor).
+        NotasMapa.iniciar({
+            emitir: (n, d) => socket.emit(n, d), esc, toast: (m, t) => showToast(m, t), emojificar: (el) => emojificar(el),
+            notas: () => geoNotesAtivas, meuId: () => currentUserId, amigos: () => (typeof amizades !== 'undefined' && amizades.amigos) || [],
+            noAlcance: (nota) => {
+                if (!myMapMarker) return null;
+                const p = myMapMarker.getLatLng();
+                const amigo = ((typeof amizades !== 'undefined' && amizades.amigos) || []).some(a => Number(a.id) === Number(nota.autorId));
+                return calcularDistanciaMetros(p.lat, p.lng, nota.lat, nota.lng) <= (amigo ? raioServidoresM : raioNotasM) * 1.1;
+            },
+            fixarAberta: (nota) => { nota.fixaAberta = true; clearTimeout(nota.timerAberta); },   // escrevendo: o balão não fecha sozinho
+            garantirVisivel: (nota) => garantirNotaVisivel(nota),
+            denunciar: (tipo, id, texto) => abrirDenuncia(tipo, id, texto),
+            exigirLocalizacao: () => exigirLocalizacao(true),
+            abrirNota: (nota, fixar) => { if (fixar) { abrirNotaFixa(nota); garantirNotaVisivel(nota); } else abrirNotaPorUnsInstantes(nota, 7000); },
+            irAte: (nota) => MapaSocial.irAte(nota.marker.getLatLng(), 'Sua nota', nota.marker, 10),
+            irParaMapa: () => { if (vistaAtual !== 'home') switchMainView('home'); },
         });
         socket.on('mapa_radar', (d) => MapaSocial.receberRadar(d));
         socket.on('mapa_servidor_previa', (p) => Explorar.previaMapa(p, (id) => socket.emit('entrar_servidor_pin', { server_id: id })));
@@ -14894,7 +14980,7 @@
             recontarNotifs();
         });
 
-        const ICONE_NOTIF = { dm: 'fa-message', amizade: 'fa-user-plus', mencao: 'fa-at', bazar: 'fa-store', sistema: 'fa-bell' };
+        const ICONE_NOTIF = { dm: 'fa-message', amizade: 'fa-user-plus', mencao: 'fa-at', bazar: 'fa-store', nota: 'fa-comment-dots', sistema: 'fa-bell' };
         function renderInbox() {
             const lista = document.getElementById('ib-lista');
             if (!notifs.itens.length) { lista.innerHTML = '<div class="ib-vazio"><i class="fa-regular fa-bell-slash"></i>Tudo em dia! Mensagens, pedidos de amizade e menções aparecem aqui.</div>'; }
@@ -14952,6 +15038,7 @@
                 const [srv, canal] = n.ref.split(':').map(Number);
                 if (srv) { entrarNoServidor(srv); setTimeout(() => document.querySelector(`.text-channel[data-id="${canal}"]`)?.click(), 120); }
             }
+            else if (n.tipo === 'nota' && n.ref) NotasMapa.abrirDaNotificacao(Number(n.ref));
             else if (n.tipo === 'bazar') {
                 document.getElementById('btn-mercado').click();
                 document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click();
@@ -15065,7 +15152,7 @@
         let _denunciaAlvo = null;
         function abrirDenuncia(tipo, id, nome) {
             _denunciaAlvo = { tipo, id };
-            document.getElementById('denuncia-titulo').textContent = { nota: 'Denunciar nota', usuario: 'Denunciar pessoa', loja: 'Denunciar loja', produto: 'Denunciar produto' }[tipo] || 'Denunciar servidor';
+            document.getElementById('denuncia-titulo').textContent = { nota: 'Denunciar nota', resposta: 'Denunciar resposta', usuario: 'Denunciar pessoa', loja: 'Denunciar loja', produto: 'Denunciar produto' }[tipo] || 'Denunciar servidor';
             document.getElementById('denuncia-sub').textContent = nome ? `"${String(nome).slice(0, 60)}" — conta pra gente o que tem de errado.` : 'Conta pra gente o que tem de errado.';
             document.getElementById('denuncia-detalhe').value = '';
             document.querySelector('input[name="dn-motivo"][value="+18"]').checked = true;
@@ -15084,6 +15171,7 @@
             showToast(d.repetida ? 'Você já denunciou isso.' : 'Obrigado! A denúncia foi registrada.', d.repetida ? 'info' : 'success');
             // some do SEU mapa na hora
             if ((d.tipo === 'nota' || d.tipo === 'servidor') && typeof removerDoMapa === 'function') removerDoMapa(d.tipo, d.id);
+            if (d.tipo === 'resposta') NotasMapa.respostaApagada({ id: d.id });
         });
 
         // ---------- toques e efeitos sonoros extras ----------

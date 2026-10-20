@@ -523,6 +523,9 @@ def bazar_moderar(dados):
         if info['tipo'] in ('loja', 'produto'):
             _avisar_mudou()
         elif info['acao'] == 'remover':
-            emit('geonote_apagada' if info['tipo'] == 'nota' else 'servidor_mapa_apagado', {'id': info['alvo_id']}, broadcast=True)
+            if info['tipo'] == 'resposta':
+                emit('geonote_resposta_apagada', {'id': info['alvo_id'], 'note_id': info.get('nota_id')}, broadcast=True)
+            else:
+                emit('geonote_apagada' if info['tipo'] == 'nota' else 'servidor_mapa_apagado', {'id': info['alvo_id']}, broadcast=True)
 
     _executar('moderar', tarefa, ref='moderacao')

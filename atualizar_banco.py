@@ -280,6 +280,10 @@ def atualizar_banco():
             # 35. Editar mensagem de DM: guarda quando foi editada pra marcar "(editada)" (NULL = nunca editada).
             add_column_se_nao_existir("direct_message", "edited_at TIMESTAMP")
 
+            # 36. Respostas e reações nas notas do mapa (Rodada 29): as tabelas geo_note_resposta e geo_note_reacao nascem pelo
+            # create_all; só a coluna de "quem pode responder" entra aqui (NULL = o padrão do código, hoje "todos").
+            add_column_se_nao_existir("geo_note", "respostas_modo VARCHAR(8)")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

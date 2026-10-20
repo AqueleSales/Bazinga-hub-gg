@@ -376,7 +376,41 @@ class GeoNote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=br_now)
 
+    # Quem pode responder (Rodada 29): 'todos' | 'amigos' | 'ninguem'. NULL = o padrão (notas_mapa.RESPOSTAS_PADRAO).
+    respostas_modo = db.Column(db.String(8), nullable=True)
+
     author = db.relationship('Person', backref='geonotes')
+    # Respostas e reações morrem junto com a nota (a faxina de notas vencidas apaga em massa; o ON DELETE CASCADE cobre isso).
+    respostas = db.relationship('GeoNoteResposta', backref='nota', cascade='all, delete-orphan', passive_deletes=True, lazy='select')
+    reacoes = db.relationship('GeoNoteReacao', backref='nota', cascade='all, delete-orphan', passive_deletes=True, lazy='select')
+
+
+class GeoNoteResposta(db.Model):
+    """Resposta a uma nota do mapa (Rodada 29). Aparece embaixo da nota pra quem enxerga a nota (e, no modo 'amigos',
+    só pro autor da nota e os amigos dele). Texto curto, sem link de quem não é amigo; o autor da nota e o de cada
+    resposta podem apagar; 3 denúncias escondem."""
+    __tablename__ = 'geo_note_resposta'
+    id = db.Column(db.Integer, primary_key=True)
+    note_id = db.Column(db.Integer, db.ForeignKey('geo_note.id', ondelete='CASCADE'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    text = db.Column(db.String(160), nullable=False)
+    created_at = db.Column(db.DateTime, default=br_now)
+    oculta = db.Column(db.Boolean, default=False)
+
+    author = db.relationship('Person', foreign_keys=[author_id])
+
+
+class GeoNoteReacao(db.Model):
+    """Uma reação de emoji (de uma lista fechada) de uma pessoa numa nota. Só o TOTAL por emoji sai do servidor:
+    quem reagiu não é revelado a ninguém (a própria pessoa recebe só as suas)."""
+    __tablename__ = 'geo_note_reacao'
+    id = db.Column(db.Integer, primary_key=True)
+    note_id = db.Column(db.Integer, db.ForeignKey('geo_note.id', ondelete='CASCADE'), nullable=False, index=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+    emoji = db.Column(db.String(16), nullable=False)
+    created_at = db.Column(db.DateTime, default=br_now)
+
+    __table_args__ = (db.UniqueConstraint('note_id', 'person_id', 'emoji', name='uq_geo_note_reacao'),)
 
 
 class MapServer(db.Model):

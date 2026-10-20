@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 
 from .models import (db, br_now, Person, BazarLoja, BazarProduto, BazarPedido, BazarMensagem, BazarAvaliacao,
                      BazarFavorito, BazarAnuncio, BazarDisputa, BazarBanimento,
-                     Denuncia, ConfigApp, Friendship, GeoNote, MapServer)
+                     Denuncia, ConfigApp, Friendship, GeoNote, GeoNoteResposta, MapServer)
 from .utils import (comitar_com_retry, url_de_imagem_ok, texto_tem_link, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, distancia_m)
 
 
@@ -1271,12 +1271,14 @@ def _resumo_alvo(tipo, a):
                 'oculta': bool(a.oculta), 'imagem': imgs[0] if imgs else None, 'pessoa_id': a.loja.owner_id if a.loja else None}
     if tipo == 'nota':
         return {'titulo': (a.text or '')[:140], 'sub': 'Nota do mapa', 'oculta': bool(a.oculta), 'imagem': None, 'pessoa_id': None}
+    if tipo == 'resposta':
+        return {'titulo': (a.text or '')[:140], 'sub': 'Resposta a uma nota do mapa', 'oculta': bool(a.oculta), 'imagem': None, 'pessoa_id': None}
     if tipo == 'servidor':
         return {'titulo': a.name, 'sub': 'Servidor plantado no mapa', 'oculta': bool(a.oculta), 'imagem': None, 'pessoa_id': None}
     return {'titulo': a.name, 'sub': f'@{a.username}' if a.username else 'Pessoa', 'oculta': False, 'imagem': a.avatar, 'pessoa_id': a.id}
 
 
-_MODELO_DENUNCIA = {'loja': BazarLoja, 'produto': BazarProduto, 'nota': GeoNote, 'servidor': MapServer, 'usuario': Person}
+_MODELO_DENUNCIA = {'loja': BazarLoja, 'produto': BazarProduto, 'nota': GeoNote, 'resposta': GeoNoteResposta, 'servidor': MapServer, 'usuario': Person}
 
 
 def fila_de_moderacao(limite=60):
@@ -1327,7 +1329,9 @@ def moderar(admin, tipo, alvo_id, acao):
                     a.ativo, a.oculta = False, True
                 else:
                     db.session.delete(a)
-            elif tipo in ('nota', 'servidor'):
+            elif tipo in ('nota', 'servidor', 'resposta'):
+                if tipo == 'resposta':
+                    info['nota_id'] = a.note_id   # quem tinha a nota na tela tira a resposta
                 db.session.delete(a)
             else:
                 raise ErroBazar('Pessoa não se "remove": use "Banir do Bazar" (com motivo e prazo).')
