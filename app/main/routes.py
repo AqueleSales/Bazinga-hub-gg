@@ -21,6 +21,7 @@ from ..importar import baixar_imagem_externa, ErroImportar
 from ..novidades import novidade_atual, novidades_para_cliente
 from ..events import sala_servidor, sala_pessoal, servidor_para_json, servidores_para_json, _estado_inventario
 from ..passe import titulo_publico
+from .. import ordem
 from ..explorar import TEMAS_EXPLORAR
 from ..efeitos import mapa_para_cliente as efeitos_custom_mapa
 from ..cosmeticos import posses_da_pessoa, posses_com_regras, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
@@ -499,19 +500,23 @@ def chat():
             # que os servidores tinham sumido. O socket ainda reenvia e
             # reconcilia depois.
             servidores_iniciais = servidores_para_json(list(usuario_atual.servers), usuario_atual)
+            # Ordem dos servidores (pastas incluídas) e DMs fixadas, da conta: também no HTML, pra barra e a lista já nascerem na ordem
+            # certa (sem consulta nova: a lista de servidores e a de amigos já estão carregadas). Fixadas primeiro, na ordem escolhida.
+            ordem_servidores_inicial = ordem.layout_da_pessoa(usuario_atual, [s['id'] for s in servidores_iniciais])
+            amigos, fixas_ids = ordem.ordenar_amigos(amigos, ordem.fixas_da_pessoa(usuario_atual))
 
             # Inventário já no HTML (1 query): moldura/efeitos/insígnias nascem desenhados, sem esperar o socket.
             inventario_inicial = _estado_inventario(usuario_atual, posses_com_regras(usuario_atual))
 
             return (usuario_atual, text_channels, voice_channels, default_channel, messages, amigos,
-                    servidores_iniciais, inventario_inicial)
+                    servidores_iniciais, inventario_inicial, ordem_servidores_inicial, fixas_ids)
 
         resultado = com_retry(carregar)
         if resultado is None:
             session.pop('user_id', None)
             return redirect(url_for('main.index'))
         (usuario_atual, text_channels, voice_channels, default_channel, messages, amigos,
-         servidores_iniciais, inventario_inicial) = resultado
+         servidores_iniciais, inventario_inicial, ordem_servidores_inicial, fixas_ids) = resultado
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -542,6 +547,7 @@ def chat():
         messages=messages,
         amigos=amigos,
         servidores_iniciais=servidores_iniciais,
+        ordem_servidores_inicial=ordem_servidores_inicial, dms_fixas_ids=fixas_ids,
         inventario_inicial=inventario_inicial,
         titulo_inicial=titulo_publico(usuario_atual.titulo_id),
         efeitos_custom_iniciais=efeitos_custom_mapa(),

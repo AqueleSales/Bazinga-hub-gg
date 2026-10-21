@@ -284,6 +284,11 @@ def atualizar_banco():
             # create_all; só a coluna de "quem pode responder" entra aqui (NULL = o padrão do código, hoje "todos").
             add_column_se_nao_existir("geo_note", "respostas_modo VARCHAR(8)")
 
+            # 37. Ordem dos servidores (com pastinhas) e DMs fixadas, na conta (Rodada 29). JSON em TEXT, NULL = nunca ordenou.
+            # (36 é da frente das notas do mapa, em outra branch.)
+            add_column_se_nao_existir("person", "ordem_servidores TEXT")
+            add_column_se_nao_existir("person", "ordem_dms TEXT")
+
             # 38. Cargos por servidor, categorias/separadores e tipos de canal (Rodada 29; os passos 36 e 37 são de outras frentes).
             # As tabelas server_role, member_role e channel_category nascem pelo create_all lá em cima. Aqui só entram as colunas.
             add_column_se_nao_existir("server", "perms_membro INTEGER")

@@ -25,6 +25,15 @@ NOVIDADES = [
         ],
     },
     {
+        'id': 30, 'data': '19/10/2026', 'titulo': 'Arraste pra organizar servidores e conversas',
+        'itens': [
+            {'icone': 'fa-hand', 'titulo': 'Segure e arraste os servidores', 'texto': 'Segure o ícone de um servidor na barra lateral: ele se solta, sobe e segue o seu dedo ou o mouse enquanto os outros abrem espaço. Solte onde quiser: a ordem fica salva na sua conta, em qualquer aparelho.'},
+            {'icone': 'fa-folder', 'titulo': 'Pastinhas de servidores', 'texto': 'Segure um servidor em cima de outro por uns 2 segundos (um anel vai crescendo) e os dois viram uma pasta, com nome e cor que você escolhe. Toque pra abrir e fechar; arraste um servidor pra fora da barra pra tirar da pasta. Pasta com um servidor só se desfaz.'},
+            {'icone': 'fa-thumbtack', 'titulo': 'Conversas fixadas no topo', 'texto': 'Nas conversas diretas, segure e arraste uma pra cima da linha: ela fica fixada onde você pôs, mesmo chegando mensagem nova. As outras seguem por mensagem mais recente. Também dá pelo botão direito (Fixar no topo).'},
+            {'icone': 'fa-keyboard', 'titulo': 'Sem mouse também', 'texto': 'Com um servidor ou conversa selecionado pelo teclado, Alt + seta pra cima ou pra baixo move; o botão direito (ou a tecla de menu) mostra Mover, Juntar numa pasta e Tirar da pasta.'},
+        ],
+    },
+    {
         'id': 29, 'data': '19/10/2026', 'titulo': 'Responder e reagir nas notas do mapa',
         'itens': [
             {'icone': 'fa-comment-dots', 'titulo': 'Responda uma nota', 'texto': 'Chegou perto de uma nota? Abra o balão e escreva embaixo dela. As respostas aparecem em ordem e a resposta de um amigo ganha o selo de amigo. Quem deixou a nota recebe um aviso na caixa de entrada.'},
