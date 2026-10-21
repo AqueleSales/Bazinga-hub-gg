@@ -9,6 +9,22 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 32, 'data': '21/10/2026', 'titulo': 'Permissões por canal',
+        'itens': [
+            {'icone': 'fa-shield-halved', 'titulo': 'Cada canal com as suas regras', 'texto': 'Em Editar canal > Permissões do canal (ou em Configurações > Canais), escolha um cargo, ou o "Membro" que vale pra todo mundo, e libere ou negue só naquele canal: ver, escrever, publicar anúncios, falar na voz ou no palco, apagar e fixar mensagens.'},
+            {'icone': 'fa-eye-slash', 'titulo': 'Canais que só alguns enxergam', 'texto': 'Quem não pode ver um canal não vê nem o nome dele (nem a categoria, se só tiver esse). Negar vence liberar, e o dono e os administradores ignoram tudo isso. Em canal privado a lista de convidados continua mandando.'},
+        ],
+    },
+    {
+        'id': 31, 'data': '19/10/2026', 'titulo': 'Cargos, categorias e mais tipos de canal nos servidores',
+        'itens': [
+            {'icone': 'fa-user-shield', 'titulo': 'Cargos com permissões', 'texto': 'Em Configurações do servidor > Cargos, crie cargos com cor e permissões (gerenciar canais, remover membros, apagar mensagens, ver canais privados, falar no palco...). Quem tem cargo mais alto manda nos de baixo, e o nome do membro ganha a cor do cargo. O dono continua podendo tudo.'},
+            {'icone': 'fa-folder', 'titulo': 'Categorias e separadores', 'texto': 'Renomeie as categorias da lista de canais, crie novas, recolha e arraste canais entre elas. Dá pra colocar linhas separadoras, com título ou sem.'},
+            {'icone': 'fa-bullhorn', 'titulo': 'Anúncios, regras, mídia e palco', 'texto': 'Novos tipos de canal: Anúncios e Regras (só lê quem não tem permissão), Mídia (só foto, vídeo e GIF), Voz com limite de pessoas e Palco (oradores e ouvintes). Cada canal pode ter um emoji próprio.'},
+            {'icone': 'fa-image', 'titulo': 'Banner e boas-vindas', 'texto': 'O servidor pode ter banner no topo da lista, uma mensagem de boas-vindas mostrada uma vez a cada pessoa e um canal que abre primeiro.'},
+        ],
+    },
+    {
         'id': 29, 'data': '19/10/2026', 'titulo': 'Responder e reagir nas notas do mapa',
         'itens': [
             {'icone': 'fa-comment-dots', 'titulo': 'Responda uma nota', 'texto': 'Chegou perto de uma nota? Abra o balão e escreva embaixo dela. As respostas aparecem em ordem e a resposta de um amigo ganha o selo de amigo. Quem deixou a nota recebe um aviso na caixa de entrada.'},

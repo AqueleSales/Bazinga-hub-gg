@@ -284,6 +284,20 @@ def atualizar_banco():
             # create_all; só a coluna de "quem pode responder" entra aqui (NULL = o padrão do código, hoje "todos").
             add_column_se_nao_existir("geo_note", "respostas_modo VARCHAR(8)")
 
+            # 38. Cargos por servidor, categorias/separadores e tipos de canal (Rodada 29; os passos 36 e 37 são de outras frentes).
+            # As tabelas server_role, member_role e channel_category nascem pelo create_all lá em cima. Aqui só entram as colunas.
+            add_column_se_nao_existir("server", "perms_membro INTEGER")
+            add_column_se_nao_existir("server", "estrutura BOOLEAN")
+            add_column_se_nao_existir("server", "boas_vindas TEXT")
+            add_column_se_nao_existir("server", "canal_boas_vindas_id INTEGER")
+            add_column_se_nao_existir("server", "banner_url VARCHAR(255)")
+            add_column_se_nao_existir("channel", "category_id INTEGER")
+            add_column_se_nao_existir("channel", "icon VARCHAR(16)")
+            add_column_se_nao_existir("channel", "user_limit INTEGER")
+
+            # 39. Permissão por canal (Rodada 29b): a tabela channel_overwrite nasce pelo create_all; aqui só a flag do canal (NULL = nenhuma sobrescrita).
+            add_column_se_nao_existir("channel", "sobrescrita BOOLEAN")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

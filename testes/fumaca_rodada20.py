@@ -77,7 +77,7 @@ ok(all(('claro: true' in re.search(r"\{ id: '%s'[^}]*\}" % t, catalogo_js).group
    'Temas: os claros do catálogo (JS) são os mesmos de utils.TEMAS_CLAROS (ligam data-claro)')
 ok(':root[data-tema="light"] body::' not in chat and ':root[data-claro] body::before' in chat, 'Temas: regras de fundo claro seguem [data-claro] e valem pra todo tema claro')
 ok('data-tema="{{ tema_id }}"' in chat and 'data-claro' in chat, 'Temas: o HTML já nasce com o tema e se o fundo é claro')
-ok("style=\"color:var(--text-header);font-weight:500;\"" in chat and 'color: var(--text-header);">Bem-vindo ao início do canal!' in chat, 'Temas claros: nome dos membros e "Bem-vindo" não ficam brancos sobre branco')
+ok("Cargos.corDoMembro(m) || 'var(--text-header)'" in chat and 'color: var(--text-header);">Bem-vindo ao início do canal!' in chat, 'Temas claros: nome dos membros e "Bem-vindo" não ficam brancos sobre branco')
 
 # mudar_tema: preset, inválido, custom, eco, e conservar o personalizado ao trocar de tema
 ana.emit('mudar_tema', {'tema': 'sakura'}); rec = ana.get_received()

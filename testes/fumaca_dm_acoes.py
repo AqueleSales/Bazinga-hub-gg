@@ -142,7 +142,7 @@ with app.app_context():
        'cada aviso só mexe no container da sua conversa (id de DM e de canal se repetem)')
     ok("document.querySelector(`.message[data-msg-id=\"${dados.msg_id}\"]`)" not in html, 'nenhum aviso de canal procura a bolha no documento inteiro')
     ok('so-canal' in html and "toggle('em-dm'" in html, 'na DM o menu esconde reagir e fixar (só existem em canal)')
-    ok("!dados.dm && souDonoDoServidor" in html, 'na DM o dono do servidor aberto não ganha o botão de apagar mensagem dos outros')
+    ok("!dados.dm && Cargos.podeApagarMensagem" in html, 'na DM o dono do servidor aberto não ganha o botão de apagar mensagem dos outros')
     ok('edited_at TIMESTAMP' in open(os.path.join(RAIZ, '..', 'atualizar_banco.py'), encoding='utf-8').read(), 'a coluna nova está no atualizar_banco.py')
 
 print()

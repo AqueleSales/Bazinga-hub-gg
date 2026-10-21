@@ -1,0 +1,156 @@
+/* Cargos, categorias/separadores, tipos de canal, palco e personalização do servidor (Rodada 29). Só o que é novo; o resto da lista de canais é do chat.html.
+   Regra de performance do app: aqui só transform/opacity animam. Estilo chapado, sem vidro/blur novo. */
+
+/* ---------- lista de canais ---------- */
+.channels-list.sem-anim > * { animation: none !important; }          /* redesenho por atualização não repete a animação de entrada */
+.cat-bloco { margin-top: 12px; }
+.cat-bloco.sem-cat { margin-top: 0; }
+.cat-bloco.sem-cat .cat-corpo:empty { display: none; }
+.channel-category.cat-cab { margin: 0 0 4px 0; user-select: none; position: relative; }
+.cat-seta { font-size: 9px; transition: transform .15s; width: 10px; }
+.cat-bloco.fechada .cat-seta { transform: rotate(-90deg); }
+.cat-bloco.fechada .cat-corpo > *:not(:has(.channel-item.active)) { display: none; }   /* recolhida: sobra só o canal em que você está */
+.cat-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-acoes { margin-left: auto; display: none; gap: 9px; align-items: center; font-size: 11px; }
+.cat-cab:hover .cat-acoes, .cat-cab:focus-within .cat-acoes { display: inline-flex; }
+.cat-acoes i { cursor: pointer; opacity: .7; padding: 2px; }
+.cat-acoes i:hover { opacity: 1; color: var(--text-header); }
+.cat-acoes .cat-del:hover { color: var(--red-color); }
+@media (pointer: coarse) { .cat-acoes { display: inline-flex; } .cat-acoes i { padding: 6px; font-size: 13px; } }
+
+.canal-bloco { position: relative; }
+.canal-emoji { display: inline-block; width: 18px; text-align: center; font-size: 15px; line-height: 1; flex-shrink: 0; }
+.canal-emoji img.emoji { width: 1.1em; height: 1.1em; }
+.canal-lim { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--text-muted); background: rgba(255,255,255,.07); border-radius: 8px; padding: 1px 6px; }
+.canal-lim + .btn-config-channel { margin-left: 6px !important; }
+.channel-item.tipo-anuncios .channel-icon { color: var(--yellow-color) !important; }
+.channel-item.tipo-regras .channel-icon { color: var(--green-color) !important; }
+.channel-item.tipo-palco .channel-icon { color: var(--brand-color); }
+
+/* separador: uma linha (com título ou sem) */
+.sep-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; margin: 4px 0; color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; position: relative; }
+.sep-linha { flex: 1; height: 1px; background: rgba(255,255,255,.12); }
+.sep-titulo { flex-shrink: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sep-acoes { display: none; position: absolute; right: 4px; gap: 8px; background: var(--bg-secondary); padding: 0 4px; border-radius: 6px; font-size: 11px; }
+.sep-item:hover .sep-acoes { display: inline-flex; }
+.sep-acoes i { cursor: pointer; opacity: .75; padding: 3px; }
+.sep-acoes i:hover { opacity: 1; color: var(--text-header); }
+.sep-acoes .sep-apagar:hover { color: var(--red-color); }
+@media (pointer: coarse) { .sep-acoes { display: inline-flex; } }
+
+/* arrastar e soltar */
+.channels-list.organizando .cat-corpo { min-height: 10px; }
+.arrastando { opacity: .35; }
+.drop-antes::before, .drop-depois::after { content: ''; display: block; height: 3px; border-radius: 2px; background: var(--brand-color); margin: 1px 0; }
+.drop-dentro { outline: 2px dashed var(--brand-color); outline-offset: -2px; border-radius: 6px; }
+.cat-bloco.drop-antes::before, .cat-bloco.drop-depois::after { margin: 4px 0; }
+
+/* banner do servidor no cabeçalho da lista */
+.channels-header.com-banner { background-size: cover; background-position: center; min-height: 64px; }
+.channels-header.com-banner h3, .channels-header.com-banner h3 i { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.7); }
+
+/* ---------- compositor travado (anúncios/regras sem permissão) ---------- */
+.chat-input-wrapper.so-leitura { opacity: .6; pointer-events: none; }
+.chat-input-wrapper.so-leitura textarea { cursor: not-allowed; }
+
+/* ---------- modal de canal ---------- */
+.tipo-grade { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 6px; }
+.tipo-card { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.08); background: var(--bg-tertiary); cursor: pointer; transition: background .12s, border-color .12s; }
+.tipo-card:hover { background: rgba(255,255,255,.06); }
+.tipo-card.selected { border-color: var(--brand-color); background: rgba(114,137,218,.14); }
+.tipo-card i { width: 18px; text-align: center; margin-top: 2px; color: var(--text-muted); }
+.tipo-card.selected i { color: var(--brand-color); }
+.tipo-card b { display: block; color: var(--text-header); font-size: 13px; }
+.tipo-card span { display: block; color: var(--text-muted); font-size: 11px; line-height: 1.35; margin-top: 2px; }
+.cx-extra { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cx-extra > div { min-width: 0; }
+.cx-op { opacity: .6; font-weight: 500; text-transform: none; }
+@media (max-width: 520px) { .tipo-grade, .cx-extra { grid-template-columns: 1fr; } }
+
+/* ---------- configurações: banner e boas-vindas ---------- */
+.cx-banner { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.cx-banner-previa { width: 220px; height: 70px; border-radius: 8px; background: var(--bg-tertiary) center / cover no-repeat; display: grid; place-items: center; color: var(--text-muted); font-size: 12px; }
+.cx-bv-card { overflow: hidden; }
+.cx-bv-banner { height: 110px; background-size: cover; background-position: center; }
+.cx-bv-texto { color: var(--text-normal); font-size: 15px; line-height: 1.5; white-space: normal; word-break: break-word; }
+
+/* ---------- aba Cargos ---------- */
+.cg-layout { display: grid; grid-template-columns: 230px 1fr; gap: 18px; align-items: start; }
+.cg-lista { display: flex; flex-direction: column; gap: 4px; }
+.cg-novo { width: 100%; margin-bottom: 8px; font-size: 13px; }
+.cg-item { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 8px; background: var(--bg-secondary); cursor: pointer; color: var(--text-normal); font-size: 14px; border: 1px solid transparent; }
+.cg-item:hover { background: rgba(255,255,255,.07); }
+.cg-item.ativo { border-color: var(--brand-color); background: rgba(114,137,218,.14); }
+.cg-item.travado .cg-nome { opacity: .6; }
+.cg-item.membro { margin-top: 8px; border-style: dashed; border-color: rgba(255,255,255,.14); }
+.cg-bolinha { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.cg-nome { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.cg-qtd { font-size: 11px; color: var(--text-muted); }
+.cg-setas { display: inline-flex; gap: 6px; color: var(--text-muted); font-size: 11px; }
+.cg-setas i { cursor: pointer; padding: 3px; } .cg-setas i:hover { color: var(--text-header); } .cg-setas i.off { opacity: .25; cursor: default; }
+.cg-editor { background: var(--bg-secondary); border-radius: 10px; padding: 18px; min-width: 0; }
+.cg-editor h3 { color: var(--text-header); font-size: 17px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.cg-editor h3 small { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+.cg-aviso { color: var(--yellow-color); font-size: 13px; margin-bottom: 12px; }
+.cg-cores { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.cg-cor { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; color: var(--text-muted); font-size: 12px; }
+.cg-cor.sel { border-color: #fff; box-shadow: 0 0 0 2px var(--brand-color); }
+.cg-cor.semcor { background: var(--bg-tertiary); }
+.cg-cor:disabled { cursor: default; opacity: .5; }
+#cg-cor-livre { width: 28px; height: 28px; padding: 0; border: none; background: none; cursor: pointer; }
+.cg-perms { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.cg-perm { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; background: var(--bg-tertiary); cursor: pointer; }
+.cg-perm.off { opacity: .55; cursor: not-allowed; }
+.cg-perm input { margin-top: 3px; accent-color: var(--brand-color); }
+.cg-perm b { display: block; color: var(--text-header); font-size: 13px; }
+.cg-perm em { display: block; color: var(--text-muted); font-size: 11.5px; font-style: normal; line-height: 1.35; margin-top: 1px; }
+.cg-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--text-normal); background: rgba(255,255,255,.06); border-radius: 10px; padding: 1px 8px 1px 6px; margin-right: 4px; }
+.cg-chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.cg-pop { position: fixed; z-index: 10600; min-width: 220px; max-height: 320px; overflow-y: auto; background: var(--bg-quaternary, var(--bg-tertiary)); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+.cg-pop-t { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); padding: 4px 6px 8px; }
+.cg-pop-i { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; color: var(--text-normal); font-size: 14px; }
+.cg-pop-i:hover { background: rgba(255,255,255,.07); }
+.cg-pop-i.off { opacity: .45; cursor: not-allowed; }
+@media (max-width: 760px) { .cg-layout { grid-template-columns: 1fr; } }
+
+/* ---------- configurações: aba Canais ---------- */
+.cx-mover { appearance: auto; max-width: 150px; padding: 6px 8px; }
+.sf-mini:disabled { opacity: .3; cursor: default; }
+.cx-cat-linha { background: rgba(255,255,255,.04); }
+
+/* ---------- participantes de voz: ouvinte e orador ---------- */
+.part-ouvinte, .part-orador { font-size: 11px; opacity: .8; margin-left: 4px; }
+.part-orador { color: var(--green-color); }
+.part-palco { background: rgba(255,255,255,.08); border: none; color: var(--text-muted); border-radius: 6px; padding: 1px 6px; font-size: 10px; cursor: pointer; margin-left: 4px; }
+.part-palco:hover { background: rgba(255,255,255,.18); color: var(--text-header); }
+
+/* ---------- permissões POR CANAL (Rodada 29b) ---------- */
+.cp-entrada { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cp-entrada .btn-cancel { padding: 8px 12px; font-size: 13px; }
+.cp-card { width: 760px; max-width: calc(100vw - 24px); }
+.cp-layout { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: start; max-height: 62vh; overflow: hidden; }
+.cp-alvos { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; max-height: 62vh; }
+.cp-alvos .cg-item.membro { margin-top: 0; margin-bottom: 6px; }
+.cp-alvos .cg-nome small { color: var(--text-muted); font-weight: 500; }
+.cp-ponto { margin-left: auto; font-size: 7px; color: var(--brand-color); }
+.cp-editor { background: var(--bg-secondary); border-radius: 10px; padding: 16px; min-width: 0; overflow-y: auto; max-height: 62vh; }
+.cp-editor h3 { color: var(--text-header); font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.cp-legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; }
+.cp-lista { display: flex; flex-direction: column; gap: 4px; }
+.cp-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; background: var(--bg-tertiary); }
+.cp-linha.off { opacity: .55; }
+.cp-txt { min-width: 0; }
+.cp-txt b { display: block; color: var(--text-header); font-size: 13px; }
+.cp-txt em { display: block; color: var(--text-muted); font-size: 11.5px; font-style: normal; line-height: 1.35; margin-top: 1px; }
+.cp-tri { display: inline-flex; flex-shrink: 0; border: 2px solid rgba(255,255,255,.14); border-radius: 8px; overflow: hidden; }
+.cp-op { background: transparent; border: 0; color: var(--text-muted); width: 34px; height: 30px; cursor: pointer; font-size: 13px; }
+.cp-op + .cp-op { border-left: 2px solid rgba(255,255,255,.14); }
+.cp-op:disabled { cursor: not-allowed; }
+.cp-op:not(:disabled):hover { background: rgba(255,255,255,.08); color: var(--text-header); }
+.cp-op.neg.sel { background: var(--red-color); color: #fff; }
+.cp-op.her.sel { background: rgba(255,255,255,.16); color: var(--text-header); }
+.cp-op.per.sel { background: var(--green-color); color: #fff; }
+.cp-nota { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.cp-botoes { display: flex; gap: 10px; margin-top: 14px; }
+@media (max-width: 760px) { .cp-layout { grid-template-columns: 1fr; max-height: none; overflow: visible; } .cp-alvos { flex-direction: row; flex-wrap: wrap; max-height: none; } .cp-editor { max-height: 52vh; } }
+.cp-botoes .btn:disabled, .cp-botoes .btn-cancel:disabled { opacity: .45; cursor: default; }
