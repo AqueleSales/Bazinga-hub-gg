@@ -280,6 +280,11 @@ def atualizar_banco():
             # 35. Editar mensagem de DM: guarda quando foi editada pra marcar "(editada)" (NULL = nunca editada).
             add_column_se_nao_existir("direct_message", "edited_at TIMESTAMP")
 
+            # 37. Ordem dos servidores (com pastinhas) e DMs fixadas, na conta (Rodada 29). JSON em TEXT, NULL = nunca ordenou.
+            # (36 é da frente das notas do mapa, em outra branch.)
+            add_column_se_nao_existir("person", "ordem_servidores TEXT")
+            add_column_se_nao_existir("person", "ordem_dms TEXT")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

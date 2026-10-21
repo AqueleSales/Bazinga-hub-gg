@@ -23,6 +23,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
 from . import loja as armazem
+from . import ordem
 from .passe import titulo_publico
 from .efeitos import mapa_para_cliente as efeitos_custom_mapa
 from .bazar import contar_pendencias as bazar_pendencias
@@ -484,7 +485,10 @@ def handle_connect():
         emit('preferencias_carregadas', {'ghost_mode': bool(usuario.ghost_mode), 'temas': {a: _dados_do_tema(usuario, a) for a in APARELHOS},
                                          'localizacao_ativa': localizacao_ligada(usuario),
                                          'localizacao_ip': usuario.localizacao_ip is not False,
-                                         'radar_estranhos': usuario.radar_estranhos is True})
+                                         'radar_estranhos': usuario.radar_estranhos is True,
+                                         # ordem dos servidores (com pastas) e DMs fixadas: já limpas, sem consulta nova (a lista de servidores já está carregada)
+                                         'ordem_servidores': ordem.layout_da_pessoa(usuario, [s['id'] for s in servidores]),
+                                         'ordem_dms': ordem.fixas_da_pessoa(usuario)})
 
         # Bônus diário: a primeira conexão do dia paga XP e mantém a sequência.
         # Em try próprio: falhar aqui não pode derrubar presença/amigos abaixo.
@@ -4306,3 +4310,7 @@ from . import explorar_events  # noqa: E402,F401
 # Conexões do perfil (links de outras plataformas, currículo, GitHub): handlers em outro arquivo, também no FIM (importa daqui).
 from . import conexoes_events  # noqa: E402,F401
 from . import musica_events  # noqa: E402,F401
+
+
+# Ordem dos servidores (com pastinhas) e DMs fixadas, na conta: handlers em outro arquivo, também no FIM (importa daqui).
+from . import ordem_events  # noqa: E402,F401

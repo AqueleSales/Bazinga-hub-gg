@@ -2984,6 +2984,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ordem.css') }}?v={{ ordem_css_v }}">
 </head>
 <body>
     <div class="discord-app">
@@ -3065,7 +3066,7 @@
 
                             <!-- Loop Mágico -->
                             {% for amigo in amigos %}
-                            <div class="dm-card user-dm-item{% if amigo.placa %} placa-{{ amigo.placa }}{% endif %}" id="dm-{{ amigo.id }}" data-user-id="{{ amigo.id }}" data-pensando="{{ amigo.pensando or '' }}" data-status-texto="{{ amigo.custom_status or '' }}" data-status="offline" data-name="{{ amigo.name }}" data-avatar="{{ amigo.avatar or '' }}">
+                            <div class="dm-card user-dm-item{% if amigo.placa %} placa-{{ amigo.placa }}{% endif %}" id="dm-{{ amigo.id }}" data-user-id="{{ amigo.id }}" data-pensando="{{ amigo.pensando or '' }}" data-status-texto="{{ amigo.custom_status or '' }}" data-status="offline" data-name="{{ amigo.name }}" data-avatar="{{ amigo.avatar or '' }}"{% if amigo.id in dms_fixas_ids %} data-fixa="1"{% endif %}>
                                 <div class="user-avatar-wrapper" style="width: 32px; height: 32px; flex-shrink: 0; background-color: var(--brand-color);">
                                     {% if amigo.avatar %}
                                         <img src="{{ amigo.avatar }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -4955,6 +4956,7 @@
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/ordem.js') }}?v={{ ordem_js_v }}"></script>
     <script>
         // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
         const rawChannelId = "{{ default_channel.id if default_channel else 1 }}";
@@ -5717,28 +5719,28 @@
 
         function iniciaisServidor(nome) { return nome.substring(0, 2).toUpperCase(); }
 
+        // Um ícone de servidor (o wrapper). Quem arruma esses ícones na barra (ordem salva na conta, pastinhas, arrastar) é o Ordem (static/js/ordem.js).
+        function criarIconeDeServidor(srv) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'server-wrapper';
+
+            const iconeSeguro = escUrl(srv.iconUrl);
+            const iconHtml = iconeSeguro
+                ? `<img src="${iconeSeguro}" style="width:100%;height:100%;object-fit:cover;">`
+                : esc(iniciaisServidor(srv.name || '?'));
+
+            wrapper.innerHTML = `
+                <div class="server-icon ${activeMyServerId === srv.id ? 'active' : ''} ${esc(Cosm.classeServidor(srv.efeito))}" id="my-server-icon-${Number(srv.id)}" title="${esc(srv.name)}">
+                    ${iconHtml}
+                </div>
+            `;
+
+            wrapper.querySelector('.server-icon').addEventListener('click', () => entrarNoServidor(srv.id));
+            return wrapper;
+        }
+
         function renderizarMeusServidores() {
-            const container = document.getElementById('dynamic-servers-container');
-            container.innerHTML = '';
-
-            meUserServers.forEach(srv => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'server-wrapper';
-
-                const iconeSeguro = escUrl(srv.iconUrl);
-                const iconHtml = iconeSeguro
-                    ? `<img src="${iconeSeguro}" style="width:100%;height:100%;object-fit:cover;">`
-                    : esc(iniciaisServidor(srv.name || '?'));
-
-                wrapper.innerHTML = `
-                    <div class="server-icon ${activeMyServerId === srv.id ? 'active' : ''} ${esc(Cosm.classeServidor(srv.efeito))}" id="my-server-icon-${Number(srv.id)}" title="${esc(srv.name)}">
-                        ${iconHtml}
-                    </div>
-                `;
-
-                wrapper.querySelector('.server-icon').addEventListener('click', () => entrarNoServidor(srv.id));
-                container.appendChild(wrapper);
-            });
+            Ordem.desenharServidores(document.getElementById('dynamic-servers-container'), meUserServers, criarIconeDeServidor);
         }
 
         function aplicarMeusServidores(servidores) {
@@ -5756,6 +5758,10 @@
         // variáveis `let` usadas por entrarNoServidor()/restaurarUltimaVista()
         // são declaradas mais abaixo).
         const servidoresIniciais = {{ servidores_iniciais|tojson }};
+        // Ordem dos servidores (com pastinhas) e DMs fixadas moram na conta; os valores iniciais já vêm no HTML (sem piscar).
+        const ordemServidoresIniciais = {{ ordem_servidores_inicial|tojson }};
+        const dmsFixasIniciais = {{ dms_fixas_ids|tojson }};
+        Ordem.iniciar({ socket, layout: ordemServidoresIniciais, fixas: dmsFixasIniciais, escUrl });
         setTimeout(() => { if (!meUserServers.length) aplicarMeusServidores(servidoresIniciais); }, 0);
 
         socket.on('servidor_discord_criado', function(srv) {
@@ -14480,6 +14486,7 @@
             menuContato.innerHTML = `
                 <button data-mc="perfil"><i class="fa-regular fa-id-card"></i> Ver perfil</button>
                 <button data-mc="msg"><i class="fa-solid fa-message"></i> Enviar mensagem</button>
+                ${Ordem.htmlMenuDM(c.id)}
                 ${amigo ? `<button data-mc="localizar"><i class="fa-solid fa-location-crosshairs"></i> Localizar no mapa</button>` : ''}
                 <button data-mc="id"><i class="fa-regular fa-copy"></i> Copiar ID</button>
                 ${(c.username || (amigoObj && amigoObj.username)) ? `<button data-mc="arroba"><i class="fa-solid fa-at"></i> Copiar @usuário</button>` : ''}
@@ -14507,6 +14514,7 @@
             const acao = b.dataset.mc;
             if (acao === 'perfil') abrirCartao(id, cartaoDaDM(id) || document.getElementById('radar-header-title'));
             else if (acao === 'msg') abrirDMDe(id);
+            else if (acao.startsWith('ordem-')) Ordem.acaoMenuDM(acao, id);
             else if (acao === 'localizar') MapaSocial.localizar(id, nome);
             else if (acao === 'id') copiarTexto(id, 'ID copiado.');
             else if (acao === 'arroba') copiarTexto('@' + user, 'Nome da conta copiado.');
@@ -14728,12 +14736,8 @@
                 card.dataset.subFixo = 'Conversa rápida'; atualizarSubDM(card);
             }
             if (card) {
-                const lista = document.getElementById('dm-list-container');
-                const primeiro = lista.children[1];       // [0] = Anotações
-                if (primeiro !== card && card.id !== 'dm-me') {
-                    lista.insertBefore(card, primeiro || null);
-                    if (!card.classList.contains('active')) { card.style.animation = 'fadeIn 0.5s ease'; setTimeout(() => card.style.animation = '', 500); }
-                }
+                // sobe pra primeira vaga livre da lista (as DMs fixadas pela pessoa NÃO se mexem; ver Ordem.subirDM em static/js/ordem.js)
+                if (Ordem.subirDM(card) && !card.classList.contains('active')) { card.style.animation = 'fadeIn 0.5s ease'; setTimeout(() => card.style.animation = '', 500); }
             }
 
             if (!meu) {

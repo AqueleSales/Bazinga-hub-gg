@@ -121,6 +121,10 @@ class Person(db.Model):
     # Quantas conexões (links de outras plataformas) a pessoa tem no perfil. Só serve pra o cartão saber se mostra a setinha SEM ir ao banco
     # (os dados ficam na tabela `conexao`). Anulável: o boot cria a coluna sem DEFAULT; NULL = 0.
     conexoes_qtd = db.Column(db.Integer, nullable=True)
+    # Ordem dos servidores na barra lateral (com as pastinhas) e DMs fixadas no topo da lista: JSON em TEXT, anuláveis (NULL = nunca
+    # ordenou). Formato e validação em app/ordem.py; vivem na conta pra valer em qualquer aparelho (Rodada 29).
+    ordem_servidores = db.Column(db.Text, nullable=True)
+    ordem_dms = db.Column(db.Text, nullable=True)
     # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
     # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
     equipados = db.Column(db.Text, nullable=True)

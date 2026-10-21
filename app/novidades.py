@@ -9,6 +9,15 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 29, 'data': '19/10/2026', 'titulo': 'Arraste pra organizar servidores e conversas',
+        'itens': [
+            {'icone': 'fa-hand', 'titulo': 'Segure e arraste os servidores', 'texto': 'Segure o ícone de um servidor na barra lateral: ele se solta, sobe e segue o seu dedo ou o mouse enquanto os outros abrem espaço. Solte onde quiser: a ordem fica salva na sua conta, em qualquer aparelho.'},
+            {'icone': 'fa-folder', 'titulo': 'Pastinhas de servidores', 'texto': 'Segure um servidor em cima de outro por uns 2 segundos (um anel vai crescendo) e os dois viram uma pasta, com nome e cor que você escolhe. Toque pra abrir e fechar; arraste um servidor pra fora da barra pra tirar da pasta. Pasta com um servidor só se desfaz.'},
+            {'icone': 'fa-thumbtack', 'titulo': 'Conversas fixadas no topo', 'texto': 'Nas conversas diretas, segure e arraste uma pra cima da linha: ela fica fixada onde você pôs, mesmo chegando mensagem nova. As outras seguem por mensagem mais recente. Também dá pelo botão direito (Fixar no topo).'},
+            {'icone': 'fa-keyboard', 'titulo': 'Sem mouse também', 'texto': 'Com um servidor ou conversa selecionado pelo teclado, Alt + seta pra cima ou pra baixo move; o botão direito (ou a tecla de menu) mostra Mover, Juntar numa pasta e Tirar da pasta.'},
+        ],
+    },
+    {
         'id': 28, 'data': '14/10/2026', 'titulo': 'Editar e apagar mensagens nas DMs',
         'itens': [
             {'icone': 'fa-pen', 'titulo': 'Editar mensagem na DM funciona', 'texto': 'Antes, editar uma mensagem na conversa direta dava erro. Agora você edita (duplo clique ou no lápis) e o outro lado vê o "(editada)" na hora.'},
