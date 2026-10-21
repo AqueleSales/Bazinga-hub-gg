@@ -6,6 +6,10 @@ COMO AS PERMISSÕES FUNCIONAM
 - Todo membro tem o cargo padrão "Membro" (`Server.perms_membro`, NULL = `PERMS_MEMBRO_PADRAO`, que repete o que qualquer membro já podia antes dos cargos).
   Os cargos de verdade (`ServerRole`) somam permissões em cima disso. `posicao` maior = cargo mais alto.
 - HIERARQUIA: ninguém cria/edita/apaga/dá cargo igual ou acima do seu, nem concede permissão que não tem, nem remove/mexe em quem está no seu nível ou acima. O dono não é expulso.
+- PERMISSÃO POR CANAL (Rodada 29b): `ChannelOverwrite` guarda, por canal e por cargo (ou pelo "Membro" padrão, role_id NULL), bits liberados (`allow`) e negados (`deny`).
+  Resolução (`resolver`): permissões do servidor + as duas implícitas de canal (ver_canal e enviar_mensagens, que todo membro tem) -> sobrescrita do Membro ->
+  soma das sobrescritas dos cargos da pessoa, com NEGAR vencendo LIBERAR no mesmo nível. Dono e Administrador ignoram tudo. Canal PRIVADO continua valendo
+  (allowed_members): a sobrescrita só restringe mais. `Channel.sobrescrita` (anulável) evita consultar a tabela em canal que nunca teve uma.
 - `Server.estrutura` (True quando existe algum cargo ou categoria) evita consultar essas tabelas em servidor que nunca as usou (o caso comum): o /chat e o connect
   não ganham query nenhuma. Nos que usam, a estrutura é carregada em 3 queries de uma vez e fica em memória (`_CACHE`, invalidada em TODA escrita daqui). O cache
   só alimenta o que é DESENHADO na tela; quem decide se uma ação vale (`contexto`) sempre lê o banco.
@@ -16,7 +20,7 @@ import unicodedata
 
 from sqlalchemy import func
 
-from .models import db, Server, Channel, ServerRole, MemberRole, ChannelCategory, server_members, channel_members
+from .models import db, Server, Channel, ServerRole, MemberRole, ChannelCategory, ChannelOverwrite, server_members, channel_members
 
 
 class ErroCargo(Exception):
@@ -44,6 +48,25 @@ PERMISSOES = [
 BIT = {p[0]: 1 << i for i, p in enumerate(PERMISSOES)}
 TODAS = (1 << len(PERMISSOES)) - 1
 IDS_PERMISSAO = tuple(BIT)
+
+# PERMISSÕES QUE UM CANAL PODE SOBRESCREVER (Rodada 29b). As cinco últimas são as do servidor (mesmos bits); `ver_canal` e `enviar_mensagens` só existem no canal:
+# no servidor todo membro as tem de graça (por isso não entram em PERMISSOES nem em Server.perms_membro: servidor antigo não perde nada).
+BIT_CANAL = {'ver_canal': 1 << 20, 'enviar_mensagens': 1 << 21}
+PERMS_CANAL = [
+    ('ver_canal', 'Ver o canal', 'Enxergar o canal na lista e ler as mensagens (em canal privado, quem entra continua sendo a lista de convidados: aqui só dá pra restringir).'),
+    ('enviar_mensagens', 'Enviar mensagens', 'Escrever no canal de texto.'),
+    ('enviar_anuncios', 'Publicar em anúncios e regras', 'Escrever neste canal se ele for de anúncios ou de regras.'),
+    ('falar_voz', 'Falar na voz', 'Sem isso a pessoa entra neste canal de voz só como ouvinte.'),
+    ('falar_palco', 'Falar no palco', 'Ser orador neste palco e chamar ouvintes.'),
+    ('apagar_mensagens', 'Apagar mensagens dos outros', 'Apagar a mensagem de qualquer pessoa neste canal.'),
+    ('fixar_mensagens', 'Fixar mensagens', 'Fixar e desafixar mensagens neste canal.'),
+]
+for _p in PERMS_CANAL:
+    BIT_CANAL.setdefault(_p[0], BIT.get(_p[0]))
+IDS_PERMS_CANAL = tuple(p[0] for p in PERMS_CANAL)
+PADRAO_CANAL = BIT_CANAL['ver_canal'] | BIT_CANAL['enviar_mensagens']     # o que todo membro tem em qualquer canal, antes de qualquer sobrescrita
+TODAS_CANAL = TODAS | PADRAO_CANAL
+MAX_SOBRESCRITAS = 26     # um por cargo (25) + o Membro padrão
 # O que qualquer membro já podia antes dos cargos existirem (convidar com teto, fixar, falar em voz). O dono pode mudar em Cargos > Membro.
 PERMS_MEMBRO_PADRAO = BIT['criar_convite'] | BIT['fixar_mensagens'] | BIT['falar_voz']
 NIVEL_DONO = 10 ** 9
@@ -70,6 +93,20 @@ def mascara_de(ids):
 def ids_da_mascara(m):
     m = m or 0
     return [i for i, b in BIT.items() if m & b]
+
+
+def mascara_canal(ids):
+    """Como `mascara_de`, mas pra lista de permissões que um canal pode sobrescrever (PERMS_CANAL)."""
+    m = 0
+    for i in (ids if isinstance(ids, (list, tuple, set)) else []):
+        if isinstance(i, str) and i in IDS_PERMS_CANAL:
+            m |= BIT_CANAL[i]
+    return m
+
+
+def ids_canal_da_mascara(m):
+    m = m or 0
+    return [i for i in IDS_PERMS_CANAL if m & BIT_CANAL[i]]
 
 
 # ==========================================
@@ -172,7 +209,7 @@ def canal_de_texto_do_servidor(srv, ref):
     except (TypeError, ValueError):
         return None
     c = Channel.query.get(cid)
-    if c and c.server_id == srv.id and c.channel_type in TIPOS_TEXTO and not c.is_private:
+    if c and c.server_id == srv.id and c.channel_type in TIPOS_TEXTO and not c.is_private and not c.sobrescrita:
         return c.id
     return None
 
@@ -181,23 +218,28 @@ def canal_de_texto_do_servidor(srv, ref):
 # CONTEXTO: o que ESTA pessoa pode NESTE servidor (sempre lido do banco)
 # ==========================================
 class Contexto:
-    __slots__ = ('perms', 'nivel', 'dono', 'membro')
+    __slots__ = ('perms', 'nivel', 'dono', 'membro', 'cargos')
 
-    def __init__(self, perms=0, nivel=0, dono=False, membro=False):
-        self.perms, self.nivel, self.dono, self.membro = perms, nivel, dono, membro
+    def __init__(self, perms=0, nivel=0, dono=False, membro=False, cargos=()):
+        self.perms, self.nivel, self.dono, self.membro, self.cargos = perms, nivel, dono, membro, cargos
 
     def tem(self, perm):
         return bool(self.perms & BIT[perm])
+
+    @property
+    def admin(self):
+        """Dono ou Administrador: ignoram qualquer sobrescrita de canal."""
+        return self.dono or bool(self.perms & BIT['administrador'])
 
 
 SEM_ACESSO = Contexto()
 
 
-def _fechar(perms, nivel, membro=True):
+def _fechar(perms, nivel, membro=True, cargos=()):
     """Administrador vira 'todas as permissões'."""
     if perms & BIT['administrador']:
         perms = TODAS
-    return Contexto(perms, nivel, False, membro)
+    return Contexto(perms, nivel, False, membro, cargos)
 
 
 def _base(srv):
@@ -221,17 +263,18 @@ def contexto(usuario, srv):
             server_members.c.server_id == srv.id, server_members.c.person_id == usuario.id).first() is not None
         if not membro:
             return None
-        perms, nivel = _base(srv), 0
+        perms, nivel, ids = _base(srv), 0, []
         if srv.estrutura:
-            for p, pos in db.session.query(ServerRole.permissoes, ServerRole.posicao).join(
+            for rid, p, pos in db.session.query(ServerRole.id, ServerRole.permissoes, ServerRole.posicao).join(
                     MemberRole, MemberRole.role_id == ServerRole.id).filter(
                     MemberRole.person_id == usuario.id, MemberRole.server_id == srv.id).all():
                 perms |= (p or 0)
                 nivel = max(nivel, pos or 0)
-        return perms, nivel
+                ids.append(rid)
+        return perms, nivel, tuple(ids)
 
     lido = _retry(ler)
-    return SEM_ACESSO if lido is None else _fechar(lido[0], lido[1])
+    return SEM_ACESSO if lido is None else _fechar(lido[0], lido[1], True, lido[2])
 
 
 def pode(usuario, srv, perm):
@@ -241,6 +284,55 @@ def pode(usuario, srv, perm):
     if perm == 'dono':
         return srv.owner_id == usuario.id
     return contexto(usuario, srv).tem(perm)
+
+
+# ==========================================
+# PERMISSÃO POR CANAL (sobrescritas): quem decide lê o banco; o cache da estrutura só alimenta o que é desenhado
+# ==========================================
+def resolver(perms, cargos_ids, ows):
+    """Máscara efetiva da pessoa NUM canal. `perms` = permissões do servidor (já com o cargo padrão e os cargos somados), `cargos_ids` = os cargos dela,
+    `ows` = [(role_id|None, allow, deny)] do canal. Administrador/dono (todas as permissões) ignoram tudo. Ordem: Membro padrão -> cargos juntos,
+    e em cada nível NEGAR vence LIBERAR (o mesmo bit liberado por um cargo e negado por outro fica negado)."""
+    if perms & BIT['administrador']:
+        return TODAS_CANAL
+    p = perms | PADRAO_CANAL
+    for rid, allow, deny in ows:
+        if rid is None:
+            p = (p & ~(deny or 0)) | (allow or 0)
+    ids = set(cargos_ids or ())
+    a = d = 0
+    for rid, allow, deny in ows:
+        if rid is not None and rid in ids:
+            a |= (allow or 0)
+            d |= (deny or 0)
+    return (p | a) & ~d
+
+
+def _linhas_do_canal(canal_id):
+    return _retry(lambda: [(rid, a or 0, d or 0) for rid, a, d in db.session.query(
+        ChannelOverwrite.role_id, ChannelOverwrite.allow, ChannelOverwrite.deny).filter(ChannelOverwrite.channel_id == canal_id).all()])
+
+
+def perms_no_canal(usuario, srv, canal, ctx=None):
+    """Máscara (BIT_CANAL + BIT) do que a pessoa pode NESTE canal; 0 se não é membro. Canal sem sobrescrita: nenhuma consulta além do contexto."""
+    ctx = ctx or contexto(usuario, srv)
+    if not ctx.membro:
+        return 0
+    if ctx.admin:
+        return TODAS_CANAL
+    if not canal.sobrescrita:
+        return ctx.perms | PADRAO_CANAL
+    return resolver(ctx.perms, ctx.cargos, _linhas_do_canal(canal.id))
+
+
+def pode_no_canal(usuario, srv, canal, perm):
+    """Como `pode`, mas olhando as sobrescritas do canal. `perm` pode ser de PERMISSOES ou de PERMS_CANAL (ver_canal, enviar_mensagens)."""
+    if usuario is None or srv is None or canal is None:
+        return False
+    bit = BIT_CANAL.get(perm) or BIT.get(perm)
+    if not bit:
+        return False
+    return bool(perms_no_canal(usuario, srv, canal) & bit)
 
 
 def nivel_do_membro(srv, pessoa_id):
@@ -275,9 +367,10 @@ def limpar_cache():
     _CACHE.clear()
 
 
-def carregar_estruturas(servidores):
+def carregar_estruturas(servidores, canais=None):
     """{server_id: estrutura} dos servidores que têm `estrutura`. Nenhuma query se nenhum tem ou se já está em cache;
-    senão 3 queries pro lote inteiro (cargos, categorias, quem tem qual cargo)."""
+    senão 3 queries pro lote inteiro (cargos, categorias, quem tem qual cargo) + 1 só se algum canal tiver sobrescrita.
+    `canais` = os canais já carregados por quem chama (evita perguntar de novo quais têm sobrescrita)."""
     agora = time.time()
     saida, faltam = {}, []
     for s in servidores:
@@ -289,7 +382,7 @@ def carregar_estruturas(servidores):
         else:
             faltam.append(s.id)
     if faltam:
-        novos = {i: {'cargos': [], 'categorias': [], 'membros': {}} for i in faltam}
+        novos = {i: {'cargos': [], 'categorias': [], 'membros': {}, 'sobrescritas': {}} for i in faltam}
         for r in ServerRole.query.filter(ServerRole.server_id.in_(faltam)).order_by(ServerRole.posicao.desc(), ServerRole.id.asc()).all():
             novos[r.server_id]['cargos'].append({'id': r.id, 'nome': r.nome, 'cor': r.cor, 'permissoes': r.permissoes or 0,
                                                  'posicao': r.posicao or 0, 'destacar': bool(r.destacar)})
@@ -297,17 +390,29 @@ def carregar_estruturas(servidores):
             novos[c.server_id]['categorias'].append({'id': c.id, 'nome': c.nome, 'pos': c.posicao or 0})
         for sid, pid, rid in db.session.query(MemberRole.server_id, MemberRole.person_id, MemberRole.role_id).filter(MemberRole.server_id.in_(faltam)).all():
             novos[sid]['membros'].setdefault(pid, []).append(rid)
+        # Sobrescritas por canal: só dos canais marcados (Channel.sobrescrita). Todo canal marcado entra no mapa (mesmo vazio): ausente = desconhecido = escondido.
+        if canais is not None:
+            marcados = [(c.id, c.server_id) for c in canais if c.sobrescrita and c.server_id in novos]
+        else:
+            marcados = db.session.query(Channel.id, Channel.server_id).filter(Channel.server_id.in_(faltam), Channel.sobrescrita.is_(True)).all()
+        if marcados:
+            dono_do = dict(marcados)
+            for cid, sid in marcados:
+                novos[sid]['sobrescritas'][cid] = []
+            for cid, rid, a, d in db.session.query(ChannelOverwrite.channel_id, ChannelOverwrite.role_id, ChannelOverwrite.allow,
+                                                   ChannelOverwrite.deny).filter(ChannelOverwrite.channel_id.in_(list(dono_do))).all():
+                novos[dono_do[cid]]['sobrescritas'][cid].append((rid, a or 0, d or 0))
         for i, est in novos.items():
             _CACHE[i] = (agora + _TTL_S, est)
             saida[i] = est
     return saida
 
 
-def perms_em_memoria(srv, pessoa_id, est):
-    """Mesma conta do `contexto`, mas em cima da estrutura já carregada (zero query). (máscara, nível)."""
+def cargos_em_memoria(srv, pessoa_id, est):
+    """Mesma conta do `contexto`, mas em cima da estrutura já carregada (zero query). (máscara, nível, ids dos cargos)."""
     if srv.owner_id == pessoa_id:
-        return TODAS, NIVEL_DONO
-    perms, nivel = _base(srv), 0
+        return TODAS, NIVEL_DONO, ()
+    perms, nivel, ids = _base(srv), 0, []
     if est:
         por_id = {c['id']: c for c in est['cargos']}
         for rid in est['membros'].get(pessoa_id, ()):
@@ -315,7 +420,31 @@ def perms_em_memoria(srv, pessoa_id, est):
             if c:
                 perms |= c['permissoes']
                 nivel = max(nivel, c['posicao'])
-    return (TODAS if perms & BIT['administrador'] else perms), nivel
+                ids.append(rid)
+    return (TODAS if perms & BIT['administrador'] else perms), nivel, tuple(ids)
+
+
+def perms_em_memoria(srv, pessoa_id, est):
+    """(máscara, nível) - ver `cargos_em_memoria`."""
+    perms, nivel, _ids = cargos_em_memoria(srv, pessoa_id, est)
+    return perms, nivel
+
+
+def mascara_no_canal_em_memoria(perms, ids, est, canal_id):
+    """Máscara efetiva num canal MARCADO, em cima da estrutura em memória (só pra desenhar a lista de cada membro). Canal que a estrutura não conhece
+    (ainda não carregada) conta como escondido, a menos que a pessoa seja admin/dono: errar pra esconder é melhor que vazar."""
+    if perms & BIT['administrador']:
+        return TODAS_CANAL
+    ows = ((est or {}).get('sobrescritas') or {}).get(canal_id)
+    if ows is None:
+        return 0
+    return resolver(perms, ids, ows)
+
+
+def sobrescritas_para_json(est, canal_id):
+    """Pra quem gerencia cargos: [{cargo: id|None, permitir: [...], negar: [...]}] do canal (None = o Membro padrão)."""
+    return [{'cargo': rid, 'permitir': ids_canal_da_mascara(a), 'negar': ids_canal_da_mascara(d)}
+            for rid, a, d in ((est or {}).get('sobrescritas') or {}).get(canal_id, ())]
 
 
 def extras_do_servidor(srv, est, usuario, visiveis):
@@ -434,7 +563,12 @@ def apagar_cargo(srv, ctx, cargo_id):
     _exigir(ctx, 'gerenciar_cargos', 'Você não pode gerenciar cargos.')
     r = _cargo_do_servidor(srv, cargo_id)
     _alcance(ctx, r)
-    db.session.delete(r)     # as ligações com os membros saem junto (cascade)
+    afetados = [cid for (cid,) in db.session.query(ChannelOverwrite.channel_id).filter(ChannelOverwrite.role_id == r.id).distinct().all()]
+    db.session.delete(r)     # as ligações com os membros e as sobrescritas de canal saem junto (cascade)
+    if afetados:
+        db.session.flush()
+        for cid in afetados:
+            _recontar_sobrescrita(cid)
     return r
 
 
@@ -498,6 +632,57 @@ def definir_perms_membro(srv, ctx, permissoes):
 def limpar_membro(srv_id, pessoa_id):
     """A pessoa saiu ou foi removida: perde os cargos que tinha neste servidor."""
     MemberRole.query.filter_by(server_id=srv_id, person_id=pessoa_id).delete(synchronize_session=False)
+
+
+# ==========================================
+# PERMISSÃO POR CANAL: escrever
+# ==========================================
+def _recontar_sobrescrita(canal_id):
+    """Mantém `Channel.sobrescrita` igual à existência de linhas (o canal some do fluxo barato só quando não sobra nenhuma)."""
+    n = ChannelOverwrite.query.filter_by(channel_id=canal_id).count()
+    c = Channel.query.get(canal_id)
+    if c is not None:
+        c.sobrescrita = n > 0
+
+
+def definir_sobrescrita(srv, ctx, usuario, canal, cargo_ref, permitir, negar):
+    """Define (ou apaga, se vier vazio) a sobrescrita de UM cargo (ou do "Membro" padrão) NESTE canal. `permitir`/`negar` = listas de ids de PERMS_CANAL.
+    Quem pode: `gerenciar_cargos`, em canal que enxerga. Anti-escalada igual à dos cargos: só mexe em cargo abaixo do seu, e só nos bits que
+    ele mesmo tem NESTE canal (liberar ou negar). Não vale tirar o próprio acesso (a menos que seja dono/Administrador)."""
+    _exigir(ctx, 'gerenciar_cargos', 'Você não pode gerenciar cargos e permissões.')
+    if canal is None or canal.server_id != srv.id or (canal.channel_type or 'text') == 'separador':
+        raise ErroCargo('Esse canal não aceita permissões.')
+    cargo = None
+    if cargo_ref not in (None, '', 'membro', 0, '0'):
+        cargo = _cargo_do_servidor(srv, cargo_ref)
+        _alcance(ctx, cargo)
+    rid = cargo.id if cargo else None
+    liberar, negar_m = mascara_canal(permitir), mascara_canal(negar)
+    liberar &= ~negar_m                 # o mesmo bit nas duas listas: negar vence
+    linha = ChannelOverwrite.query.filter_by(channel_id=canal.id, role_id=rid).first()
+    antes_a, antes_d = ((linha.allow or 0), (linha.deny or 0)) if linha else (0, 0)
+    mexeu = (liberar ^ antes_a) | (negar_m ^ antes_d)
+    if mexeu and not ctx.dono:
+        meus = perms_no_canal(usuario, srv, canal, ctx)
+        if mexeu & ~meus:
+            raise ErroCargo('Você não pode liberar nem negar uma permissão que você mesmo não tem neste canal.')
+    if not liberar and not negar_m:
+        if linha:
+            db.session.delete(linha)
+    else:
+        if linha is None:
+            if ChannelOverwrite.query.filter_by(channel_id=canal.id).count() >= MAX_SOBRESCRITAS:
+                raise ErroCargo('Esse canal já tem permissões demais.')
+            linha = ChannelOverwrite(channel_id=canal.id, role_id=rid)
+            db.session.add(linha)
+        linha.allow, linha.deny = liberar, negar_m
+    db.session.flush()
+    _recontar_sobrescrita(canal.id)
+    if canal.sobrescrita:
+        _marcar_estrutura(srv)
+    if not ctx.admin and not (perms_no_canal(usuario, srv, canal, ctx) & BIT_CANAL['ver_canal']):
+        raise ErroCargo('Isso tiraria o seu próprio acesso a este canal. Peça a alguém com um cargo mais alto.')
+    return canal
 
 
 # ==========================================
@@ -670,10 +855,17 @@ def proxima_posicao(srv_id, categoria_id):
 # REGRAS POR TIPO DE CANAL
 # ==========================================
 def checar_envio(usuario, srv, canal, tem_anexo):
-    """(ok, mensagem). Canal de texto normal passa direto SEM consulta nenhuma; anúncios/regras exigem a permissão; mídia exige anexo."""
+    """(ok, mensagem). Canal de texto normal e sem sobrescrita passa direto SEM consulta nenhuma; anúncios/regras exigem a permissão; mídia exige anexo;
+    canal com sobrescrita confere "Enviar mensagens" (e "Publicar em anúncios", se for o caso) já com o que o cargo da pessoa tem NESTE canal."""
     tipo = canal.channel_type or 'text'
+    mascara = None
+    if canal.sobrescrita and srv is not None:
+        mascara = perms_no_canal(usuario, srv, canal)
+        if not mascara & BIT_CANAL['enviar_mensagens']:
+            return False, 'Você não tem permissão para enviar mensagens neste canal.'
     if tipo in TIPOS_SO_LEITURA:
-        if srv is None or not pode(usuario, srv, 'enviar_anuncios'):
+        pode_publicar = bool(mascara & BIT['enviar_anuncios']) if mascara is not None else (srv is not None and pode(usuario, srv, 'enviar_anuncios'))
+        if not pode_publicar:
             nome = 'anúncios' if tipo == 'anuncios' else 'regras'
             return False, f'Só quem tem permissão publica em canais de {nome}.'
     elif tipo == 'midia' and not tem_anexo:
@@ -688,13 +880,14 @@ def regras_de_voz(usuario, srv, canal, participantes, convidados=()):
     if srv is None:
         return True, '', False
     ctx = contexto(usuario, srv)
+    mascara = perms_no_canal(usuario, srv, canal, ctx)       # com as sobrescritas do canal, se houver
     limite = canal.user_limit
     if limite and (canal.channel_type or 'voice') in TIPOS_VOZ:
         dentro = {p.get('usuario_id') for p in participantes if p.get('usuario_id') != usuario.id}
         if len(dentro) >= limite:
             return False, f'Esse canal está lotado ({limite}/{limite}).', False
     if canal.channel_type == 'palco':
-        ouvinte = not (ctx.tem('falar_palco') or usuario.id in convidados)
+        ouvinte = not (mascara & BIT['falar_palco'] or usuario.id in convidados)
     else:
-        ouvinte = not ctx.tem('falar_voz')
+        ouvinte = not (mascara & BIT['falar_voz'])
     return True, '', ouvinte

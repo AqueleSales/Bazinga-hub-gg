@@ -9,6 +9,13 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 31, 'data': '21/10/2026', 'titulo': 'Permissões por canal',
+        'itens': [
+            {'icone': 'fa-shield-halved', 'titulo': 'Cada canal com as suas regras', 'texto': 'Em Editar canal > Permissões do canal (ou em Configurações > Canais), escolha um cargo, ou o "Membro" que vale pra todo mundo, e libere ou negue só naquele canal: ver, escrever, publicar anúncios, falar na voz ou no palco, apagar e fixar mensagens.'},
+            {'icone': 'fa-eye-slash', 'titulo': 'Canais que só alguns enxergam', 'texto': 'Quem não pode ver um canal não vê nem o nome dele (nem a categoria, se só tiver esse). Negar vence liberar, e o dono e os administradores ignoram tudo isso. Em canal privado a lista de convidados continua mandando.'},
+        ],
+    },
+    {
         'id': 29, 'data': '19/10/2026', 'titulo': 'Cargos, categorias e mais tipos de canal nos servidores',
         'itens': [
             {'icone': 'fa-user-shield', 'titulo': 'Cargos com permissões', 'texto': 'Em Configurações do servidor > Cargos, crie cargos com cor e permissões (gerenciar canais, remover membros, apagar mensagens, ver canais privados, falar no palco...). Quem tem cargo mais alto manda nos de baixo, e o nome do membro ganha a cor do cargo. O dono continua podendo tudo.'},

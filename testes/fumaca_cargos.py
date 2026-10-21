@@ -312,7 +312,8 @@ with app.app_context():
     # ---------- o cliente espelha as listas fechadas do servidor ----------
     import re
     js = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'static', 'js', 'cargos.js'), encoding='utf-8').read()
-    ids_js = re.findall(r"^\s+\['([a-z_]+)', '[^']+', '", js, re.M)
+    bloco_js = re.search(r"const PERMISSOES = \[(.*?)\n    \];", js, re.S).group(1)   # só a lista do servidor (a de canal, PERMS_CANAL, é conferida em fumaca_permissoes_canal.py)
+    ids_js = re.findall(r"^\s+\['([a-z_]+)', '[^']+', '", bloco_js, re.M)
     ok(ids_js == list(cargos.IDS_PERMISSAO), 'cargos.js lista as MESMAS permissões, na mesma ordem')
     tipos_js = set(re.findall(r"^\s+([a-z]+): \{ fam: '", js, re.M))
     ok(tipos_js == set(cargos.TIPOS_CANAL), 'cargos.js lista os MESMOS tipos de canal')

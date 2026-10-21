@@ -291,6 +291,9 @@ def atualizar_banco():
             add_column_se_nao_existir("channel", "icon VARCHAR(16)")
             add_column_se_nao_existir("channel", "user_limit INTEGER")
 
+            # 39. Permissão por canal (Rodada 29b): a tabela channel_overwrite nasce pelo create_all; aqui só a flag do canal (NULL = nenhuma sobrescrita).
+            add_column_se_nao_existir("channel", "sobrescrita BOOLEAN")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

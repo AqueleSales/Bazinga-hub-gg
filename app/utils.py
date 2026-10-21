@@ -105,12 +105,17 @@ def pode_ver_canal(usuario, canal):
             return False
         if servidor.owner_id == usuario.id:
             return True
-        if com_retry(lambda: db.session.query(channel_members.c.person_id).filter(
-                channel_members.c.channel_id == canal.id,
-                channel_members.c.person_id == usuario.id).first() is not None):
-            return True
+        convidado = com_retry(lambda: db.session.query(channel_members.c.person_id).filter(
+            channel_members.c.channel_id == canal.id,
+            channel_members.c.person_id == usuario.id).first() is not None)
         # Convite à parte, só o cargo "Ver canais privados" (ou Administrador) enxerga canal privado sem ter sido chamado.
-        return cargos.pode(usuario, servidor, 'ver_canais_privados')
+        if not convidado and not cargos.pode(usuario, servidor, 'ver_canais_privados'):
+            return False
+
+    # Permissão por canal (Rodada 29b): só consulta a tabela se o canal já teve alguma sobrescrita. Aqui ela só RESTRINGE (canal privado continua exigindo convite).
+    if canal.sobrescrita:
+        servidor = com_retry(lambda: Server.query.get(canal.server_id))
+        return servidor is not None and cargos.pode_no_canal(usuario, servidor, canal, 'ver_canal')
 
     return True
 

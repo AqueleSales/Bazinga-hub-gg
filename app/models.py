@@ -206,6 +206,21 @@ class ServerRole(db.Model):
     posicao = db.Column(db.Integer, default=1)
     destacar = db.Column(db.Boolean, nullable=True)           # mostra os membros desse cargo num grupo à parte na lista
     membros = db.relationship('MemberRole', backref='cargo', lazy=True, cascade="all, delete-orphan")
+    sobrescritas = db.relationship('ChannelOverwrite', backref='cargo', lazy=True, cascade="all, delete-orphan")
+
+
+class ChannelOverwrite(db.Model):
+    """Sobrescrita de permissão POR CANAL (Rodada 29b): num canal, um cargo (ou o cargo padrão "Membro", `role_id` NULL) tem permissões
+    liberadas (`allow`) ou negadas (`deny`) por cima das do servidor. Máscaras de bits de cargos.PERMS_CANAL; um bit nunca está nas duas.
+    Uma linha por canal+cargo (a unicidade do Membro, que tem role_id NULL, é garantida pelo código: NULL não colide em UNIQUE).
+    Apagar o cargo ou o canal apaga as linhas (cascade). `Channel.sobrescrita` avisa que existe alguma, pra não consultar a tabela à toa."""
+    __tablename__ = 'channel_overwrite'
+    id = db.Column(db.Integer, primary_key=True)
+    channel_id = db.Column(db.Integer, db.ForeignKey('channel.id'), nullable=False, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('server_role.id'), nullable=True, index=True)
+    allow = db.Column(db.Integer, default=0)
+    deny = db.Column(db.Integer, default=0)
+    __table_args__ = (db.UniqueConstraint('channel_id', 'role_id', name='uq_sobrescrita_canal_cargo'),)
 
 
 class MemberRole(db.Model):
@@ -238,6 +253,9 @@ class Channel(db.Model):
     category_id = db.Column(db.Integer, nullable=True)
     icon = db.Column(db.String(16), nullable=True)           # emoji do canal (cargos.emoji_valido)
     user_limit = db.Column(db.Integer, nullable=True)        # canal de voz: máximo de pessoas (NULL = sem limite)
+    # True quando o canal tem alguma ChannelOverwrite (permissão por cargo só neste canal). NULL/False = nenhuma: nada consulta a tabela
+    # (enviar mensagem, ver o canal e a lista do servidor ficam com o custo de antes).
+    sobrescrita = db.Column(db.Boolean, nullable=True)
 
     # Canal pode pertencer a um Servidor criado por um usuário. Nulo = canal
     # padrão do "Bazinga Hub" (o servidor global inicial, fora do sistema de Servers).
@@ -250,6 +268,7 @@ class Channel(db.Model):
 
     # Relacionamento: Um canal tem várias mensagens
     messages = db.relationship('Message', backref='channel', lazy=True, cascade="all, delete-orphan")
+    overwrites = db.relationship('ChannelOverwrite', backref='canal', lazy=True, cascade="all, delete-orphan")
 
     # Só vale quando is_private=True
     allowed_members = db.relationship('Person', secondary=channel_members, lazy='select',

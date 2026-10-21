@@ -5,7 +5,8 @@
      trocarServidor(srv), canalAtualId(), religarCanais(container), abrirCriarCanal(dados), abrirEditarCanal(canal), selecionarTipo(tipo), membros(), emojificar(el),
      emCall(canalId), travarMic(), escolherImagem(cfg), uploadMidia(arquivo), configAberta(), pedirMembros(), trocarSecao(nome), abrirConfigCompleta(),
      fecharConfigCompleta() }
-   Os ids de permissão e de tipo espelham app/cargos.py (PERMISSOES e TIPOS_CANAL): o teste testes/fumaca_cargos.py confere que as listas batem. */
+   Os ids de permissão e de tipo espelham app/cargos.py (PERMISSOES, PERMS_CANAL e TIPOS_CANAL): os testes testes/fumaca_cargos.py e fumaca_permissoes_canal.py conferem que as listas batem.
+   Permissão por canal (Rodada 29b): cada canal marcado (`sobrescrita`) chega com `perms` (o que EU posso nele) e, só pra quem gerencia cargos, `ow` (quem tem o quê). */
 const Cargos = (() => {
     'use strict';
     let C = null;
@@ -28,6 +29,23 @@ const Cargos = (() => {
         ['enviar_anuncios', 'Publicar em anúncios e regras', 'Escrever em canais de anúncios e de regras (todo mundo pode ler).'],
         ['falar_palco', 'Falar no palco', 'Ser orador em canal de palco e chamar ouvintes pro palco.'],
     ];
+    const PERMS_CANAL = [
+        ['ver_canal', 'Ver o canal', 'Enxergar o canal na lista e ler as mensagens. Em canal privado, quem entra continua sendo a lista de convidados: aqui só dá pra restringir.'],
+        ['enviar_mensagens', 'Enviar mensagens', 'Escrever no canal de texto.'],
+        ['enviar_anuncios', 'Publicar em anúncios e regras', 'Escrever neste canal, se ele for de anúncios ou de regras.'],
+        ['falar_voz', 'Falar na voz', 'Sem isso a pessoa entra neste canal de voz só como ouvinte.'],
+        ['falar_palco', 'Falar no palco', 'Ser orador neste palco e chamar ouvintes.'],
+        ['apagar_mensagens', 'Apagar mensagens dos outros', 'Apagar a mensagem de qualquer pessoa neste canal.'],
+        ['fixar_mensagens', 'Fixar mensagens', 'Fixar e desafixar mensagens neste canal.'],
+    ];
+    const PERMS_DO_TIPO = {      // o que faz sentido mostrar em cada tipo de canal (o servidor aceita qualquer uma da lista)
+        text: ['ver_canal', 'enviar_mensagens', 'apagar_mensagens', 'fixar_mensagens'],
+        midia: ['ver_canal', 'enviar_mensagens', 'apagar_mensagens', 'fixar_mensagens'],
+        anuncios: ['ver_canal', 'enviar_mensagens', 'enviar_anuncios', 'apagar_mensagens', 'fixar_mensagens'],
+        regras: ['ver_canal', 'enviar_mensagens', 'enviar_anuncios', 'apagar_mensagens', 'fixar_mensagens'],
+        voice: ['ver_canal', 'falar_voz'],
+        palco: ['ver_canal', 'falar_palco'],
+    };
     const TIPOS = {
         text: { fam: 'texto', nome: 'Texto', fa: 'fa-hashtag', desc: 'Conversa livre, com mensagens, fotos e GIFs.' },
         anuncios: { fam: 'texto', nome: 'Anúncios', fa: 'fa-bullhorn', desc: 'Todo mundo lê; só quem tem permissão escreve.' },
@@ -52,6 +70,14 @@ const Cargos = (() => {
     const ehDono = (srv) => !!srv && Number(srv.owner_id) === Number(C.meuId());
     const pode = (srv, perm) => !!srv && (ehDono(srv) || (srv.minhasPerms || []).includes(perm));
     const podeGerir = (srv) => ehDono(srv) || GESTAO.some(p => pode(srv, p));
+    const canalPorId = (srv, id) => ((srv && srv.channels) || []).find(c => String(c.id) === String(id));
+    /** O que EU posso NESTE canal. Canal marcado vem com `perms` (já resolvido pelo servidor); canal comum: as permissões do servidor + ver/enviar, que todo membro tem. */
+    function permNoCanal(srv, canal, perm) {
+        if (!srv) return false;
+        if (ehDono(srv) || pode(srv, 'administrador')) return true;
+        if (canal && Array.isArray(canal.perms)) return canal.perms.includes(perm);
+        return perm === 'ver_canal' || perm === 'enviar_mensagens' || pode(srv, perm);
+    }
     const meuNivel = (srv) => (ehDono(srv) ? NIVEL_DONO : (srv.meuNivel || 0));
     const cargoPorId = (srv, id) => (srv.cargos || []).find(c => Number(c.id) === Number(id));
     const nivelDe = (srv, cargosIds) => (cargosIds || []).reduce((n, id) => Math.max(n, (cargoPorId(srv, id) || {}).pos || 0), 0);
@@ -324,7 +350,15 @@ const Cargos = (() => {
                     <select id="cx-categoria" class="bz-input" style="padding-left:12px;"></select></div>
                 <div id="cx-limite-box"><label class="bz-label">Limite de pessoas <span class="cx-op">(vazio = sem limite)</span></label>
                     <input type="number" id="cx-limite" class="bz-input" min="1" max="99" placeholder="Sem limite" style="padding-left:12px;"></div>
+            </div>
+            <div class="cp-entrada" id="cx-perm-box" style="display:none;">
+                <button class="btn-cancel" id="cx-perm-abrir" type="button"><i class="fa-solid fa-shield-halved"></i> Permissões do canal</button>
+                <span class="cx-op">Quem pode ver, escrever, falar, apagar e fixar só neste canal, por cargo.</span>
             </div>`);
+        document.getElementById('cx-perm-abrir').addEventListener('click', () => {
+            const srv = C.servidorAtivo(), id = document.getElementById('cx-perm-abrir').dataset.canal;
+            if (srv && id) abrirPermissoes(canalPorId(srv, id));
+        });
         const rotuloNome = blocoNome.querySelector('.bz-label');
         if (rotuloNome) rotuloNome.id = 'cx-rotulo-nome';
     }
@@ -350,6 +384,12 @@ const Cargos = (() => {
         modalTipoInicial = editando ? canal.type : (tipoValido(dados.tipo) || 'text');
         grupo.style.display = editando && tipos.length <= 1 ? 'none' : 'block';
         desenharCartasDeTipo(tipos, modalTipoInicial);
+        const caixaPerm = document.getElementById('cx-perm-box');
+        if (caixaPerm) {   // permissões do canal só existem pra canal já criado e pra quem gerencia cargos
+            const mostrar = editando && canal.type !== 'separador' && pode(srv, 'gerenciar_cargos');
+            caixaPerm.style.display = mostrar ? '' : 'none';
+            document.getElementById('cx-perm-abrir').dataset.canal = editando ? canal.id : '';
+        }
         document.getElementById('cx-icone').value = editando ? (canal.icone || '') : '';
         document.getElementById('cx-limite').value = editando && canal.limite ? canal.limite : '';
         // categoria: só quando já existem categorias de verdade (servidor antigo mostra as duas seções "virtuais")
@@ -408,10 +448,12 @@ const Cargos = (() => {
         const campo = document.getElementById('message-input');
         if (!srv || !canal || !campo) return;
         const t = canal.type || 'text';
-        const leitura = (t === 'anuncios' || t === 'regras') && !pode(srv, 'enviar_anuncios');
+        const semEnviar = !permNoCanal(srv, canal, 'enviar_mensagens');
+        const leitura = semEnviar || ((t === 'anuncios' || t === 'regras') && !permNoCanal(srv, canal, 'enviar_anuncios'));
         campo.disabled = leitura;
         if (wrap) wrap.classList.toggle('so-leitura', leitura);
-        if (leitura) campo.placeholder = t === 'regras' ? 'Este canal é só pra ler as regras' : 'Só quem tem permissão publica aqui';
+        if (semEnviar) campo.placeholder = 'Você pode ler este canal, mas não pode enviar mensagens nele';
+        else if (leitura) campo.placeholder = t === 'regras' ? 'Este canal é só pra ler as regras' : 'Só quem tem permissão publica aqui';
         else if (t === 'midia') campo.placeholder = `Envie uma foto, vídeo ou GIF em ${canal.name} (o texto vira legenda)`;
         else campo.placeholder = `Conversar em #${canal.name}`;
         const cab = document.getElementById('current-channel-header');
@@ -426,7 +468,8 @@ const Cargos = (() => {
         const srv = C.servidorAtivo();
         const canal = srv && (srv.channels || []).find(c => String(c.id) === String(C.canalAtualId()));
         if (!canal) return true;
-        if ((canal.type === 'anuncios' || canal.type === 'regras') && !pode(srv, 'enviar_anuncios')) { C.toast('Só quem tem permissão publica nesse canal.', 'warning'); return false; }
+        if (!permNoCanal(srv, canal, 'enviar_mensagens')) { C.toast('Você não tem permissão para enviar mensagens neste canal.', 'warning'); return false; }
+        if ((canal.type === 'anuncios' || canal.type === 'regras') && !permNoCanal(srv, canal, 'enviar_anuncios')) { C.toast('Só quem tem permissão publica nesse canal.', 'warning'); return false; }
         if (canal.type === 'midia' && !qtdAnexos) { C.toast('Esse canal é só de mídia: anexe uma foto, vídeo ou GIF.', 'warning'); return false; }
         return true;
     }
@@ -473,9 +516,10 @@ const Cargos = (() => {
     }
     function ajustarMenuMensagem(menu, srv, dm) {
         const fixar = document.getElementById('ctx-pin');
-        if (fixar) fixar.style.display = (dm || (srv && !pode(srv, 'fixar_mensagens'))) ? 'none' : '';
+        const canal = srv && canalPorId(srv, C.canalAtualId());
+        if (fixar) fixar.style.display = (dm || (srv && !permNoCanal(srv, canal, 'fixar_mensagens'))) ? 'none' : '';
     }
-    function podeApagarMensagem(srv) { return pode(srv, 'apagar_mensagens'); }
+    function podeApagarMensagem(srv) { return permNoCanal(srv, srv && canalPorId(srv, C.canalAtualId()), 'apagar_mensagens'); }
 
     // ---------------------------------------------------------------------
     // configurações completas: abas novas e permissões por aba
@@ -701,9 +745,10 @@ const Cargos = (() => {
                     <div class="av" style="background:rgba(255,255,255,.07);border-radius:9px;">${c.icone ? `<span>${E(c.icone)}</span>` : `<i class="fa-solid ${t.fa}" style="color:var(--text-muted);font-size:13px;"></i>`}</div>
                     <div class="txt"><div class="nm">${E(c.name || '(separador sem título)')}</div><div class="sub">${E(sub)}</div></div>
                     ${c.is_private ? '<span class="sf-etiqueta"><i class="fa-solid fa-lock"></i> privado</span>' : ''}
-                    ${gerencia ? `<div class="acoes"><button class="sf-mini" data-sobe="${Number(c.id)}" ${ci === 0 ? 'disabled' : ''}>▲</button><button class="sf-mini" data-desce="${Number(c.id)}" ${ci === g.itens.length - 1 ? 'disabled' : ''}>▼</button>
+                    ${c.sobrescrita ? '<span class="sf-etiqueta" title="Este canal tem permissões próprias por cargo"><i class="fa-solid fa-shield-halved"></i> permissões</span>' : ''}
+                    ${gerencia || pode(srv, 'gerenciar_cargos') ? `<div class="acoes">${c.type !== 'separador' && pode(srv, 'gerenciar_cargos') ? `<button class="sf-mini" data-perm-canal="${Number(c.id)}" title="Permissões deste canal por cargo">Permissões</button>` : ''}${gerencia ? `<button class="sf-mini" data-sobe="${Number(c.id)}" ${ci === 0 ? 'disabled' : ''}>▲</button><button class="sf-mini" data-desce="${Number(c.id)}" ${ci === g.itens.length - 1 ? 'disabled' : ''}>▼</button>
                         <select class="sf-mini cx-mover" data-mover="${Number(c.id)}" title="Mover para outra categoria">${opcoes(g.id)}</select>
-                        <button class="sf-mini" data-editar="${Number(c.id)}">Editar</button></div>` : ''}</div>`);
+                        <button class="sf-mini" data-editar="${Number(c.id)}">Editar</button>` : ''}</div>` : ''}</div>`);
             });
         });
         lista.innerHTML = html.length ? html.join('') : '<div class="sf-vazio">Nenhum canal ainda.</div>';
@@ -727,12 +772,107 @@ const Cargos = (() => {
         }));
         lista.querySelectorAll('[data-cat-ren]').forEach(b => b.addEventListener('click', () => { const g = grupos.find(x => String(x.id) === b.dataset.catRen); renomearCategoria(srv, b.dataset.catRen, g && g.nome); }));
         lista.querySelectorAll('[data-cat-del]').forEach(b => b.addEventListener('click', () => { const g = grupos.find(x => String(x.id) === b.dataset.catDel); apagarCategoria(srv, b.dataset.catDel, g && g.nome); }));
+        lista.querySelectorAll('[data-perm-canal]').forEach(b => b.addEventListener('click', () => abrirPermissoes(canalPorId(srv, b.dataset.permCanal))));
         lista.querySelectorAll('[data-editar]').forEach(b => b.addEventListener('click', () => {
             const c = (srv.channels || []).find(x => Number(x.id) === Number(b.dataset.editar));
             if (!c) return;
             if (c.type === 'separador') { renomearSeparador(srv, c.id); return; }
             C.fecharConfigCompleta(); C.abrirEditarCanal(c);
         }));
+    }
+
+    // ---------------------------------------------------------------------
+    // permissões POR CANAL: janela com os cargos de um lado e, do outro, liberar/herdar/negar cada coisa
+    // ---------------------------------------------------------------------
+    let pm = null;   // { canalId, alvo: 'membro' | cargoId, rascunho: {perm: 'permitir'|'negar'}, sujo }
+    const OW = (canal) => canal.ow || [];
+    function linhaDoAlvo(canal, alvo) { return OW(canal).find(o => (alvo === 'membro' ? o.cargo == null : Number(o.cargo) === Number(alvo))); }
+    function rascunhoDe(canal, alvo) {
+        const o = linhaDoAlvo(canal, alvo), r = {};
+        (o ? o.permitir : []).forEach(p => { r[p] = 'permitir'; });
+        (o ? o.negar : []).forEach(p => { r[p] = 'negar'; });
+        return r;
+    }
+    function fecharPermissoes() { document.getElementById('cx-perm-modal')?.remove(); pm = null; }
+
+    function abrirPermissoes(canal) {
+        const srv = C.servidorAtivo();
+        if (!srv || !canal) return;
+        if (!pode(srv, 'gerenciar_cargos')) { C.toast('Só quem gerencia cargos mexe nas permissões do canal.', 'warning'); return; }
+        fecharPermissoes();
+        pm = { canalId: canal.id, alvo: 'membro', rascunho: rascunhoDe(canal, 'membro'), sujo: false };
+        const el = document.createElement('div');
+        el.id = 'cx-perm-modal'; el.className = 'modal-overlay'; el.style.display = 'flex';
+        el.innerHTML = `<div class="bazinga-modal cp-card">
+            <div class="modal-header" style="position:relative;"><h2 id="cp-titulo"></h2><p>Por cargo, só neste canal. Negar vence liberar, e o dono e os administradores ignoram tudo isto.</p>
+                <i class="fa-solid fa-xmark modal-close-x" id="cp-x"></i></div>
+            <div class="modal-content cp-layout"><div class="cp-alvos" id="cp-alvos"></div><div class="cp-editor" id="cp-editor"></div></div>
+            <div class="modal-footer"><button class="btn-cancel" id="cp-fechar" type="button">Fechar</button></div></div>`;
+        document.body.appendChild(el);
+        el.addEventListener('mousedown', (e) => { if (e.target === el) fecharPermissoes(); });
+        el.querySelector('#cp-x').addEventListener('click', fecharPermissoes);
+        el.querySelector('#cp-fechar').addEventListener('click', fecharPermissoes);
+        desenharPermissoes();
+    }
+
+    function desenharPermissoes() {
+        const srv = C.servidorAtivo(), box = document.getElementById('cx-perm-modal');
+        const canal = pm && canalPorId(srv, pm.canalId);
+        if (!box) return;
+        if (!srv || !canal) { fecharPermissoes(); return; }    // o canal sumiu pra mim (apagado, ou eu perdi o acesso)
+        const t = TIPOS[canal.type] || TIPOS.text;
+        box.querySelector('#cp-titulo').innerHTML = `Permissões de ${canal.icone ? E(canal.icone) : `<i class="fa-solid ${t.fa}"></i>`} ${E(canal.name)}`;
+        const roles = (srv.cargos || []).slice().sort((a, b) => b.pos - a.pos);
+        const marca = (alvo) => (linhaDoAlvo(canal, alvo) ? '<i class="fa-solid fa-circle cp-ponto" title="Tem permissões próprias aqui"></i>' : '');
+        const alvos = box.querySelector('#cp-alvos');
+        alvos.innerHTML = `<div class="cg-item membro ${pm.alvo === 'membro' ? 'ativo' : ''}" data-alvo="membro"><span class="cg-bolinha" style="background:#99aab5"></span><span class="cg-nome">Membro <small>(todos)</small></span>${marca('membro')}</div>`
+            + roles.map(r => `<div class="cg-item ${Number(pm.alvo) === Number(r.id) ? 'ativo' : ''} ${editavel(srv, r) ? '' : 'travado'}" data-alvo="${Number(r.id)}">${chipCargo(r)}<span class="cg-nome">${E(r.nome)}</span>${marca(r.id)}</div>`).join('');
+        alvos.querySelectorAll('.cg-item').forEach(it => it.addEventListener('click', () => {
+            const ir = () => {
+                pm.alvo = it.dataset.alvo === 'membro' ? 'membro' : Number(it.dataset.alvo);
+                pm.rascunho = rascunhoDe(canal, pm.alvo); pm.sujo = false;
+                desenharPermissoes();
+            };
+            if (pm.sujo) C.confirmar('Trocar de cargo?', 'Você mudou coisas aqui e não salvou. Elas se perdem se trocar.', ir); else ir();
+        }));
+        const alvoCargo = pm.alvo === 'membro' ? null : roles.find(r => Number(r.id) === Number(pm.alvo));
+        if (pm.alvo !== 'membro' && !alvoCargo) { pm.alvo = 'membro'; pm.rascunho = rascunhoDe(canal, 'membro'); pm.sujo = false; return desenharPermissoes(); }
+        const livre = !alvoCargo || editavel(srv, alvoCargo);
+        const lista = (PERMS_DO_TIPO[canal.type] || PERMS_DO_TIPO.text);
+        const linhas = PERMS_CANAL.filter(p => lista.includes(p[0]) || pm.rascunho[p[0]]).map(([id, nm, desc]) => {
+            const eu = permNoCanal(srv, canal, id), v = pm.rascunho[id] || 'herdar';
+            const off = !livre || !eu;
+            const tit = !livre ? 'Cargo do seu nível ou acima: só dá pra olhar' : (!eu ? 'Você não tem essa permissão neste canal, então não pode liberar nem negar' : '');
+            const botao = (valor, rotulo, cls) => `<button type="button" class="cp-op ${cls} ${v === valor ? 'sel' : ''}" data-perm="${id}" data-valor="${valor}" ${off ? 'disabled' : ''}>${rotulo}</button>`;
+            return `<div class="cp-linha ${off ? 'off' : ''}" title="${E(tit)}"><div class="cp-txt"><b>${E(nm)}</b><em>${E(desc)}</em></div>
+                <div class="cp-tri">${botao('negar', '<i class="fa-solid fa-xmark"></i>', 'neg')}${botao('herdar', '<i class="fa-solid fa-minus"></i>', 'her')}${botao('permitir', '<i class="fa-solid fa-check"></i>', 'per')}</div></div>`;
+        }).join('');
+        const nomeAlvo = alvoCargo ? alvoCargo.nome : 'Membro (todo mundo)';
+        const ed = box.querySelector('#cp-editor');
+        ed.innerHTML = `<h3>${alvoCargo ? chipCargo(alvoCargo) : '<span class="cg-bolinha" style="background:#99aab5"></span>'} ${E(nomeAlvo)}</h3>
+            ${livre ? '' : '<p class="cg-aviso"><i class="fa-solid fa-lock"></i> Cargo do seu nível ou acima: você só pode olhar.</p>'}
+            <div class="cp-legenda"><span><i class="fa-solid fa-xmark"></i> Negar</span><span><i class="fa-solid fa-minus"></i> Herdar do servidor</span><span><i class="fa-solid fa-check"></i> Permitir</span></div>
+            <div class="cp-lista">${linhas}</div>
+            ${canal.is_private ? '<p class="cp-nota"><i class="fa-solid fa-lock"></i> Canal privado: quem entra continua sendo a lista de convidados. "Ver o canal" aqui só serve pra restringir.</p>' : ''}
+            ${livre ? `<div class="cp-botoes"><button class="btn btn-primary" id="cp-salvar" type="button" ${pm.sujo ? '' : 'disabled'}>Salvar</button>
+                <button class="btn-cancel" id="cp-limpar" type="button" ${linhaDoAlvo(canal, pm.alvo) || Object.keys(pm.rascunho).length ? '' : 'disabled'}>Voltar ao padrão</button></div>` : ''}`;
+        ed.querySelectorAll('.cp-op').forEach(b => b.addEventListener('click', () => {
+            if (b.dataset.valor === 'herdar') delete pm.rascunho[b.dataset.perm]; else pm.rascunho[b.dataset.perm] = b.dataset.valor;
+            pm.sujo = true; desenharPermissoes();
+        }));
+        const enviar = (r) => C.socket.emit('canal_permissao', {
+            canal_id: canal.id, cargo_id: pm.alvo === 'membro' ? null : pm.alvo,
+            permitir: Object.keys(r).filter(k => r[k] === 'permitir'), negar: Object.keys(r).filter(k => r[k] === 'negar'),
+        });
+        ed.querySelector('#cp-salvar')?.addEventListener('click', () => { enviar(pm.rascunho); pm.sujo = false; C.toast('Salvando permissões...', 'info'); });
+        ed.querySelector('#cp-limpar')?.addEventListener('click', () => { pm.rascunho = {}; pm.sujo = false; enviar({}); C.toast('Voltando ao padrão...', 'info'); });
+    }
+    /** O servidor mandou a estrutura de novo: se a janela está aberta, atualiza (sem pisar em algo que a pessoa está editando). */
+    function atualizarPermissoes() {
+        if (!pm || !document.getElementById('cx-perm-modal')) return;
+        const srv = C.servidorAtivo(), canal = srv && canalPorId(srv, pm.canalId);
+        if (canal && !pm.sujo) pm.rascunho = rascunhoDe(canal, pm.alvo);
+        desenharPermissoes();
     }
 
     // ----- aba MEMBROS: cargos de cada um, remover e passar posse -----
@@ -888,7 +1028,7 @@ const Cargos = (() => {
         let out = '';
         if (p.ouvinte) out += ' <i class="fa-solid fa-ear-listen part-ouvinte" title="Ouvinte"></i>';
         else if (canal.type === 'palco') out += ' <i class="fa-solid fa-microphone-lines part-orador" title="No palco"></i>';
-        if (canal.type === 'palco' && pode(srv, 'falar_palco') && Number(p.usuario_id) !== Number(C.meuId()) && p.usuario_id != null) {
+        if (canal.type === 'palco' && permNoCanal(srv, canal, 'falar_palco') && Number(p.usuario_id) !== Number(C.meuId()) && p.usuario_id != null) {
             out += ` <button type="button" class="part-palco" data-palco="${Number(canalId)}:${Number(p.usuario_id)}:${p.ouvinte ? 1 : 0}" title="${p.ouvinte ? 'Chamar pro palco' : 'Mandar de volta pra plateia'}"><i class="fa-solid ${p.ouvinte ? 'fa-hand' : 'fa-arrow-down'}"></i></button>`;
         }
         return out;
@@ -908,6 +1048,7 @@ const Cargos = (() => {
         if (canal) aoAbrirCanal(canal);
         C.pedirMembros();
         if (C.configAberta()) { aoAtualizarConfig(novo); }
+        atualizarPermissoes();
     }
     function aoAtualizarConfig(srv) {
         desenharCargos(srv);
@@ -923,6 +1064,7 @@ const Cargos = (() => {
         const s = C.socket;
         s.on('servidor_estrutura', aoReceberEstrutura);
         s.on('mensagem_recusada', mensagemRecusada);
+        s.on('canal_permissao_ok', () => C.toast('Permissões do canal salvas!', 'success'));
         s.on('palco_papel', receberPapel);
         s.on('cargos_dos_membros_mudou', (d) => { const a = C.servidorAtivo(); if (a && d && a.id === d.server_id) C.pedirMembros(); });
         s.on('cargo_criado', (d) => { const a = C.servidorAtivo(); if (a && d && a.id === d.server_id) cargoSel = d.cargo_id; });
@@ -938,7 +1080,7 @@ const Cargos = (() => {
     }
 
     return {
-        iniciar, pode, podeGerir, ehDono, familia, tipoValido, TIPOS, PERMISSOES,
+        iniciar, pode, podeGerir, ehDono, familia, tipoValido, TIPOS, PERMISSOES, PERMS_CANAL, permNoCanal, abrirPermissoes,
         htmlLista, depoisDeDesenhar, redesenhar, pintarCabecalho,
         preencherModal, aoMudarTipo, camposDoModal, aoAbrirCanal, podeEnviar,
         ajustarMenuServidor, ajustarMenuCanal, ajustarMenuMensagem, podeApagarMensagem,

@@ -8,8 +8,8 @@ from flask_socketio import emit
 
 from . import socketio
 from . import cargos
-from .models import db, Server, Person
-from .utils import com_retry, comitar_com_retry, canal_permitido
+from .models import db, Server, Person, Channel
+from .utils import com_retry, comitar_com_retry, canal_permitido, pode_ver_canal
 from .events import (usuario_logado, sala_pessoal, avisar_servidor, participantes_call, palco_convidados, _avisar_participantes)
 
 
@@ -165,6 +165,31 @@ def canais_organizar(dados):
 
 
 # ==========================================
+# PERMISSÃO POR CANAL (sobrescrita por cargo)
+# ==========================================
+@socketio.on('canal_permissao')
+def canal_permissao(dados):
+    """Define (ou limpa, se vierem as duas listas vazias) o que UM cargo (cargo_id) ou o "Membro" padrão (cargo_id vazio) pode NESTE canal.
+    `permitir`/`negar` = ids de cargos.PERMS_CANAL. Só quem gerencia cargos e enxerga o canal; a regra de hierarquia mora em cargos.definir_sobrescrita."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    d = dict(_dict(dados))
+    try:
+        canal = com_retry(lambda: Channel.query.get(int(d.get('canal_id'))))
+    except (TypeError, ValueError):
+        canal = None
+    if canal is None or canal.server_id is None or not pode_ver_canal(usuario, canal):
+        emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal.'})
+        return
+    d['server_id'] = canal.server_id
+    canal_id = canal.id
+    _aplicar(usuario, d, 'CANAL PERMISSAO',
+             lambda srv, ctx: cargos.definir_sobrescrita(srv, ctx, usuario, canal, d.get('cargo_id'), d.get('permitir'), d.get('negar')),
+             depois=lambda srv, c: emit('canal_permissao_ok', {'server_id': srv.id, 'canal_id': canal_id}))
+
+
+# ==========================================
 # PALCO: chamar um ouvinte pro palco (ou mandar de volta)
 # ==========================================
 @socketio.on('palco_promover')
@@ -179,7 +204,7 @@ def palco_promover(dados):
             emit('erro_bazinga', {'msg': 'Esse canal não é um palco.'})
             return
         srv = com_retry(lambda: Server.query.get(canal.server_id))
-        if not cargos.pode(usuario, srv, 'falar_palco'):
+        if not cargos.pode_no_canal(usuario, srv, canal, 'falar_palco'):
             emit('erro_bazinga', {'msg': 'Só quem pode falar no palco chama outras pessoas pra falar.'})
             return
         chave = str(canal.id)
@@ -197,7 +222,7 @@ def palco_promover(dados):
             convidados.add(alvo_id)
         else:
             convidados.discard(alvo_id)
-        ouvinte = not (cargos.pode(alvo, srv, 'falar_palco') or alvo_id in convidados)
+        ouvinte = not (cargos.pode_no_canal(alvo, srv, canal, 'falar_palco') or alvo_id in convidados)
         for p in entradas:
             p['ouvinte'] = ouvinte
         _avisar_participantes(chave, canal.server_id)

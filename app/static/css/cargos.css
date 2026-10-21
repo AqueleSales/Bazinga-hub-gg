@@ -123,3 +123,34 @@
 .part-orador { color: var(--green-color); }
 .part-palco { background: rgba(255,255,255,.08); border: none; color: var(--text-muted); border-radius: 6px; padding: 1px 6px; font-size: 10px; cursor: pointer; margin-left: 4px; }
 .part-palco:hover { background: rgba(255,255,255,.18); color: var(--text-header); }
+
+/* ---------- permissões POR CANAL (Rodada 29b) ---------- */
+.cp-entrada { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cp-entrada .btn-cancel { padding: 8px 12px; font-size: 13px; }
+.cp-card { width: 760px; max-width: calc(100vw - 24px); }
+.cp-layout { display: grid; grid-template-columns: 200px 1fr; gap: 16px; align-items: start; max-height: 62vh; overflow: hidden; }
+.cp-alvos { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; max-height: 62vh; }
+.cp-alvos .cg-item.membro { margin-top: 0; margin-bottom: 6px; }
+.cp-alvos .cg-nome small { color: var(--text-muted); font-weight: 500; }
+.cp-ponto { margin-left: auto; font-size: 7px; color: var(--brand-color); }
+.cp-editor { background: var(--bg-secondary); border-radius: 10px; padding: 16px; min-width: 0; overflow-y: auto; max-height: 62vh; }
+.cp-editor h3 { color: var(--text-header); font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.cp-legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; }
+.cp-lista { display: flex; flex-direction: column; gap: 4px; }
+.cp-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; background: var(--bg-tertiary); }
+.cp-linha.off { opacity: .55; }
+.cp-txt { min-width: 0; }
+.cp-txt b { display: block; color: var(--text-header); font-size: 13px; }
+.cp-txt em { display: block; color: var(--text-muted); font-size: 11.5px; font-style: normal; line-height: 1.35; margin-top: 1px; }
+.cp-tri { display: inline-flex; flex-shrink: 0; border: 2px solid rgba(255,255,255,.14); border-radius: 8px; overflow: hidden; }
+.cp-op { background: transparent; border: 0; color: var(--text-muted); width: 34px; height: 30px; cursor: pointer; font-size: 13px; }
+.cp-op + .cp-op { border-left: 2px solid rgba(255,255,255,.14); }
+.cp-op:disabled { cursor: not-allowed; }
+.cp-op:not(:disabled):hover { background: rgba(255,255,255,.08); color: var(--text-header); }
+.cp-op.neg.sel { background: var(--red-color); color: #fff; }
+.cp-op.her.sel { background: rgba(255,255,255,.16); color: var(--text-header); }
+.cp-op.per.sel { background: var(--green-color); color: #fff; }
+.cp-nota { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.cp-botoes { display: flex; gap: 10px; margin-top: 14px; }
+@media (max-width: 760px) { .cp-layout { grid-template-columns: 1fr; max-height: none; overflow: visible; } .cp-alvos { flex-direction: row; flex-wrap: wrap; max-height: none; } .cp-editor { max-height: 52vh; } }
+.cp-botoes .btn:disabled, .cp-botoes .btn-cancel:disabled { opacity: .45; cursor: default; }

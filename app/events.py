@@ -325,13 +325,18 @@ def _dados_de_servidores(servidores):
     contagem = dict(db.session.query(server_members.c.server_id, func.count(server_members.c.person_id)).filter(
         server_members.c.server_id.in_(ids)).group_by(server_members.c.server_id).all())
     # Cargos/categorias: zero query em servidor que nunca usou (Server.estrutura vazio) ou que já está em cache (ver cargos.py)
-    return canais, permitidos, contagem, cargos.carregar_estruturas(servidores)
+    return canais, permitidos, contagem, cargos.carregar_estruturas(servidores, canais)
 
 
 def _json_de_servidor(srv, dados, usuario=None):
     canais, permitidos, contagem, estruturas = dados
     est = estruturas.get(srv.id)
-    ve_privados = usuario is None or bool(cargos.perms_em_memoria(srv, usuario.id, est)[0] & cargos.BIT['ver_canais_privados'])
+    if usuario is None:
+        perms_u, ids_u = cargos.TODAS, ()
+    else:
+        perms_u, _nivel, ids_u = cargos.cargos_em_memoria(srv, usuario.id, est)
+    ve_privados = bool(perms_u & cargos.BIT['ver_canais_privados'])
+    gerencia_cargos = bool(perms_u & cargos.BIT['gerenciar_cargos'])
     visiveis = []
     for c in canais:
         if c.server_id != srv.id:
@@ -339,12 +344,22 @@ def _json_de_servidor(srv, dados, usuario=None):
         # mesma regra do pode_ver_canal para quem já é membro: canal privado só pro dono, convidados e quem tem "Ver canais privados"
         if c.is_private and not ve_privados and usuario.id not in permitidos.get(c.id, ()):
             continue
-        visiveis.append({
+        item = {
             'id': c.id, 'name': c.name, 'type': c.channel_type, 'topic': c.topic,
             'is_private': bool(c.is_private),
             'membros': sorted(permitidos.get(c.id, ())) if c.is_private else [],
             'categoria_id': c.category_id, 'icone': c.icon, 'limite': c.user_limit, 'pos': c.position or 0
-        })
+        }
+        # Permissão por canal: só canais marcados custam algo. Quem não pode ver o canal NÃO recebe nem o nome (nem a categoria, que depende dos visíveis).
+        if c.sobrescrita:
+            mascara = cargos.mascara_no_canal_em_memoria(perms_u, ids_u, est, c.id)
+            if not mascara & cargos.BIT_CANAL['ver_canal']:
+                continue
+            item['sobrescrita'] = True
+            item['perms'] = cargos.ids_canal_da_mascara(mascara)      # o que EU posso neste canal (o cliente trava o campo de mensagem etc.)
+            if gerencia_cargos:
+                item['ow'] = cargos.sobrescritas_para_json(est, c.id)   # o detalhe (quem tem o quê) só vai pra quem gerencia cargos
+        visiveis.append(item)
     extras = cargos.extras_do_servidor(srv, est, usuario, visiveis)
     return {**extras,
         'id': srv.id,
@@ -377,6 +392,16 @@ def servidor_para_json(srv, usuario=None):
     return servidores_para_json([srv], usuario)[0]
 
 
+def _tirar_da_sala(pessoa_id, sala):
+    """Tira todos os sockets da pessoa de uma sala (canal). Melhor esforço: se falhar, o servidor segue recusando entrar de novo (pode_ver_canal)."""
+    try:
+        gerente = socketio.server.manager
+        for sid, _eio in list(gerente.get_participants('/', sala_pessoal(pessoa_id))):
+            socketio.server.leave_room(sid, sala, namespace='/')
+    except Exception as e:
+        print(f"[SALA] não consegui tirar {pessoa_id} da sala {sala}: {e}")
+
+
 def avisar_servidor(srv, evento='servidor_discord_criado'):
     """Reenvia o servidor inteiro para todos os membros conectados.
 
@@ -387,9 +412,15 @@ def avisar_servidor(srv, evento='servidor_discord_criado'):
     """
     cargos.invalidar(srv.id)
     dados = _dados_de_servidores([srv])
+    marcados = [c.id for c in dados[0] if c.sobrescrita and c.server_id == srv.id]   # canais com permissão própria: [] na imensa maioria dos servidores
     for membro in srv.members:
-        emit(evento, _json_de_servidor(srv, dados, membro),
-             to=sala_pessoal(membro.id))
+        payload = _json_de_servidor(srv, dados, membro)
+        emit(evento, payload, to=sala_pessoal(membro.id))
+        if marcados:     # quem deixou de ver um canal marcado também sai da sala dele: não recebe mais as mensagens novas
+            veem = {c['id'] for c in payload['channels']}
+            for cid in marcados:
+                if cid not in veem:
+                    _tirar_da_sala(membro.id, str(cid))
 
 
 # ==========================================
@@ -696,7 +727,7 @@ def lidar_com_mensagem(dados):
         return
 
     # Tipo do canal: anúncios/regras só com permissão, mídia só com anexo. Canal de texto comum passa sem consulta nenhuma.
-    if canal.channel_type and canal.channel_type != 'text' and canal.server_id is not None:
+    if canal.server_id is not None and ((canal.channel_type and canal.channel_type != 'text') or canal.sobrescrita):
         try:
             liberado, motivo = cargos.checar_envio(usuario, com_retry(lambda: Server.query.get(canal.server_id)), canal, bool(anexo_url))
         except Exception as e:
@@ -905,7 +936,7 @@ def lidar_com_exclusao(dados):
         pode_moderar = False
         if msg.person_id != usuario.id and canal.server_id is not None:
             servidor = Server.query.get(canal.server_id)
-            pode_moderar = cargos.pode(usuario, servidor, 'apagar_mensagens')
+            pode_moderar = cargos.pode_no_canal(usuario, servidor, canal, 'apagar_mensagens')   # com as permissões próprias do canal
 
         if msg.person_id != usuario.id and not pode_moderar:
             emit('erro_bazinga', {'msg': 'Você só pode apagar as suas próprias mensagens.'})
@@ -939,7 +970,7 @@ def fixar_mensagem(dados):
         canal = Channel.query.get(msg.channel_id)
         if not pode_ver_canal(usuario, canal):
             return
-        if canal.server_id is not None and not cargos.pode(usuario, Server.query.get(canal.server_id), 'fixar_mensagens'):
+        if canal.server_id is not None and not cargos.pode_no_canal(usuario, Server.query.get(canal.server_id), canal, 'fixar_mensagens'):
             emit('erro_bazinga', {'msg': 'Você não tem permissão para fixar mensagens aqui.'})
             return
 
@@ -1439,7 +1470,7 @@ def _anunciar_canal(evento, srv, canal):
     payload['server_id'] = srv.id
     for membro in srv.members:
         # Canal público todo membro vê: pular a consulta por membro (era 2 a 3 queries por pessoa pra chegar sempre em True).
-        if not canal.is_private or pode_ver_canal(membro, canal):
+        if not (canal.is_private or canal.sobrescrita) or pode_ver_canal(membro, canal):
             emit(evento, payload, to=sala_pessoal(membro.id))
 
 
@@ -1498,7 +1529,7 @@ def editar_canal(dados):
 
         # Quem via o canal ANTES da mudança: se ele virar privado (ou alguém
         # for removido), essas pessoas precisam ser avisadas que o canal sumiu.
-        viam_antes = {m.id for m in srv.members if (not canal.is_private) or pode_ver_canal(m, canal)}
+        viam_antes = {m.id for m in srv.members if not (canal.is_private or canal.sobrescrita) or pode_ver_canal(m, canal)}
         era_separador = canal.channel_type == 'separador'
 
         def preparar():
@@ -1538,7 +1569,7 @@ def editar_canal(dados):
         _anunciar_canal('canal_editado', srv, canal)
 
         # Pra quem perdeu o acesso, o canal simplesmente desaparece da lista.
-        if canal.is_private:
+        if canal.is_private or canal.sobrescrita:
             for membro in srv.members:
                 if membro.id in viam_antes and not pode_ver_canal(membro, canal):
                     emit('canal_apagado', {'server_id': srv.id, 'canal_id': canal.id},
