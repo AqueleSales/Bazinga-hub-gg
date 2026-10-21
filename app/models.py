@@ -157,9 +157,20 @@ class Server(db.Model):
     publico = db.Column(db.Boolean, nullable=True)
     tema_explorar = db.Column(db.String(20), nullable=True)
 
+    # Cargos, categorias e personalização (app/cargos.py). Tudo anulável: o boot cria as colunas sem DEFAULT.
+    # perms_membro = máscara de permissões do cargo padrão "Membro" (NULL = cargos.PERMS_MEMBRO_PADRAO).
+    perms_membro = db.Column(db.Integer, nullable=True)
+    # True quando o servidor já tem algum cargo/categoria: sem isso o /chat e o connect nem consultam essas tabelas (caso comum).
+    estrutura = db.Column(db.Boolean, nullable=True)
+    boas_vindas = db.Column(db.Text, nullable=True)                 # cartão mostrado uma vez a quem abre o servidor
+    canal_boas_vindas_id = db.Column(db.Integer, nullable=True)     # canal que abre primeiro (sem FK de propósito: canal apagado = ignora)
+    banner_url = db.Column(db.String(255), nullable=True)           # imagem do cabeçalho do servidor
+
     # Relacionamentos
     # Quando o servidor for deletado, os canais somem junto (cascade)
     channels = db.relationship('Channel', backref='server', lazy=True, cascade="all, delete-orphan")
+    cargos = db.relationship('ServerRole', backref='server', lazy=True, cascade="all, delete-orphan")
+    categorias = db.relationship('ChannelCategory', backref='server', lazy=True, cascade="all, delete-orphan")
     invites = db.relationship('Invite', backref='server', lazy=True, cascade="all, delete-orphan")
     events = db.relationship('Event', backref='server', lazy=True, cascade="all, delete-orphan")
 
@@ -180,11 +191,53 @@ channel_members = db.Table('channel_members',
                            )
 
 
+class ServerRole(db.Model):
+    """Cargo DENTRO de um servidor (o `Role` lá de cima é outra coisa: a cor global da pessoa).
+
+    `permissoes` é uma máscara de bits (ids e ordem em cargos.PERMISSOES: nunca reordene, só acrescente no fim).
+    `posicao` maior = cargo mais alto: ninguém mexe em cargo igual ou acima do seu (o dono está acima de todos).
+    O cargo padrão "Membro" (vale pra todo mundo) não é uma linha daqui: mora em Server.perms_membro."""
+    __tablename__ = 'server_role'
+    id = db.Column(db.Integer, primary_key=True)
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False, index=True)
+    nome = db.Column(db.String(24), nullable=False)
+    cor = db.Column(db.String(7), nullable=True)              # '#rrggbb'
+    permissoes = db.Column(db.Integer, default=0)
+    posicao = db.Column(db.Integer, default=1)
+    destacar = db.Column(db.Boolean, nullable=True)           # mostra os membros desse cargo num grupo à parte na lista
+    membros = db.relationship('MemberRole', backref='cargo', lazy=True, cascade="all, delete-orphan")
+
+
+class MemberRole(db.Model):
+    """Quem tem qual cargo. `server_id` repete o do cargo só pra limpar tudo de uma pessoa num servidor numa query só."""
+    __tablename__ = 'member_role'
+    id = db.Column(db.Integer, primary_key=True)
+    server_id = db.Column(db.Integer, nullable=False, index=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('server_role.id'), nullable=False)
+    __table_args__ = (db.UniqueConstraint('person_id', 'role_id', name='uq_cargo_do_membro'),)
+
+
+class ChannelCategory(db.Model):
+    """O "dropdown" que agrupa canais na barra lateral. Recolher/expandir é por pessoa (fica no navegador)."""
+    __tablename__ = 'channel_category'
+    id = db.Column(db.Integer, primary_key=True)
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False, index=True)
+    nome = db.Column(db.String(32), nullable=False)
+    posicao = db.Column(db.Integer, default=0)
+
+
 class Channel(db.Model):
     __tablename__ = 'channel'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    channel_type = db.Column(db.String(20), default='text')  # 'text' ou 'voice'
+    # Tipos (ids validados em cargos.TIPOS_CANAL): texto = text/anuncios/regras/midia; voz = voice/palco;
+    # 'separador' é só uma linha visual na lista (nunca guarda mensagem nem entra em call).
+    channel_type = db.Column(db.String(20), default='text')
+    # Categoria (ChannelCategory.id). Sem FK de propósito: a coluna nasce pelo boot sem constraint, e apagar categoria solta os canais no código.
+    category_id = db.Column(db.Integer, nullable=True)
+    icon = db.Column(db.String(16), nullable=True)           # emoji do canal (cargos.emoji_valido)
+    user_limit = db.Column(db.Integer, nullable=True)        # canal de voz: máximo de pessoas (NULL = sem limite)
 
     # Canal pode pertencer a um Servidor criado por um usuário. Nulo = canal
     # padrão do "Bazinga Hub" (o servidor global inicial, fora do sistema de Servers).

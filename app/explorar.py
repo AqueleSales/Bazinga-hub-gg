@@ -15,6 +15,7 @@ from sqlalchemy import func
 
 from .models import db, Server, Channel, Person, server_members
 from .utils import com_retry, comitar_com_retry, eh_membro
+from .cargos import TIPOS_TEXTO, TIPOS_VOZ
 
 # (id, nome, ícone Font Awesome, cor)
 TEMAS_EXPLORAR = [
@@ -101,8 +102,8 @@ def previa(usuario, server_id, liberado=False):
     if not s.publico and not meu and not liberado:
         raise ErroExplorar('Esse servidor não está aberto a visitas.')
     membros = com_retry(lambda: _contagem([s.id])).get(s.id, 0)
-    canais = com_retry(lambda: Channel.query.filter_by(server_id=s.id, is_private=False, channel_type='text').order_by(Channel.position, Channel.id).limit(12).all())
-    voz = com_retry(lambda: Channel.query.filter_by(server_id=s.id, is_private=False, channel_type='voice').count())
+    canais = com_retry(lambda: Channel.query.filter(Channel.server_id == s.id, Channel.is_private.is_(False), Channel.channel_type.in_(TIPOS_TEXTO)).order_by(Channel.position, Channel.id).limit(12).all())
+    voz = com_retry(lambda: Channel.query.filter(Channel.server_id == s.id, Channel.is_private.is_(False), Channel.channel_type.in_(TIPOS_VOZ)).count())
     dono = com_retry(lambda: Person.query.get(s.owner_id))
     j = _item(s, membros, meu)
     j.update({'descricao': s.description or '', 'canais': [c.name for c in canais], 'canais_voz': voz, 'dono': dono.name if dono else '',
@@ -130,7 +131,7 @@ def definir_publico(srv, publico, tema=None):
             raise ErroExplorar(f'Escreva uma descrição de pelo menos {DESC_MIN} caracteres antes de aparecer no Explorar.')
         if tema not in IDS_TEMAS:
             raise ErroExplorar('Escolha um tema pro servidor.')
-        if not Channel.query.filter_by(server_id=srv.id, is_private=False, channel_type='text').first():
+        if not Channel.query.filter(Channel.server_id == srv.id, Channel.is_private.is_(False), Channel.channel_type.in_(TIPOS_TEXTO)).first():
             raise ErroExplorar('O servidor precisa de pelo menos um canal de texto aberto (não privado).')
 
     def preparar():

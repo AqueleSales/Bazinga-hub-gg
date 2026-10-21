@@ -2982,6 +2982,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mapa_social.css') }}?v={{ mapa_social_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conexoes.css') }}?v={{ conexoes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 </head>
@@ -4953,6 +4954,7 @@
     <script src="{{ url_for('static', filename='js/mapa_social.js') }}?v={{ mapa_social_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script>
@@ -5883,6 +5885,7 @@
             serverSidebar.style.display = 'flex';
 
             const souDono = souDonoDoServidor(srv);
+            const podeConfig = Cargos.pode(srv, 'gerenciar_servidor'), podeCanais = Cargos.pode(srv, 'gerenciar_canais');
 
             serverSidebar.querySelector('.channels-header').innerHTML =
                 `<h3 style="display:flex; align-items:center; gap:6px; overflow:hidden;">
@@ -5898,14 +5901,10 @@
                     <span class="atalho-badge" id="atalho-eventos-badge" style="display:none;">0</span>
                 </div>
                 <div class="atalho-sep"></div>`
-                + htmlCategoria('CANAIS DE TEXTO', 'text', souDono)
-                + srv.channels.filter(c => c.type === 'text')
-                    .map((c, i) => htmlDoCanal(c, i === 0, souDono)).join('')
-                + htmlCategoria('CANAIS DE VOZ', 'voice', souDono, true)
-                + srv.channels.filter(c => c.type === 'voice')
-                    .map(c => htmlDoCanal(c, false, souDono)).join('');
+                + Cargos.htmlLista(srv);   // categorias, separadores e canais de todos os tipos (static/js/cargos.js)
 
-            ligarBotoesDeCanal(channelsList);
+            Cargos.depoisDeDesenhar(channelsList, srv, false);
+            Cargos.pintarCabecalho(srv);
             channelsList.querySelector('#atalho-eventos')
                 ?.addEventListener('click', () => abrirCalendario());
 
@@ -5927,11 +5926,12 @@
                             <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🔗</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Convide seus amigos (link ou QR)</span></div>
                             <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
                         </div>
-                        ${souDono ? `
+                        ${podeConfig ? `
                         <div class="welcome-action-btn" onclick="abrirConfigServidor()">
                             <div style="display: flex; align-items: center;"><div class="welcome-action-icon">🖌️</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Personalize o ícone e o nome do servidor</span></div>
                             <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
-                        </div>
+                        </div>` : ''}
+                        ${podeCanais ? `
                         <div class="welcome-action-btn" onclick="abrirModalCanal('criar', { tipo: 'text' })">
                             <div style="display: flex; align-items: center;"><div class="welcome-action-icon">➕</div> <span style="color: var(--text-normal); font-weight: 600; font-size: 15px;">Crie mais um canal</span></div>
                             <i class="fa-solid fa-chevron-right" style="color: var(--text-muted);"></i>
@@ -5962,9 +5962,11 @@
             // aberto em vez de jogar a pessoa de volta pro primeiro.
             const canais = Array.from(channelsList.querySelectorAll('.text-channel'));
             const atual = canais.find(c => Number(c.getAttribute('data-id')) === Number(currentChannelId));
-            const alvo = (manterVista && atual) ? atual : canais[0];
+            // O dono pode escolher o canal que abre primeiro (Cargos > Perfil do servidor > "Canal que abre primeiro").
+            const alvo = (manterVista && atual) ? atual : (Cargos.canalInicial(srv, canais) || canais[0]);
             if (alvo) alvo.click();
             salvarUltimaVista();
+            if (!manterVista) Cargos.aoEntrarNoServidor(srv);   // cartão de boas-vindas (uma vez por texto)
         }
 
         function bindChannelListeners() {
@@ -5977,10 +5979,10 @@
             const srvCache = meUserServers.find(s => s.id === serverId);
             if (!srvCache) return;
             mudanca(srvCache);
-            // Redesenhar a lista inteira é mais simples (e menos sujeito a bug)
-            // do que inserir/remover nós na mão em 3 lugares diferentes.
+            // Redesenhar a lista inteira é mais simples (e menos sujeito a bug) do que inserir/remover nós na mão. Só a LISTA:
+            // a conversa aberta não recarrega (static/js/cargos.js; o `servidor_estrutura` que vem junto acerta categorias e permissões).
             if (serverId === activeMyServerId) {
-                entrarNoServidor(serverId, vistaAtual !== 'server');
+                Cargos.redesenhar(srvCache);
                 if (configCompletaAberta()) desenharCanaisDaConfig();
             }
         }
@@ -5989,8 +5991,8 @@
             sincronizarCanais(dados.server_id, srv => {
                 if (!srv.channels.some(c => c.id === dados.id)) srv.channels.push(dados);
             });
-            if (dados.server_id === activeMyServerId) {
-                showToast(`Canal ${dados.type === 'voice' ? '' : '#'}${dados.name} criado!`, "success");
+            if (dados.server_id === activeMyServerId && dados.type !== 'separador') {
+                showToast(`Canal ${Cargos.familia(dados.type) === 'voz' ? '' : '#'}${dados.name} criado!`, "success");
             }
         });
 
@@ -6002,10 +6004,12 @@
         });
 
         socket.on('canal_apagado', function(dados) {
+            let eraSeparador = false;
             sincronizarCanais(dados.server_id, srv => {
+                eraSeparador = srv.channels.some(c => c.id === dados.canal_id && c.type === 'separador');
                 srv.channels = srv.channels.filter(c => c.id !== dados.canal_id);
             });
-            if (dados.server_id === activeMyServerId) showToast("Canal apagado.", "warning");
+            if (dados.server_id === activeMyServerId && !eraSeparador) showToast("Canal apagado.", "warning");
         });
 
         socket.on('servidor_apagado', function(dados) {
@@ -6068,15 +6072,8 @@
         let tipoCanalEscolhido = 'text';
 
         function selecionarTipoCanal(tipo) {
-            tipoCanalEscolhido = tipo === 'voice' ? 'voice' : 'text';
-            document.querySelectorAll('#channel-type-group .bz-radio-card').forEach(card => {
-                card.classList.toggle('selected', card.getAttribute('data-tipo') === tipoCanalEscolhido);
-            });
-            document.getElementById('channel-name-prefix').textContent = tipoCanalEscolhido === 'voice' ? '🔊' : '#';
-            document.getElementById('channel-modal-sub').textContent =
-                tipoCanalEscolhido === 'voice' ? 'em Canais de Voz' : 'em Canais de Texto';
-            document.getElementById('channel-name-input').placeholder =
-                tipoCanalEscolhido === 'voice' ? 'sala-de-voz' : 'novo-canal';
+            tipoCanalEscolhido = Cargos.tipoValido(tipo) || 'text';   // texto, anúncios, regras, mídia, voz, palco ou separador (static/js/cargos.js)
+            Cargos.aoMudarTipo(tipoCanalEscolhido);
         }
 
         // ---- Seletor de quem entra num canal privado ----
@@ -6155,7 +6152,7 @@
                         ${htmlBolinha(statusClasse, m.emoji)}
                     </div>
                     <div style="display:flex;flex-direction:column;min-width:0;">
-                        <span class="${classeNome(m.nome_estilo)}" style="color:var(--text-header);font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
+                        <span class="${classeNome(m.nome_estilo)}" style="color:${esc(Cargos.corDoMembro(m) || 'var(--text-header)')};font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
                         ${sub ? `<span class="dm-sub">${esc(sub)}</span>` : ''}
                     </div>
                 </div>`;
@@ -6164,10 +6161,10 @@
             const online = membrosDoServidor.filter(m => m.id === currentUserId || membrosOnlineSet.has(m.id));
             const offline = membrosDoServidor.filter(m => m.id !== currentUserId && !membrosOnlineSet.has(m.id));
 
-            cont.innerHTML =
-                `<div class="channel-category">ONLINE — ${online.length}</div>` +
+            cont.innerHTML = Cargos.agruparMembros(online, offline, linha) ||    // cargos "mostrados separados" ganham grupo próprio
+                (`<div class="channel-category">ONLINE — ${online.length}</div>` +
                 online.map(linha).join('') +
-                (offline.length ? `<div class="channel-category" style="margin-top:14px;">OFFLINE — ${offline.length}</div>${offline.map(linha).join('')}` : '');
+                (offline.length ? `<div class="channel-category" style="margin-top:14px;">OFFLINE — ${offline.length}</div>${offline.map(linha).join('')}` : ''));
             emojificar(cont);
         }
 
@@ -6192,8 +6189,8 @@
         function abrirModalCanal(modo, dados = {}) {
             const srv = servidorAtivo();
             if (!srv) { showToast("Abra um servidor primeiro.", "warning"); return; }
-            if (!souDonoDoServidor(srv)) {
-                showToast("Só o dono do servidor pode mexer nos canais.", "warning");
+            if (!Cargos.pode(srv, 'gerenciar_canais')) {
+                showToast("Você não tem permissão para mexer nos canais deste servidor.", "warning");
                 return;
             }
 
@@ -6203,8 +6200,6 @@
             document.getElementById('channel-modal-title').textContent = editando ? 'Editar canal' : 'Criar canal';
             document.getElementById('channel-save-btn').textContent = editando ? 'Salvar' : 'Criar canal';
             document.getElementById('channel-delete-btn').style.display = editando ? 'flex' : 'none';
-            // O tipo do canal não muda depois de criado (as mensagens já estão lá).
-            document.getElementById('channel-type-group').style.display = editando ? 'none' : 'block';
 
             selecionarTipoCanal(editando ? dados.type : (dados.tipo || 'text'));
             document.getElementById('channel-name-input').value = editando ? (dados.name || '') : '';
@@ -6215,6 +6210,8 @@
             membrosMarcados = new Set((editando && dados.membros ? dados.membros : []).map(Number));
             socket.emit('listar_membros_servidor', { server_id: activeMyServerId });
             alternarAreaDePrivado();
+            // Tipos (só dentro da mesma família ao editar), ícone, categoria e limite de pessoas; esconde o que não vale pro tipo escolhido
+            Cargos.preencherModal(editando, editando ? dados : null, dados);
 
             document.getElementById('channel-modal').style.display = 'flex';
             setTimeout(() => document.getElementById('channel-name-input').focus(), 50);
@@ -6227,23 +6224,24 @@
 
         function salvarCanal() {
             const nome = document.getElementById('channel-name-input').value.trim();
-            if (!nome) { showToast("Dá um nome pro canal.", "warning"); return; }
+            if (!nome && tipoCanalEscolhido !== 'separador') { showToast("Dá um nome pro canal.", "warning"); return; }   // separador pode ficar sem título
 
             const topico = document.getElementById('channel-topic-input').value.trim();
             const privado = document.getElementById('channel-private-input').checked;
             const membros = privado ? Array.from(membrosMarcados) : [];
+            const extras = Cargos.camposDoModal(!!canalEmEdicao);   // tipo, ícone, limite de pessoas e categoria
 
             if (canalEmEdicao) {
                 socket.emit('editar_canal', {
                     canal_id: canalEmEdicao.id, nome: nome, topico: topico,
-                    privado: privado, membros: membros
+                    privado: privado, membros: membros, ...extras
                 });
                 showToast("Salvando canal...", "info");
             } else {
                 socket.emit('criar_canal', {
                     server_id: activeMyServerId, nome: nome,
                     tipo: tipoCanalEscolhido, topico: topico,
-                    privado: privado, membros: membros
+                    privado: privado, membros: membros, ...extras
                 });
                 showToast("Criando canal...", "info");
             }
@@ -6270,8 +6268,8 @@
         function abrirConfigServidor() {
             const srv = servidorAtivo();
             if (!srv) { showToast("Abra um servidor primeiro.", "warning"); return; }
-            if (!souDonoDoServidor(srv)) {
-                showToast("Só o dono pode abrir as configurações.", "warning");
+            if (!Cargos.pode(srv, 'gerenciar_servidor')) {
+                showToast("Você não tem permissão para mudar as configurações do servidor.", "warning");
                 return;
             }
 
@@ -6379,8 +6377,8 @@
         // ==========================================
         function abrirConfigCompleta() {
             const srv = servidorAtivo();
-            if (!srv || !souDonoDoServidor(srv)) {
-                showToast("Só o dono abre as configurações.", "warning");
+            if (!srv || !Cargos.podeGerir(srv)) {
+                showToast("Você não tem permissão para abrir as configurações deste servidor.", "warning");
                 return;
             }
 
@@ -6397,9 +6395,10 @@
 
             desenharCanaisDaConfig();
             socket.emit('listar_membros_servidor', { server_id: srv.id });
-            socket.emit('listar_convites', { server_id: srv.id });
+            if (Cargos.pode(srv, 'gerenciar_servidor')) socket.emit('listar_convites', { server_id: srv.id });
 
-            trocarSecaoConfig('perfil');
+            // Cada pessoa vê só as abas que pode usar (Cargos, Canais, Membros...); abre na primeira delas.
+            trocarSecaoConfig(Cargos.aoAbrirConfig(srv));
             document.getElementById('server-full-settings').classList.add('aberto');
         }
 
@@ -6436,7 +6435,8 @@
                 server_id: activeMyServerId,
                 nome: nome,
                 descricao: document.getElementById('sf-desc').value.trim(),
-                banner_color: corServidorEscolhida
+                banner_color: corServidorEscolhida,
+                ...Cargos.camposDoPerfil()    // banner, mensagem de boas-vindas e canal que abre primeiro
             };
             if (iconeServidorNovo !== undefined) payload.icon_url = iconeServidorNovo;
 
@@ -6445,84 +6445,17 @@
             document.getElementById('sf-nome-servidor').textContent = nome;
         }
 
+        // Canais (por categoria, com setas e "mover para") e Membros (com cargos): desenhados em static/js/cargos.js.
         function desenharCanaisDaConfig() {
-            const srv = servidorAtivo();
-            const lista = document.getElementById('sf-lista-canais');
-            if (!lista || !srv) return;
-
-            if (!srv.channels.length) {
-                lista.innerHTML = '<div class="sf-vazio">Nenhum canal ainda.</div>';
-                return;
-            }
-
-            lista.innerHTML = srv.channels.map(c => `
-                <div class="sf-linha">
-                    <div class="av" style="background:rgba(255,255,255,.07); border-radius:9px;">
-                        <i class="fa-solid ${c.type === 'voice' ? 'fa-volume-high' : 'fa-hashtag'}" style="color:var(--text-muted); font-size:13px;"></i>
-                    </div>
-                    <div class="txt">
-                        <div class="nm">${esc(c.name)}</div>
-                        <div class="sub">${c.topic ? esc(c.topic) : (c.type === 'voice' ? 'Canal de voz' : 'Canal de texto')}</div>
-                    </div>
-                    ${c.is_private ? '<span class="sf-etiqueta"><i class="fa-solid fa-lock"></i> privado</span>' : ''}
-                    <div class="acoes">
-                        <button class="sf-mini" data-editar="${Number(c.id)}">Editar</button>
-                    </div>
-                </div>`).join('');
-
-            lista.querySelectorAll('[data-editar]').forEach(b => {
-                b.addEventListener('click', () => {
-                    const canal = acharCanal(Number(b.getAttribute('data-editar')));
-                    if (!canal) return;
-                    fecharConfigCompleta();
-                    abrirModalCanal('editar', canal);
-                });
-            });
+            Cargos.desenharConfigCanais(servidorAtivo(), document.getElementById('sf-lista-canais'));
         }
 
         function desenharMembrosDaConfig() {
             const lista = document.getElementById('sf-lista-membros');
-            const srv = servidorAtivo();
-            if (!lista || !srv) return;
-
+            if (!lista || !servidorAtivo()) return;
             document.getElementById('sf-total-membros').textContent = `— ${membrosDoServidor.length}`;
-
-            lista.innerHTML = membrosDoServidor.map(m => {
-                const av = escUrl(m.avatar);
-                const souEu = Number(m.id) === Number(currentUserId);
-                return `<div class="sf-linha">
-                    <div class="av">${av ? `<img src="${av}">` : esc((m.nome || '?')[0].toUpperCase())}</div>
-                    <div class="txt">
-                        <div class="nm">${esc(m.nome)}${souEu ? ' <span style="color:var(--text-muted); font-weight:500;">(você)</span>' : ''}</div>
-                        <div class="sub">${m.dono ? 'Dono do servidor' : 'Membro'}</div>
-                    </div>
-                    ${m.dono ? '<span class="sf-etiqueta">👑 dono</span>' : `
-                    <div class="acoes">
-                        <button class="sf-mini" data-posse="${Number(m.id)}" title="Passar a posse do servidor">Passar posse</button>
-                        <button class="sf-mini perigo" data-expulsar="${Number(m.id)}">Remover</button>
-                    </div>`}
-                </div>`;
-            }).join('');
-
-            lista.querySelectorAll('[data-expulsar]').forEach(b => {
-                b.addEventListener('click', () => {
-                    const id = Number(b.getAttribute('data-expulsar'));
-                    const m = membrosDoServidor.find(x => Number(x.id) === id);
-                    openConfirmModal(`Remover ${m ? m.nome : 'este membro'}?`,
-                        "A pessoa perde acesso aos canais e some do servidor. Ela pode voltar com um convite novo.",
-                        () => socket.emit('expulsar_membro', { server_id: activeMyServerId, person_id: id }));
-                });
-            });
-
-            lista.querySelectorAll('[data-posse]').forEach(b => {
-                b.addEventListener('click', () => {
-                    const id = Number(b.getAttribute('data-posse'));
-                    const m = membrosDoServidor.find(x => Number(x.id) === id);
-                    openConfirmModal(`Passar a posse para ${m ? m.nome : 'esta pessoa'}?`,
-                        "Ela vira dona do servidor e você vira membro comum. Só ela poderá desfazer isso.",
-                        () => socket.emit('transferir_posse', { server_id: activeMyServerId, person_id: id }));
-                });
-            });
+            Cargos.desenharMembrosConfig(servidorAtivo(), lista);
+            Cargos.desenharCargos(servidorAtivo());   // a contagem de membros por cargo mora na aba Cargos
         }
 
         function desenharConvitesDaConfig(convites) {
@@ -6869,7 +6802,7 @@
                 const srv = servidorAtivo();
                 if (!srv) return;
                 const menu = document.getElementById('server-dropdown');
-                menu.classList.toggle('nao-sou-dono', !souDonoDoServidor(srv));
+                Cargos.ajustarMenuServidor(menu, srv);   // cada item aparece conforme a permissão da pessoa
                 const r = this.getBoundingClientRect();
                 posicionarMenu(menu, r.left + 8, r.bottom + 6);
                 e.stopPropagation();
@@ -6905,7 +6838,7 @@
             if (!canalDoContexto) return;
 
             const menu = document.getElementById('channel-context-menu');
-            menu.classList.toggle('nao-sou-dono', !souDonoDoServidor(servidorAtivo()));
+            Cargos.ajustarMenuCanal(menu, servidorAtivo());
             posicionarMenu(menu, e.clientX, e.clientY);
         });
 
@@ -7430,9 +7363,9 @@
             }));
             if (activeMyServerId) {
                 const srv = (meUserServers || []).find(s => s.id === activeMyServerId);
-                (srv?.channels || []).forEach(c => itens.push({
-                    label: `${c.type === 'voice' ? '🔊' : '#'} ${c.name}`, sub: srv.name,
-                    acao: () => document.querySelector(`.${c.type === 'voice' ? 'voice-channel' : 'text-channel'}[data-id="${c.id}"]`)?.click()
+                (srv?.channels || []).filter(c => c.type !== 'separador').forEach(c => itens.push({
+                    label: `${Cargos.familia(c.type) === 'voz' ? '🔊' : '#'} ${c.name}`, sub: srv.name,
+                    acao: () => document.querySelector(`.${Cargos.familia(c.type) === 'voz' ? 'voice-channel' : 'text-channel'}[data-id="${c.id}"]`)?.click()
                 }));
             }
             document.querySelectorAll('.user-dm-item').forEach(item => itens.push({
@@ -9008,6 +8941,7 @@
                 const channelName = btn.getAttribute('data-name');
                 document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> ${esc(channelName)}`;
                 document.getElementById('message-input').placeholder = `Conversar em #${channelName}`;
+                Cargos.aoAbrirCanal(acharCanal(Number(currentChannelId)));   // ícone/tipo no cabeçalho; anúncios e regras travam o campo sem permissão
 
                 // Clicou num canal de texto: o chat aparece inteiro e a call (se houver) vira a janela mini
                 document.getElementById('text-view').classList.remove('hidden');
@@ -9148,6 +9082,7 @@
 
             const prontos = anexosPendentes.filter(a => a.url);
             if (!texto && prontos.length === 0) return;
+            if (!Cargos.podeEnviar(texto, prontos.length)) return;   // anúncios/regras sem permissão; canal de mídia sem anexo
 
             // Resposta (só a 1ª mensagem do envio carrega a citação)
             const resp = respostaAtual('canal');
@@ -9339,8 +9274,9 @@
             menu.classList.toggle('nao-sou-autor', !dados.souAutor);
             menu.classList.toggle('em-dm', dados.dm);       // reagir e fixar só existem em canal (não há tabela disso pra DM)
             // Apagar: o autor sempre pode; o dono do servidor também (menos na DM: lá só o autor).
-            const podeApagar = dados.souAutor || (!dados.dm && souDonoDoServidor(servidorAtivo()));
+            const podeApagar = dados.souAutor || (!dados.dm && Cargos.podeApagarMensagem(servidorAtivo()));
             menu.classList.toggle('nao-posso-apagar', !podeApagar);
+            Cargos.ajustarMenuMensagem(menu, servidorAtivo(), dados.dm);
             document.getElementById('ctx-copy-link').style.display = dados.anexo ? 'flex' : 'none';
             document.getElementById('ctx-copy').style.display = dados.texto ? 'flex' : 'none';
 
@@ -11008,6 +10944,27 @@
             if (typeof Loja !== 'undefined') Loja.inventarioMudou();
         });
 
+        // CARGOS, CATEGORIAS, SEPARADORES E TIPOS DE CANAL (+ palco e personalização do servidor): static/js/cargos.js só desenha e pede;
+        // quem decide o que cada pessoa pode é o servidor (app/cargos.py). Precisa vir antes do 1º entrarNoServidor (que roda num setTimeout 0).
+        Cargos.iniciar({
+            socket, esc, escUrl, toast: (m, t) => showToast(m, t),
+            confirmar: (t, x, ok) => openConfirmModal(t, x, ok), pedirTexto: (t, d, ph, cb) => openInputModal(t, d, ph, cb),
+            meuId: () => currentUserId, servidores: () => meUserServers, servidorAtivo: () => servidorAtivo(), canalAtualId: () => currentChannelId,
+            trocarServidor: (novo) => {
+                const antigo = meUserServers.find(x => x.id === novo.id);
+                meUserServers = meUserServers.map(x => x.id === novo.id ? novo : x);
+                if (!antigo || antigo.name !== novo.name || antigo.iconUrl !== novo.iconUrl || antigo.efeito !== novo.efeito) renderizarMeusServidores();
+            },
+            religarCanais: (container) => { ligarBotoesDeCanal(container); bindChannelListeners(); },
+            abrirCriarCanal: (dados) => abrirModalCanal('criar', dados), abrirEditarCanal: (c) => abrirModalCanal('editar', c),
+            selecionarTipo: (t) => selecionarTipoCanal(t), membros: () => membrosDoServidor, emojificar: (el) => emojificar(el),
+            emCall: (canalId) => inCall && String(currentVoiceChannelId) === String(canalId), travarMic: () => toggleMic(true),
+            escolherImagem: (cfg) => abrirSeletorMidia(cfg), uploadMidia: (f) => uploadMidia(f),
+            configAberta: () => configCompletaAberta(),
+            pedirMembros: () => { if (activeMyServerId) socket.emit('listar_membros_servidor', { server_id: activeMyServerId }); },
+            trocarSecao: (n) => trocarSecaoConfig(n), abrirConfigCompleta: () => abrirConfigCompleta(), fecharConfigCompleta: () => fecharConfigCompleta(),
+        });
+
         // MÚSICA (janelinha com pesquisa, player e fila): static/js/musica.js só desenha; quem pesquisa é o servidor (a chave da API nunca chega aqui).
         Musica.iniciar({
             emitir: (n, d) => socket.emit(n, d), esc, toast: (m, t) => showToast(m, t), confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
@@ -11062,7 +11019,7 @@
         if (radarEstranhos) MapaSocial.ligarRadar(true);
         const cfgExplorar = () => {
             const srv = servidorAtivo(), on = document.getElementById('cfg-explorar-on');
-            if (!srv || !souDonoDoServidor(srv)) return;
+            if (!srv || !Cargos.pode(srv, 'gerenciar_servidor')) return;
             if (on.checked && (document.getElementById('cfg-server-desc').value || '').trim() !== (srv.description || '').trim()) {
                 on.checked = false;
                 showToast('Salve a descrição primeiro (botão Salvar), depois ligue o Explorar.', 'warning');
@@ -13152,7 +13109,7 @@
                     ? `<img src="${avatarSeguro}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
                     : esc((p.nome || '?')[0].toUpperCase());
                 return `<div class="channel-item" style="font-size:13px;">
-                    <div class="user-avatar-wrapper" style="width:24px;height:24px;border-radius:50%;margin-right:4px;background-color:${avatarSeguro ? 'transparent' : 'var(--brand-color)'};">${avatarHtml}</div> ${esc(p.nome)}
+                    <div class="user-avatar-wrapper" style="width:24px;height:24px;border-radius:50%;margin-right:4px;background-color:${avatarSeguro ? 'transparent' : 'var(--brand-color)'};">${avatarHtml}</div> ${esc(p.nome)}${Cargos.marcaParticipante(dados.canal_id, p)}
                 </div>`;
             }).join('');
         });
@@ -13831,6 +13788,8 @@
         let semMicrofone = false;   // entrou na call sem conseguir abrir o microfone (a faixa enviada é um silêncio)
 
         function toggleMic(forceState) {
+            // Ouvinte (palco, ou sem "Falar nos canais de voz"): o microfone não liga até o servidor liberar (trava leve: o áudio é P2P).
+            if (Cargos.micTravado() && (forceState === false || (forceState === undefined && micMuted))) { showToast('Você está como ouvinte: não pode ligar o microfone aqui.', 'warning'); return; }
             micMuted = forceState !== undefined ? forceState : !micMuted;
             // quem entrou sem microfone e agora desmuta: tenta abrir o microfone de verdade (a causa pode ter sido resolvida)
             if (!micMuted && semMicrofone && inCall && myMicStream) reaplicarMic();

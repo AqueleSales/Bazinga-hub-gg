@@ -280,6 +280,17 @@ def atualizar_banco():
             # 35. Editar mensagem de DM: guarda quando foi editada pra marcar "(editada)" (NULL = nunca editada).
             add_column_se_nao_existir("direct_message", "edited_at TIMESTAMP")
 
+            # 38. Cargos por servidor, categorias/separadores e tipos de canal (Rodada 29; os passos 36 e 37 são de outras frentes).
+            # As tabelas server_role, member_role e channel_category nascem pelo create_all lá em cima. Aqui só entram as colunas.
+            add_column_se_nao_existir("server", "perms_membro INTEGER")
+            add_column_se_nao_existir("server", "estrutura BOOLEAN")
+            add_column_se_nao_existir("server", "boas_vindas TEXT")
+            add_column_se_nao_existir("server", "canal_boas_vindas_id INTEGER")
+            add_column_se_nao_existir("server", "banner_url VARCHAR(255)")
+            add_column_se_nao_existir("channel", "category_id INTEGER")
+            add_column_se_nao_existir("channel", "icon VARCHAR(16)")
+            add_column_se_nao_existir("channel", "user_limit INTEGER")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

@@ -23,6 +23,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
                     servidor_mapa_para_json, RAIO_NOTAS_M, RAIO_SERVIDORES_M,
                     MAX_NOTAS_ATIVAS_POR_PESSOA, DENUNCIAS_PARA_OCULTAR, MOTIVOS_DENUNCIA, eh_membro)
 from . import loja as armazem
+from . import cargos
 from .passe import titulo_publico
 from .efeitos import mapa_para_cliente as efeitos_custom_mapa
 from .bazar import contar_pendencias as bazar_pendencias
@@ -66,6 +67,8 @@ _TEMP_ID_VALIDO = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 # quem mais estava lá, e só depois de entrar. Chave é a mesma string usada em
 # sala_call ("<canal_id>" ou "dm_<menorId>_<maiorId>").
 participantes_call = {}
+# chave da call de PALCO -> ids de quem foi chamado ao palco por um orador (ouvinte promovido). Some quando a call esvazia.
+palco_convidados = {}
 # sid -> (chave_da_call, peer_id), só pra limpar certo se a conexão cair sem
 # passar por sair_call (fechar o navegador manda sair_call via beforeunload,
 # mas queda de rede não).
@@ -107,6 +110,7 @@ def _tirar_da_call(chave, peer_id, avisar=True):
         lista[:] = [p for p in lista if p['peer_id'] != peer_id]
         if not lista:
             participantes_call.pop(chave, None)
+            palco_convidados.pop(chave, None)
     if meta and _call_por_sid.get(meta['sid']) == (chave, peer_id):
         _call_por_sid.pop(meta['sid'], None)
     if avisar:
@@ -121,8 +125,9 @@ def _sair_apos_graca(chave, peer_id, token):
         _tirar_da_call(chave, peer_id)
 
 
-def _entrar_em_call(chave, peer_id, usuario, server_id=None):
-    """Registra a entrada. Devolve True se é uma REENTRADA (mesmo peer voltando depois de uma queda do socket)."""
+def _entrar_em_call(chave, peer_id, usuario, server_id=None, ouvinte=False):
+    """Registra a entrada. Devolve True se é uma REENTRADA (mesmo peer voltando depois de uma queda do socket).
+    `ouvinte` = entrou sem poder falar (sem "Falar nos canais de voz", ou no palco sem ser orador): vai marcado pra todo mundo."""
     chave_atual = (chave, peer_id)
     reentrada = chave_atual in _meta_call
     _graca_call.pop(chave_atual, None)
@@ -153,7 +158,8 @@ def _entrar_em_call(chave, peer_id, usuario, server_id=None):
     lista = participantes_call.setdefault(chave, [])
     lista[:] = [p for p in lista if p['peer_id'] != peer_id]
     lista.append({'peer_id': peer_id, 'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
-                  'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario)})
+                  'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario),
+                  'ouvinte': bool(ouvinte)})
     _meta_call[chave_atual] = {'sid': request.sid, 'usuario_id': usuario.id, 'server_id': server_id}
     _call_por_sid[request.sid] = chave_atual
     return reentrada
@@ -296,7 +302,8 @@ def canal_para_json(c):
         'type': c.channel_type,
         'topic': c.topic,
         'is_private': bool(c.is_private),
-        'membros': [p.id for p in c.allowed_members] if c.is_private else []
+        'membros': [p.id for p in c.allowed_members] if c.is_private else [],
+        'categoria_id': c.category_id, 'icone': c.icon, 'limite': c.user_limit, 'pos': c.position or 0
     }
 
 
@@ -306,7 +313,7 @@ def _dados_de_servidores(servidores):
     servidores = list(servidores)
     ids = [s.id for s in servidores]
     if not ids:
-        return {}, {}, {}
+        return {}, {}, {}, {}
     canais = Channel.query.filter(Channel.server_id.in_(ids)).order_by(
         Channel.server_id.asc(), Channel.position.asc(), Channel.id.asc()).all()
     privados = [c.id for c in canais if c.is_private]
@@ -317,24 +324,29 @@ def _dados_de_servidores(servidores):
             permitidos.setdefault(cid, set()).add(pid)
     contagem = dict(db.session.query(server_members.c.server_id, func.count(server_members.c.person_id)).filter(
         server_members.c.server_id.in_(ids)).group_by(server_members.c.server_id).all())
-    return canais, permitidos, contagem
+    # Cargos/categorias: zero query em servidor que nunca usou (Server.estrutura vazio) ou que já está em cache (ver cargos.py)
+    return canais, permitidos, contagem, cargos.carregar_estruturas(servidores)
 
 
 def _json_de_servidor(srv, dados, usuario=None):
-    canais, permitidos, contagem = dados
+    canais, permitidos, contagem, estruturas = dados
+    est = estruturas.get(srv.id)
+    ve_privados = usuario is None or bool(cargos.perms_em_memoria(srv, usuario.id, est)[0] & cargos.BIT['ver_canais_privados'])
     visiveis = []
     for c in canais:
         if c.server_id != srv.id:
             continue
-        # mesma regra do pode_ver_canal para quem já é membro: canal privado só pro dono e convidados
-        if usuario is not None and c.is_private and usuario.id != srv.owner_id and usuario.id not in permitidos.get(c.id, ()):
+        # mesma regra do pode_ver_canal para quem já é membro: canal privado só pro dono, convidados e quem tem "Ver canais privados"
+        if c.is_private and not ve_privados and usuario.id not in permitidos.get(c.id, ()):
             continue
         visiveis.append({
             'id': c.id, 'name': c.name, 'type': c.channel_type, 'topic': c.topic,
             'is_private': bool(c.is_private),
-            'membros': sorted(permitidos.get(c.id, ())) if c.is_private else []
+            'membros': sorted(permitidos.get(c.id, ())) if c.is_private else [],
+            'categoria_id': c.category_id, 'icone': c.icon, 'limite': c.user_limit, 'pos': c.position or 0
         })
-    return {
+    extras = cargos.extras_do_servidor(srv, est, usuario, visiveis)
+    return {**extras,
         'id': srv.id,
         'name': srv.name,
         'iconUrl': srv.icon_url,
@@ -365,16 +377,18 @@ def servidor_para_json(srv, usuario=None):
     return servidores_para_json([srv], usuario)[0]
 
 
-def avisar_servidor(srv):
+def avisar_servidor(srv, evento='servidor_discord_criado'):
     """Reenvia o servidor inteiro para todos os membros conectados.
 
-    Usado depois de qualquer mudança estrutural (nome, ícone, canais). Cada
-    membro recebe a sua própria versão, porque a lista de canais depende de
-    quais canais privados a pessoa pode ver.
+    Usado depois de qualquer mudança estrutural (nome, ícone, canais, cargos, categorias). Cada
+    membro recebe a sua própria versão, porque a lista de canais e as permissões dependem de
+    quais canais privados e cargos a pessoa tem. `evento='servidor_estrutura'` é o aviso leve:
+    o cliente só redesenha a lista de canais, sem recarregar a conversa que está aberta.
     """
+    cargos.invalidar(srv.id)
     dados = _dados_de_servidores([srv])
     for membro in srv.members:
-        emit('servidor_discord_criado', _json_de_servidor(srv, dados, membro),
+        emit(evento, _json_de_servidor(srv, dados, membro),
              to=sala_pessoal(membro.id))
 
 
@@ -681,6 +695,21 @@ def lidar_com_mensagem(dados):
     if not texto and not anexo_url:
         return
 
+    # Tipo do canal: anúncios/regras só com permissão, mídia só com anexo. Canal de texto comum passa sem consulta nenhuma.
+    if canal.channel_type and canal.channel_type != 'text' and canal.server_id is not None:
+        try:
+            liberado, motivo = cargos.checar_envio(usuario, com_retry(lambda: Server.query.get(canal.server_id)), canal, bool(anexo_url))
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO TIPO CANAL] {e}")
+            liberado, motivo = False, 'Não foi possível conferir a permissão agora. Tente de novo.'
+        if not liberado:
+            emit('erro_bazinga', {'msg': motivo})
+            temp = temp_id_seguro(dados)
+            if temp:
+                emit('mensagem_recusada', {'temp_id': temp, 'canal_id': canal.id}, to=request.sid)
+            return
+
     # Resposta: só vale citar mensagem DESTE canal (o resumo vem do banco, não do cliente).
     resposta = None
     try:
@@ -872,13 +901,13 @@ def lidar_com_exclusao(dados):
         if not pode_ver_canal(usuario, canal):
             return
 
-        # Pode apagar quem escreveu a mensagem ou o dono do servidor do canal.
-        dono_do_servidor = False
-        if canal.server_id is not None:
+        # Pode apagar quem escreveu a mensagem ou quem tem "Apagar mensagens dos outros" no servidor do canal (o dono sempre tem).
+        pode_moderar = False
+        if msg.person_id != usuario.id and canal.server_id is not None:
             servidor = Server.query.get(canal.server_id)
-            dono_do_servidor = servidor is not None and servidor.owner_id == usuario.id
+            pode_moderar = cargos.pode(usuario, servidor, 'apagar_mensagens')
 
-        if msg.person_id != usuario.id and not dono_do_servidor:
+        if msg.person_id != usuario.id and not pode_moderar:
             emit('erro_bazinga', {'msg': 'Você só pode apagar as suas próprias mensagens.'})
             return
 
@@ -909,6 +938,9 @@ def fixar_mensagem(dados):
 
         canal = Channel.query.get(msg.channel_id)
         if not pode_ver_canal(usuario, canal):
+            return
+        if canal.server_id is not None and not cargos.pode(usuario, Server.query.get(canal.server_id), 'fixar_mensagens'):
+            emit('erro_bazinga', {'msg': 'Você não tem permissão para fixar mensagens aqui.'})
             return
 
         nova_fixada = not msg.is_pinned
@@ -988,10 +1020,25 @@ def lidar_entrar_call(dados):
                 return
             chave = str(canal.id)
             server_id = canal.server_id
+            if canal.channel_type not in cargos.TIPOS_VOZ:
+                emit('erro_bazinga', {'msg': 'Esse canal não é de voz.'})
+                return
+
+        # Lotação (limite do canal) e papel (orador x ouvinte) valem só em canal de servidor.
+        ouvinte = False
+        if server_id is not None:
+            srv_call = com_retry(lambda: Server.query.get(server_id))
+            liberado, motivo, ouvinte = cargos.regras_de_voz(usuario, srv_call, canal, participantes_call.get(chave, []),
+                                                              palco_convidados.get(chave, ()))
+            if not liberado:
+                emit('erro_bazinga', {'msg': motivo})
+                emit('entrada_call_recusada', {'canal_id': chave, 'motivo': motivo})
+                return
 
         sala_call = f"voz_{chave}"
         join_room(sala_call)
-        reentrada = _entrar_em_call(chave, peer_id, usuario, server_id)
+        reentrada = _entrar_em_call(chave, peer_id, usuario, server_id, ouvinte)
+        emit('palco_papel', {'canal_id': chave, 'ouvinte': ouvinte, 'palco': bool(server_id is not None and canal.channel_type == 'palco')})
 
         # Quem já está na call liga pra quem chegou (só quem JÁ estava dentro disca). Na reentrada (o socket piscou) o
         # aviso vai de novo: o cliente só refaz a ligação se a antiga morreu de verdade.
@@ -1307,24 +1354,46 @@ def criar_canal(dados):
 
     try:
         server_id = int(dados.get('server_id'))
-        nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:LIM_NOME_CANAL]
-        tipo = 'voice' if dados.get('tipo') == 'voice' else 'text'
-        if not nome:
+        # Tipo: lista fechada (cargos.TIPOS_CANAL). Sem `tipo` = texto, como sempre foi; tipo desconhecido é recusado.
+        tipo = 'text' if dados.get('tipo') in (None, '') else cargos.tipo_valido(dados.get('tipo'))
+        if not tipo:
+            emit('erro_bazinga', {'msg': 'Esse tipo de canal não existe.'})
             return
+        separador = tipo == 'separador'
+        if separador:     # separador pode ficar sem título (uma linha só); nome de canal não pode
+            nome = cargos.limpar_nome(dados.get('nome'), cargos.LIM_NOME_SEPARADOR)
+        else:
+            nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:LIM_NOME_CANAL]
+            if not nome:
+                return
 
         srv = com_retry(lambda: Server.query.get(server_id))
-        if not srv or srv.owner_id != usuario.id:
-            emit('erro_bazinga', {'msg': 'Só o dono do servidor pode criar canais (por enquanto).'})
+        if not srv:
+            return
+        ctx = cargos.contexto(usuario, srv)
+        if not ctx.tem('gerenciar_canais'):
+            emit('erro_bazinga', {'msg': 'Você não tem permissão para criar canais neste servidor.'})
             return
 
-        topico = (dados.get('topico') or '').strip()[:255] or None
-        privado = bool(dados.get('privado'))
+        topico = None if separador else ((dados.get('topico') or '').strip()[:255] or None)
+        privado = False if separador else bool(dados.get('privado'))
         escolhidos = _membros_escolhidos(srv, dados.get('membros'))
+        icone = None if separador else cargos.emoji_valido(dados.get('icone'))
+        limite = cargos.limite_de_voz(dados.get('limite')) if tipo in cargos.TIPOS_VOZ else None
 
         def preparar():
-            ultimo = Channel.query.filter_by(server_id=srv.id).count()
-            novo = Channel(name=nome, channel_type=tipo, server_id=srv.id,
-                           topic=topico, is_private=privado, position=ultimo)
+            if Channel.query.filter_by(server_id=srv.id).count() >= cargos.MAX_CANAIS:
+                raise cargos.ErroCargo(f'Cada servidor tem no máximo {cargos.MAX_CANAIS} canais e separadores.')
+            cat = cargos.resolver_categoria(srv, dados.get('categoria_id'))
+            if cat is not None:
+                categoria_id = cat.id
+            elif dados.get('categoria_id') in (None, '', 0, '0') and 'categoria_id' not in dados:
+                categoria_id = cargos.categoria_para_novo_canal(srv, cargos.familia_do_tipo(tipo)) if srv.estrutura else None
+            else:
+                categoria_id = None       # pediu "sem categoria" de propósito
+            novo = Channel(name=nome, channel_type=tipo, server_id=srv.id, topic=topico, is_private=privado,
+                           position=cargos.proxima_posicao(srv.id, categoria_id), category_id=categoria_id,
+                           icon=icone, user_limit=limite)
             if privado:
                 novo.allowed_members = escolhidos
             db.session.add(novo)
@@ -1335,6 +1404,10 @@ def criar_canal(dados):
         # Canal privado não pode ser anunciado pra sala inteira do servidor -
         # quem não tem acesso nem deve saber que ele existe.
         _anunciar_canal('canal_criado', srv, novo_canal)
+        avisar_servidor(srv, 'servidor_estrutura')   # cada um recebe a sua lista (categoria visível e canal privado dependem de quem olha)
+    except cargos.ErroCargo as e:
+        db.session.rollback()
+        emit('erro_bazinga', {'msg': str(e)})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO CRIAR CANAL] {e}")
@@ -1365,7 +1438,8 @@ def _anunciar_canal(evento, srv, canal):
     payload = canal_para_json(canal)
     payload['server_id'] = srv.id
     for membro in srv.members:
-        if pode_ver_canal(membro, canal):
+        # Canal público todo membro vê: pular a consulta por membro (era 2 a 3 queries por pessoa pra chegar sempre em True).
+        if not canal.is_private or pode_ver_canal(membro, canal):
             emit(evento, payload, to=sala_pessoal(membro.id))
 
 
@@ -1381,11 +1455,13 @@ def listar_membros_servidor(dados):
         if not srv or usuario not in srv.members:
             return
 
+        cargos_por_pessoa = cargos.cargos_dos_membros(srv)   # {} em servidor sem cargos (nenhuma query)
         emit('membros_do_servidor', {
             'server_id': srv.id,
             'membros': [{
                 'id': m.id, 'nome': m.name, 'avatar': m.avatar,
                 'dono': m.id == srv.owner_id,
+                'cargos': cargos_por_pessoa.get(m.id, []),
                 # Pra mim mesmo vale o status real; pros outros, o que eles
                 # escolheram mostrar (Invisível aparece como offline).
                 'status': (m.status or 'online') if m.id == usuario.id else status_visivel(m),
@@ -1411,22 +1487,46 @@ def editar_canal(dados):
         if not canal or canal.server_id is None:
             return
 
-        srv = servidor_gerenciavel(usuario, canal.server_id)
+        srv = servidor_gerenciavel(usuario, canal.server_id, 'gerenciar_canais')
         if not srv:
-            emit('erro_bazinga', {'msg': 'Só o dono do servidor pode editar canais.'})
+            emit('erro_bazinga', {'msg': 'Você não tem permissão para editar canais neste servidor.'})
+            return
+        # Só edita canal que enxerga (canal privado alheio não é editável chutando o id).
+        if canal.channel_type != 'separador' and not pode_ver_canal(usuario, canal):
+            emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal.'})
             return
 
         # Quem via o canal ANTES da mudança: se ele virar privado (ou alguém
         # for removido), essas pessoas precisam ser avisadas que o canal sumiu.
-        viam_antes = {m.id for m in srv.members if pode_ver_canal(m, canal)}
+        viam_antes = {m.id for m in srv.members if (not canal.is_private) or pode_ver_canal(m, canal)}
+        era_separador = canal.channel_type == 'separador'
 
         def preparar():
             if 'nome' in dados:
-                nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:LIM_NOME_CANAL]
-                if nome:
-                    canal.name = nome
+                if era_separador:      # separador aceita título vazio
+                    canal.name = cargos.limpar_nome(dados.get('nome'), cargos.LIM_NOME_SEPARADOR)
+                else:
+                    nome = (dados.get('nome') or '').strip().lower().replace(' ', '-')[:LIM_NOME_CANAL]
+                    if nome:
+                        canal.name = nome
+            if era_separador:
+                return        # o resto (assunto, privado, ícone...) não existe num separador
+            if 'tipo' in dados:     # só troca dentro da mesma família (texto <-> texto, voz <-> voz): as mensagens/call seguem valendo
+                novo_tipo = cargos.tipo_valido(dados.get('tipo'), cargos.familia_do_tipo(canal.channel_type))
+                if novo_tipo:
+                    canal.channel_type = novo_tipo
             if 'topico' in dados:
                 canal.topic = (dados.get('topico') or '').strip()[:255] or None
+            if 'icone' in dados:
+                canal.icon = cargos.emoji_valido(dados.get('icone'))
+            if 'limite' in dados:
+                canal.user_limit = cargos.limite_de_voz(dados.get('limite')) if canal.channel_type in cargos.TIPOS_VOZ else None
+            if 'categoria_id' in dados:
+                cat = cargos.resolver_categoria(srv, dados.get('categoria_id'))
+                novo_cat = cat.id if cat else None
+                if novo_cat != canal.category_id:
+                    canal.category_id = novo_cat
+                    canal.position = cargos.proxima_posicao(srv.id, novo_cat)
             if 'privado' in dados:
                 canal.is_private = bool(dados.get('privado'))
             if 'membros' in dados or 'privado' in dados:
@@ -1438,10 +1538,15 @@ def editar_canal(dados):
         _anunciar_canal('canal_editado', srv, canal)
 
         # Pra quem perdeu o acesso, o canal simplesmente desaparece da lista.
-        for membro in srv.members:
-            if membro.id in viam_antes and not pode_ver_canal(membro, canal):
-                emit('canal_apagado', {'server_id': srv.id, 'canal_id': canal.id},
-                     to=sala_pessoal(membro.id))
+        if canal.is_private:
+            for membro in srv.members:
+                if membro.id in viam_antes and not pode_ver_canal(membro, canal):
+                    emit('canal_apagado', {'server_id': srv.id, 'canal_id': canal.id},
+                         to=sala_pessoal(membro.id))
+        avisar_servidor(srv, 'servidor_estrutura')
+    except cargos.ErroCargo as e:
+        db.session.rollback()
+        emit('erro_bazinga', {'msg': str(e)})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO EDITAR CANAL] {e}")
@@ -1459,14 +1564,17 @@ def apagar_canal(dados):
         if not canal or canal.server_id is None:
             return
 
-        srv = servidor_gerenciavel(usuario, canal.server_id)
+        srv = servidor_gerenciavel(usuario, canal.server_id, 'gerenciar_canais')
         if not srv:
-            emit('erro_bazinga', {'msg': 'Só o dono do servidor pode apagar canais.'})
+            emit('erro_bazinga', {'msg': 'Você não tem permissão para apagar canais neste servidor.'})
+            return
+        if not pode_ver_canal(usuario, canal) and canal.channel_type != 'separador':
+            emit('erro_bazinga', {'msg': 'Você não tem acesso a esse canal.'})
             return
 
-        # Não deixa o servidor ficar sem nenhum canal de texto.
-        if canal.channel_type == 'text':
-            restantes = Channel.query.filter_by(server_id=srv.id, channel_type='text').count()
+        # Não deixa o servidor ficar sem nenhum canal de texto (anúncios, regras e mídia também são de texto).
+        if canal.channel_type in cargos.TIPOS_TEXTO:
+            restantes = Channel.query.filter(Channel.server_id == srv.id, Channel.channel_type.in_(cargos.TIPOS_TEXTO)).count()
             if restantes <= 1:
                 emit('erro_bazinga', {'msg': 'O servidor precisa de pelo menos um canal de texto.'})
                 return
@@ -1479,6 +1587,7 @@ def apagar_canal(dados):
         comitar_com_retry(preparar)
         emit('canal_apagado', {'server_id': srv.id, 'canal_id': canal_id},
              to=sala_servidor(srv.id))
+        avisar_servidor(srv, 'servidor_estrutura')
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO APAGAR CANAL] {e}")
@@ -1497,7 +1606,7 @@ def editar_servidor(dados):
     try:
         srv = servidor_gerenciavel(usuario, dados.get('server_id'))
         if not srv:
-            emit('erro_bazinga', {'msg': 'Só o dono pode mexer nas configurações do servidor.'})
+            emit('erro_bazinga', {'msg': 'Você não tem permissão para mexer nas configurações do servidor.'})
             return
 
         def preparar():
@@ -1507,6 +1616,13 @@ def editar_servidor(dados):
                     srv.name = nome
             if 'descricao' in dados:
                 srv.description = (dados.get('descricao') or '').strip()[:1000] or None
+            # Personalização (frente de cargos): boas-vindas, canal que abre primeiro e banner.
+            if 'boas_vindas' in dados:
+                srv.boas_vindas = cargos.limpar_texto(dados.get('boas_vindas'), cargos.LIM_BOAS_VINDAS)
+            if 'canal_boas_vindas_id' in dados:
+                srv.canal_boas_vindas_id = cargos.canal_de_texto_do_servidor(srv, dados.get('canal_boas_vindas_id'))
+            if 'banner_url' in dados:
+                srv.banner_url = cargos.url_de_banner(dados.get('banner_url'), url_de_imagem_ok)
             if 'banner_color' in dados:
                 srv.banner_color = dados.get('banner_color') or None
             if 'icon_url' in dados:
@@ -1589,7 +1705,7 @@ def apagar_servidor(dados):
         return
 
     try:
-        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'), 'dono')
         if not srv:
             emit('erro_bazinga', {'msg': 'Só o dono pode apagar o servidor.'})
             return
@@ -1613,15 +1729,15 @@ def apagar_servidor(dados):
 
 @socketio.on('expulsar_membro')
 def expulsar_membro(dados):
-    """Tira alguém do servidor. Só o dono, e o dono não pode se expulsar."""
+    """Tira alguém do servidor. Quem tem "Remover membros" e só alguém abaixo do seu cargo; o dono nunca é removido."""
     usuario = usuario_logado()
     if not usuario:
         return
 
     try:
-        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'), 'expulsar')
         if not srv:
-            emit('erro_bazinga', {'msg': 'Só o dono pode remover membros.'})
+            emit('erro_bazinga', {'msg': 'Você não tem permissão para remover membros.'})
             return
 
         alvo = com_retry(lambda: Person.query.get(int(dados.get('person_id'))))
@@ -1630,8 +1746,15 @@ def expulsar_membro(dados):
         if alvo.id == srv.owner_id:
             emit('erro_bazinga', {'msg': 'O dono não pode se remover do próprio servidor.'})
             return
+        if alvo.id == usuario.id:
+            emit('erro_bazinga', {'msg': 'Para sair do servidor use "Sair do servidor".'})
+            return
+        if srv.owner_id != usuario.id and cargos.nivel_do_membro(srv, alvo.id) >= cargos.contexto(usuario, srv).nivel:
+            emit('erro_bazinga', {'msg': 'Você só remove quem está abaixo do seu cargo.'})
+            return
 
         def preparar():
+            cargos.limpar_membro(srv.id, alvo.id)
             srv.members.remove(alvo)
             # Também sai dos canais privados em que estava liberado
             for canal in srv.channels:
@@ -1639,6 +1762,7 @@ def expulsar_membro(dados):
                     canal.allowed_members.remove(alvo)
 
         comitar_com_retry(preparar)
+        cargos.invalidar(srv.id)
 
         # Some da sidebar de quem foi removido, na hora
         emit('servidor_apagado', {'server_id': srv.id}, to=sala_pessoal(alvo.id))
@@ -1658,7 +1782,7 @@ def transferir_posse(dados):
         return
 
     try:
-        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'), 'dono')
         if not srv:
             emit('erro_bazinga', {'msg': 'Só o dono pode passar a posse.'})
             return
@@ -1698,10 +1822,12 @@ def sair_do_servidor(dados):
             return
 
         def preparar():
+            cargos.limpar_membro(srv.id, usuario.id)
             if usuario in srv.members:
                 srv.members.remove(usuario)
 
         comitar_com_retry(preparar)
+        cargos.invalidar(srv.id)
         leave_room(sala_servidor(srv.id))
         emit('servidor_apagado', {'server_id': srv.id})  # some da sidebar de quem saiu
     except Exception as e:
@@ -4005,7 +4131,11 @@ def criar_convite(dados):
         if not srv or not eh_membro(usuario, srv.id):
             emit('erro_bazinga', {'msg': 'Você precisa estar no servidor pra convidar alguém.'})
             return
-        sou_dono = pode_gerenciar_servidor(usuario, srv)
+        ctx_convite = cargos.contexto(usuario, srv)
+        if not ctx_convite.tem('criar_convite'):
+            emit('erro_bazinga', {'msg': 'Você não tem permissão para criar convites neste servidor.'})
+            return
+        sou_dono = ctx_convite.tem('gerenciar_servidor')     # quem gerencia o servidor convida sem teto de prazo e de usos
 
         duracao = _parse_ilimitado(dados.get('duracao'))     # horas, None = nunca expira
         max_usos = _parse_ilimitado(dados.get('max_usos'))   # None = ilimitado
@@ -4172,7 +4302,7 @@ def listar_eventos(dados):
                             .order_by(Event.starts_at.asc()).all())
         emit('eventos_do_servidor', {
             'server_id': srv.id,
-            'pode_gerenciar': pode_gerenciar_servidor(usuario, srv),
+            'pode_gerenciar': pode_gerenciar_servidor(usuario, srv, 'gerenciar_eventos'),
             'eventos': [evento_para_json(e) for e in eventos]
         })
     except Exception as e:
@@ -4188,7 +4318,7 @@ def criar_evento(dados):
         return
 
     try:
-        srv = servidor_gerenciavel(usuario, dados.get('server_id'))
+        srv = servidor_gerenciavel(usuario, dados.get('server_id'), 'gerenciar_eventos')
         if not srv:
             emit('erro_bazinga', {'msg': 'Você não tem permissão para criar eventos aqui.'})
             return
@@ -4230,7 +4360,7 @@ def editar_evento(dados):
         ev = com_retry(lambda: Event.query.get(dados.get('id')))
         if not ev:
             return
-        srv = servidor_gerenciavel(usuario, ev.server_id)
+        srv = servidor_gerenciavel(usuario, ev.server_id, 'gerenciar_eventos')
         if not srv:
             emit('erro_bazinga', {'msg': 'Você não tem permissão para editar eventos aqui.'})
             return
@@ -4271,7 +4401,7 @@ def apagar_evento(dados):
         ev = com_retry(lambda: Event.query.get(dados.get('id')))
         if not ev:
             return
-        srv = servidor_gerenciavel(usuario, ev.server_id)
+        srv = servidor_gerenciavel(usuario, ev.server_id, 'gerenciar_eventos')
         if not srv:
             emit('erro_bazinga', {'msg': 'Você não tem permissão para apagar eventos aqui.'})
             return
@@ -4306,3 +4436,7 @@ from . import explorar_events  # noqa: E402,F401
 # Conexões do perfil (links de outras plataformas, currículo, GitHub): handlers em outro arquivo, também no FIM (importa daqui).
 from . import conexoes_events  # noqa: E402,F401
 from . import musica_events  # noqa: E402,F401
+
+
+# Cargos por servidor, categorias/separadores da lista de canais e palco: handlers em outro arquivo, também no FIM (importa daqui).
+from . import cargos_events  # noqa: E402,F401

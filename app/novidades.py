@@ -9,6 +9,15 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 29, 'data': '19/10/2026', 'titulo': 'Cargos, categorias e mais tipos de canal nos servidores',
+        'itens': [
+            {'icone': 'fa-user-shield', 'titulo': 'Cargos com permissões', 'texto': 'Em Configurações do servidor > Cargos, crie cargos com cor e permissões (gerenciar canais, remover membros, apagar mensagens, ver canais privados, falar no palco...). Quem tem cargo mais alto manda nos de baixo, e o nome do membro ganha a cor do cargo. O dono continua podendo tudo.'},
+            {'icone': 'fa-folder', 'titulo': 'Categorias e separadores', 'texto': 'Renomeie as categorias da lista de canais, crie novas, recolha e arraste canais entre elas. Dá pra colocar linhas separadoras, com título ou sem.'},
+            {'icone': 'fa-bullhorn', 'titulo': 'Anúncios, regras, mídia e palco', 'texto': 'Novos tipos de canal: Anúncios e Regras (só lê quem não tem permissão), Mídia (só foto, vídeo e GIF), Voz com limite de pessoas e Palco (oradores e ouvintes). Cada canal pode ter um emoji próprio.'},
+            {'icone': 'fa-image', 'titulo': 'Banner e boas-vindas', 'texto': 'O servidor pode ter banner no topo da lista, uma mensagem de boas-vindas mostrada uma vez a cada pessoa e um canal que abre primeiro.'},
+        ],
+    },
+    {
         'id': 28, 'data': '14/10/2026', 'titulo': 'Editar e apagar mensagens nas DMs',
         'itens': [
             {'icone': 'fa-pen', 'titulo': 'Editar mensagem na DM funciona', 'texto': 'Antes, editar uma mensagem na conversa direta dava erro. Agora você edita (duplo clique ou no lápis) e o outro lado vê o "(editada)" na hora.'},

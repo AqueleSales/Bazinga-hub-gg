@@ -138,6 +138,7 @@ def create_app():
                 'bazar_css_v': _versao_estatico('css/bazar.css'), 'bazar_js_v': _versao_estatico('js/bazar.js'),
                 'titulos_css_v': _versao_estatico('css/titulos.css'), 'efeitos_js_v': _versao_estatico('js/efeitos.js'), 'efeitos_css_v': _versao_estatico('css/efeitos.css'), 'explorar_css_v': _versao_estatico('css/explorar.css'), 'mapa_social_css_v': _versao_estatico('css/mapa_social.css'), 'mapa_social_js_v': _versao_estatico('js/mapa_social.js'), 'conexoes_css_v': _versao_estatico('css/conexoes.css'), 'conexoes_js_v': _versao_estatico('js/conexoes.js'), 'explorar_js_v': _versao_estatico('js/explorar.js'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'), 'admin_graficos_js_v': _versao_estatico('js/admin_graficos.js'),
                 'musica_css_v': _versao_estatico('css/musica.css'), 'musica_js_v': _versao_estatico('js/musica.js'),
+                'cargos_css_v': _versao_estatico('css/cargos.css'), 'cargos_js_v': _versao_estatico('js/cargos.js'),
                 'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'novidade_atual': novidade_atual()}
 
     with app.app_context():

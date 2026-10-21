@@ -17,6 +17,7 @@ from sqlalchemy.exc import OperationalError
 
 from .models import db, Channel, Server, MissaoProgresso, Person, MovimentoDrc, br_now, server_members, channel_members
 from .cosmeticos import patente_do_nivel, patente_comeca_em, ids_do_tipo, equipados_da_pessoa, efeito_servidor_valido
+from . import cargos
 
 
 def com_retry(fn, tentativas=4, espera=1.0):
@@ -79,6 +80,9 @@ def pode_ver_canal(usuario, canal):
     """
     if usuario is None or canal is None:
         return False
+    # Separador é só uma linha da lista de canais: não guarda mensagem nem tem sala (chutar o id dele não abre nada).
+    if canal.channel_type == 'separador':
+        return False
     if canal.server_id is None:
         return True
 
@@ -101,9 +105,12 @@ def pode_ver_canal(usuario, canal):
             return False
         if servidor.owner_id == usuario.id:
             return True
-        return com_retry(lambda: db.session.query(channel_members.c.person_id).filter(
-            channel_members.c.channel_id == canal.id,
-            channel_members.c.person_id == usuario.id).first() is not None)
+        if com_retry(lambda: db.session.query(channel_members.c.person_id).filter(
+                channel_members.c.channel_id == canal.id,
+                channel_members.c.person_id == usuario.id).first() is not None):
+            return True
+        # Convite à parte, só o cargo "Ver canais privados" (ou Administrador) enxerga canal privado sem ter sido chamado.
+        return cargos.pode(usuario, servidor, 'ver_canais_privados')
 
     return True
 
@@ -119,27 +126,22 @@ def canal_permitido(usuario, canal_id):
     return canal if pode_ver_canal(usuario, canal) else None
 
 
-def pode_gerenciar_servidor(usuario, servidor):
-    """Quem pode mexer nas configurações do servidor, canais, convites e eventos.
-
-    Hoje é só o dono. Quando existir um sistema de cargos por servidor, é aqui
-    que a checagem de permissão entra - todos os handlers já passam por esta
-    função, então não vai ser preciso caçar cada um.
-    """
-    if usuario is None or servidor is None:
-        return False
-    return servidor.owner_id == usuario.id
+def pode_gerenciar_servidor(usuario, servidor, perm='gerenciar_servidor'):
+    """True se a pessoa tem a permissão `perm` (ids em cargos.PERMISSOES) neste servidor; o dono tem todas.
+    `perm='dono'` = só o dono (apagar o servidor, passar a posse). É o ponto único de decisão: os handlers passam a
+    permissão que a ação exige em vez de comparar `owner_id` na mão."""
+    return cargos.pode(usuario, servidor, perm)
 
 
-def servidor_gerenciavel(usuario, server_id):
-    """Busca o servidor e devolve ele só se o usuário puder administrá-lo."""
+def servidor_gerenciavel(usuario, server_id, perm='gerenciar_servidor'):
+    """Busca o servidor e devolve ele só se o usuário tiver a permissão `perm` nele."""
     if usuario is None:
         return None
     try:
         servidor = com_retry(lambda: Server.query.get(int(server_id)))
     except (TypeError, ValueError):
         return None
-    return servidor if pode_gerenciar_servidor(usuario, servidor) else None
+    return servidor if pode_gerenciar_servidor(usuario, servidor, perm) else None
 
 
 def gerar_codigo_convite(tamanho=8):
