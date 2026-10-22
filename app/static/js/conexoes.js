@@ -185,7 +185,7 @@ const Conexoes = (() => {
         const titulo = pf && pf.nome ? `Playlist de ${pf.nome}` : 'Playlist';
         if (!fx.length) {
             return `<article class="cx-card vinil fila" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c, 'no YouTube')}
-                <div class="cx-link"><div class="cx-link-t"><b>${T(titulo)}</b><small>Nenhuma música ainda</small>${pf && pf.sou_eu ? '<em>Cole links do YouTube ou do YouTube Music em Configurações > Conexões.</em>' : ''}</div></div></article>`;
+                <div class="cx-link"><div class="cx-link-t"><b>${T(titulo)}</b><small>Nenhuma música ainda</small>${pf && pf.sou_eu ? '<em>Cole links do YouTube ou do YouTube Music em Configurações > Apps conectados.</em>' : ''}</div></div></article>`;
         }
         const refs = fx.map(chaveFaixa).join(',');
         return `<article class="cx-card vinil fila" style="--c:${T(p.cor)}"${marca(c.tipo)} data-cx-vinil>${cabecalhoCard(c, 'no YouTube')}
@@ -365,7 +365,7 @@ const Conexoes = (() => {
         const p = plataforma('linkedin'), dados = c.dados && c.dados.cv;
         if (!dados) {
             return `<article class="cx-card" style="--c:${T(p.cor)}"${marca(c.tipo)}>${cabecalhoCard(c)}<div class="cx-link"><div class="cx-link-t"><b>${T(c.titulo || hostDe(c.url))}</b>${c.titulo ? `<small>${T(hostDe(c.url))}</small>` : ''}
-                ${pf && pf.sou_eu ? '<em>Pra mostrar o currículo aqui, solte o PDF do seu LinkedIn em Configurações > Conexões.</em>' : ''}</div>${botaoAbrir(c.url, 'Ver no LinkedIn')}</div></article>`;
+                ${pf && pf.sou_eu ? '<em>Pra mostrar o currículo aqui, solte o PDF do seu LinkedIn em Configurações > Apps conectados.</em>' : ''}</div>${botaoAbrir(c.url, 'Ver no LinkedIn')}</div></article>`;
         }
         const foto = dados.foto && /^https:\/\//i.test(dados.foto) ? `<img class="cx-cv-foto" src="${ctx.escUrl(dados.foto)}" alt="">` : (pf && pf.avatar ? `<img class="cx-cv-foto" src="${ctx.escUrl(pf.avatar)}" alt="">` : '<span class="cx-cv-foto vazio"><i class="fa-solid fa-user"></i></span>');
         const banner = dados.banner && /^https:\/\//i.test(dados.banner) ? `<img src="${ctx.escUrl(dados.banner)}" alt="">` : '';
@@ -412,7 +412,7 @@ const Conexoes = (() => {
     }
 
     // ---------------------------------------------------------------------
-    // CARROSSEL (opcional, Configurações > Conexões): uma conexão por página, com mais detalhes. A página 0 é o próprio perfil: "<" na 1ª conexão volta pra ele.
+    // CARROSSEL (opcional, Configurações > Apps conectados): uma conexão por página, com mais detalhes. A página 0 é o próprio perfil: "<" na 1ª conexão volta pra ele.
     // O padrão continua sendo a lista (compacta) com rolagem.
     // ---------------------------------------------------------------------
     const CAR_CHAVE = 'pnt_cx_carrossel';

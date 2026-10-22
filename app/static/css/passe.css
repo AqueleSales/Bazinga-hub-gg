@@ -26,7 +26,7 @@
 .pz-acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
 .pz-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px; font-weight: 800; font-size: 13px; cursor: pointer; background: color-mix(in srgb, var(--text-header) 9%, transparent); color: var(--text-header); border: 1px solid color-mix(in srgb, var(--text-header) 16%, transparent); text-decoration: none; }
 .pz-btn:hover { background: color-mix(in srgb, var(--text-header) 16%, transparent); }
-.pz-btn.primario { background: var(--pz-cor, #d4a24c); border-color: var(--pz-cor, #d4a24c); color: #1a1408; }   /* as janelas (resgatar, Olimpo) ficam no <body>, fora do #passe que define --pz-cor: sem o valor reserva o botão ficava transparente com texto escuro */
+.pz-btn.primario { background: var(--pz-cor, #d4a24c); border-color: var(--pz-cor, #d4a24c); color: #1a1408; }   /* as janelas (resgatar, Brasa) ficam no <body>, fora do #passe que define --pz-cor: sem o valor reserva o botão ficava transparente com texto escuro */
 .pz-btn.primario:hover { filter: brightness(1.08); }
 .pz-btn[disabled] { opacity: .45; cursor: not-allowed; filter: none; }
 
@@ -111,7 +111,7 @@
 
 .pz-cap-tit { position: sticky; left: 4px; display: flex; flex-direction: column; width: max-content; max-width: 100%; }   /* o nome do canto acompanha a rolagem enquanto você está nele */
 
-/* ---- Olimpo (janela da assinatura) ---- */
+/* ---- Brasa (janela da assinatura; classe .pz-olimpo = id interno) ---- */
 .pz-olimpo { text-align: center; max-width: 440px; }
 .pz-olimpo h3 { margin: 4px 0 2px; }
 .pz-oli-lista { list-style: none; padding: 0; margin: 14px 0; text-align: left; display: grid; gap: 8px; font-size: 14px; line-height: 1.45; }

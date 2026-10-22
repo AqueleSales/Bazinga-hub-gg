@@ -8,7 +8,7 @@
 const Efeitos = (() => {
     const reg = {};                 // id -> { tipo, receita }
     let versao = 0;                 // sobe a cada registrar(): elementos já montados com receita velha são refeitos
-    const reduz = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduz = () => (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.hasAttribute('data-reduz-mov');   // sistema OU Configurações > Acessibilidade
     const lim = (v, mn, mx, p) => { const x = Number(v); return Number.isFinite(x) ? Math.max(mn, Math.min(mx, x)) : p; };
     const cor = (v, p) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : p;
     const opc = (v, lista, p) => lista.includes(v) ? v : p;

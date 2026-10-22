@@ -28,6 +28,7 @@ from . import cargos
 from . import guardiao
 from . import termos
 from . import ordem
+from . import preferencias
 from .passe import titulo_publico
 from .efeitos import mapa_para_cliente as efeitos_custom_mapa
 from .bazar import contar_pendencias as bazar_pendencias, ids_dos_admins as bazar_ids_dos_admins
@@ -252,9 +253,12 @@ def tem_aba_visivel(person_id):
     return any(uid == person_id and vis for uid, vis in list(_visivel_por_sid.values()))
 
 
-def push_se_ausente(destino_id, titulo, corpo='', tag=None, extra=None, url='/chat'):
-    """Push só se a pessoa não está com o app aberto e visível, nem em "Não perturbar". Nunca quebra quem chamou."""
+def push_se_ausente(destino_id, titulo, corpo='', tag=None, extra=None, url='/chat', tipo_aviso=None):
+    """Push só se a pessoa não está com o app aberto e visível, nem em "Não perturbar". Nunca quebra quem chamou.
+    `tipo_aviso` (dm, mencao, amizade, ligacao, bazar, nota): se a pessoa desligou esse tipo em Configurações > Notificações, não manda."""
     try:
+        if tipo_aviso and not preferencias.aviso_ligado(destino_id, tipo_aviso):
+            return False
         if tem_aba_visivel(destino_id):
             return False
         from .push import enviar_push
@@ -562,7 +566,10 @@ def handle_connect():
                                          'radar_estranhos': usuario.radar_estranhos is True,
                                          # ordem dos servidores (com pastas) e DMs fixadas: já limpas, sem consulta nova (a lista de servidores já está carregada)
                                          'ordem_servidores': ordem.layout_da_pessoa(usuario, [s['id'] for s in servidores]),
-                                         'ordem_dms': ordem.fixas_da_pessoa(usuario)})
+                                         'ordem_dms': ordem.fixas_da_pessoa(usuario),
+                                         # preferências da conta (notificações por tipo, acessibilidade, hora): já validadas, sem consulta nova
+                                         'prefs': preferencias.da_pessoa(usuario)})
+        preferencias.guardar_no_cache(usuario)
 
         # Bônus diário: a primeira conexão do dia paga XP e mantém a sequência.
         # Em try próprio: falhar aqui não pode derrubar presença/amigos abaixo.
@@ -1307,7 +1314,8 @@ def chamar_amigo(dados):
     if not esta_online(amigo_id):
         # Sem app aberto não dá pra tocar, mas o aviso no aparelho diz que a pessoa tentou ligar.
         push_se_ausente(amigo_id, f'Ligação perdida de {usuario.name}', 'Tentou falar com você agora.',
-                        tag=f'chamada-{usuario.id}', extra={'tipo': 'dm', 'de_id': usuario.id, 'icone': usuario.avatar}, url=f'/chat?dm={usuario.id}')
+                        tag=f'chamada-{usuario.id}', extra={'tipo': 'dm', 'de_id': usuario.id, 'icone': usuario.avatar}, url=f'/chat?dm={usuario.id}',
+                        tipo_aviso='ligacao')
         emit('chamada_recusada', {'por_nome': 'A pessoa', 'offline': True})
         return
 
@@ -1319,7 +1327,7 @@ def chamar_amigo(dados):
     # App aberto mas em segundo plano (celular bloqueado): o push é o que faz o aparelho avisar.
     push_se_ausente(amigo_id, f'{usuario.name} está te ligando', 'Toque pra atender.',
                     tag=f'ligando-{usuario.id}', extra={'tipo': 'chamada', 'de_id': usuario.id, 'urgente': True, 'icone': usuario.avatar},
-                    url=f'/chat?dm={usuario.id}')
+                    url=f'/chat?dm={usuario.id}', tipo_aviso='ligacao')
 
 
 @socketio.on('aceitar_chamada')
@@ -3861,8 +3869,11 @@ def notificacao_json(n):
 
 
 def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None, agrupar=False, icone=None):
-    """Guarda na caixa de entrada e avisa a sala pessoal. Nunca quebra quem chamou."""
+    """Guarda na caixa de entrada e avisa a sala pessoal. Nunca quebra quem chamou.
+    Se a pessoa desligou esse tipo em Configurações > Notificações (preferencias.aviso_ligado), não guarda nem manda push: devolve None."""
     try:
+        if not preferencias.aviso_ligado(destino_id, tipo):
+            return None
         def preparar():
             n = None
             if agrupar:
@@ -3886,7 +3897,7 @@ def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None
             if icone:
                 extra['icone'] = icone       # foto de quem escreveu ou do servidor: é o que o aviso do aparelho desenha
             url = f'/chat?dm={de_id}' if tipo == 'dm' and de_id else '/chat'
-            push_se_ausente(destino_id, titulo, texto or '', tag=f'{tipo}-{de_id or ref or ""}', extra=extra, url=url)
+            push_se_ausente(destino_id, titulo, texto or '', tag=f'{tipo}-{de_id or ref or ""}', extra=extra, url=url, tipo_aviso=tipo)
         except Exception as e:
             print(f"[ERRO PUSH NOTIFICACAO] {e}")
         return n
@@ -4585,3 +4596,5 @@ from . import ordem_events  # noqa: E402,F401
 # Atividades da call (xadrez) e convite pra voz (Rodada 34): handlers em outros arquivos, também no FIM (importam daqui).
 from . import atividades_events  # noqa: E402,F401
 from . import call_events  # noqa: E402,F401
+# Configurações do usuário (preferências da conta, histórico de cobrança, resumo de privacidade): handlers em outro arquivo, também no FIM.
+from . import config_usuario_events  # noqa: E402,F401

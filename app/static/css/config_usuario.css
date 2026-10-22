@@ -1,0 +1,167 @@
+/* Configurações do usuário (Rodada 34): janela maior, menu em grupos com busca, abas novas e as opções de acessibilidade.
+   Carrega DEPOIS do <style> do chat.html (ganha por ordem). Só transform/opacity se mexem; nada de gradiente de enfeite. */
+
+/* ---------- a janela: mais larga e mais alta, com respiro ---------- */
+.settings-modal { width: min(1240px, 96vw); height: min(840px, 93vh); }
+.settings-sidebar { flex: 0 0 clamp(236px, 22%, 300px); width: auto; max-width: none; align-items: stretch; padding: 22px 12px 18px 22px; }
+.settings-content { padding: 34px 56px 56px 48px; }
+.set-section { max-width: 940px; }
+.set-title { font-size: 21px; margin-bottom: 18px; }
+.settings-content h3.set-title { font-size: 15px !important; margin-bottom: 10px !important; }
+
+/* ---------- menu lateral em grupos ---------- */
+.set-tab-group { max-width: none; gap: 1px; }
+.set-tab-header { font-size: 11.5px; letter-spacing: .07em; margin-top: 6px; padding: 6px 10px 4px; }
+.set-tab { font-size: 14.5px; padding: 7px 10px; }
+.set-sep { height: 1px; margin: 10px 8px; background: color-mix(in srgb, var(--text-muted) 24%, transparent); }
+.set-tab.set-sair { color: var(--red-color); }
+
+.set-busca { position: relative; margin: 0 0 12px; }
+.set-busca i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
+.set-busca input { width: 100%; padding: 8px 10px 8px 31px; border-radius: 8px; border: 1px solid transparent; background: var(--bg-tertiary); color: var(--text-normal); font-size: 13.5px; font-family: inherit; outline: none; }
+.set-busca input:focus { border-color: var(--brand-color); }
+.set-busca input::placeholder { color: var(--text-muted); }
+
+/* ---------- resultados da busca ---------- */
+.bs-lista { display: flex; flex-direction: column; gap: 6px; }
+.bs-item { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 10px 14px; border-radius: 10px; background: var(--bg-tertiary); border: 1px solid transparent; color: var(--text-normal); cursor: pointer; font-family: inherit; }
+.bs-item:hover, .bs-item:focus-visible { border-color: var(--brand-color); outline: none; }
+.bs-t { color: var(--text-header); font-weight: 600; font-size: 14.5px; }
+.bs-t i { font-size: 11px; color: var(--brand-color); margin-right: 4px; }
+.bs-c { color: var(--brand-color); font-size: 11.5px; font-weight: 700; letter-spacing: .02em; }
+.bs-d { color: var(--text-muted); font-size: 12.5px; line-height: 1.45; }
+.set-achado { outline: 2px solid var(--brand-color); outline-offset: 4px; border-radius: 8px; background: color-mix(in srgb, var(--brand-color) 10%, transparent); }
+
+/* ---------- linhas de opção (Rodada 34) e as antigas (.discord-toggle) com a mesma cara ---------- */
+.cfg-linha, .settings-content .discord-toggle { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 0; margin: 0; border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 16%, transparent); }
+.settings-content .discord-toggle { margin-bottom: 0; }
+.cfg-linha.cfg-coluna { flex-direction: column; align-items: stretch; gap: 10px; }
+.cfg-txt { flex: 1; min-width: 0; }
+.cfg-txt h4, .settings-content .discord-toggle h4 { color: var(--text-header); font-size: 15px !important; font-weight: 600 !important; margin: 0 0 3px; }
+.cfg-txt p, .settings-content .discord-toggle p { color: var(--text-muted); font-size: 13px !important; line-height: 1.5; margin: 0; max-width: 72ch; }
+.cfg-txt p + p, .settings-content .discord-toggle p + p { margin-top: 6px; }
+.cfg-txt b, .cfg-txt p b { color: var(--text-normal); }
+.cfg-ico { flex: none; width: 30px; text-align: center; color: var(--text-muted); font-size: 16px; }
+.cfg-h { color: var(--text-header); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; margin: 30px 0 6px; }
+.cfg-h:first-child { margin-top: 0; }
+.cfg-h small { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--text-muted); font-size: 12px; }
+.cfg-lede { color: var(--text-muted); font-size: 14px; line-height: 1.55; margin: -6px 0 6px; max-width: 74ch; }
+.cfg-dica { display: block; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; margin: 8px 0 4px; max-width: 74ch; }
+.cfg-alerta { color: var(--yellow-color); font-size: 12.5px; margin-top: 6px !important; }
+.cfg-alerta:empty { display: none; }
+.cfg-vazio { padding: 22px 16px; color: var(--text-muted); font-size: 13.5px; text-align: center; }
+.cfg-campo .control-label { margin-bottom: 8px; }
+.cfg-chip { display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; background: color-mix(in srgb, var(--text-muted) 22%, transparent); color: var(--text-normal); }
+.cfg-chip.ok { background: color-mix(in srgb, var(--green-color) 22%, transparent); color: var(--green-color); }
+.cfg-chip.aviso { background: color-mix(in srgb, var(--yellow-color) 22%, transparent); color: var(--yellow-color); }
+.cfg-chip.teste { background: color-mix(in srgb, var(--brand-color) 22%, transparent); color: var(--brand-color); padding: 1px 7px; font-size: 10.5px; }
+.cfg-ir { cursor: pointer; }
+.cfg-dica a, .cfg-txt a { color: var(--brand-color); }
+.toggle-switch[role="switch"]:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 2px; }
+.cfg-linha .btn, .settings-content .btn { white-space: nowrap; }
+
+/* caixinhas dobráveis (ajuda longa) */
+.cfg-detalhes { border: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent); border-radius: 10px; padding: 0 14px; margin: 0; }
+.cfg-detalhes summary { cursor: pointer; padding: 10px 0; font-size: 13.5px; font-weight: 600; color: var(--text-normal); }
+.cfg-detalhes[open] summary { border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 16%, transparent); margin-bottom: 8px; }
+.cfg-detalhes .cx-aba-info { padding-bottom: 12px; }
+
+/* ---------- controle segmentado (tamanho do texto, densidade, filtros) ---------- */
+.cfg-seg { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 6px; }
+.cfg-seg-bt { flex: 1 1 120px; padding: 10px 12px; border-radius: 9px; border: 1px solid color-mix(in srgb, var(--text-muted) 24%, transparent); background: var(--bg-tertiary); color: var(--text-normal); cursor: pointer; font-weight: 600; font-family: inherit; font-size: 14px; }
+.cfg-seg-bt:hover { border-color: var(--text-muted); }
+.cfg-seg-bt.active { border-color: var(--brand-color); background: color-mix(in srgb, var(--brand-color) 16%, var(--bg-tertiary)); color: var(--text-header); }
+.cfg-seg-bt:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 2px; }
+
+/* ---------- sub-abas (Voz e vídeo) ---------- */
+.cfg-subs { display: flex; gap: 4px; margin: -4px 0 22px; border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent); overflow-x: auto; scrollbar-width: none; }
+.cfg-subs::-webkit-scrollbar { display: none; }
+.cfg-sub-bt { flex: none; padding: 9px 16px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
+.cfg-sub-bt:hover { color: var(--text-normal); }
+.cfg-sub-bt.active { color: var(--text-header); border-bottom-color: var(--brand-color); }
+.cfg-sub-pagina { display: none; }
+.cfg-sub-pagina.active { display: block; }
+.cfg-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.cfg-teste { display: flex; gap: 16px; align-items: center; margin-top: 24px; }
+.cfg-medidor { flex: 1; height: 16px; background: var(--bg-tertiary); border-radius: 4px; overflow: hidden; display: flex; }
+.cfg-info-item { display: flex; gap: 16px; padding: 15px 0; border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 16%, transparent); }
+.cfg-info-item > i { flex: none; width: 30px; text-align: center; font-size: 19px; color: var(--brand-color); margin-top: 2px; }
+.cfg-info-item h4 { color: var(--text-header); font-size: 15px; font-weight: 600; margin: 0 0 3px; }
+.cfg-info-item p { color: var(--text-muted); font-size: 13px; line-height: 1.5; margin: 0; max-width: 72ch; }
+.tc-slider { display: flex; align-items: center; gap: 12px; }
+.tc-slider output { min-width: 44px; color: var(--text-muted); font-size: 13px; text-align: right; }
+.tc-slider .discord-slider { margin-top: 0; }
+
+/* ---------- Cobrança ---------- */
+.cb-resumo { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.cb-resumo > div { background: var(--bg-tertiary); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+.cb-resumo small { color: var(--text-muted); font-size: 11.5px; font-weight: 600; }
+.cb-resumo b { color: var(--text-header); font-size: 18px; }
+.cb-resumo b.pos, .cb-v.pos { color: var(--green-color); }
+.cb-resumo b.neg, .cb-v.neg { color: var(--red-color); }
+.cb-lista { border: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent); border-radius: 10px; max-height: 380px; overflow-y: auto; margin-top: 10px; }
+.cb-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 14%, transparent); }
+.cb-item:last-child { border-bottom: 0; }
+.cb-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cb-t b { color: var(--text-header); font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-t small { color: var(--text-muted); font-size: 12px; }
+.cb-v { min-width: 84px; text-align: right; color: var(--text-header); font-size: 14px; font-variant-numeric: tabular-nums; }
+.cb-saldo { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+
+/* ---------- Brasa ---------- */
+.br-heroi { display: flex; align-items: center; gap: 30px; padding: 24px 28px; border-radius: 14px; background: color-mix(in srgb, #ff7a18 9%, var(--bg-secondary)); border: 1px solid color-mix(in srgb, #ff7a18 38%, transparent); }
+.br-omega { flex: none; width: 132px; height: 132px; display: flex; align-items: center; justify-content: center; }
+.br-heroi-txt h3 { color: var(--text-header); font-size: 24px; margin: 0 0 4px; }
+.br-status { color: var(--text-normal); font-size: 14.5px; margin: 0 0 14px; line-height: 1.5; }
+.br-acoes { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Acessibilidade: a prévia e o que cada opção faz ---------- */
+.ac-previa { border-radius: 10px; background: var(--bg-primary); border: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent); padding: 8px 0; overflow: hidden; }
+.ac-previa .message { padding-left: 18px; padding-right: 18px; }
+.ac-previa .message:hover { background: transparent; }
+
+/* Tamanho do texto do chat (mensagens, nomes, hora, citações e o campo de escrever). 'm' é o padrão e não mexe em nada. */
+html[data-texto="p"] .message-text, html[data-texto="p"] #message-input, html[data-texto="p"] #dm-message-input { font-size: 13.5px; line-height: 1.3rem; }
+html[data-texto="p"] .message-author { font-size: 13.5px; } html[data-texto="p"] .message-timestamp { font-size: 11px; }
+html[data-texto="g"] .message-text, html[data-texto="g"] #message-input, html[data-texto="g"] #dm-message-input { font-size: 17px; line-height: 1.55rem; }
+html[data-texto="g"] .message-author { font-size: 16.5px; } html[data-texto="g"] .message-timestamp { font-size: 13px; }
+html[data-texto="gg"] .message-text, html[data-texto="gg"] #message-input, html[data-texto="gg"] #dm-message-input { font-size: 19.5px; line-height: 1.8rem; }
+html[data-texto="gg"] .message-author { font-size: 18.5px; } html[data-texto="gg"] .message-timestamp { font-size: 14px; }
+html[data-texto="g"] .grouped-timestamp { font-size: 11px; } html[data-texto="gg"] .grouped-timestamp { font-size: 12px; }
+
+/* Densidade: espaço entre mensagens e itens das listas */
+html[data-densidade="compacta"] .message { padding-top: 0; padding-bottom: 0; }
+html[data-densidade="compacta"] .message.first { margin-top: 8px; padding-top: 1px; padding-bottom: 1px; }
+html[data-densidade="compacta"] .channel-item { padding-top: 3px; padding-bottom: 3px; margin-bottom: 0; }
+html[data-densidade="compacta"] .dm-card { padding: 4px 8px; margin-top: 2px; margin-bottom: 2px; }
+html[data-densidade="ampla"] .message { padding-top: 4px; padding-bottom: 4px; }
+html[data-densidade="ampla"] .message.first { margin-top: 26px; padding-top: 6px; padding-bottom: 6px; }
+html[data-densidade="ampla"] .channel-item { padding-top: 9px; padding-bottom: 9px; margin-bottom: 4px; }
+html[data-densidade="ampla"] .dm-card { padding: 12px 10px; margin-top: 6px; margin-bottom: 6px; }
+
+/* Sublinhar links e menções */
+html[data-sublinhar] a, html[data-sublinhar] .mencao { text-decoration: underline; text-underline-offset: 2px; }
+html[data-sublinhar] .btn, html[data-sublinhar] a.btn, html[data-sublinhar] .set-tab, html[data-sublinhar] a[role="button"] { text-decoration: none; }
+
+/* Reduzir movimento: o fim de toda animação/transição é mostrado na hora (a prefers-reduced-motion do sistema já faz o mesmo em vários lugares) */
+html[data-reduz-mov] *, html[data-reduz-mov] *::before, html[data-reduz-mov] *::after {
+    animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important; transition-delay: 0s !important; scroll-behavior: auto !important;
+}
+
+/* ---------- celular: tela cheia, menu em pílulas, busca no topo ---------- */
+@media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
+    .settings-modal { width: 100vw; height: 100vh; height: 100dvh; }
+    .settings-sidebar { flex: none; padding: 22px 0 0 8px; align-items: flex-start; }
+    .set-busca { width: calc(100vw - 76px); margin: 0 0 8px; flex: none; }
+    .settings-sidebar .set-sep { display: none; }
+    .settings-content { padding: 6px 14px 90px; }
+    .cfg-grade2 { grid-template-columns: 1fr; gap: 16px; }
+    .cb-resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .br-heroi { flex-direction: column; text-align: center; padding: 20px 16px; gap: 16px; }
+    .br-acoes { justify-content: center; }
+    .cfg-linha, .settings-content .discord-toggle { gap: 14px; padding: 14px 0; }
+    .cb-saldo { display: none; }
+    .cfg-teste { flex-direction: column; align-items: stretch; }
+    .cfg-seg-bt { flex-basis: 45%; }
+}

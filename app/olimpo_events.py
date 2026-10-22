@@ -1,4 +1,4 @@
-"""Eventos do Olimpo (a assinatura; a regra mora em olimpo.py). Ativar de graça enquanto OLIMPO_GRATIS não for 0; senão gera a cobrança Pix."""
+"""Eventos da Brasa (id interno olimpo; a assinatura, a regra mora em olimpo.py). Ativar de graça enquanto OLIMPO_GRATIS não for 0; senão gera a cobrança Pix."""
 import time
 
 from flask_socketio import emit
@@ -43,12 +43,12 @@ def olimpo_ativar(dados=None):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO OLIMPO] {e}")
-        emit('erro_bazinga', {'msg': f'Não foi possível ativar o Olimpo: {e}'})
+        emit('erro_bazinga', {'msg': f'Não foi possível ativar a {olimpo.NOME}: {e}'})
 
 
 @socketio.on('olimpo_simular')
 def olimpo_simular(dados=None):
-    """MODO TESTE: "paga" a cobrança do Olimpo sem dinheiro (só no provedor simulado e só quem foi cobrado: pagamentos.simular_pagamento confere)."""
+    """MODO TESTE: "paga" a cobrança da Brasa sem dinheiro (só no provedor simulado e só quem foi cobrado: pagamentos.simular_pagamento confere)."""
     usuario = usuario_logado()
     if not usuario or _freio(usuario, 'simular', 1.0):
         return

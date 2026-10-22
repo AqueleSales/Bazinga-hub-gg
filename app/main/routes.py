@@ -25,6 +25,7 @@ from .. import ordem
 from .. import cargos
 from .. import termos as termos_mod
 from .. import guardiao
+from .. import preferencias, config_usuario
 from ..bazar import ids_dos_admins as _ids_dos_admins
 from ..explorar import TEMAS_EXPLORAR
 from ..efeitos import mapa_para_cliente as efeitos_custom_mapa
@@ -254,6 +255,30 @@ def termos_aceitar():
         pessoa.termos_aceitos_em = br_now()
     comitar_com_retry(gravar)
     return redirect(url_for('main.chat'))
+
+
+_ultima_copia_de_dados = {}
+
+
+@main_bp.route("/api/meus-dados")
+def meus_dados():
+    """A "cópia dos meus dados" (LGPD, art. 18): um JSON com o que o Pantheon guarda da conta de QUEM PEDE (o id vem da sessão, nunca da URL).
+    Sem o texto das mensagens, sem a chave Pix e sem dado de outras pessoas (ver app/config_usuario.py). 1 pedido a cada 20 s por pessoa."""
+    pessoa = usuario_da_sessao()
+    if not pessoa:
+        return jsonify({'error': 'Acesso negado'}), 401
+    agora = time.monotonic()
+    if agora - _ultima_copia_de_dados.get(pessoa.id, -999) < 20:
+        return jsonify({'error': 'Espere uns segundos e peça de novo.'}), 429
+    _ultima_copia_de_dados[pessoa.id] = agora
+    try:
+        corpo = com_retry(lambda: config_usuario.exportar_json(pessoa))
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"[ERRO MEUS DADOS] {e}")
+        return jsonify({'error': 'Não consegui montar a cópia agora, tenta de novo.'}), 503
+    return Response(corpo, mimetype='application/json; charset=utf-8',
+                    headers={'Content-Disposition': 'attachment; filename="meus-dados-pantheon.json"', 'Cache-Control': 'no-store'})
 
 
 @main_bp.route("/webhooks/asaas", methods=["POST"])
@@ -597,6 +622,7 @@ def chat():
     resposta = current_app.make_response(render_template(
         "chat.html",
         tema_id=tema_id, tema_custom=tema_custom, tema_claro=tema_claro, aparelho_inicial=aparelho,
+        prefs_iniciais=preferencias.da_pessoa(usuario_atual),   # acessibilidade e hora já no HTML (sem piscar); notificações por tipo vão no connect
         aviso_convite=aviso_convite,
         usuario_atual=usuario_atual,
         text_channels=text_channels,

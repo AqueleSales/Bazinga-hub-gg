@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-tema="{{ tema_id }}"{% if tema_claro %} data-claro{% endif %}{% if tema_id == 'custom' %} data-base="{{ tema_custom.base }}"{% if tema_custom.img %} data-fundo{% endif %} style="--brand-color: {{ tema_custom.cor }}; --fundo-escuro: {{ tema_custom.escuro / 100 }}; --painel-opac: {{ tema_custom.painel }}%;{% if tema_custom.img %} --fundo-img: url('{{ tema_custom.img }}');{% endif %}"{% endif %}>
+<html lang="pt-BR" data-tema="{{ tema_id }}" data-texto="{{ prefs_iniciais.texto }}" data-densidade="{{ prefs_iniciais.densidade }}"{% if prefs_iniciais.sublinhar %} data-sublinhar{% endif %}{% if prefs_iniciais.reduz_mov %} data-reduz-mov{% endif %}{% if prefs_iniciais.hora12 %} data-hora12{% endif %}{% if tema_claro %} data-claro{% endif %}{% if tema_id == 'custom' %} data-base="{{ tema_custom.base }}"{% if tema_custom.img %} data-fundo{% endif %} style="--brand-color: {{ tema_custom.cor }}; --fundo-escuro: {{ tema_custom.escuro / 100 }}; --painel-opac: {{ tema_custom.painel }}%;{% if tema_custom.img %} --fundo-img: url('{{ tema_custom.img }}');{% endif %}"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
@@ -3013,6 +3013,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ordem.css') }}?v={{ ordem_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/config_usuario.css') }}?v={{ config_usuario_css_v }}">
 </head>
 <body>
     <div class="discord-app">
@@ -4507,20 +4508,34 @@
                 <span class="esc-hint">ESC</span>
             </div>
 
-            <!-- Barra Lateral Esquerda -->
+            <!-- Barra Lateral Esquerda: grupos como no Discord, com busca (ConfigUsuario monta o índice a partir das próprias seções) -->
             <div class="settings-sidebar">
+                <div class="set-busca" role="search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" id="set-busca-campo" placeholder="Buscar nas configurações" autocomplete="off" spellcheck="false" aria-label="Buscar nas configurações">
+                </div>
                 <div class="set-tab-group">
-                    <div class="set-tab-header">Configurações de Usuário</div>
+                    <div class="set-tab-header">Configurações de usuário</div>
                     <div class="set-tab active" data-target="set-perfil">Meu Perfil</div>
-                    <div class="set-tab" data-target="set-conexoes">Conexões</div>
+                    <div class="set-tab" data-target="set-privacidade">Dados e privacidade</div>
+                    <div class="set-tab" data-target="set-notificacoes">Notificações</div>
                     <div class="set-tab" data-target="set-inventario">Inventário</div>
-                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
-                    <div class="set-tab-header">Configurações do App</div>
-                    <div class="set-tab" data-target="set-geral">Geral</div>
-                    <div class="set-tab" data-target="set-voz">Voz e Vídeo</div>
+                    <div class="set-sep"></div>
+                    <div class="set-tab-header">Cobrança</div>
+                    <div class="set-tab" data-target="set-cobranca">Cobrança</div>
+                    <div class="set-tab" data-target="set-brasa">Brasa</div>
+                    <div class="set-sep"></div>
+                    <div class="set-tab-header">Configurações do app</div>
                     <div class="set-tab" data-target="set-aparencia">Aparência</div>
-                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 10px;"></div>
-                    <a href="{{ url_for('auth.logout') }}" style="text-decoration: none;"><div class="set-tab" style="color: var(--red-color);">Sair</div></a>
+                    <div class="set-tab" data-target="set-acessibilidade">Acessibilidade</div>
+                    <div class="set-tab" data-target="set-voz">Voz e vídeo</div>
+                    <div class="set-tab" data-target="set-idioma">Idioma e horário</div>
+                    <div class="set-tab" data-target="set-geral">Geral</div>
+                    <div class="set-sep"></div>
+                    <div class="set-tab-header">Apps</div>
+                    <div class="set-tab" data-target="set-conexoes">Apps conectados</div>
+                    <div class="set-sep"></div>
+                    <a href="{{ url_for('auth.logout') }}" style="text-decoration: none;"><div class="set-tab set-sair">Sair</div></a>
                 </div>
             </div>
 
@@ -4662,19 +4677,23 @@
 
                 <!-- ABA: CONEXÕES (links de outras plataformas; a "outra face" do cartão de perfil). Desenhada por static/js/conexoes.js -->
                 <div class="set-section" id="set-conexoes" style="max-width: 1000px;">
-                    <h2 class="set-title">Conexões</h2>
+                    <h2 class="set-title">Apps conectados</h2>
                     <div class="pf-layout">
                         <div class="pf-controles">
                             <div class="pf-bloco">
                                 <div class="pf-bloco-tit">Seus links <span class="cx-contagem" id="cx-contagem"></span></div>
-                                <p class="cx-aba-info">Cole o link do seu <b>GitHub, YouTube, Twitch, Spotify, Instagram, TikTok, X, Steam, iFood, Amazon, OLX</b> ou da sua <b>loja/site</b> (Shopify, Wix, domínio próprio) e pronto: o cartão se monta sozinho, sem você editar nada. Pra mudar alguma coisa, mude no site oficial: o Pantheon atualiza sozinho. Quem abrir o seu perfil vê uma setinha ao lado do cartão e vira pra ver tudo (uma lista compacta, ou um carrossel se você ligar a opção abaixo), e o app sempre pergunta antes de abrir um link fora dele.</p>
+                                <p class="cx-aba-info">Cole o link do seu perfil em outro site (GitHub, YouTube, Twitch, Spotify, Instagram, TikTok, X, Steam, iFood, Amazon, OLX ou da sua loja/site) e o cartão se monta sozinho. Pra mudar algo, mude no site oficial: o Pantheon atualiza.</p>
+                                <details class="cfg-detalhes"><summary>Como isso aparece pros outros</summary>
+                                    <p class="cx-aba-info">Quem abrir o seu perfil vê uma setinha ao lado do cartão e vira pra ver tudo: uma lista compacta (ou um carrossel, se você ligar a opção abaixo). Antes de abrir um link fora do app, o Pantheon sempre pergunta.</p></details>
                                 <div id="cx-lista"><div class="cx-vazio">Carregando...</div></div>
                                 <button type="button" class="cx-bt" id="cx-bazar" style="align-self:flex-start;"><i class="fa-solid fa-store"></i> Adicionar a minha loja do Bazar</button>
                                 <button type="button" class="cx-bt" id="cx-fila" style="align-self:flex-start;"><i class="fa-solid fa-compact-disc"></i> Criar a minha playlist de músicas</button>
                                 <label class="cx-ia" id="cx-car-linha"><input type="checkbox" id="cx-car"> <span>Ver as conexões em carrossel <small>(uma por página, com mais detalhes; só muda como VOCÊ vê os perfis. Desligado, é uma lista compacta)</small></span></label>
                                 <label class="cx-ia" id="cx-ia-linha" hidden><input type="checkbox" id="cx-ia"> <span>Usar IA pra ler o PDF do LinkedIn <small>(o texto do PDF é enviado ao Google pra ler melhor; só marque se concordar)</small></span></label>
-                                <p class="cx-aba-info"><b>Playlist:</b> crie a sua playlist e cole links de músicas ou playlists do <b>YouTube</b> ou do <b>YouTube Music</b> (no YouTube Music: Compartilhar &gt; Copiar link). Elas viram um disco no seu perfil que toca em sequência, com próxima e anterior, e quem abrir o seu perfil escolhe qual faixa ouvir. O som vem do player do YouTube, então vídeo que o dono não deixa tocar fora do YouTube é pulado. Até 30 músicas.</p>
-                                <p class="cx-aba-info"><b>LinkedIn:</b> o LinkedIn proíbe qualquer app de ler um perfil pelo link (nem a IA consegue abrir). O jeito mais direto: no seu perfil do LinkedIn clique em <b>Mais &gt; Salvar como PDF</b>, depois cole o link do LinkedIn aqui e use o botão <b>Importar o PDF do LinkedIn</b>. O currículo aparece na hora, sem editor; pra mudar algo, mude no LinkedIn e importe de novo.</p>
+                                <details class="cfg-detalhes"><summary>Playlist de músicas</summary>
+                                    <p class="cx-aba-info">Crie a sua playlist e cole links de músicas ou playlists do <b>YouTube</b> ou do <b>YouTube Music</b> (no YouTube Music: Compartilhar &gt; Copiar link). Elas viram um disco no seu perfil que toca em sequência. O som vem do player do YouTube, então vídeo que o dono não deixa tocar fora do YouTube é pulado. Até 30 músicas.</p></details>
+                                <details class="cfg-detalhes"><summary>Importar o LinkedIn</summary>
+                                    <p class="cx-aba-info">O LinkedIn não deixa nenhum app ler um perfil pelo link. O jeito: no seu perfil do LinkedIn clique em <b>Mais &gt; Salvar como PDF</b>, cole o link do LinkedIn aqui e use <b>Importar o PDF do LinkedIn</b>. Pra mudar algo, mude no LinkedIn e importe de novo.</p></details>
                             </div>
                         </div>
                         <div class="pf-previa">
@@ -4754,19 +4773,6 @@
 
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0;"></div>
 
-                    <div id="push-secao">
-                        <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">Avisos no aparelho</h3>
-                        <div class="discord-toggle">
-                            <div>
-                                <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Avisar mesmo com o app fechado</h4>
-                                <p style="color: var(--text-muted); font-size: 14px;">Mensagem direta, menção, pedido de amizade e ligação aparecem na tela do aparelho. Só chega quando você <b>não</b> está com o app aberto, e não chega em "Não perturbar". Vale só neste aparelho.</p>
-                                <p id="push-estado" style="font-size: 13px; color: var(--yellow-color); margin-top: 6px;"></p>
-                            </div>
-                            <div class="toggle-switch tg-app" id="tg-push"></div>
-                        </div>
-                        <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0;"></div>
-                    </div>
-
                     <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">Mensagens</h3>
                     <div class="discord-toggle">
                         <div>
@@ -4776,23 +4782,6 @@
                         <div class="toggle-switch tg-app" id="tg-resp-triplo"></div>
                     </div>
 
-                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 24px 0;"></div>
-
-                    <h3 class="set-title" style="font-size: 16px; margin-bottom: 14px;">Avisos</h3>
-                    <div class="discord-toggle">
-                        <div>
-                            <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Sons</h4>
-                            <p style="color: var(--text-muted); font-size: 14px;">Mensagens, menções, chamadas e missões. Fica só neste aparelho.</p>
-                        </div>
-                        <div class="toggle-switch tg-app" id="tg-som"></div>
-                    </div>
-                    <div class="discord-toggle">
-                        <div>
-                            <h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Avisos na área de trabalho</h4>
-                            <p style="color: var(--text-muted); font-size: 14px;">Mostra uma notificação quando chega algo e o app não está na tela. Fica só neste aparelho.</p>
-                        </div>
-                        <div class="toggle-switch tg-app" id="tg-aviso"></div>
-                    </div>
 
                     <!-- só no app desktop -->
                     <div id="geral-desktop" hidden>
@@ -4866,60 +4855,96 @@
                     </div>
                 </div>
 
-                <!-- ABA: VOZ E VÍDEO (Hardware) -->
+                <!-- ABA: VOZ E VÍDEO (Hardware), em sub-abas: Voz, Avançado, Sons, Transmissão -->
                 <div class="set-section" id="set-voz">
                     <h2 class="set-title">Voz e vídeo</h2>
+                    <div class="cfg-subs" id="voz-subs" role="tablist">
+                        <button type="button" class="cfg-sub-bt active" data-sub="voz" role="tab">Voz</button>
+                        <button type="button" class="cfg-sub-bt" data-sub="avancado" role="tab">Avançado</button>
+                        <button type="button" class="cfg-sub-bt" data-sub="sons" role="tab">Sons</button>
+                        <button type="button" class="cfg-sub-bt" data-sub="transmissao" role="tab">Transmissão</button>
+                    </div>
 
-                    <div style="display: flex; gap: 24px; margin-bottom: 24px;">
-                        <div style="flex: 1; min-width: 0;">
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Microfone</div>
-                            <select id="modal-mic-select" class="discord-select-old"></select>
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Microfone</div>
-                            <input type="range" class="discord-slider" min="0" max="100" value="100">
+                    <div class="cfg-sub-pagina active" data-sub="voz">
+                        <div class="cfg-grade2">
+                            <div class="cfg-campo">
+                                <label class="control-label" for="modal-mic-select">Microfone</label>
+                                <select id="modal-mic-select" class="discord-select-old"></select>
+                            </div>
+                            <div class="cfg-campo">
+                                <label class="control-label" for="modal-speaker-select">Alto-falante</label>
+                                <select id="modal-speaker-select" class="discord-select-old"></select>
+                            </div>
                         </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase;">Alto-falante</div>
-                            <select id="modal-speaker-select" class="discord-select-old"></select>
-                            <div class="set-subtitle" style="font-size: 12px; text-transform: uppercase; margin-top: 16px;">Volume do Alto-falante</div>
-                            <input type="range" class="discord-slider" min="0" max="100" value="100">
+                        <div class="cfg-campo" style="margin-top: 18px;">
+                            <label class="control-label" for="vol-saida">Volume de quem fala com você</label>
+                            <div class="tc-slider"><input type="range" class="discord-slider" id="vol-saida" min="0" max="100" step="5" value="100"><output id="vol-saida-v">100%</output></div>
+                            <span class="cfg-dica">Vale só pro áudio da call, neste aparelho. O volume do seu microfone é o do sistema (Windows, Android...).</span>
+                        </div>
+                        <div class="cfg-teste">
+                            <button class="btn btn-primary" id="btn-modal-mic-test">Teste do microfone</button>
+                            <div class="cfg-medidor" id="modal-mic-meter-segmented"><!-- barras segmentadas geradas via JS --></div>
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 32px;">
-                        <button class="btn btn-primary" id="btn-modal-mic-test">Teste do microfone</button>
-                        <div style="flex: 1; height: 16px; background-color: var(--bg-tertiary); border-radius: 4px; overflow: hidden; display: flex;" id="modal-mic-meter-segmented">
-                            <!-- Barras segmentadas geradas via JS -->
+                    <div class="cfg-sub-pagina" data-sub="avancado">
+                        <h3 class="cfg-h">Perfil de entrada</h3>
+                        <div class="radio-card" data-profile="isolamento">
+                            <div class="radio-circle"></div><div class="radio-text"><h4>Isolamento de voz</h4><p>Só a sua voz: o navegador reduz ruído, eco e oscilação do volume.</p></div>
+                        </div>
+                        <div class="radio-card" data-profile="estudio">
+                            <div class="radio-circle"></div><div class="radio-text"><h4>Estúdio</h4><p>Áudio puro: microfone aberto e sem processamento.</p></div>
+                        </div>
+                        <div class="radio-card active" data-profile="personalizado">
+                            <div class="radio-circle"></div><div class="radio-text"><h4>Personalizado</h4><p>Você escolhe cada ajuste abaixo.</p></div>
+                        </div>
+                        <div id="custom-audio-settings" style="margin-top: 22px;">
+                            <div class="cfg-linha"><div class="cfg-txt"><h4>Supressão de ruído</h4><p>Reduz ruído de fundo.</p></div><div class="toggle-switch active" id="toggle-noise"></div></div>
+                            <div class="cfg-linha"><div class="cfg-txt"><h4>Cancelamento de eco</h4><p>Evita que a sua caixa de som volte pelo microfone.</p></div><div class="toggle-switch active" id="toggle-echo"></div></div>
+                            <div class="cfg-linha"><div class="cfg-txt"><h4>Controle automático de ganho</h4><p>Ajusta o volume do seu microfone sozinho.</p></div><div class="toggle-switch active" id="toggle-gain"></div></div>
                         </div>
                     </div>
 
-                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 32px 0;"></div>
-
-                    <h3 class="set-title" style="margin-bottom: 16px;">Perfil de entrada</h3>
-                    <div class="radio-card" data-profile="isolamento">
-                        <div class="radio-circle"></div><div class="radio-text"><h4>Isolamento de Voz</h4><p>Só a sua linda voz: deixe o {{ app_nome }} equalizar o ruído.</p></div>
-                    </div>
-                    <div class="radio-card" data-profile="estudio">
-                        <div class="radio-circle"></div><div class="radio-text"><h4>Estúdio</h4><p>Áudio puro: microfone aberto e sem processamento.</p></div>
-                    </div>
-                    <div class="radio-card active" data-profile="personalizado">
-                        <div class="radio-circle"></div><div class="radio-text"><h4>Personalizado</h4><p>Modo avançado: me dê todos os botões e mostradores!</p></div>
+                    <div class="cfg-sub-pagina" data-sub="sons">
+                        <div class="cfg-linha"><div class="cfg-txt"><h4>Sons de entrar e sair da call</h4><p>Um bipe quando alguém entra ou sai da call em que você está. Fica só neste aparelho.</p></div><div class="toggle-switch tg-app" id="tg-som-call"></div></div>
+                        <div class="cfg-linha"><div class="cfg-txt"><h4>Sons de XP, nível e missões</h4><p>Os tilintes quando você ganha XP, sobe de nível ou conclui uma missão. Fica só neste aparelho.</p></div><div class="toggle-switch tg-app" id="tg-som-xp"></div></div>
+                        <div class="cfg-linha cfg-coluna"><div class="cfg-txt"><h4>Volume dos sons do app</h4><p>Vale pra todos os sons do Pantheon (mensagens, menções, toque de chamada...), neste aparelho.</p></div>
+                            <div class="tc-slider"><input type="range" class="discord-slider" id="som-vol" min="0" max="100" step="5" value="100"><output id="som-vol-v">100%</output><button type="button" class="btn" id="som-vol-testar">Testar</button></div></div>
+                        <p class="cfg-dica">Quais avisos fazem som (mensagem, menção, pedido de amizade, ligação) você escolhe em <a href="#" class="cfg-ir" data-ir="set-notificacoes">Notificações</a>.</p>
                     </div>
 
-                    <div id="custom-audio-settings" style="margin-top: 32px;">
-                        <div class="discord-toggle">
-                            <div><h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Supressão de ruído</h4><p style="color: var(--text-muted); font-size: 14px;">Reduz ruído de fundo.</p></div>
-                            <div class="toggle-switch active" id="toggle-noise"></div>
-                        </div>
-                        <div class="discord-toggle">
-                            <div><h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Cancelamento de eco</h4></div>
-                            <div class="toggle-switch active" id="toggle-echo"></div>
-                        </div>
-                        <div class="discord-toggle">
-                            <div><h4 style="color: var(--text-header); font-weight: 500; font-size: 16px;">Controle automático de ganho</h4><p style="color: var(--text-muted); font-size: 14px;">Ajusta o volume do seu mic sozinho.</p></div>
-                            <div class="toggle-switch active" id="toggle-gain"></div>
+                    <div class="cfg-sub-pagina" data-sub="transmissao">
+                        <div class="cfg-info">
+                            <div class="cfg-info-item"><i class="fa-solid fa-display"></i><div><h4>Tela compartilhada</h4><p>Até 720p e 30 quadros por segundo. Quem recebe pode dar zoom com a roda do mouse.</p></div></div>
+                            <div class="cfg-info-item"><i class="fa-solid fa-video"></i><div><h4>Câmera</h4><p>Até 640×480 e 24 quadros por segundo.</p></div></div>
+                            <div class="cfg-info-item"><i class="fa-solid fa-gauge-high"></i><div><h4>Qualidade automática</h4><p>A cada poucos segundos o app mede a perda de pacotes de quem está te vendo e sobe ou desce a qualidade sozinho. Não há ajuste manual: a call é ponto a ponto, então a conexão mais fraca manda.</p></div></div>
+                            <div class="cfg-info-item"><i class="fa-solid fa-ban"></i><div><h4>Sem prévia da própria tela</h4><p>Quando você compartilha a tela do app, ele não mostra a sua própria transmissão pra você (viraria um túnel infinito).</p></div></div>
                         </div>
                     </div>
                 </div>
+
+                <!-- SEÇÕES NOVAS (Rodada 34): o conteúdo é desenhado por static/js/config_usuario.js -->
+                <div class="set-section" id="set-privacidade"><h2 class="set-title">Dados e privacidade</h2><div id="pv-corpo"></div></div>
+
+                <div class="set-section" id="set-notificacoes">
+                    <h2 class="set-title">Notificações</h2>
+                    <p class="cfg-lede">Escolha como e quando o Pantheon te avisa. O que está marcado como <b>neste aparelho</b> vale só aqui; o que está em <b>na sua conta</b> vale em todos os aparelhos.</p>
+                    <h3 class="cfg-h">Neste aparelho</h3>
+                    <div id="push-secao">
+                        <div class="cfg-linha"><div class="cfg-txt"><h4>Avisar mesmo com o app fechado</h4><p>Mensagem direta, menção, pedido de amizade e ligação aparecem na tela do aparelho. Só chega quando você <b>não</b> está com o app aberto, e não chega em "Não perturbar".</p>
+                            <p id="push-estado" class="cfg-alerta"></p></div><div class="toggle-switch tg-app" id="tg-push"></div></div>
+                    </div>
+                    <div class="cfg-linha"><div class="cfg-txt"><h4>Sons</h4><p>Mensagens, menções, chamadas e missões. O volume e os sons de call ou de XP ficam em <a href="#" class="cfg-ir" data-ir="set-voz" data-sub="sons">Voz e vídeo &gt; Sons</a>.</p></div><div class="toggle-switch tg-app" id="tg-som"></div></div>
+                    <div class="cfg-linha"><div class="cfg-txt"><h4>Avisos na área de trabalho</h4><p>Mostra uma notificação quando chega algo e o app não está na tela.</p></div><div class="toggle-switch tg-app" id="tg-aviso"></div></div>
+                    <h3 class="cfg-h">Me avise quando... <small>(na sua conta)</small></h3>
+                    <p class="cfg-dica">Desligar um tipo tira a entrada dele da caixa de entrada, o aviso no aparelho e o som. As mensagens, pedidos e ligações continuam chegando normalmente. Avisos de sistema (pagamento confirmado, segurança, loja liberada) não podem ser desligados.</p>
+                    <div id="nt-tipos"></div>
+                </div>
+
+                <div class="set-section" id="set-cobranca"><h2 class="set-title">Cobrança</h2><div id="cb-corpo"></div></div>
+                <div class="set-section" id="set-brasa"><h2 class="set-title">Brasa</h2><div id="br-corpo"></div></div>
+                <div class="set-section" id="set-acessibilidade"><h2 class="set-title">Acessibilidade</h2><div id="ac-corpo"></div></div>
+                <div class="set-section" id="set-idioma"><h2 class="set-title">Idioma e horário</h2><div id="id-corpo"></div></div>
 
             </div>
         </div>
@@ -5006,6 +5031,7 @@
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/ordem.js') }}?v={{ ordem_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/config_usuario.js') }}?v={{ config_usuario_js_v }}"></script>
     <script>
         // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
         const rawChannelId = "{{ default_channel.id if default_channel else 1 }}";
@@ -7325,7 +7351,7 @@
         socket.on('pedido_amizade_recebido', (d) => {
             showToast(`${d.de_nome} quer ser seu amigo!`, 'info');
             tocarSom('amizade');
-            avisoDoNavegador(`${d.de_nome} quer ser seu amigo`, 'Abra o app pra responder.', d.de_avatar, { de_id: d.de_id });
+            avisoDoNavegador(`${d.de_nome} quer ser seu amigo`, 'Abra o app pra responder.', d.de_avatar, { de_id: d.de_id }, 'amizade');
             if (document.getElementById('add-friend-modal').style.display === 'flex') {
                 socket.emit('listar_pedidos_pendentes');
             }
@@ -9066,7 +9092,7 @@
                 const timeOnly = hora.includes('às') ? hora.split('às')[1].trim() : hora;
                 div.innerHTML = `
                     ${acoesHtml}
-                    <div class="grouped-timestamp">${esc(timeOnly)}</div>
+                    <div class="grouped-timestamp">${esc(ConfigUsuario.horaFmt(timeOnly))}</div>
                     <div class="message-content">
                         ${citacaoHtml}
                         ${textoHtml}
@@ -9082,7 +9108,7 @@
                     <div class="message-content">
                         <div class="message-header">
                             <span class="message-author ${esc(estiloNome)}" style="${estiloNome ? '' : `color: ${corSegura};`}">${esc(autor)}</span>
-                            <span class="message-timestamp">${esc(hora)}</span>
+                            <span class="message-timestamp">${esc(ConfigUsuario.horaFmt(hora))}</span>
                         </div>
                         ${citacaoHtml}
                         ${textoHtml}
@@ -11178,6 +11204,13 @@
             toast: (msg, tipo) => showToast(msg, tipo),
             somResgate: () => tocarSom('missao'),
         });
+        // CONFIGURAÇÕES DO USUÁRIO (busca, Cobrança, Brasa, Notificações por tipo, Acessibilidade, Idioma e horário): static/js/config_usuario.js.
+        ConfigUsuario.iniciar({
+            socket, toast: (m, t) => showToast(m, t),
+            amizades: () => amizades,
+            irParaAmigos: (aba) => { document.getElementById('settings-modal').classList.remove('active'); abrirAmigos(aba); },
+            tocar: (tipo, forcar) => tocarSom(tipo, forcar),
+        });
         // EXPLORAR SERVIDORES (o mar): static/js/explorar.js só desenha; o que é público e quem entra são do servidor.
         Explorar.iniciar({ emitir: (n, d) => socket.emit(n, d), esc, escUrl, toast: (m, t) => showToast(m, t) });
         socket.on('explorar', (d) => Explorar.receber(d));
@@ -12330,6 +12363,7 @@
             });
         }
         document.querySelector('.set-tab[data-target="set-geral"]').addEventListener('click', atualizarAbaGeral);
+        document.querySelector('.set-tab[data-target="set-notificacoes"]').addEventListener('click', atualizarAbaGeral);   // Sons e aviso na área de trabalho moraram pra lá
         // adiado de propósito: usa somLigado()/SOM_CHAVE e variáveis do mapa declaradas mais abaixo no script
         setTimeout(atualizarAbaGeral, 0);
 
@@ -12442,6 +12476,18 @@
             enumerarDispositivos();
             reaplicarMic();
         }
+
+        // Os seletores de Configurações > Voz e vídeo valem de verdade (antes só listavam os dispositivos e não faziam nada ao trocar)
+        document.getElementById('modal-mic-select').addEventListener('change', (e) => {
+            const o = e.target.selectedOptions[0];
+            mudarMicrofone({ deviceId: e.target.value, label: o ? o.text : '' });
+        });
+        document.getElementById('modal-speaker-select').addEventListener('change', (e) => {
+            const o = e.target.selectedOptions[0];
+            currentSpeakerId = e.target.value;
+            document.getElementById('current-speaker-name').innerText = (o && o.text) || 'Padrão do Windows';
+            aplicarSaida(); enumerarDispositivos();
+        });
 
         // Pega o microfone de novo com as constraints atuais (dispositivo + isolamento/eco/ganho) e troca na call ao vivo.
         async function reaplicarMic() {
@@ -13496,6 +13542,7 @@
             a.autoplay = true;
             a.srcObject = stream;
             a.muted = !!deafened;
+            a.volume = ConfigUsuario.volumeSaida();        // Configurações > Voz e vídeo
             card.appendChild(a);
             tocarAudioRemoto(a);
             return a;
@@ -14344,6 +14391,7 @@
         // Som de entrada equipado por quem entrou (só quem tem o item); sem ele, o bipe padrão.
         function tocarSomDeEntrada(idSom) {
             if (!CallUI.sonsLigados()) return;
+            if (!ConfigUsuario.somPermitido('call_entrar')) return;     // Configurações > Voz e vídeo > Sons
             if (idSom) {
                 if (!somLigado() || perfilMeu.status === 'dnd') return;
                 const ctx = garantirAudio();
@@ -14351,18 +14399,21 @@
             }
             tocarSom('call_entrar');
         }
-        function tocarSom(tipo) {
+        function tocarSom(tipo, forcar) {
             if ((tipo === 'call_entrar' || tipo === 'call_sair') && !CallUI.sonsLigados()) return;   // 3 pontinhos da call > Sons de entrada e saída
             // "Não perturbar" cala o som (a notificação continua na caixa de entrada)
             if (!somLigado() || (typeof perfilMeu !== 'undefined' && perfilMeu.status === 'dnd')) return;
+            // tipo de aviso desligado em Configurações > Notificações, sons de call/XP desligados, volume zerado (`forcar` = o botão "Testar")
+            if (forcar ? ConfigUsuario.volumeSons() <= 0 : !ConfigUsuario.somPermitido(tipo)) return;
             const ctx = garantirAudio();
             if (!ctx || ctx.state !== 'running') return;
+            const fator = ConfigUsuario.volumeSons();
             const t0 = ctx.currentTime;
             (SONS[tipo] || SONS.msg).forEach(([freq, inicio, dur, vol = 0.16]) => {
                 const o = ctx.createOscillator(), g = ctx.createGain();
                 o.type = 'sine'; o.frequency.value = freq;
                 g.gain.setValueAtTime(0.0001, t0 + inicio);
-                g.gain.exponentialRampToValueAtTime(vol, t0 + inicio + 0.02);
+                g.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol * fator), t0 + inicio + 0.02);
                 g.gain.exponentialRampToValueAtTime(0.0001, t0 + inicio + dur);
                 o.connect(g); g.connect(ctx.destination);
                 o.start(t0 + inicio); o.stop(t0 + inicio + dur + 0.03);
@@ -14377,8 +14428,9 @@
             return u.startsWith('https://res.cloudinary.com/') && u.includes('/image/upload/') ? u.replace('/image/upload/', '/image/upload/c_fill,w_192,h_192,f_png/') : u;
         }
         // aparece no canto da tela (Windows e navegador) quando você não está olhando o app: janela escondida, minimizada ou em segundo plano
-        function avisoDoNavegador(titulo, corpo, icone, alvo) {
+        function avisoDoNavegador(titulo, corpo, icone, alvo, tipo) {
             try {
+                if (tipo && !ConfigUsuario.avisa(tipo)) return;      // Configurações > Notificações > Me avise quando...
                 if ((!document.hidden && document.hasFocus()) || !avisoLigado() || !('Notification' in window) || Notification.permission !== 'granted') return;
                 if (typeof perfilMeu !== 'undefined' && perfilMeu.status === 'dnd') return;
                 // Aparelho com push ligado: o servidor já manda o aviso pelo service worker (com som, ícone do app e toque que
@@ -15017,11 +15069,11 @@
                 const trecho = d.texto ? d.texto.slice(0, 90) : '📎 Anexo';
                 const mudo = amizades.silenciados.includes(Number(d.usuario_id));   // contato silenciado: chega, mas sem barulho
                 if (!aberta && card) {
-                    if (!mudo) { somarBadgeDM(card); showToast(`${d.usuario}: ${trecho}`, 'info'); tocarSom('msg'); }
+                    if (!mudo) { somarBadgeDM(card); if (ConfigUsuario.avisa('dm')) showToast(`${d.usuario}: ${trecho}`, 'info'); tocarSom('msg'); }
                 } else if (document.hidden && !mudo) {
                     tocarSom('msg');
                 }
-                if (!mudo) avisoDoNavegador(d.usuario, trecho, d.avatar, { de_id: d.usuario_id });
+                if (!mudo) avisoDoNavegador(d.usuario, trecho, d.avatar, { de_id: d.usuario_id }, 'dm');
             }
         }
 
@@ -15246,7 +15298,7 @@
         socket.on('mencao_recebida', (d) => {
             tocarSom('mencao');
             const srv = (typeof meUserServers !== 'undefined' ? meUserServers : []).find(x => Number(x.id) === Number(d.server_id));
-            avisoDoNavegador(`${d.autor} em #${d.canal_nome}${srv ? ' · ' + srv.name : ''}`, d.trecho, srv && srv.iconUrl);
+            avisoDoNavegador(`${d.autor} em #${d.canal_nome}${srv ? ' · ' + srv.name : ''}`, d.trecho, srv && srv.iconUrl, null, 'mencao');
         });
 
         // ---------- ROLAGEM: histórico antigo + foto que carrega depois ----------
@@ -15382,7 +15434,7 @@
             // o listener antigo já guardou a chamada em chamadaRecebidaDe (ou recusou na hora se estava ocupado)
             if (chamadaRecebidaDe && Number(chamadaRecebidaDe.de_id) === Number(d.de_id)) {
                 iniciarToque('toque');
-                avisoDoNavegador(`${d.de_nome} está te ligando`, d.tipo === 'video' ? 'Chamada de vídeo' : 'Chamada de voz', d.de_avatar, { de_id: d.de_id });
+                avisoDoNavegador(`${d.de_nome} está te ligando`, d.tipo === 'video' ? 'Chamada de vídeo' : 'Chamada de voz', d.de_avatar, { de_id: d.de_id }, 'ligacao');
             }
         });
         ['chamada_aceita', 'chamada_recusada', 'chamada_cancelada', 'chamada_resolvida'].forEach(ev => socket.on(ev, pararToque));
@@ -15790,7 +15842,7 @@
             const a = b.dataset.a;
             if (a === 'sair') { Promise.resolve(window.pushSairAntes && window.pushSairAntes()).finally(() => { location.href = '/auth/logout'; }); return; }
             fecharVoce();
-            if (a === 'avisos') { const cfg = $('btn-open-settings'); if (cfg) cfg.click(); setTimeout(() => { const t = document.querySelector('.set-tab[data-target="set-geral"]'); if (t) t.click(); }, 120); return; }
+            if (a === 'avisos') { const cfg = $('btn-open-settings'); if (cfg) cfg.click(); setTimeout(() => { const t = document.querySelector('.set-tab[data-target="set-notificacoes"]'); if (t) t.click(); }, 120); return; }
             const alvo = { perfil: 'btn-open-popout', inventario: 'btn-inventario', musica: 'btn-musica', config: 'btn-open-settings', mic: 'btn-mic', fone: 'btn-deafen' }[a];
             const el = $(alvo); if (el) el.click();
         }));
@@ -16174,7 +16226,7 @@
                 catch (e) { est.textContent = 'Não deu certo: ' + (e && e.message ? e.message : e); }
                 await pintar();
             });
-            document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.set-tab[data-target="set-geral"]')) pintar(); });
+            document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.set-tab[data-target="set-geral"], .set-tab[data-target="set-notificacoes"]')) pintar(); });
             pintar();
         }
 
@@ -16183,7 +16235,7 @@
             let visto = false; try { visto = localStorage.getItem('pnt_push_dica') === '1'; } catch (e) {}
             if (!visto) setTimeout(() => {
                 try { localStorage.setItem('pnt_push_dica', '1'); } catch (e) {}
-                try { showToast('Quer receber avisos de mensagem com o app fechado? Ative em Configurações > Geral > Avisos no aparelho.', 'info'); } catch (e) {}
+                try { showToast('Quer receber avisos de mensagem com o app fechado? Ative em Configurações > Notificações.', 'info'); } catch (e) {}
             }, 45000);
         }
     })();

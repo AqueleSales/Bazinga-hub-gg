@@ -292,7 +292,7 @@ const Cosm = (() => {
         bazinga:      { nome: 'BAZINGA', desc: 'on top!', cor: '#3ddc6e' },
         coder:        { nome: 'Coder', desc: 'Mexeu no código por baixo do capô.', cor: '#22d3ee' },
         so_nos:       { nome: 'Só nós', desc: 'Uma sarça que arde e não se consome. Só quem começou isso tem.', cor: '#ff8a1f' },
-        olimpo:       { nome: 'Olimpo', desc: 'Quem sustenta o Pantheon. Uma letra Ômega de lava: o fim e o começo, com raios do Olimpo correndo por dentro.', cor: '#ff7a18' },
+        olimpo:       { nome: 'Brasa', desc: 'Quem sustenta o Pantheon. Uma letra Ômega de lava: o fim e o começo, com raios correndo por dentro.', cor: '#ff7a18' },
     };
     // Chama de 7 pontos (contorno em coordenadas 0-1, ponta em cima, "lambida" na esquerda), escalada pra caixa dada.
     const CHAMA = [[.50, 0], [.55, .18, .78, .28, .86, .55], [.94, .80, .78, 1, .50, 1], [.22, 1, .06, .80, .14, .55],
@@ -396,7 +396,7 @@ const Cosm = (() => {
             <g class="bd-codigo" fill="none" stroke="#67e8f9" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 24 L14.5 32 L23 40"/><path d="M41 24 L49.5 32 L41 40"/><path d="M35.5 22 L28.5 42" stroke="#a5f3fc" stroke-width="3.6"/>
             </g>`,
-        // Ômega de lava (Olimpo): 5 peças voam e se encaixam, a lava ESFRIA (a crosta escurece e sobram só as rachaduras acesas) e raios correm pelo Ômega.
+        // Ômega de lava (Brasa, id olimpo): 5 peças voam e se encaixam, a lava ESFRIA (a crosta escurece e sobram só as rachaduras acesas) e raios correm pelo Ômega.
         // A máscara (as 5 peças) recorta a lava; a animação mexe só nas peças, na crosta e nos raios. Parado (sem zoom/hover) é o Ômega inteiro e frio.
         olimpo: () => {
             const k = ++bdOmegaN;
@@ -1227,7 +1227,7 @@ const Cosm = (() => {
         const pats = op.patentes || [];
         if (!pats.length) return;
         const N = pats.length, H = MT_BASE + (N - 1) * MT_PASSO + MT_TOPO;
-        const reduz = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reduz = (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.hasAttribute('data-reduz-mov');
         const nivel = Math.max(parseInt(op.nivel, 10) || 1, 1);
 
         // x (em %) de cada estação: zigue-zague que vai fechando conforme a montanha estreita
@@ -1606,7 +1606,7 @@ const Cosm = (() => {
 
     const MOTORES = { amaterasu: AMATERASU, punicao: PUNICAO };
     const _estadoCv = new WeakMap();
-    const _reduzMov = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const _reduzMov = () => (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.hasAttribute('data-reduz-mov');   // sistema OU Configurações > Acessibilidade
     let _cvRodando = false, _cvUltimo = 0;
 
     // Desenha um quadro de todos os canvases visíveis. Devolve false quando não há nenhum (o laço dorme).

@@ -216,8 +216,8 @@ _item('badge', 'beta_tester', 'Beta Tester', 'Está no beta. Cada bug achado aco
 _item('badge', 'bazinga', 'BAZINGA', 'on top!', raridade='lendario')
 _item('badge', 'coder', 'Coder', 'Mexeu no código por baixo do capô.', raridade='unico')
 _item('badge', 'so_nos', 'Só nós', 'Uma sarça que arde e não se consome. Só quem começou isso tem.', raridade='unico', tema='fusao')
-#   olimpo                    -> quem tem a assinatura Olimpo ativa (app/olimpo.py concede; posses_da_pessoa tira quando vence)
-_item('badge', 'olimpo', 'Olimpo', 'Quem sustenta o Pantheon. Uma letra Ômega de lava: o fim e o começo, com raios do Olimpo correndo por dentro.', raridade='lendario')
+#   olimpo                    -> quem tem a assinatura Brasa (id interno `olimpo`) ativa (app/olimpo.py concede; posses_da_pessoa tira quando vence)
+_item('badge', 'olimpo', 'Brasa', 'Quem sustenta o Pantheon. Uma letra Ômega de lava: o fim e o começo, com raios correndo por dentro.', raridade='lendario')
 
 # ---- Laboratório: itens do tema Gogeta ----
 _item('moldura', 'gogeta', 'Aura Dourada', 'Anel de ki dourado com chamas subindo.', 'gogeta')
@@ -633,7 +633,7 @@ LABORATORIO = {
 # INSÍGNIAS POR REGRA (não precisam de concessão manual)
 # ==========================================
 BADGE_BETA = 'badge:beta_tester'
-BADGE_OLIMPO = 'badge:olimpo'     # dado/tirado pelo Olimpo (app/olimpo.py): vale enquanto a assinatura vale
+BADGE_OLIMPO = 'badge:olimpo'     # dado/tirado pela Brasa (id interno olimpo; app/olimpo.py): vale enquanto a assinatura vale
 BADGE_BAZINGA = 'badge:bazinga'
 ALPHA_NOMES = ['filippo', 'fernando albernaz', 'gabriel alves santana', 'gabriel silva', 'arthur neves fiorotti', 'juarez']
 _cache_bazinga = {}
@@ -740,7 +740,7 @@ def posses_da_pessoa(person_id):
     from .models import Posse
     posses = {p.item_id for p in Posse.query.filter_by(person_id=person_id).all()}
     if BADGE_OLIMPO in posses:
-        # a insígnia do Olimpo some sozinha quando a assinatura vence (só quem TEM a insígnia paga essa consulta a mais)
+        # a insígnia da Brasa some sozinha quando a assinatura vence (só quem TEM a insígnia paga essa consulta a mais)
         from .models import db, Person, br_now
         ate = db.session.query(Person.olimpo_ate).filter(Person.id == person_id).scalar()
         if not ate or ate <= br_now():
