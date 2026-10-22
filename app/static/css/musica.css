@@ -8,7 +8,7 @@
 #btn-musica.aberto { color: var(--text-header); }
 @keyframes muSalto { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 
-.musica-janela { --mu-c: #ff3b5c; position: fixed; right: 16px; bottom: 16px; width: 360px; max-width: calc(100vw - 16px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; z-index: 1450;
+.musica-janela { --mu-c: #ff3b5c; position: fixed; right: 16px; bottom: 16px; width: 360px; max-width: calc(100vw - 16px); max-height: calc(100vh - 32px); display: flex; flex-direction: column; z-index: 1560;   /* acima da janela da call (1500) e do painel de atividades (1520); abaixo de menus e cartões */
     background: var(--bg-secondary); color: var(--text-normal); border: 1px solid rgba(255, 255, 255, .12); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .55); overflow: hidden; }
 .musica-janela[hidden] { display: none; }
 .mu-topo { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; background: var(--bg-tertiary); cursor: grab; touch-action: none; user-select: none; flex: none; }

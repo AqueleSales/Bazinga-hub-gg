@@ -33,7 +33,13 @@
         const URL_PEERJS = 'https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js';
         const URL_QRCODE = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
         // SRI: o navegador recusa o arquivo se o CDN entregar algo diferente do que conferimos (CDN comprometido). Lib nova = hash novo.
-        const SRI_LIBS = { [URL_PEERJS]: 'sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb' };
+        // chess.js 0.10.3 (global Chess): só ajuda o tabuleiro de xadrez das Atividades da call; o servidor valida todo lance.
+        const URL_CHESS = 'https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js';
+        const SRI_LIBS = {
+            // hash conferido em 22/10/2026 contra unpkg E jsdelivr (os dois entregam o mesmo arquivo); o antigo bloqueava o PeerJS e ninguém entrava em call
+            [URL_PEERJS]: 'sha384-qOF1Ybxd53PR4BTaDzAk+eXLDARxOKQYQpXPqbJu/xkJWLIDDfP/ZusfTctQyNs+',
+            [URL_CHESS]: 'sha384-aH7F59TKSh8OEAivbclch9UUnWn/Uy8AQlYYKzpVaQkAp8W6IF2VocW/knEeRwT0',
+        };
         const carregarLib = (function () {
             const cache = {};
             return function (url) {
@@ -610,8 +616,7 @@
         .cj-topo button:hover { background: rgba(255,255,255,.1); color: #fff; }
         .call-janela.mini .video-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; padding: 8px 8px 54px; align-content: start; }
         .call-janela.mini .video-card { max-height: none; border-radius: 6px; }
-        .call-janela.mini .video-card.focused { height: 100%; min-height: 110px; }
-        .call-janela.mini .video-grid.focused-mode .video-card:not(.focused) { height: 56px; }
+        /* o tamanho dos quadros (grade e quadro principal) agora é calculado por static/js/call_ui.js (#video-grid.cu-auto) */
         .call-janela.mini .video-avatar { width: 40px; height: 40px; font-size: 16px; }
         .call-janela.mini .video-label { bottom: 4px; left: 4px; font-size: 11px; padding: 2px 6px; }
         .call-janela.mini .call-controls-bar { opacity: 1; transform: translateX(-50%); pointer-events: auto; bottom: 8px; padding: 4px 6px; gap: 6px; }
@@ -3002,6 +3007,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loja_mapa.css') }}?v={{ loja_mapa_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conexoes.css') }}?v={{ conexoes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/call_ui.css') }}?v={{ call_ui_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/atividades.css') }}?v={{ atividades_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
@@ -3149,6 +3156,7 @@
                     <div class="voice-actions">
                         <button class="voice-action-btn" id="btn-side-camera" title="Ligar Câmera"><i class="fa-solid fa-video"></i></button>
                         <button class="voice-action-btn" id="btn-side-screen" title="Compartilhar Tela"><i class="fa-solid fa-desktop"></i></button>
+                        <button class="voice-action-btn" id="btn-side-ruido" title="Supressão de ruído: reduz o barulho de fundo do seu microfone usando o filtro do navegador" aria-label="Supressão de ruído" aria-pressed="false"><i class="fa-solid fa-wave-square"></i></button>
                     </div>
                 </div>
 
@@ -3344,9 +3352,12 @@
                             <button class="call-btn" id="btn-main-mic" title="Silenciar"><i class="fa-solid fa-microphone"></i></button>
                             <button class="call-btn" id="btn-main-deafen" title="Ensurdecer (parar de ouvir)"><i class="fa-solid fa-headphones"></i></button>
                             <button class="call-btn" id="btn-main-camera" title="Ligar Câmera"><i class="fa-solid fa-video"></i></button>
-                            <button class="call-btn" id="btn-main-screen" title="Compartilhar Tela"><i class="fa-solid fa-desktop"></i></button>
-
-                            <div class="media-btn-wrap">
+                            <!-- O "+" abre em leque: transmitir tela, clipe, convidar, atividades e os 3 pontinhos (static/js/call_ui.js).
+                                 #btn-main-screen, #btn-main-clip e #media-popup mantêm o id e os ouvintes; o CallUI.iniciar() os leva pra
+                                 camada do leque (#cf-camada), fora da janela da call, que corta o que passa da borda. -->
+                            <div class="cf-fan" id="cf-fan">
+                                <button class="call-btn cf-main" id="cf-main" title="Mais: tela, clipe, convidar, atividades e configurações" aria-haspopup="true" aria-expanded="false"><i class="fa-solid fa-plus"></i><span class="cf-pontinho"></span></button>
+                                <button class="call-btn cf-op" id="btn-main-screen" title="Compartilhar Tela" aria-label="Compartilhar tela"><i class="fa-solid fa-desktop"></i></button>
                                 <div class="media-popup" id="media-popup">
                                     <button class="media-popup-btn gravar" id="pop-btn-gravar">
                                         <i class="fa-solid fa-circle"></i> Gravar
@@ -3360,7 +3371,7 @@
                                         <span class="chave"></span>
                                     </label>
                                 </div>
-                                <button class="call-btn" id="btn-main-clip" title="Gravar / Clipar"><i class="fa-solid fa-clapperboard"></i></button>
+                                <button class="call-btn cf-op" id="btn-main-clip" title="Gravar / Clipar" aria-label="Gravar ou clipar"><i class="fa-solid fa-clapperboard"></i></button>
                             </div>
 
                             <div style="width: 1px; height: 32px; background-color: #3f4147; margin: 0 4px;"></div>
@@ -4989,6 +5000,8 @@
     <script src="{{ url_for('static', filename='js/loja_mapa.js') }}?v={{ loja_mapa_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/call_ui.js') }}?v={{ call_ui_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/atividades.js') }}?v={{ atividades_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
@@ -9300,6 +9313,7 @@
             // O servidor também manda pro autor direto (garantia contra sala perdida):
             // se essa mensagem já está na tela, ignora a repetição.
             if (dados.id && container.querySelector(`.message[data-msg-id="${Number(dados.id)}"]`)) return;
+            if (Number(dados.usuario_id) !== Number(currentUserId)) CallUI.previaMensagem({ nome: dados.usuario, texto: dados.texto, anexo: !!dados.anexo_url, onde: '#' + (((document.getElementById('current-channel-header') || {}).textContent || '').trim()) });
             // Eco da própria mensagem que já foi mostrada otimista: troca a
             // bolha "pendente" pela confirmada em vez de duplicar.
             if (dados.temp_id) {
@@ -12590,6 +12604,7 @@
             if (nomeEl) nomeEl.textContent = NOMES_PERFIL_ENTRADA[perfil];
             renderPerfilEntradaMenu();
             reaplicarMic();    // vale na hora, com você falando (antes só na próxima vez que o microfone abrisse)
+            if (typeof pintarRuidoRapido === 'function') pintarRuidoRapido();
         }
 
         document.querySelectorAll('.radio-card[data-profile]').forEach(card => {
@@ -12604,6 +12619,7 @@
                 el.classList.toggle('active');
                 aoMudar(el.classList.contains('active'));
                 reaplicarMic();
+                if (typeof pintarRuidoRapido === 'function') pintarRuidoRapido();
             });
         }
         alternarToggle('toggle-noise', (ativo) => { noiseSuppressionOn = ativo; });
@@ -12666,6 +12682,7 @@
             document.getElementById('cj-titulo').textContent = document.getElementById('connected-voice-name').textContent || 'Voz conectada';
             posicionarCall();
             videoGrid.querySelectorAll('video').forEach(v => { try { v.play().catch(() => {}); } catch (e) {} });
+            CallUI.aoMostrar(modo);   // fecha o "+"/menu, recalcula a grade e afasta a janela da Música se elas se cobrirem
         }
         function callMinimizar() { if (callJanela.classList.contains('ativa') && callModo === 'cheia') callMostrar('mini'); }
         function callOcultar() {
@@ -12700,6 +12717,55 @@
             }).observe(callJanela);
             window.addEventListener('resize', posicionarCall);
         })();
+
+        // CALL (botão "+", menu dos 3 pontinhos, grade, zoom, convidar pra voz) e ATIVIDADES (xadrez): static/js/call_ui.js e atividades.js
+        // só desenham e pedem; quem decide (quem convida, quem joga, se o lance vale) é o servidor.
+        CallUI.iniciar({
+            esc, escUrl, toast: (m, t) => showToast(m, t), emitir: (n, d) => socket.emit(n, d), som: (t) => tocarSom(t),
+            janela: callJanela, view: videoView, grade: videoGrid,
+            emCall: () => inCall, canalId: () => currentVoiceChannelId, ehDM: () => callEhDM(), modo: () => callModo,
+            moverCall: (x, y) => { callPos = { x, y }; posicionarCall(); },
+            abrirConfigVoz: () => { settingsModal.classList.add('active'); enumerarDispositivos(); document.querySelector('.set-tab[data-target="set-voz"]').click(); },
+            ruido: { ligado: () => ruidoLigado(), alternar: () => alternarRuidoRapido() },
+            aoMudarQualidade: () => aplicarQualidadeAoVivo(),
+            amigos: () => ((typeof amizades !== 'undefined' && amizades.amigos) || []).map(a => ({ id: a.id, nome: a.nome, avatar: a.avatar, online: statusEfetivo(a) !== 'offline' })),
+            entrarNaCall: (serverId, canalId, nome) => {
+                // vem do aviso "fulano te chamou pra call": abre o servidor (pro nome certo aparecer no painel) e conecta
+                try { if (serverId && Number(activeMyServerId) !== Number(serverId)) entrarNoServidor(Number(serverId)); } catch (e) {}
+                setTimeout(() => conectarNaCall(String(canalId), nome), 200);
+            },
+        });
+        Atividades.iniciar({
+            esc, escUrl, toast: (m, t) => showToast(m, t), emitir: (n, d) => socket.emit(n, d), som: (t) => tocarSom(t),
+            confirmar: (t, x, ok) => openConfirmModal(t, x, ok), meuId: () => currentUserId,
+            canalId: () => currentVoiceChannelId, emCall: () => inCall, carregarChess: () => carregarLib(URL_CHESS),
+        });
+        socket.on('atividade_estado', (d) => Atividades.aoEstado(d));
+        socket.on('atividade_erro', (d) => Atividades.aoErro(d));
+        socket.on('voz_convite', (d) => CallUI.convidado(d));
+        socket.on('voz_convite_enviado', (d) => CallUI.aoConvidadoEnviado(d));
+
+        // Supressão de ruído rápida (botão perto do "Voz conectada" e item do menu dos 3 pontinhos). É o filtro NATIVO do navegador
+        // (constraint noiseSuppression do getUserMedia), a mesma chave da aba Voz e Vídeo: mexer aqui muda lá e vice-versa.
+        function ruidoLigado() { return !!perfilDeAudioConstraints().noiseSuppression; }
+        function pintarRuidoRapido() {
+            const on = ruidoLigado();
+            const b = document.getElementById('btn-side-ruido');
+            if (b) { b.classList.toggle('ligado', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+            CallUI.pintarRuido();
+        }
+        function alternarRuidoRapido() {
+            const novo = !ruidoLigado();
+            // se estava num perfil pronto (Isolamento/Estúdio), vira Personalizado mantendo o resto como o perfil fazia
+            const base = perfilDeAudioConstraints();
+            noiseSuppressionOn = base.noiseSuppression; echoCancellationOn = base.echoCancellation; autoGainOn = base.autoGainControl;
+            noiseSuppressionOn = novo;
+            [['toggle-noise', noiseSuppressionOn], ['toggle-echo', echoCancellationOn], ['toggle-gain', autoGainOn]].forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.classList.toggle('active', !!v); });
+            aplicarPerfilEntrada('personalizado');   // atualiza a aba Voz e Vídeo e reabre o microfone com a nova regra
+            pintarRuidoRapido();
+            showToast(novo ? 'Supressão de ruído ligada.' : 'Supressão de ruído desligada.', 'info');
+        }
+        document.getElementById('btn-side-ruido').addEventListener('click', alternarRuidoRapido);
 
         videoGrid.addEventListener('click', (e) => {
             const card = e.target.closest('.video-card');
@@ -12804,21 +12870,53 @@
         // descer um degrau - sem isso, uma call P2P com alguém em rede ruim
         // travava/engasgava pra ela E pra quem estava do outro lado.
         // ==========================================
-        const NIVEIS_BITRATE = { tela: [1500000, 800000, 350000], video: [900000, 500000, 250000] };
+        // A pessoa escolhe nos 3 pontinhos da call: Economia / Automática / Alta (degraus de bitrate e teto de resolução) e, pra tela,
+        // Nitidez (texto e código nítidos) ou Fluidez (jogos e vídeo). Dentro do degrau escolhido o ajuste continua automático.
+        const NIVEIS_POR_QUALIDADE = {
+            economia: { tela: [800000, 450000, 220000], video: [450000, 260000, 150000] },
+            auto:     { tela: [1800000, 900000, 400000], video: [900000, 500000, 250000] },
+            alta:     { tela: [3500000, 1800000, 800000], video: [1800000, 1000000, 500000] },
+        };
+        // teto de resolução (altura) e fps da TELA compartilhada, por qualidade e por "otimizar"
+        const TELA_POR_QUALIDADE = {
+            economia: { nitidez: { h: 720, fps: 10 },  fluidez: { h: 480, fps: 30 } },
+            auto:     { nitidez: { h: 1080, fps: 15 }, fluidez: { h: 720, fps: 30 } },
+            alta:     { nitidez: { h: 1080, fps: 30 }, fluidez: { h: 1080, fps: 30 } },
+        };
+        // câmera (largura x altura ideais, fps)
+        const CAMERA_POR_QUALIDADE = { economia: { w: 640, h: 360, fps: 20 }, auto: { w: 960, h: 540, fps: 24 }, alta: { w: 1280, h: 720, fps: 30 } };
+        function opcaoCall(k, padrao) { try { return CallUI.opcao(k) || padrao; } catch (e) { return padrao; } }
+        function niveisDe(tipo) { return (NIVEIS_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || NIVEIS_POR_QUALIDADE.auto)[tipo] || NIVEIS_POR_QUALIDADE.auto.video; }
+        function telaAlvo() { return (TELA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || TELA_POR_QUALIDADE.auto)[opcaoCall('otimizar', 'nitidez')]; }
+        function cameraAlvo() { return CAMERA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || CAMERA_POR_QUALIDADE.auto; }
         const monitoresBitrate = new Map();
+
+        // Aplica o que foi escolhido nas transmissões que já estão no ar (bitrate, dica de conteúdo, resolução e fps).
+        function aplicarQualidadeAoVivo() {
+            monitoresBitrate.forEach(m => { try { m.reaplicar(); } catch (e) {} });
+            const dica = opcaoCall('otimizar', 'nitidez') === 'nitidez' ? 'detail' : 'motion';
+            const t = telaAlvo();
+            activeScreenStreams.forEach(sc => sc.stream.getVideoTracks().forEach(tr => {
+                try { tr.contentHint = dica; tr.applyConstraints({ height: { ideal: t.h, max: t.h }, frameRate: { ideal: t.fps, max: t.fps } }).catch(() => {}); } catch (e) {}
+            }));
+            if (myCamStream) myCamStream.getVideoTracks().forEach(tr => {
+                const c = cameraAlvo();
+                try { tr.contentHint = 'motion'; tr.applyConstraints({ width: { ideal: c.w }, height: { ideal: c.h }, frameRate: { ideal: c.fps, max: c.fps } }).catch(() => {}); } catch (e) {}
+            });
+        }
 
         function monitorarEAjustarBitrate(call, tipo) {
             if (!call || !call.peerConnection || monitoresBitrate.has(call)) return;
-            const niveis = NIVEIS_BITRATE[tipo] || NIVEIS_BITRATE.video;
-            let nivelAtual = 0;
+            let nivelAtual = 0, bonsSeguidos = 0;
 
             const aplicarNivel = async (i) => {
+                const niveis = niveisDe(tipo);
                 const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
                 if (!sender) return;
                 try {
                     const params = sender.getParameters();
                     if (!params.encodings || !params.encodings.length) params.encodings = [{}];
-                    params.encodings[0].maxBitrate = niveis[i];
+                    params.encodings[0].maxBitrate = niveis[Math.min(i, niveis.length - 1)];
                     await sender.setParameters(params);
                 } catch(e) {}
             };
@@ -12854,11 +12952,13 @@
                     if (deltaEnviados <= 0) return;
 
                     const perda = deltaPerdidos / (deltaEnviados + deltaPerdidos);
-                    if (perda > 0.05 && nivelAtual < niveis.length - 1) { nivelAtual++; aplicarNivel(nivelAtual); }
-                    else if (perda < 0.01 && nivelAtual > 0) { nivelAtual--; aplicarNivel(nivelAtual); }
+                    // desce rápido (5 s com perda alta), mas só sobe depois de 10 s seguidos de rede boa: sem isso oscilava entre degraus
+                    if (perda > 0.05 && nivelAtual < niveisDe(tipo).length - 1) { nivelAtual++; bonsSeguidos = 0; aplicarNivel(nivelAtual); }
+                    else if (perda < 0.01 && nivelAtual > 0) { if (++bonsSeguidos >= 2) { nivelAtual--; bonsSeguidos = 0; aplicarNivel(nivelAtual); } }
+                    else bonsSeguidos = 0;
                 } catch(e) {}
             }, 5000);
-            monitoresBitrate.set(call, intervalId);
+            monitoresBitrate.set(call, { intervalId, reaplicar: () => aplicarNivel(nivelAtual) });
 
             call.on('close', () => { clearInterval(intervalId); monitoresBitrate.delete(call); });
         }
@@ -13447,7 +13547,7 @@
                 videoTrack.onended = () => aplicarEstadoCamera(peerId);
                 aplicarEstadoCamera(peerId);
             }
-            if (ehTela) tornarZoomavel(card);
+            tornarZoomavel(card);   // câmera e tela dos outros: zoom, arrastar, "preencher" e o nível à vista
         }
 
         // peerId -> câmera ligada? (preenchido pelo evento estado_camera; padrão = desligada = avatar)
@@ -13484,36 +13584,8 @@
             if (inCall && myPeerId && currentVoiceChannelId) socket.emit('estado_camera', { canal_id: currentVoiceChannelId, peer_id: myPeerId, ligada: !!myCamStream });
         }
 
-        // Zoom na tela compartilhada de OUTRA pessoa: roda do mouse dá zoom (no ponto do cursor), arrastar move,
-        // duplo clique volta ao normal.
-        function tornarZoomavel(card) {
-            const v = card.querySelector('video'); if (!v) return;
-            card.classList.add('zoomavel');
-            const dica = document.createElement('div'); dica.className = 'zoom-dica'; dica.textContent = 'Roda do mouse = zoom · arraste = mover · 2 cliques = reset';
-            card.appendChild(dica);
-            let z = 1, tx = 0, ty = 0, arr = null, moveu = false;
-            const aplicar = () => {
-                const r = card.getBoundingClientRect();
-                const mx = (r.width * (z - 1)) / 2, my = (r.height * (z - 1)) / 2;
-                tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty));
-                v.style.transform = z === 1 ? '' : `translate(${tx}px, ${ty}px) scale(${z})`;
-                card.classList.toggle('com-zoom', z > 1);
-            };
-            card.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const r = card.getBoundingClientRect();
-                const cx = e.clientX - r.left - r.width / 2, cy = e.clientY - r.top - r.height / 2;
-                const novo = Math.min(6, Math.max(1, z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
-                tx = cx - (cx - tx) * (novo / z); ty = cy - (cy - ty) * (novo / z);
-                z = novo; if (z === 1) { tx = ty = 0; }
-                aplicar();
-            }, { passive: false });
-            card.addEventListener('mousedown', (e) => { if (z > 1) { arr = { x: e.clientX - tx, y: e.clientY - ty }; moveu = false; e.preventDefault(); } });
-            window.addEventListener('mousemove', (e) => { if (!arr) return; moveu = true; tx = e.clientX - arr.x; ty = e.clientY - arr.y; aplicar(); });
-            window.addEventListener('mouseup', () => { arr = null; });
-            card.addEventListener('click', (e) => { if (moveu) { e.stopPropagation(); moveu = false; } }, true);
-            card.addEventListener('dblclick', () => { z = 1; tx = ty = 0; aplicar(); });
-        }
+        // Zoom na câmera/tela de OUTRA pessoa (roda do mouse, arrastar, pinça, botões -/+ e "preencher", com o nível à vista): ver CallUI.zoom em static/js/call_ui.js.
+        function tornarZoomavel(card) { CallUI.zoom(card); }
 
         // Câmera e Tela
         document.getElementById('btn-main-camera').addEventListener('click', async () => {
@@ -13533,9 +13605,11 @@
                     // webcam (às vezes 1080p+): mais banda gasta sem ganho
                     // real numa grade de call pequena. Automático, sem
                     // escolha manual - mesma filosofia da tela compartilhada.
+                    const cam = cameraAlvo();
                     myCamStream = await navigator.mediaDevices.getUserMedia({
-                        video: { width: { ideal: 640, max: 1280 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 } }
+                        video: { width: { ideal: cam.w, max: 1280 }, height: { ideal: cam.h, max: 720 }, frameRate: { ideal: cam.fps, max: 30 } }
                     });
+                    myCamStream.getVideoTracks().forEach(tr => { try { tr.contentHint = 'motion'; } catch (e) {} });
                     videoCardVideo.srcObject = myCamStream; videoCardVideo.style.display = 'block'; videoCardAvatar.style.display = 'none';
                     document.getElementById('btn-main-camera').classList.add('active'); document.getElementById('btn-side-camera').classList.add('active-stream');
                     atualizarMidiaparaAmigos(myCamStream.getVideoTracks()[0]);
@@ -13578,14 +13652,17 @@
             // pedido (ex: manda a tela em 1440p nativa); com "max" travado
             // no mesmo valor, o encoder do WebRTC nunca sai da faixa - era um
             // dos motivos do compartilhamento pesar mais que devia.
+            const alvoTela = telaAlvo();
             const constraints = {
-                video: { height: { ideal: TELA_RES_PADRAO, max: TELA_RES_PADRAO }, frameRate: { ideal: TELA_FPS_PADRAO, max: TELA_FPS_PADRAO } },
+                video: { height: { ideal: alvoTela.h, max: alvoTela.h }, frameRate: { ideal: alvoTela.fps, max: alvoTela.fps } },
                 audio: true,
                 selfBrowserSurface: 'exclude',      // não oferece esta própria aba (a que gera o espelho infinito)
                 surfaceSwitching: 'include'
             };
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
+                // "detail" mantém texto e código nítidos (perde fluidez se a rede apertar); "motion" faz o contrário (jogos, vídeo)
+                newStream.getVideoTracks().forEach(tr => { try { tr.contentHint = opcaoCall('otimizar', 'nitidez') === 'nitidez' ? 'detail' : 'motion'; } catch (e) {} });
                 const streamId = Date.now();
                 // `calls` guarda as ligações PeerJS abertas pra essa tela em
                 // cada peer - sem isso, pararCompartilhamento() não tinha
@@ -13885,7 +13962,7 @@
             mediaPopup.classList.toggle('aberto');
         });
         document.addEventListener('click', (e) => {
-            if (mediaPopup.classList.contains('aberto') && !e.target.closest('.media-btn-wrap')) fecharPopupMedia();
+            if (mediaPopup.classList.contains('aberto') && !e.target.closest('.media-btn-wrap, .cf-fan, #cf-camada')) fecharPopupMedia();
         });
 
         document.getElementById('pop-btn-gravar').addEventListener('click', () => {
@@ -14059,6 +14136,7 @@
             resetarMudo();
             document.getElementById('voice-panel').classList.remove('active');
             callOcultar();
+            CallUI.aoSair(); Atividades.aoSairDaCall();
             document.getElementById('text-view').classList.remove('hidden'); document.getElementById('text-view').classList.remove('sidebar-mode');
             document.getElementById('video-grid').classList.remove('focused-mode');
             document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');
@@ -14265,6 +14343,7 @@
         };
         // Som de entrada equipado por quem entrou (só quem tem o item); sem ele, o bipe padrão.
         function tocarSomDeEntrada(idSom) {
+            if (!CallUI.sonsLigados()) return;
             if (idSom) {
                 if (!somLigado() || perfilMeu.status === 'dnd') return;
                 const ctx = garantirAudio();
@@ -14273,6 +14352,7 @@
             tocarSom('call_entrar');
         }
         function tocarSom(tipo) {
+            if ((tipo === 'call_entrar' || tipo === 'call_sair') && !CallUI.sonsLigados()) return;   // 3 pontinhos da call > Sons de entrada e saída
             // "Não perturbar" cala o som (a notificação continua na caixa de entrada)
             if (!somLigado() || (typeof perfilMeu !== 'undefined' && perfilMeu.status === 'dnd')) return;
             const ctx = garantirAudio();
@@ -14933,6 +15013,7 @@
             }
 
             if (!meu) {
+                CallUI.previaMensagem({ nome: d.usuario, texto: d.texto, anexo: !!d.anexo_url, onde: 'DM' });
                 const trecho = d.texto ? d.texto.slice(0, 90) : '📎 Anexo';
                 const mudo = amizades.silenciados.includes(Number(d.usuario_id));   // contato silenciado: chega, mas sem barulho
                 if (!aberta && card) {

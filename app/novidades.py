@@ -9,6 +9,21 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 37, 'data': '22/10/2026', 'titulo': 'Call renovada: botão +, xadrez, zoom e grade que se ajusta',
+        'itens': [
+            {'icone': 'fa-plus', 'titulo': 'Um botão só: o +',
+             'texto': 'Tela, clipe, convidar, atividades e os 3 pontinhos agora abrem em leque ao clicar no +, que vira um X. Os 3 pontinhos têm as configurações da call: exibição em grade, minha câmera, participantes sem vídeo, prévia de mensagens, ruído, sons e qualidade.'},
+            {'icone': 'fa-chess-knight', 'titulo': 'Atividades: xadrez na call',
+             'texto': 'Duas pessoas da call jogam xadrez e todo mundo assiste ao vivo. O servidor confere cada lance, tem empate, desistência e revanche. Música na call e bots aparecem como em breve.'},
+            {'icone': 'fa-magnifying-glass-plus', 'titulo': 'Zoom e preencher',
+             'texto': 'Na câmera e na tela dos outros: roda do mouse, arrastar, pinça no celular, botões de mais e menos e Preencher (cobre o quadro cortando as bordas), com o nível sempre à vista.'},
+            {'icone': 'fa-table-cells-large', 'titulo': 'Grade que se ajusta e mais nitidez',
+             'texto': 'Os quadros enchem a janela sem rolar, o quadro principal vai pro clique, pra tela compartilhada ou pra quem fala. Tela compartilhada com mais nitidez (escolha Nitidez ou Fluidez) e botão de supressão de ruído ao lado do Voz conectada.'},
+            {'icone': 'fa-user-plus', 'titulo': 'Convidar pra voz e Música por cima',
+             'texto': 'Chame um amigo do servidor pra call, e ele recebe um aviso com o botão Entrar. A janela de Música não fica mais embaixo da call, e a call se afasta dela quando as duas se cobrem. E a call volta a conectar: o carregador de voz estava sendo bloqueado.'},
+        ],
+    },
+    {
         'id': 36, 'data': '22/10/2026', 'titulo': 'Cargos mais fáceis, pasta redonda, notificação com foto e mais',
         'itens': [
             {'icone': 'fa-shield-halved', 'titulo': 'Cargos com interruptores e arrastar',

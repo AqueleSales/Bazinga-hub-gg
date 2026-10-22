@@ -137,6 +137,12 @@ def _tirar_da_call(chave, peer_id, avisar=True):
             _previa_restrita.pop(chave, None)
     if meta and _call_por_sid.get(meta['sid']) == (chave, peer_id):
         _call_por_sid.pop(meta['sid'], None)
+    # A atividade (xadrez) é da call: call vazia apaga, e quem saiu antes da partida começar libera a cadeira.
+    try:
+        from . import atividades_events
+        atividades_events.ao_sair_da_call(chave, meta['usuario_id'] if meta else None, avisar)
+    except Exception as e:
+        print(f"[ERRO ATIVIDADE AO SAIR] {e}")
     if avisar:
         socketio.emit('usuario_saiu_call', {'peer_id': peer_id}, to=f"voz_{chave}")
         _avisar_participantes(chave, meta['server_id'] if meta else None)
@@ -1166,6 +1172,10 @@ def lidar_entrar_call(dados):
         # (o cliente usa pra limpar card de gente que já saiu e pra pedir a ligação de quem não conectou).
         _avisar_participantes(chave, server_id)
         emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, []), 'completa': True})
+        # Quem chega no meio de uma partida já recebe o tabuleiro (e quem sentou e voltou, a cadeira marcada como presente).
+        from . import atividades_events
+        if atividades_events.atividades.da_call(chave):
+            atividades_events.avisar(chave)         # vai pra sala inteira: o recém-chegado recebe e a cadeira de quem voltou fica "presente"
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ENTRAR CALL] {e}")
@@ -4572,3 +4582,6 @@ from . import notas_mapa_events  # noqa: E402,F401
 from . import cargos_events  # noqa: E402,F401
 # Ordem dos servidores (com pastinhas) e DMs fixadas, na conta: handlers em outro arquivo, também no FIM (importa daqui).
 from . import ordem_events  # noqa: E402,F401
+# Atividades da call (xadrez) e convite pra voz (Rodada 34): handlers em outros arquivos, também no FIM (importam daqui).
+from . import atividades_events  # noqa: E402,F401
+from . import call_events  # noqa: E402,F401

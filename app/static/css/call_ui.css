@@ -1,0 +1,153 @@
+/* Call (Rodada 34): botão "+" em leque, menu dos 3 pontinhos, grade que se ajusta, zoom e prévia de mensagens.
+   static/js/call_ui.js monta tudo; o leque e os menus moram numa camada fixa (#cf-camada) fora da janela da call, porque a
+   janela tem overflow:hidden e cortaria o que passa da borda (principalmente na janela pequena).
+   Chapado e fosco como o resto do app. Só transform/opacity se mexem; body.rolando e prefers-reduced-motion já seguram o resto. */
+
+/* ---------- camada dos popovers ---------- */
+#cf-camada { position: fixed; inset: 0; z-index: 1600; pointer-events: none; }
+#cf-camada > * { pointer-events: auto; }
+
+/* ---------- botão "+" (fica na barra da call) ---------- */
+.cf-fan { position: relative; display: flex; align-items: center; }
+.call-btn.cf-main { background: var(--brand-color); color: #fff; transition: transform .22s cubic-bezier(.2, .9, .3, 1.2), background-color .2s; }
+.call-btn.cf-main:hover { background: var(--brand-hover, var(--brand-color)); filter: brightness(1.08); }
+.call-btn.cf-main.aberto { transform: rotate(90deg); background: #5a5d66; }
+.call-btn.cf-main .cf-pontinho { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--red-color); box-shadow: 0 0 0 2px var(--bg-quaternary); display: none; }
+.call-btn.cf-main.com-aviso .cf-pontinho { display: block; }
+.call-controls-bar.cf-aberto { opacity: 1 !important; transform: translateX(-50%) translateY(0) !important; pointer-events: auto !important; }
+
+/* ---------- botões do leque ---------- */
+.cf-op { position: fixed; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center;
+    background: var(--bg-secondary); color: var(--text-header); font-size: 18px; cursor: pointer; box-shadow: 0 8px 20px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .08);
+    opacity: 0; pointer-events: none !important; transform: translate(var(--x0, 0px), var(--y0, 0px)) scale(.35);
+    transition: transform .24s cubic-bezier(.2, .9, .3, 1.2), opacity .16s; transition-delay: var(--atraso, 0ms); }
+#cf-camada.leque .cf-op { opacity: 1; pointer-events: auto !important; transform: translate(var(--x, 0px), var(--y, 0px)) scale(1); }
+.cf-op:hover { background: var(--bg-tertiary); }
+.cf-op:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 2px; }
+.cf-op.ativo { background: var(--brand-color); color: #fff; }
+.cf-op.danger { background: var(--red-color); color: #fff; }
+.cf-op svg { width: 22px; height: 22px; display: block; }
+.cf-op .cf-rotulo { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; font-weight: 700; color: #fff;
+    background: rgba(0, 0, 0, .72); padding: 2px 7px; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .15s .1s; }
+#cf-camada.leque .cf-op .cf-rotulo { opacity: 1; }
+/* os botões antigos mantêm o id (os outros códigos do app ligam neles), mas aqui ficam do tamanho do leque */
+.cf-op.call-btn { width: 46px; height: 46px; font-size: 18px; background: var(--bg-secondary); }
+.cf-op.call-btn:hover { background: var(--bg-tertiary); }
+.cf-op.call-btn.active-green { background: var(--green-color); color: #fff; }
+.cf-op#btn-main-clip.gravando { background: var(--recording-color); color: #fff; animation: pulsarGravando 1.6s ease-in-out infinite; }
+.cf-op#btn-main-clip.clipando { background: var(--clip-color); color: #fff; }
+
+/* popup do clipe (Gravar / Clipar / automático): sai de dentro da barra e se ancora no "+" */
+#cf-camada .media-popup { position: fixed; left: 0; top: 0; bottom: auto; transform: translate(-50%, -100%) translateY(6px); }
+#cf-camada .media-popup.aberto { transform: translate(-50%, -100%); }
+#cf-camada .media-popup::after { display: none; }
+
+/* ---------- menu dos 3 pontinhos ---------- */
+.cf-menu { position: fixed; left: 0; top: 0; width: 308px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--bg-quaternary, var(--bg-secondary)); color: var(--text-normal); border: 1px solid rgba(255, 255, 255, .1); border-radius: 12px; padding: 6px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .55); opacity: 0; transform: translateY(6px) scale(.98); transform-origin: bottom center; pointer-events: none !important; transition: opacity .15s, transform .15s; }
+.cf-menu.aberto { opacity: 1; transform: none; pointer-events: auto !important; }
+.cf-menu hr { border: 0; border-top: 1px solid rgba(255, 255, 255, .08); margin: 6px 4px; }
+.cf-menu h6 { margin: 8px 10px 4px; font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); font-weight: 800; }
+.cf-it { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; color: inherit; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.cf-it:hover, .cf-it:focus-visible { background: rgba(255, 255, 255, .07); outline: none; }
+.cf-it > i:first-child { width: 16px; text-align: center; color: var(--text-muted); }
+.cf-it > span { flex: 1; min-width: 0; }
+.cf-it small { display: block; font-size: 11.5px; font-weight: 500; color: var(--text-muted); margin-top: 1px; }
+.cf-sw { flex: none; position: relative; width: 38px; height: 22px; border-radius: 11px; background: #4e5058; transition: background .15s; }
+.cf-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.cf-it[aria-checked="true"] .cf-sw { background: var(--green-color); }
+.cf-it[aria-checked="true"] .cf-sw::after { transform: translateX(16px); }
+.cf-seg { display: flex; gap: 4px; padding: 2px 10px 8px; }
+.cf-seg button { flex: 1; border: 0; border-radius: 8px; padding: 7px 4px; background: rgba(255, 255, 255, .06); color: var(--text-normal); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.cf-seg button:hover { background: rgba(255, 255, 255, .1); }
+.cf-seg button[aria-pressed="true"] { background: var(--brand-color); color: #fff; }
+.cf-nota { padding: 0 12px 8px; font-size: 11.5px; line-height: 1.35; color: var(--text-muted); }
+
+/* ---------- invite pra voz ---------- */
+.cf-conv { position: fixed; inset: 0; z-index: 10600; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, .55); padding: 16px; }
+.cf-conv.aberto { display: flex; }
+.cf-conv-card { width: 400px; max-width: 100%; max-height: min(560px, 90vh); display: flex; flex-direction: column; background: var(--bg-secondary); color: var(--text-normal); border: 1px solid rgba(255, 255, 255, .1); border-radius: 14px; box-shadow: 0 24px 60px rgba(0, 0, 0, .6); overflow: hidden; }
+.cf-conv-topo { display: flex; align-items: center; gap: 10px; padding: 14px 16px; }
+.cf-conv-topo h3 { flex: 1; margin: 0; font-size: 16px; color: var(--text-header); }
+.cf-conv-topo button { border: 0; background: transparent; color: var(--text-muted); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+.cf-conv-topo button:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.cf-conv-busca { margin: 0 16px 8px; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .1); background: var(--bg-primary); color: var(--text-normal); font-size: 14px; }
+.cf-conv-lista { flex: 1; overflow-y: auto; padding: 0 8px 8px; min-height: 120px; }
+.cf-conv-lin { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; }
+.cf-conv-lin:hover { background: rgba(255, 255, 255, .05); }
+.cf-conv-av { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-color); color: #fff; display: grid; place-items: center; font-weight: 800; overflow: hidden; flex: none; position: relative; }
+.cf-conv-av img { width: 100%; height: 100%; object-fit: cover; }
+.cf-conv-lin .nome { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-conv-lin .nome small { display: block; font-weight: 500; color: var(--text-muted); font-size: 11.5px; }
+.cf-conv-lin button { border: 0; border-radius: 8px; padding: 7px 14px; background: var(--green-color); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; flex: none; }
+.cf-conv-lin button:disabled { background: #4e5058; cursor: default; }
+.cf-conv-vazio { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 13.5px; line-height: 1.45; }
+.cf-conv-rodape { display: flex; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.cf-conv-rodape button { flex: 1; border: 0; border-radius: 8px; padding: 9px; background: rgba(255, 255, 255, .08); color: var(--text-normal); font-weight: 700; font-size: 13px; cursor: pointer; }
+.cf-conv-rodape button:hover { background: rgba(255, 255, 255, .13); }
+
+/* quando alguém te chama pra uma call (convite recebido) */
+.cf-chamado { position: fixed; right: 16px; bottom: 90px; z-index: 10400; width: 320px; max-width: calc(100vw - 32px); display: flex; gap: 12px; align-items: center; padding: 12px;
+    background: var(--bg-secondary); border: 1px solid rgba(255, 255, 255, .12); border-left: 4px solid var(--green-color); border-radius: 12px; box-shadow: 0 16px 40px rgba(0, 0, 0, .55);
+    transform: translateY(16px); opacity: 0; transition: transform .25s, opacity .25s; }
+.cf-chamado.aberto { transform: none; opacity: 1; }
+.cf-chamado .txt { flex: 1; min-width: 0; font-size: 13px; color: var(--text-normal); line-height: 1.3; }
+.cf-chamado .txt b { color: var(--text-header); }
+.cf-chamado .acoes { display: flex; flex-direction: column; gap: 6px; }
+.cf-chamado button { border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 12.5px; cursor: pointer; background: var(--green-color); color: #fff; }
+.cf-chamado button.nao { background: rgba(255, 255, 255, .1); color: var(--text-normal); }
+
+/* ---------- prévia de novas mensagens (dentro da call cheia) ---------- */
+.cf-previas { position: absolute; left: 14px; bottom: 96px; z-index: 12; display: flex; flex-direction: column; gap: 6px; max-width: min(340px, 60%); pointer-events: none; }
+.cf-previa { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; background: rgba(17, 18, 20, .92); color: #fff; font-size: 13px; line-height: 1.3;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .45); border-left: 3px solid var(--brand-color); animation: cfPreviaEntra .22s ease-out; }
+.cf-previa b { display: block; font-size: 12px; color: #cfd2da; }
+.cf-previa span { word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cf-previa.saindo { opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; }
+@keyframes cfPreviaEntra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- grade que se ajusta ao nº de pessoas ---------- */
+/* o JS calcula o tamanho do quadro (--cu-w/--cu-h) pra encher a janela sem rolar; sem JS cai no auto-fit antigo.
+   O prefixo #video-grid vence as regras antigas (.video-grid.focused-mode, .call-janela.mini ... e as do celular). */
+#video-grid.cu-auto { display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: var(--cu-gap, 12px); padding: var(--cu-pad, 16px); padding-bottom: var(--cu-pad-b, 92px); overflow: hidden; }
+#video-grid.cu-auto .video-card { flex: 0 0 auto; width: var(--cu-w, 320px); height: var(--cu-h, 180px); max-height: none; max-width: none; aspect-ratio: auto; border-radius: 10px; transition: border-color .2s, box-shadow .2s; }
+#video-grid.cu-auto.cu-rolar { overflow-y: auto; }
+#video-grid.cu-auto .video-avatar { width: calc(var(--cu-h, 180px) * .42); height: calc(var(--cu-h, 180px) * .42); font-size: calc(var(--cu-h, 180px) * .16); max-width: 140px; max-height: 140px; }
+/* quadro principal (clique no quadro, tela compartilhada ou, sem "Exibição em grade", quem está falando) + faixa embaixo */
+#video-grid.cu-auto.cu-foco { align-content: flex-start; }
+#video-grid.cu-auto.cu-foco .video-card.cu-principal { order: -10; flex: 0 0 100%; width: 100%; height: var(--cu-fh, 60%); }
+#video-grid.cu-auto.cu-foco .video-card:not(.cu-principal) { width: var(--cu-sw, 176px); height: var(--cu-sh, 99px); border-radius: 8px; }
+#video-grid.cu-auto.cu-foco .video-card:not(.cu-principal) .video-avatar { width: calc(var(--cu-sh, 99px) * .5); height: calc(var(--cu-sh, 99px) * .5); font-size: calc(var(--cu-sh, 99px) * .2); }
+#video-grid.cu-auto.cu-foco .video-card:not(.cu-principal) .video-label { bottom: 4px; left: 4px; font-size: 11px; padding: 2px 6px; }
+#video-grid.cu-auto.cu-foco .video-card.cu-principal .video-avatar { width: calc(var(--cu-fh-px, 200) * .34px); height: calc(var(--cu-fh-px, 200) * .34px); font-size: calc(var(--cu-fh-px, 200) * .13px); max-width: 200px; max-height: 200px; }
+.video-card.cu-oculto { display: none !important; }
+.cu-vazio { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 24px 24px 90px; color: var(--text-muted); font-size: 14px; line-height: 1.45; pointer-events: none; }
+.video-view.cu-grade-vazia .cu-vazio { display: flex; }
+.call-janela.mini #video-grid.cu-auto { --cu-pad: 6px; --cu-pad-b: 50px; --cu-gap: 6px; }
+.call-janela.mini #video-grid.cu-auto .video-card { border-radius: 6px; }
+.call-janela.mini .video-avatar { width: auto; }
+.call-janela.mini #video-grid.cu-auto .video-avatar { width: calc(var(--cu-h, 100px) * .42); height: calc(var(--cu-h, 100px) * .42); font-size: calc(var(--cu-h, 100px) * .17); }
+
+/* ---------- zoom ---------- */
+.video-card .cu-zoom { position: absolute; right: 8px; bottom: 8px; z-index: 5; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, .72); color: #fff; opacity: 0; transition: opacity .15s; }
+.video-card:hover .cu-zoom, .video-card.cu-zoom-ativo .cu-zoom, .video-card:focus-within .cu-zoom { opacity: 1; }
+.video-card.cu-sem-video .cu-zoom { display: none; }
+.cu-zoom button { border: 0; background: transparent; color: #fff; width: 28px; height: 26px; border-radius: 7px; cursor: pointer; font-size: 12px; padding: 0; }
+.cu-zoom button:hover, .cu-zoom button:focus-visible { background: rgba(255, 255, 255, .18); outline: none; }
+.cu-zoom button[aria-pressed="true"] { background: var(--brand-color); }
+.cu-zoom .nivel { min-width: 46px; text-align: center; font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cu-zoom .modo { font-size: 10.5px; font-weight: 700; padding: 0 6px; opacity: .85; white-space: nowrap; }
+.video-card.cu-preencher video { object-fit: cover !important; }
+.video-card.zoomavel { touch-action: pan-y; }
+.call-janela.mini .video-card .cu-zoom .modo { display: none; }
+
+/* ---------- botão de ruído do painel "Voz conectada" ---------- */
+.voice-action-btn#btn-side-ruido.ligado { background: var(--green-color); color: #fff; }
+.voice-action-btn#btn-side-ruido svg { width: 17px; height: 17px; display: block; margin: auto; }
+
+@media (max-width: 720px) {
+    .cf-menu { left: 8px !important; right: 8px; width: auto; }
+    .cf-previas { bottom: 110px; }
+    #video-grid.cu-auto { --cu-pad: 10px; --cu-pad-b: 96px; --cu-gap: 8px; }
+}
