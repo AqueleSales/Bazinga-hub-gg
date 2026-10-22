@@ -1244,6 +1244,7 @@ python testes/fumaca_categorias.py # Rodada 29: categorias (virtuais -> reais), 
 python testes/fumaca_dm_acoes.py   # Rodada 28: editar/apagar DM por eventos próprios (id de DM x id de canal se cruzam), regras de link/bloqueio na edição, (editada) no histórico, o cliente escolhe o evento certo
 python testes/fumaca_notas_mapa.py # Rodada 29: responder/reagir nas notas (alcance, bloqueio, modos todos/amigos/desligado, link só entre amigos, limites, só totais de reação, quem recebe cada aviso ao vivo, denúncia, consultas fixas, cascata ao apagar, arquivos do cliente)
 python testes/fumaca_ordem_servidores.py  # Rodada 29: ordem dos servidores e pastas na conta (id alheio descartado, pasta criada/renomeada/desfeita, abas sincronizadas, servidor novo cai no fim), DMs fixadas, o que o cliente promete
+python testes/fumaca_seguranca.py  # Rodada 30: peer_id da call só pra quem entrou (prévia pública sem peer_id, canal privado não vaza), cliente só atende peer listado, cabeçalhos de segurança, CORS do socket, SRI dos CDNs
 python testes/fumaca_push.py       # notificações push (chaves, inscrição, quem recebe)
 python testes/fumaca_insignias.py  # Beta pra todos, BAZINGA por servidor, Alpha por nome
 python testes/fumaca_bazar.py      # Bazar: Pix copia e cola, loja/produto, pedido (estados), privacidade da chave Pix, estoque, avaliação, denúncia+moderação, corrida
@@ -2586,6 +2587,20 @@ Lista: `[Anotações] [conversas rápidas/pedidos] [FIXADAS, na ordem escolhida]
 
 ### Não feito / ideias
 Pasta dentro de pasta; reordenar canais do servidor (é a frente 3, cargos/categorias); ordenar a parte livre das DMs por mensagem recente já no carregamento (exigiria uma consulta por conversa ou um campo `ultima_mensagem`); notificação em pasta fechada (não existe badge de servidor hoje); testar com o dedo de verdade e no Opera GX do dono.
+
+## Rodada 30 de 21/10/2026 — auditoria de segurança (leitura do código) e primeiras correções
+
+Pedido do dono: "colocar segurança em tudo e ver o que já temos". Auditoria só por leitura (nada rodado em produção, nada visto no Render/Neon). Teste: `python testes/fumaca_seguranca.py`.
+
+### Corrigido
+- **Dava pra ouvir/ver alguém numa call sem ter acesso a ela (alta).** O `peer_id` (a "campainha" do PeerJS) ia na prévia `participantes_call_mudou` pra sala do servidor inteira e o cliente atendia QUALQUER ligação (`call.answer(streamParaChamada())`, manda mic/câmera). Agora: (1) a lista **completa** (`completa: true`, com `peer_id`) só vai pra sala `voz_<chave>` (quem entrou); a prévia de fora usa `_previa_publica()` (sem `peer_id`) e é o que `listar_participantes_call` devolve; (2) o cliente guarda `peersDaCall` (de `novo_usuario_call` e da lista completa) e só atende depois de `esperarPeerAutorizado(call.peer)` (espera até 6 s: o aviso do servidor e a ligação chegam por caminhos diferentes); peer fora da lista é derrubado; (3) o handler de `participantes_call_mudou` só reconcilia a própria call com a lista `completa`.
+- **Prévia ao vivo de call em canal de voz PRIVADO vazava nome/avatar pro servidor inteiro.** `_previa_restrita[chave]` (convidados + dono, calculada em `entrar_call`, apagada quando a call esvazia) restringe os destinos. **Limite**: canal com sobrescrita por cargo (`ver_canal` negado) ainda usa a sala do servidor (só nomes, sem peer_id); quem tem `ver_canais_privados` por cargo só vê a prévia ao abrir o servidor, não ao vivo.
+- **Cabeçalhos** (`_cabecalhos_de_seguranca` em `app/__init__.py`): `X-Frame-Options: SAMEORIGIN`, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` (o player do YouTube exige Referer), `Permissions-Policy` (câmera/mic/localização/captura só do próprio app), CSP **só com** `frame-ancestors 'self'; base-uri 'self'; object-src 'none'` (o app tem JS/CSS inline: uma CSP com `script-src` quebraria tudo) e HSTS quando a requisição é HTTPS.
+- **CORS do Socket.IO**: `"*"` saiu. `_origens_do_socket()`: fora do Render = mesma origem (padrão do engineio); no Render = `RENDER_EXTERNAL_URL`, `https://bazinga-hub-gg.onrender.com` e `ORIGENS_PERMITIDAS` (vírgula; **definir no Render se usar domínio próprio**, senão o tempo real não conecta nele).
+- **SRI** (hash sha384 + `crossorigin`) em leaflet js/css, socket.io, twemoji e PeerJS (`SRI_LIBS` no `carregarLib`). **Lib nova ou versão nova = hash novo** (`curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`). O cache de CDN do service worker virou `cdn-v2` (entrada antiga sem CORS quebraria o SRI).
+
+### Ainda aberto (da auditoria)
+Sem limite de requisições por IP (`/api/upload`, `/api/gifs`, login, `/auth/desktop/trocar`; os freios são por funcionalidade e em memória) · sinalização da call na nuvem pública `0.peerjs.com` e TURN público (montar PeerServer/TURN próprios) · `/auth/logout` é GET · `run.py` com `debug=True` (só local) · `instance/*.db` versionados (vazios) · credenciais do `.env` que foram pro histórico (commits `f9f7218`, `e7e2a27`, `5455046`) continuam pra trocar · não houve varredura de `innerHTML` do `chat.html` nem leitura linha a linha de Bazar/Passe · CSP com `script-src` exigiria tirar o JS inline do `chat.html`.
 
 # Convenções
 

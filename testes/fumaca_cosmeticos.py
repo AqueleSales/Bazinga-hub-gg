@@ -270,7 +270,7 @@ with app.app_context():
     # equipar/desequipar NO MEIO da call avisa os outros participantes (regra 6)
     ev(sales); ev(fil)
     fil.emit('desequipar_item', {'tipo': 'efeito_fala'}); ev(fil)
-    aviso = [m for m in ev(sales, 'participantes_call_mudou')]
+    aviso = [m for m in ev(sales, 'participantes_call_mudou') if m['args'][0].get('completa')]   # a lista COMPLETA (com peer_id) é a de quem está dentro; a prévia pública não traz peer_id
     eu_fil = aviso and next((p for p in aviso[-1]['args'][0]['participantes'] if p['peer_id'] == 'peer-fil'), None)
     ok(eu_fil is not None and 'efeito_fala' not in eu_fil['equipados'] and eu_fil['equipados'].get('efeito_avatar') == 'sasuke',
        'Desequipar durante a call atualiza o visual do participante pra quem está nela (participantes_call_mudou)')

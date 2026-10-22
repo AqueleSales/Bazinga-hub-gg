@@ -85,21 +85,37 @@ _graca_call = {}
 GRACA_CALL_SEGUNDOS = 12
 
 
+# chave da call -> ids de quem pode ACOMPANHAR a prévia de uma call de canal PRIVADO (os convidados do canal + o dono do
+# servidor). Sem isto o aviso ao vivo ("fulano está na voz") ia pra sala do servidor inteira e vazava o canal privado.
+_previa_restrita = {}
+
+
 def _destinos_da_call(chave, server_id):
-    """Quem acompanha a prévia dessa call: os dois da DM, ou o servidor inteiro."""
+    """Quem acompanha a prévia dessa call: os dois da DM, os convidados de um canal privado, ou o servidor inteiro."""
     if isinstance(chave, str) and chave.startswith('dm_'):
         try:
             _, a, b = chave.split('_')
             return [sala_pessoal(int(a)), sala_pessoal(int(b))]
         except ValueError:
             return []
+    if chave in _previa_restrita:
+        return [sala_pessoal(i) for i in _previa_restrita[chave]]
     return [sala_servidor(server_id)] if server_id else []
 
 
+def _previa_publica(lista):
+    """A lista de quem está na call SEM o `peer_id`. O peer_id é a "campainha" da pessoa: quem o conhece liga pra ela, e o
+    cliente atende. Ele só vai pra quem entrou na call (sala `voz_<chave>`); a prévia de fora mostra só nome e visual."""
+    return [{k: v for k, v in p.items() if k != 'peer_id'} for p in lista]
+
+
 def _avisar_participantes(chave, server_id):
-    payload = {'canal_id': chave, 'participantes': participantes_call.get(chave, [])}
+    lista = participantes_call.get(chave, [])
+    # `completa` = traz os peer_id: só pra quem já está dentro (é com ela que o cliente reconcilia e religa).
+    socketio.emit('participantes_call_mudou', {'canal_id': chave, 'participantes': lista, 'completa': True}, to=f"voz_{chave}")
+    publico = {'canal_id': chave, 'participantes': _previa_publica(lista)}
     for sala in _destinos_da_call(chave, server_id):
-        socketio.emit('participantes_call_mudou', payload, to=sala)
+        socketio.emit('participantes_call_mudou', publico, to=sala)
 
 
 def _tirar_da_call(chave, peer_id, avisar=True):
@@ -113,6 +129,7 @@ def _tirar_da_call(chave, peer_id, avisar=True):
         if not lista:
             participantes_call.pop(chave, None)
             palco_convidados.pop(chave, None)
+            _previa_restrita.pop(chave, None)
     if meta and _call_por_sid.get(meta['sid']) == (chave, peer_id):
         _call_por_sid.pop(meta['sid'], None)
     if avisar:
@@ -1062,6 +1079,7 @@ def lidar_entrar_call(dados):
 
         # Lotação (limite do canal) e papel (orador x ouvinte) valem só em canal de servidor.
         ouvinte = False
+        srv_call = None
         if server_id is not None:
             srv_call = com_retry(lambda: Server.query.get(server_id))
             liberado, motivo, ouvinte = cargos.regras_de_voz(usuario, srv_call, canal, participantes_call.get(chave, []),
@@ -1070,6 +1088,11 @@ def lidar_entrar_call(dados):
                 emit('erro_bazinga', {'msg': motivo})
                 emit('entrada_call_recusada', {'canal_id': chave, 'motivo': motivo})
                 return
+
+        if srv_call is not None and canal.is_private:
+            _previa_restrita[chave] = sorted({u.id for u in canal.allowed_members} | {srv_call.owner_id})
+        else:
+            _previa_restrita.pop(chave, None)
 
         sala_call = f"voz_{chave}"
         join_room(sala_call)
@@ -1087,7 +1110,7 @@ def lidar_entrar_call(dados):
         # Prévia pra quem está com o servidor/DM aberto mas ainda não entrou, e a lista oficial pra quem chegou
         # (o cliente usa pra limpar card de gente que já saiu e pra pedir a ligação de quem não conectou).
         _avisar_participantes(chave, server_id)
-        emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, [])})
+        emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, []), 'completa': True})
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ENTRAR CALL] {e}")
@@ -1147,7 +1170,7 @@ def listar_participantes_call(dados):
                 return
             chave = str(canal.id)
 
-        emit('participantes_call_mudou', {'canal_id': chave, 'participantes': participantes_call.get(chave, [])})
+        emit('participantes_call_mudou', {'canal_id': chave, 'participantes': _previa_publica(participantes_call.get(chave, []))})
     except Exception as e:
         db.session.rollback()
         # Sem toast aqui de propósito - isso roda em silêncio ao abrir um
@@ -2716,15 +2739,7 @@ def _atualizar_visual_na_call(usuario):
             for p in meus:
                 p.update({'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo,
                           'equipados': equipados_da_pessoa(usuario)})
-            payload = {'canal_id': chave, 'participantes': lista}
-            if chave.startswith('dm_'):
-                _, id_a, id_b = chave.split('_')
-                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_a)))
-                emit('participantes_call_mudou', payload, to=sala_pessoal(int(id_b)))
-            else:
-                canal = com_retry(lambda: Channel.query.get(int(chave)))
-                if canal and canal.server_id:
-                    emit('participantes_call_mudou', payload, to=sala_servidor(canal.server_id))
+            _avisar_participantes(chave, (_meta_call.get((chave, meus[0]['peer_id'])) or {}).get('server_id'))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO VISUAL NA CALL] {e}")   # nunca derruba o equipar

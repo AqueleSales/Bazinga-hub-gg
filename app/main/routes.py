@@ -327,7 +327,7 @@ self.addEventListener('notificationclick', e => {
 });
 
 const CACHE_ESTATICO = 'estatico-' + VERSAO;
-const CACHE_CDN = 'cdn-v1';
+const CACHE_CDN = 'cdn-v2';
 const CACHEAR_ESTATICO = __CACHEAR_ESTATICO__;
 
 // CDN só entra no cache se a URL carrega versão fixa (nunca @latest / @1):

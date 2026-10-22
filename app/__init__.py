@@ -25,6 +25,17 @@ MOEDA_SIGLA = "DRC"
 APP_VERSAO = (os.environ.get('RENDER_GIT_COMMIT') or '')[:10] or str(int(time.time()))
 
 
+def _origens_do_socket():
+    """Origens que podem abrir o WebSocket. Antes era "*": qualquer site aberto no navegador da pessoa podia tentar falar com o
+    servidor em nome dela. Em produção vale só o endereço do app (RENDER_EXTERNAL_URL, o endereço fixo e ORIGENS_PERMITIDAS, separadas
+    por vírgula, pra domínio próprio). Fora do Render devolve None = o padrão do python-engineio: só a mesma origem da página."""
+    if not os.getenv('RENDER'):
+        return None
+    extras = [o.strip().rstrip('/') for o in (os.getenv('ORIGENS_PERMITIDAS') or '').split(',') if o.strip()]
+    base = [(os.getenv('RENDER_EXTERNAL_URL') or '').rstrip('/'), 'https://bazinga-hub-gg.onrender.com']
+    return sorted({o for o in base + extras if o})
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -39,7 +50,7 @@ def create_app():
     app.config.from_object(Config)
 
     db.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, cors_allowed_origins=_origens_do_socket())
 
     # --- INÍCIO DO NOVO CÓDIGO (Registrando o OAuth) ---
     from .auth.routes import auth_bp, init_oauth
@@ -76,6 +87,20 @@ def create_app():
     import gzip as _gzip
     _cache_gz = {}
     _TIPOS_GZ = ('text/css', 'text/javascript', 'application/javascript', 'application/json', 'image/svg+xml', 'text/plain')
+
+    @app.after_request
+    def _cabecalhos_de_seguranca(resp):
+        # Não sobrescreve o que uma rota já definiu. O app tem CSS/JS inline (chat.html), então uma CSP com `script-src` quebraria
+        # tudo: aqui ficam só as diretivas que não dependem disso (quem pode embutir a página, <base> e plugins).
+        h = resp.headers
+        h.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        h.setdefault('X-Content-Type-Options', 'nosniff')
+        h.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')   # o player do YouTube exige Referer
+        h.setdefault('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self), display-capture=(self), payment=(), usb=()')
+        h.setdefault('Content-Security-Policy', "frame-ancestors 'self'; base-uri 'self'; object-src 'none'")
+        if request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https':
+            h.setdefault('Strict-Transport-Security', 'max-age=31536000')
+        return resp
 
     @app.after_request
     def _comprimir_estatico(resp):

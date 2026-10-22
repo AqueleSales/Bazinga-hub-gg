@@ -18,17 +18,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Leaflet Mapa (CSS e JS) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 
     <!-- WebSockets e P2P -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js" integrity="sha384-X1SLf1wLC8Wc9sKkGtPGAgaBL5xgXh+3MxaelbTb3a1XxHNkVV7o/zaax0jdNwJD" crossorigin="anonymous"></script>
     <!-- PeerJS (chamadas) e qrcodejs (QR do convite) NÃO bloqueiam mais a abertura da página:
          são baixados sob demanda por carregarLib() (e pré-aquecidos quando o navegador está ocioso).
          Antes eram <script> síncronos no <head> - o chat inteiro esperava o unpkg responder. -->
     <script>
         const URL_PEERJS = 'https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js';
         const URL_QRCODE = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+        // SRI: o navegador recusa o arquivo se o CDN entregar algo diferente do que conferimos (CDN comprometido). Lib nova = hash novo.
+        const SRI_LIBS = { [URL_PEERJS]: 'sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb' };
         const carregarLib = (function () {
             const cache = {};
             return function (url) {
@@ -36,6 +38,7 @@
                 return cache[url] = new Promise((ok, erro) => {
                     const s = document.createElement('script');
                     s.src = url; s.onload = ok;
+                    if (SRI_LIBS[url]) { s.integrity = SRI_LIBS[url]; s.crossOrigin = 'anonymous'; }
                     s.onerror = () => { delete cache[url]; erro(new Error('Não consegui carregar ' + url)); };
                     document.head.appendChild(s);
                 });
@@ -62,7 +65,7 @@
             try { const m = await import('https://cdn.jsdelivr.net/npm/emoji-picker-element@1/i18n/pt_BR.js'); window.__emojiI18nPt = m.default; } catch (e) {}
         } catch (e) { console.warn('emoji-picker-element indisponível; usando o painel simples.'); }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" integrity="sha384-32KMvAMS4DUBcQtHG6fzADguo/tpN1Nh6BAJa2QqZc6/i0K+YPQE+bWiqBRAWuFs" crossorigin="anonymous"></script>
     <!-- Service worker: cacheia só /static e CDN versionado (ver service_worker() em routes.py). Também é o que deixa o PWA instalável. -->
     <script>
         // No app desktop (Electron) o SW fica de fora: ver configurarSessao() em desktop/main.js.
@@ -12970,7 +12973,17 @@
                     }
                 });
 
-                mePeer.on('call', call => {
+                // SEGURANÇA: o PeerJS deixa QUALQUER um que conheça o id desta aba ligar, e atender manda o meu microfone/câmera.
+                // Só atende quem o servidor listou na MINHA call (peersDaCall); espera uns segundos porque o aviso do servidor
+                // e a ligação chegam por caminhos diferentes e podem inverter a ordem. Quem não está na lista é derrubado.
+                mePeer.on('call', chamada => {
+                    esperarPeerAutorizado(chamada.peer).then(liberado => {
+                        if (!liberado) {
+                            console.warn('[call] ligação recusada: o servidor não lista esse peer na minha call');
+                            try { chamada.close(); } catch (e) {}
+                            return;
+                        }
+                        ((call) => {
                     if (call.metadata && call.metadata.type === 'screen') {
                         call.answer();
                         // Chave por STREAM, não só por pessoa - com só `call.peer`
@@ -13032,6 +13045,8 @@
                         });
                         peers[call.peer] = call;
                     }
+                        })(chamada);
+                    });
                 });
 
                 monitorarVolume(myMicStream, 'my-video-card');
@@ -13059,6 +13074,18 @@
         // `participantes_call_mudou`), não do `metadata` do peer: um cliente adulterado afirmaria ter um item exclusivo
         // que não tem. peer_id -> { moldura, nome_estilo, equipados }
         const visualPorPeer = {};
+        // peer_id de quem o SERVIDOR diz que está na minha call (novo_usuario_call + lista completa). Só esses podem me ligar.
+        const peersDaCall = new Set();
+        function esperarPeerAutorizado(peerId, ms = 6000) {
+            return new Promise(resolver => {
+                const fim = Date.now() + ms;
+                (function olhar() {
+                    if (peersDaCall.has(peerId)) return resolver(true);
+                    if (Date.now() >= fim || !inCall) return resolver(false);
+                    setTimeout(olhar, 150);
+                })();
+            });
+        }
         const MOLDURAS_EXCLUSIVAS = ['gogeta', 'sasuke', 'fusao'];
 
         function aplicarVisualAoCard(peerId) {
@@ -13094,6 +13121,7 @@
         }
 
         socket.on('novo_usuario_call', (dados) => {
+            if (inCall && dados.peer_id && String(dados.canal_id) === String(currentVoiceChannelId)) peersDaCall.add(dados.peer_id);
             registrarVisual(dados.peer_id, dados);
             const voiceUsersDiv = document.getElementById(`voice-users-${dados.canal_id}`);
             if(voiceUsersDiv && !document.getElementById(`vu-${dados.peer_id}`)) {
@@ -13139,7 +13167,7 @@
             });
         });
 
-        socket.on('usuario_saiu_call', (dados) => removerVideoDoPeer(dados.peer_id));
+        socket.on('usuario_saiu_call', (dados) => { peersDaCall.delete(dados.peer_id); removerVideoDoPeer(dados.peer_id); });
 
         // Prévia de quem já está numa call, pra quem ainda NÃO entrou (tipo
         // Discord mostrar avatares embaixo do canal de voz). Enquanto eu
@@ -13155,6 +13183,7 @@
         function reconciliarCall(lista) {
             participantesDaCall = lista || [];
             const vivos = new Set(participantesDaCall.map(p => p.peer_id));
+            peersDaCall.clear(); vivos.forEach(id => id && peersDaCall.add(id));
             document.querySelectorAll('#video-grid .video-card[id^="vc-"]').forEach(c => {
                 const peer = peerDoCard(c.id);
                 if (peer !== myPeerId && !vivos.has(peer)) removerVideoDoPeer(peer);
@@ -13187,7 +13216,11 @@
 
         socket.on('participantes_call_mudou', (dados) => {
             (dados.participantes || []).forEach(p => registrarVisual(p.peer_id, p));
-            if (inCall && String(currentVoiceChannelId) === String(dados.canal_id)) { reconciliarCall(dados.participantes); return; }
+            if (inCall && String(currentVoiceChannelId) === String(dados.canal_id)) {
+                // só a lista COMPLETA (com peer_id, enviada a quem está dentro) serve pra reconciliar; a prévia pública não traz peer_id
+                if (dados.completa) reconciliarCall(dados.participantes);
+                return;
+            }
 
             const box = document.getElementById(`voice-users-${dados.canal_id}`);
             if (!box) return;
@@ -13951,7 +13984,7 @@
                 socket.emit('sair_call', { canal_id: currentVoiceChannelId, peer_id: myPeerId });
                 mePeer.destroy(); mePeer = null;
             }
-            myPeerId = null; participantesDaCall = [];
+            myPeerId = null; participantesDaCall = []; peersDaCall.clear();
             currentVoiceChannelId = null;
             document.querySelectorAll('.video-card:not(#my-video-card)').forEach(c => c.remove());
             // Sem isso, peer ids de calls antigas ficavam acumulados aqui pra

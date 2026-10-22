@@ -9,6 +9,15 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 33, 'data': '21/10/2026', 'titulo': 'Chamadas mais seguras',
+        'itens': [
+            {'icone': 'fa-shield-halved', 'titulo': 'Só quem está na call entra na call',
+             'texto': 'O endereço da sua chamada agora só vai pra quem está nela, e o app só atende ligação de quem o servidor confirma. Canal de voz privado também deixou de aparecer pra quem não tem acesso.'},
+            {'icone': 'fa-lock', 'titulo': 'Proteções extras no site',
+             'texto': 'Cabeçalhos de segurança, conexão em tempo real só do endereço oficial e verificação dos scripts externos.'},
+        ],
+    },
+    {
         'id': 32, 'data': '21/10/2026', 'titulo': 'Permissões por canal',
         'itens': [
             {'icone': 'fa-shield-halved', 'titulo': 'Cada canal com as suas regras', 'texto': 'Em Editar canal > Permissões do canal (ou em Configurações > Canais), escolha um cargo, ou o "Membro" que vale pra todo mundo, e libere ou negue só naquele canal: ver, escrever, publicar anúncios, falar na voz ou no palco, apagar e fixar mensagens.'},
