@@ -90,8 +90,10 @@ with app.app_context():
     ok(nova_perto and nova_perto[-1]['args'][0]['nome'] == 'Doces da Ana' and nova_perto[-1]['args'][0]['aprox'], 'regra 6: quem está perto vê a loja aparecer na hora')
     ok(not ev(cris, 'loja_mapa_nova'), 'quem está longe não recebe o pino')
     j = nova_perto[-1]['args'][0]
-    ok(set(j) == {'id', 'nome', 'categoria', 'cor', 'toldo', 'logo_url', 'regiao', 'nota', 'nota_qtd', 'lat', 'lng', 'aprox', 'pague_no_app', 'reputacao', 'dono_id'},
+    ok(set(j) == {'id', 'nome', 'categoria', 'cor', 'toldo', 'logo_url', 'banner_url', 'regiao', 'nota', 'nota_qtd', 'lat', 'lng', 'aprox', 'pague_no_app', 'reputacao', 'dono_id', 'produtos'},
        'a prévia traz só o necessário')
+    ok([p['nome'] for p in j['produtos']] == ['Brigadeiro'] and j['produtos'][0]['preco_cent'] == 4500 and set(j['produtos'][0]) == {'id', 'nome', 'preco_cent', 'tipo', 'capa'},
+       'a prévia leva os produtos (nome e preço) e só isso: nada de estoque, descrição nem o texto privado de entrega')
     ok('pix' not in str(j).lower() and 'wallet' not in str(j).lower() and 'ana@' not in str(j), 'e NADA de Pix, carteira nem e-mail')
     emitir(ana, 'plantar_loja', {**AQUI, 'aprox': False})
     loja = BazarLoja.query.one()
@@ -133,6 +135,30 @@ with app.app_context():
     ok(BazarLoja.query.one().pino_lat is None and any(m['name'] == 'loja_mapa_ok' and m['args'][0].get('removida') for m in rec), 'o dono tira a loja do mapa')
     ok(any(m['name'] == 'loja_mapa_removida' for m in ev(beto)) and vê() == [], 'quem olhava vê sumir na hora')
     ok(BazarLoja.query.one().aberta is not False, 'tirar do mapa não fecha a loja')
+
+    # ---------------- 5b. vitrine do cartão: sorteio, limite, só o que se pode comprar, uma consulta pro mapa inteiro ----------------
+    from app.models import BazarProduto
+    loja = BazarLoja.query.one()
+    for i in range(9):
+        emitir(ana, 'bazar_salvar_produto', {'nome': f'Doce {i}', 'preco_cent': 1000 + i, 'tipo': 'digital'})
+    db.session.add(BazarProduto(loja_id=loja.id, nome='Escondido', preco_cent=100, tipo='digital', ativo=False))
+    db.session.add(BazarProduto(loja_id=loja.id, nome='Esgotado', preco_cent=100, tipo='fisico', estoque=0))
+    db.session.add(BazarProduto(loja_id=loja.id, nome='Moderado', preco_cent=100, tipo='digital', oculta=True))
+    db.session.commit()
+    prev = bazar.produtos_da_previa([loja.id])[loja.id]
+    ok(len(prev) == bazar.PREVIA_PRODUTOS, f'no máximo {bazar.PREVIA_PRODUTOS} produtos no cartão')
+    ok(not {'Escondido', 'Esgotado', 'Moderado'} & {p['nome'] for p in prev}, 'produto desativado, esgotado ou escondido pela moderação não aparece')
+    vistos = {tuple(p['nome'] for p in bazar.produtos_da_previa([loja.id])[loja.id]) for _ in range(12)}
+    ok(len(vistos) > 1, 'o sorteio muda de uma carga pra outra')
+    from sqlalchemy import event
+    emitir(ana, 'plantar_loja', {**AQUI, 'aprox': False})
+    consultas = []
+    def conta(conn, cur, stmt, *a): consultas.append(stmt)
+    event.listen(db.engine, 'before_cursor_execute', conta)
+    bazar.lojas_no_mapa(-17, -15, -49, -46)
+    event.remove(db.engine, 'before_cursor_execute', conta)
+    ok(len([q for q in consultas if 'bazar_produto' in q]) == 1, 'os produtos de TODAS as lojas do mapa vêm numa consulta só')
+    emitir(ana, 'tirar_loja_do_mapa')
 
     # ---------------- 6. loja no JSON do Bazar ----------------
     ok(bazar.loja_json(BazarLoja.query.one())['pino'] is False, 'loja_json diz se tem pino')

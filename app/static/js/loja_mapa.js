@@ -85,15 +85,66 @@ const LojaMapa = (function () {
     // ---------------------------------------------------------------------
     // pinos e cartão de prévia
     // ---------------------------------------------------------------------
+    const brl = (c) => 'R$ ' + (Number(c || 0) / 100).toFixed(2).replace('.', ',');
+    let relogio = null;
+
+    // vitrine de produtos do cartão: um por vez, trocando sozinha (pausa com o mouse em cima), com setas, pontinhos e arrastar de lado
+    function vitrine(l) {
+        const ps = Array.isArray(l.produtos) ? l.produtos : [];
+        if (!ps.length) return '';
+        const slides = ps.map((p) => `<button type="button" class="lm-prod" data-lm="abrir" data-id="${Number(l.id)}" tabindex="-1" aria-label="${esc(p.nome)}, ${brl(p.preco_cent)}">
+            <span class="lm-foto">${urlOk(p.capa) ? `<img src="${esc(urlOk(p.capa))}" alt="" loading="lazy">` : '<i class="fa-solid fa-bag-shopping"></i>'}</span>
+            <span class="lm-ptxt"><b>${esc(p.nome)}</b><em>${brl(p.preco_cent)}</em></span></button>`).join('');
+        const mais = ps.length > 1;
+        return `<div class="lm-vit" data-n="${ps.length}" data-i="0">
+            <div class="lm-vit-trilho">${slides}</div>
+            ${mais ? `<button type="button" class="lm-seta e" data-lmv="-1" aria-label="Produto anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <button type="button" class="lm-seta d" data-lmv="1" aria-label="Próximo produto"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="lm-pts">${ps.map((_, i) => `<i data-p="${i}"${i ? '' : ' class="on"'}></i>`).join('')}</div>` : ''}
+        </div>`;
+    }
+
+    function irPara(vit, i) {
+        const n = Number(vit.dataset.n) || 1;
+        i = ((i % n) + n) % n;
+        vit.dataset.i = i;
+        vit.querySelector('.lm-vit-trilho').style.transform = `translateX(${-100 * i}%)`;
+        vit.querySelectorAll('.lm-pts i').forEach((p, k) => p.classList.toggle('on', k === i));
+    }
+
+    function ligarVitrine(el) {
+        const vit = el && el.querySelector('.lm-vit');
+        clearInterval(relogio);
+        if (!vit) return;
+        const n = Number(vit.dataset.n) || 1;
+        if (n < 2) return;
+        // começa num produto sorteado: duas pessoas olhando a mesma loja não veem a mesma primeira coisa
+        irPara(vit, Math.floor(Math.random() * n));
+        let parado = false, x0 = null;
+        vit.addEventListener('mouseenter', () => { parado = true; });
+        vit.addEventListener('mouseleave', () => { parado = false; });
+        vit.addEventListener('click', (e) => { const b = e.target.closest('[data-lmv]'); if (b) { e.stopPropagation(); irPara(vit, Number(vit.dataset.i) + Number(b.dataset.lmv)); } });
+        vit.addEventListener('pointerdown', (e) => { x0 = e.clientX; });
+        vit.addEventListener('pointerup', (e) => {
+            if (x0 == null) return;
+            const dx = e.clientX - x0; x0 = null;
+            if (Math.abs(dx) > 36) irPara(vit, Number(vit.dataset.i) + (dx < 0 ? 1 : -1));
+        });
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        relogio = setInterval(() => { if (!parado && !document.hidden) irPara(vit, Number(vit.dataset.i) + 1); }, 3200);
+    }
+
     function cartao(l) {
         const meu = Number(l.dono_id) === Number(ctx.meuId());
         const nota = l.nota ? `<span class="lm-nota"><i class="fa-solid fa-star"></i> ${String(l.nota).replace('.', ',')} <small>(${Number(l.nota_qtd) || 0})</small></span>` : '<span class="lm-nota"><small>Loja nova</small></span>';
+        const capa = urlOk(l.banner_url) ? ` style="background-image:url('${esc(urlOk(l.banner_url))}')"` : '';
         return `<div class="lm-prev" style="--lj:${esc(l.cor)}">
-            <div class="lm-capa"><span class="lm-logo grande">${urlOk(l.logo_url) ? `<img src="${esc(urlOk(l.logo_url))}" alt="">` : inicial(l.nome)}</span></div>
+            <div class="lm-capa${capa ? ' com-img' : ''}"${capa}><span class="lm-logo grande">${urlOk(l.logo_url) ? `<img src="${esc(urlOk(l.logo_url))}" alt="">` : inicial(l.nome)}</span></div>
             <div class="lm-corpo">
                 <h3>${esc(l.nome)}</h3>
                 <div class="lm-sub">${nota}${l.regiao ? ` · ${esc(l.regiao)}` : ''}</div>
                 <div class="lm-sel">${l.pague_no_app ? '<span class="lm-chip"><i class="fa-solid fa-qrcode"></i> Pague pelo app</span>' : ''}${l.aprox ? '<span class="lm-chip suave"><i class="fa-solid fa-location-crosshairs"></i> área aproximada</span>' : ''}</div>
+                ${vitrine(l)}
                 <button type="button" class="lm-abrir" data-lm="abrir" data-id="${Number(l.id)}"><i class="fa-solid fa-store"></i> Abrir a loja</button>
                 ${meu ? '<button type="button" class="lm-tirar peq" data-lm="tirar"><i class="fa-solid fa-trash"></i> Tirar do mapa</button>' : ''}
             </div></div>`;
@@ -103,13 +154,16 @@ const LojaMapa = (function () {
         const mapa = ctx.mapa();
         if (!mapa || !l || l.lat == null) return;
         tirar(l.id);
+        // o ponto do mapa é a BASE da lojinha (o chão do corpo): o nome fica solto embaixo, fora da caixa, pra não empurrar o ponto
         const icone = L.divIcon({
             className: '',
             html: `<div class="pino-loja" style="--lj:${esc(l.cor)}"><span class="pl-toldo"></span><span class="pl-corpo">${urlOk(l.logo_url) ? `<img src="${esc(urlOk(l.logo_url))}" alt="">` : inicial(l.nome)}</span><span class="pl-nome">${esc(l.nome)}</span></div>`,
-            iconSize: [64, 74], iconAnchor: [32, 74],
+            iconSize: [64, 46], iconAnchor: [32, 46],
         });
         const marker = L.marker([l.lat, l.lng], { icon: icone }).addTo(mapa);
-        marker.bindPopup(cartao(l), { minWidth: 240, maxWidth: 240, closeButton: true, className: 'balao-wrap', autoPanPadding: [30, 30] });
+        marker.bindPopup(() => cartao(pinos.get(Number(l.id))?.dados || l), { minWidth: 240, maxWidth: 240, closeButton: true, className: 'balao-wrap lm-balao', autoPanPadding: [30, 30], offset: [0, -4] });
+        marker.on('popupopen', (e) => ligarVitrine(e.popup.getElement()));
+        marker.on('popupclose', () => clearInterval(relogio));
         pinos.set(Number(l.id), { marker, dados: l });
     }
 
@@ -128,7 +182,8 @@ const LojaMapa = (function () {
         [...pinos.keys()].filter((id) => !ids.has(id)).forEach(tirar);
         lista.forEach((l) => {
             const ja = pinos.get(Number(l.id));
-            if (!ja || ja.dados.lat !== l.lat || ja.dados.lng !== l.lng || ja.dados.nome !== l.nome || ja.dados.pague_no_app !== l.pague_no_app || ja.dados.logo_url !== l.logo_url) pintar(l);
+            if (!ja || ja.dados.lat !== l.lat || ja.dados.lng !== l.lng || ja.dados.nome !== l.nome || ja.dados.pague_no_app !== l.pague_no_app || ja.dados.logo_url !== l.logo_url || ja.dados.banner_url !== l.banner_url) pintar(l);
+            else ja.dados = l;   // mesmo pino, produtos sorteados de novo: o próximo cartão aberto já usa a lista nova
         });
     }
 

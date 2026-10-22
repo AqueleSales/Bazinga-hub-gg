@@ -12,6 +12,7 @@ Só lógica e dados (sem socket; os handlers moram em bazar_events.py). O que es
 """
 import hashlib
 import json
+import random
 import re
 import unicodedata
 
@@ -328,11 +329,41 @@ def reputacao(l):
 GRADE_APROX = 0.003      # ~330 m: quem vende de casa planta só a ÁREA (o ponto é arredondado pra essa grade), nunca a porta
 
 
-def loja_pino_json(l, aprox=None):
-    """O que sai no mapa: só o necessário pra um cartão de prévia. Nada de Pix, carteira, e-mail nem endereço."""
+PREVIA_PRODUTOS = 6      # quantos produtos a loja mostra no cartão do mapa (sorteados entre os ativos; muda a cada carga)
+
+
+def produtos_da_previa(loja_ids):
+    """Até PREVIA_PRODUTOS produtos ativos e visíveis de cada loja, SORTEADOS, numa consulta só (não uma por loja).
+    Só o que o cartão precisa: nome, preço em centavos e a capa. Devolve {loja_id: [produto, ...]}."""
+    ids = [i for i in set(loja_ids) if i]
+    if not ids:
+        return {}
+    linhas = (BazarProduto.query.filter(BazarProduto.loja_id.in_(ids), or_(BazarProduto.ativo.is_(None), BazarProduto.ativo == True),   # noqa: E712
+                                        or_(BazarProduto.oculta.is_(None), BazarProduto.oculta == False))                              # noqa: E712
+              .order_by(BazarProduto.id).limit(2000).all())
+    por_loja = {}
+    for p in linhas:
+        if p.estoque is not None and p.estoque <= 0:
+            continue
+        capa = (_lista_json(p.imagens, LIM_IMAGENS) or [None])[0]
+        por_loja.setdefault(p.loja_id, []).append({'id': p.id, 'nome': p.nome, 'preco_cent': p.preco_cent, 'tipo': p.tipo,
+                                                   'capa': capa if capa and url_de_imagem_ok(capa) else None})
+    for lista in por_loja.values():
+        random.shuffle(lista)
+        del lista[PREVIA_PRODUTOS:]
+    return por_loja
+
+
+def loja_pino_json(l, aprox=None, produtos=None):
+    """O que sai no mapa: só o necessário pra um cartão de prévia. Nada de Pix, carteira, e-mail nem endereço.
+    `produtos` = a lista já sorteada (lojas_no_mapa busca de todas as lojas de uma vez); sem ela busca só desta loja."""
+    if produtos is None:
+        produtos = produtos_da_previa([l.id]).get(l.id, [])
     return {'id': l.id, 'nome': l.nome, 'categoria': l.categoria, 'cor': CORES.get(l.cor, CORES['ambar']), 'toldo': l.toldo,
-            'logo_url': l.logo_url, 'regiao': l.regiao or '', 'nota': nota_media(l), 'nota_qtd': l.nota_qtd or 0, 'lat': l.pino_lat, 'lng': l.pino_lng,
-            'aprox': bool(l.pino_aprox), 'pague_no_app': checkout_ativo(l), 'reputacao': reputacao(l), 'dono_id': l.owner_id}
+            'logo_url': l.logo_url, 'banner_url': l.banner_url if l.banner_url and url_de_imagem_ok(l.banner_url) else None,
+            'regiao': l.regiao or '', 'nota': nota_media(l), 'nota_qtd': l.nota_qtd or 0, 'lat': l.pino_lat, 'lng': l.pino_lng,
+            'aprox': bool(l.pino_aprox), 'pague_no_app': checkout_ativo(l), 'reputacao': reputacao(l), 'dono_id': l.owner_id,
+            'produtos': produtos}
 
 
 def lojas_no_mapa(a, b, c, d):
@@ -341,7 +372,9 @@ def lojas_no_mapa(a, b, c, d):
                                or_(BazarLoja.aberta.is_(None), BazarLoja.aberta == True),            # noqa: E712
                                or_(BazarLoja.oculta.is_(None), BazarLoja.oculta == False),           # noqa: E712
                                BazarLoja.owner_id.notin_(_subq_banidos()))
-    return [loja_pino_json(l) for l in q.limit(300).all()]
+    lojas = q.limit(300).all()
+    prods = produtos_da_previa([l.id for l in lojas])
+    return [loja_pino_json(l, produtos=prods.get(l.id, [])) for l in lojas]
 
 
 def plantar_loja(usuario, lat, lng, aprox=True):

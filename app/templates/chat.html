@@ -2615,6 +2615,14 @@
             background: rgba(20,21,26,.88); color: #fff; border: 1px solid rgba(255,255,255,.14); border-radius: 99px; padding: 7px 8px 7px 16px;
             font-size: 13px; backdrop-filter: blur(6px); box-shadow: 0 8px 26px rgba(0,0,0,.45); animation: convEntra .35s ease backwards; white-space: nowrap; }
         .explorar-faixa button { border: 0; background: var(--brand-color); color: #fff; font-weight: 800; border-radius: 99px; padding: 6px 14px; cursor: pointer; font-size: 12.5px; }
+        /* posição aproximada: aviso fixo (o círculo de precisão some em 10 s e a pessoa não sabia por que o ponto estava fora do lugar) + corrigir */
+        .pos-aprox { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1090; display: flex; align-items: center; gap: 10px; max-width: calc(100% - 24px);
+            background: rgba(20,21,26,.9); color: #fff; border: 1px solid rgba(242,180,65,.5); border-radius: 99px; padding: 6px 8px 6px 14px; font-size: 12.5px;
+            box-shadow: 0 8px 26px rgba(0,0,0,.45); animation: convEntra .35s ease backwards; white-space: nowrap; }
+        .pos-aprox i.fa-location-crosshairs { color: #f2b441; }
+        .pos-aprox button { border: 0; background: var(--brand-color); color: #fff; font-weight: 800; border-radius: 99px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+        .pos-aprox button.sec { background: transparent; color: var(--text-muted); font-weight: 700; }
+        .pino-loja-holo { opacity: .6; pointer-events: none; font-weight: 800; color: #fff; background: rgba(0,0,0,.7); border-radius: 10px; padding: 4px 8px; font-size: 12px; white-space: nowrap; }
         .explorar-pino { display: grid !important; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #fff; font-size: 16px;
             background: linear-gradient(140deg, #5865f2, #9b59b6); box-shadow: 0 0 0 4px rgba(88,101,242,.35), 0 6px 18px rgba(0,0,0,.5); animation: convFlutua 3s ease-in-out infinite; }
 
@@ -8017,6 +8025,7 @@
                         const imgSrc = srv.iconUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(srv.name)}&background=5865F2&color=fff`;
                         htmlContent = `<div class="server-marker hologram"><img src="${imgSrc}" style="width:100%;height:100%;"></div>`;
                     }
+                    if(plantingMode === 'loja') htmlContent = `<div class="pino-loja-holo"><i class="fa-solid fa-store"></i> Sua loja</div>`;
                     placementPreview = L.marker([e.latlng.lat, e.latlng.lng], {icon: L.divIcon({ className: '', html: htmlContent, iconSize: [40, 40], iconAnchor: [20, 40] }), interactive: false}).addTo(bazingaMap);
                 } else {
                     placementPreview.setLatLng([e.latlng.lat, e.latlng.lng]);
@@ -8025,6 +8034,7 @@
 
             // Clique para Plantar (Transação Final)
             bazingaMap.on('click', function(e) {
+                if (corrigindoPos) { corrigirPosicaoEm(e.latlng); return; }
                 if (!plantingMode) return;
 
                 if (plantingMode === 'copia') {
@@ -8105,9 +8115,16 @@
             // teletransporte manual vale até você clicar em "Centralizar em mim".
             const aoReceberGps = (position) => {
                 if (posicaoManual || !localizacaoAtiva) return;
-                const { latitude: lat, longitude: lng } = position.coords;
-                const accuracy = position.coords.accuracy || 0;
+                let { latitude: lat, longitude: lng } = position.coords;
+                let accuracy = position.coords.accuracy || 0;
                 const agora = Date.now();
+                const crua = { lat, lng, acc: accuracy };
+                // Correção da pessoa ("estou aqui"): vale enquanto o aparelho continuar chutando o mesmo lugar (dentro da margem de erro dele)
+                if (correcaoPos && !position._ip) {
+                    if (calcularDistanciaMetros(correcaoPos.ref.lat, correcaoPos.ref.lng, lat, lng) <= Math.max(correcaoPos.raio, 300)) {
+                        lat += correcaoPos.dlat; lng += correcaoPos.dlng; accuracy = Math.min(accuracy || 40, 40);
+                    } else { correcaoPos = null; try { localStorage.removeItem(CORRECAO_POS_CHAVE); } catch (e) {} }
+                }
                 // Fix PIOR que o que já tenho e que me joga longe = o Wi-Fi/IP do PC chutando outra região (era o "mapa
                 // louco": Samambaia -> Taguatinga -> Samambaia). Só aceita se não for bem pior, ou se o anterior já envelheceu.
                 if (ultimoFixGps) {
@@ -8115,16 +8132,17 @@
                     const dist = calcularDistanciaMetros(f.lat, f.lng, lat, lng);
                     if (accuracy > f.acc * 1.5 && dist > Math.max(f.acc, 200) && agora - f.t < 10 * 60 * 1000) return;
                 }
-                ultimoFixGps = { lat, lng, acc: accuracy, t: agora };
+                ultimoFixGps = { lat, lng, acc: accuracy, t: agora, crua };
                 posicaoConfiavel = true;
                 origemPosicao = position._ip ? 'ip' : 'aparelho';
                 atualizarAbaGeral();
                 if (accuracy > 1500 && !avisouAproximado) {
                     avisouAproximado = true;
-                    showToast(`Sua localização está aproximada (±${(accuracy / 1000).toFixed(1)} km): PC sem GPS chuta pelo Wi-Fi. Dê dois cliques no mapa onde você está de verdade — o ponto fica salvo.`, 'warning');
+                    showToast(`Sua localização está aproximada (±${(accuracy / 1000).toFixed(1)} km): PC sem GPS chuta pelo Wi-Fi. Use o botão "Estou aqui" no topo do mapa pra acertar o ponto.`, 'warning');
                 }
                 atualizarMinhaPosicao(lat, lng);
                 mostrarPrecisao(lat, lng, accuracy);
+                atualizarChipAprox(position._ip ? 0 : accuracy);
                 // O servidor precisa saber onde estou até no Modo Fantasma (pra conferir alcance); ele é quem esconde o pino dos
                 // outros. `fonte` diz de onde veio: IP só deixa olhar o mapa, aparelho deixa agir.
                 if (typeof socket !== 'undefined' && socket.connected) {
@@ -8156,8 +8174,8 @@
                 if (await tentarPosicaoPorIP()) return;
                 if (myMapMarker) return;
                 showToast(err && err.code === 1
-                    ? 'Localização bloqueada no navegador. Libere no cadeado do endereço ou dê dois cliques no mapa onde você está.'
-                    : 'Não consegui achar sua localização. Dê dois cliques no mapa, no ponto onde você está.', 'warning');
+                    ? 'Localização bloqueada no navegador. Libere no cadeado do endereço e recarregue a página.'
+                    : 'Não consegui achar sua localização. Confira se a localização do aparelho está ligada; enquanto isso dá pra explorar o mapa com dois cliques.', 'warning');
                 atualizarMinhaPosicao(-23.550520, -46.633308);   // só pra o mapa existir; o teletransporte corrige
             };
             try { localStorage.removeItem('pnt_pos_manual'); } catch (e) {}   // o teletransporte acabou (virou "explorar")
@@ -8220,14 +8238,70 @@
         let ultimoFixGps = null, avisouAproximado = false, posicaoConfiavel = false, offereceuNavegadorNestaSessao = false;
         // Círculo de "estou em algum lugar aqui dentro" quando o aparelho só sabe a região (Wi-Fi/IP).
         // Some sozinho em 10s: ficava parado no mapa pra sempre e parecia um "mini radar verde" sem explicação.
-        function mostrarPrecisao(lat, lng, acc) {
+        function mostrarPrecisao(lat, lng, acc, ficar) {
             if (!bazingaMap) return;
             clearTimeout(timerPrecisao);
             const tirar = () => { if (circuloPrecisao) { bazingaMap.removeLayer(circuloPrecisao); circuloPrecisao = null; } };
             if (!acc || acc < 40) { tirar(); return; }
             if (!circuloPrecisao) circuloPrecisao = L.circle([lat, lng], { radius: acc, color: '#43b581', weight: 1, opacity: .5, fillColor: '#43b581', fillOpacity: .08, interactive: false }).addTo(bazingaMap);
             else circuloPrecisao.setLatLng([lat, lng]).setRadius(acc);
-            timerPrecisao = setTimeout(tirar, 10000);
+            if (!ficar) timerPrecisao = setTimeout(tirar, 10000);
+        }
+
+        // "Posição aproximada": PC sem GPS chuta pelo Wi-Fi e o ponto cai a centenas de metros. O aviso fica fixo enquanto a margem de erro
+        // for grande e deixa a pessoa apontar onde está DE VERDADE, mas só dentro da própria margem de erro do aparelho (até 3 km): é
+        // acerto fino, não teletransporte (pra olhar longe existe o Explorar; pra agir longe, o servidor continua recusando).
+        const CORRECAO_POS_CHAVE = 'pnt_pos_correcao';
+        let correcaoPos = null, corrigindoPos = false, chipAprox = null;
+        try {
+            const c = JSON.parse(localStorage.getItem(CORRECAO_POS_CHAVE) || 'null');
+            if (c && c.ref && Date.now() - c.t < 3 * 3600 * 1000) correcaoPos = c; else localStorage.removeItem(CORRECAO_POS_CHAVE);
+        } catch (e) {}
+        function atualizarChipAprox(acc) {
+            if (!bazingaMap) return;
+            const mostrar = !corrigindoPos && !modoExplorar && acc > 150;
+            const mostrarCorrigindo = corrigindoPos;
+            if (!mostrar && !mostrarCorrigindo) { if (chipAprox) { chipAprox.remove(); chipAprox = null; } return; }
+            if (!chipAprox) {
+                chipAprox = document.createElement('div');
+                chipAprox.className = 'pos-aprox';
+                L.DomEvent.disableClickPropagation(chipAprox);
+                bazingaMap.getContainer().appendChild(chipAprox);
+            }
+            const m = acc >= 1000 ? (acc / 1000).toFixed(1) + ' km' : Math.round(acc) + ' m';
+            chipAprox.innerHTML = mostrarCorrigindo
+                ? '<span><i class="fa-solid fa-location-crosshairs"></i> Clique no mapa onde você está de verdade</span><button type="button" class="sec" data-pa="cancelar">Cancelar</button>'
+                : `<span><i class="fa-solid fa-location-crosshairs"></i> Posição aproximada (±${m})</span><button type="button" data-pa="corrigir">Estou aqui</button>`;
+            chipAprox.querySelector('button').onclick = (ev) => {
+                if (ev.currentTarget.dataset.pa === 'cancelar') { corrigindoPos = false; document.getElementById('bazinga-map').style.cursor = ''; atualizarChipAprox(ultimoFixGps ? ultimoFixGps.acc : 0); return; }
+                corrigindoPos = true; plantingMode = null;
+                if (placementPreview) { bazingaMap.removeLayer(placementPreview); placementPreview = null; }
+                document.getElementById('bazinga-map').style.cursor = 'crosshair';
+                const f = ultimoFixGps && ultimoFixGps.crua;
+                if (f) mostrarPrecisao(f.lat, f.lng, f.acc, true);
+                atualizarChipAprox(0);
+            };
+        }
+        function corrigirPosicaoEm(ll) {
+            const f = ultimoFixGps && ultimoFixGps.crua;
+            if (!f) { corrigindoPos = false; atualizarChipAprox(0); return; }
+            const teto = Math.min(Math.max(f.acc || 0, 300), 3000);
+            if (calcularDistanciaMetros(f.lat, f.lng, ll.lat, ll.lng) > teto) {
+                showToast(`Esse ponto está longe demais da sua posição lida (máximo ${teto >= 1000 ? (teto / 1000).toFixed(1) + ' km' : Math.round(teto) + ' m'}). Clique dentro do círculo verde.`, 'warning');
+                return;
+            }
+            correcaoPos = { dlat: ll.lat - f.lat, dlng: ll.lng - f.lng, ref: { lat: f.lat, lng: f.lng }, raio: f.acc || 0, t: Date.now() };
+            try { localStorage.setItem(CORRECAO_POS_CHAVE, JSON.stringify(correcaoPos)); } catch (e) {}
+            corrigindoPos = false;
+            document.getElementById('bazinga-map').style.cursor = '';
+            ultimoFixGps = { lat: ll.lat, lng: ll.lng, acc: 40, t: Date.now(), crua: f };
+            posicaoConfiavel = true;
+            atualizarMinhaPosicao(ll.lat, ll.lng);
+            mostrarPrecisao(ll.lat, ll.lng, 0);
+            atualizarChipAprox(0);
+            atualizarAbaGeral();
+            if (socket.connected) socket.emit('atualizar_localizacao', { lat: ll.lat, lng: ll.lng, fonte: 'aparelho' });
+            showToast('Posição acertada! Vale enquanto o aparelho continuar lendo o mesmo lugar.', 'success');
         }
 
         // Reanuncia a minha posição (só se ela é de verdade: nunca o ponto "falso" de São Paulo do fallback).

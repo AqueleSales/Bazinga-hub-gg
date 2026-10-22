@@ -1,12 +1,13 @@
-/* Loja no mapa (Rodada 32): pino, cartão de prévia e a escolha do botão "Plantar". Chapado, sem animação contínua. */
+/* Loja no mapa (Rodada 32): pino, cartão de prévia e a escolha do botão "Plantar". Chapado; a única animação contínua é a vitrine do cartão (só com o cartão aberto). */
 .pino-loja { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: transform .18s cubic-bezier(.16, .84, .44, 1); }
 .pino-loja:hover { transform: translateY(-3px) scale(1.06); }
 .pino-loja .pl-toldo { width: 46px; height: 12px; border-radius: 6px 6px 0 0; background: repeating-linear-gradient(90deg, var(--lj, #d9822b) 0 8px, #fff 8px 16px); border: 2px solid var(--lj, #d9822b); border-bottom: 0; box-sizing: border-box; }
 .pino-loja .pl-corpo { width: 40px; height: 32px; margin-top: -3px; border: 3px solid var(--lj, #d9822b); border-radius: 0 0 8px 8px; background: var(--bg-secondary, #2f3136); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; overflow: hidden; box-sizing: border-box; box-shadow: 0 3px 0 rgba(0, 0, 0, .35); }
 .pino-loja .pl-corpo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pino-loja .pl-nome { max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 800; color: #fff; background: rgba(0, 0, 0, .72); border-radius: 8px; padding: 1px 7px; }
+.pino-loja { position: relative; }
+.pino-loja .pl-nome { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 800; color: #fff; background: rgba(0, 0, 0, .72); border-radius: 8px; padding: 1px 7px; }
 
-.lm-prev { width: 240px; margin: -13px -20px -14px; border-radius: 14px; overflow: hidden; background: var(--bg-secondary, #2f3136); color: var(--text-normal, #dcddde); font-family: inherit; }
+.lm-prev { width: 240px; margin: 0; border-radius: 14px; overflow: hidden; background: var(--bg-secondary, #2f3136); color: var(--text-normal, #dcddde); font-family: inherit; }
 .lm-prev .lm-capa { height: 54px; background: var(--lj, #d9822b); position: relative; }
 .lm-logo { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: var(--lj, #d9822b); color: #fff; font-weight: 800; overflow: hidden; }
 .lm-logo img { width: 100%; height: 100%; object-fit: cover; }
@@ -41,3 +42,34 @@
 .lm-aprox input { margin-right: 8px; }
 .lm-aprox small { display: block; margin: 3px 0 0 26px; color: var(--text-muted, #a3a6aa); }
 @media (max-width: 520px) { .lm-opcoes { grid-template-columns: 1fr; } }
+
+/* cartão: banner da loja de capa, entrada em cascata e a vitrine de produtos com preço (só transform/opacity) */
+.lm-prev .lm-capa.com-img { background-size: cover; background-position: center; }
+.lm-prev .lm-capa.com-img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, .35), transparent 70%); }
+.lm-balao .leaflet-popup-content-wrapper { animation: lmBalao .34s cubic-bezier(.16, .84, .44, 1) backwards; transform-origin: 50% 100%; }
+@keyframes lmBalao { from { opacity: 0; transform: translateY(12px) scale(.92); } }
+.lm-prev .lm-logo.grande { animation: lmPop .46s cubic-bezier(.34, 1.56, .64, 1) .08s backwards; }
+@keyframes lmPop { from { opacity: 0; transform: scale(.4) rotate(-12deg); } }
+.lm-prev .lm-corpo > * { animation: lmSobe .36s cubic-bezier(.16, .84, .44, 1) backwards; }
+.lm-prev .lm-corpo > :nth-child(1) { animation-delay: .12s; }
+.lm-prev .lm-corpo > :nth-child(2) { animation-delay: .17s; }
+.lm-prev .lm-corpo > :nth-child(3) { animation-delay: .22s; }
+.lm-prev .lm-corpo > :nth-child(4) { animation-delay: .28s; }
+.lm-prev .lm-corpo > :nth-child(5) { animation-delay: .34s; }
+@keyframes lmSobe { from { opacity: 0; transform: translateY(8px); } }
+.lm-vit { position: relative; overflow: hidden; border-radius: 12px; background: var(--bg-tertiary, #202225); margin: 0 0 10px; }
+.lm-vit-trilho { display: flex; transition: transform .45s cubic-bezier(.16, .84, .44, 1); }
+.lm-prod { flex: 0 0 100%; display: flex; align-items: center; gap: 10px; padding: 8px 30px 8px 8px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+.lm-foto { flex: 0 0 56px; width: 56px; height: 56px; border-radius: 10px; background: var(--bg-secondary, #2f3136); display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--lj, #d9822b); font-size: 22px; }
+.lm-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lm-ptxt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lm-ptxt b { font-size: 13px; color: var(--text-header, #fff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lm-ptxt em { font-style: normal; font-weight: 800; font-size: 14.5px; color: #3ddc84; }
+.lm-seta { position: absolute; top: 50%; width: 24px; height: 24px; margin-top: -16px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity .15s; display: flex; align-items: center; justify-content: center; }
+.lm-seta.e { left: 4px; } .lm-seta.d { right: 4px; }
+.lm-vit:hover .lm-seta, .lm-seta:focus-visible { opacity: 1; }
+.lm-pts { display: flex; justify-content: center; gap: 4px; padding: 0 0 6px; }
+.lm-pts i { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted, #a3a6aa); opacity: .4; transition: opacity .2s, transform .2s; }
+.lm-pts i.on { opacity: 1; background: var(--lj, #d9822b); transform: scale(1.3); }
+@media (hover: none) { .lm-seta { opacity: .85; } }
+@media (prefers-reduced-motion: reduce) { .lm-balao .leaflet-popup-content-wrapper, .lm-prev .lm-logo.grande, .lm-prev .lm-corpo > * { animation: none; } .lm-vit-trilho { transition: none; } }
