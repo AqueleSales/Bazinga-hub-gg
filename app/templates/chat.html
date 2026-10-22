@@ -33,7 +33,7 @@
         const URL_PEERJS = 'https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js';
         const URL_QRCODE = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
         // SRI: o navegador recusa o arquivo se o CDN entregar algo diferente do que conferimos (CDN comprometido). Lib nova = hash novo.
-        const SRI_LIBS = { [URL_PEERJS]: 'sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb' };
+        const SRI_LIBS = { [URL_PEERJS]: 'sha384-qOF1Ybxd53PR4BTaDzAk+eXLDARxOKQYQpXPqbJu/xkJWLIDDfP/ZusfTctQyNs+' };
         const carregarLib = (function () {
             const cache = {};
             return function (url) {
