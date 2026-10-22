@@ -9,6 +9,17 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 37, 'data': '22/10/2026', 'titulo': 'Clipes da call de verdade',
+        'itens': [
+            {'icone': 'fa-exclamation', 'titulo': 'Sinal (!) com os clipes da call',
+             'texto': 'Quando a call esquenta (risada, grito de empolgação, todo mundo falando junto) o Pantheon guarda o momento sozinho e um sinal (!) aparece no canto da tela da call, com uma animação. Clique pra ver os clipes. Cada um some em 20 minutos e todos somem quando a call acaba.'},
+            {'icone': 'fa-scissors', 'titulo': 'Cortar de verdade, mandar e baixar',
+             'texto': 'Abra um clipe, escolha o trecho nos cursores e corte: o arquivo novo só tem o trecho. Depois mande pra um amigo, num chat ou baixe no PC. De volta na lista você vê o que é novo, o que já viu e o que já mandou.'},
+            {'icone': 'fa-video', 'titulo': 'Vídeos de até 25 MB nos chats',
+             'texto': 'Vídeos maiores que 5 MB agora sobem normalmente (antes davam o aviso de imagem grande demais).'},
+        ],
+    },
+    {
         'id': 36, 'data': '22/10/2026', 'titulo': 'Cargos mais fáceis, pasta redonda, notificação com foto e mais',
         'itens': [
             {'icone': 'fa-shield-halved', 'titulo': 'Cargos com interruptores e arrastar',

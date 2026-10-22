@@ -74,6 +74,8 @@ ampla variedade, itens vendidos separados (pacote opcional), efeito de avatar po
 
 **Rodada 33 (22/10/2026): sete correções do feedback do dono (loja no mapa, cargos, pasta, ícone, inventário, ícone do canal, notificações com foto).** Ver "Rodada 33" (antes de "Convenções"). **Depois do deploy: `python atualizar_banco.py` (passo 42). O `desktop/` mudou (0.3.2, só chega com `npm run dist` + release).** O dono mandou depois uma lista GRANDE de pedidos novos (clipes automáticos, botão "+" e configurações da call, layout das transmissões, configurações do usuário maiores, "Brasa" no lugar do Olimpo, prestígio de servidor, canal de lojas): estão em `C:\Users\Sales\AppData\Roaming\Claude\side-session-notes\local_96a14574-76a2-4938-8e80-0373cd90a86b\pedidos-do-dono-22-10.md`.
 
+**Rodada 34 (22/10/2026): clipes da call refeitos** (clipe automático que aparece de verdade com 3 gatilhos, sinal (!) no canto da tela da call, pop-up com os clipes, corte de verdade, mandar pra amigo/canal/baixar, vida de 20 min, upload de vídeo até 25 MB). Ver "Rodada 34" (antes de "Convenções"). Sem coluna/tabela nova. **Calibrado só com sinais sintéticos: ouvir uma call real e ajustar a sensibilidade.** Novidade 37 em `novidades.py`.
+
 **Rodada 29 (19/10/2026, frente 1 de 5; as outras frentes estão em sessões próprias, plano em `C:\Users\Sales\AppData\Roaming\Claude\side-session-notes\local_be232aa6-d239-4639-8f64-61521ec669f2\00-plano-das-frentes.md`): responder e reagir nas notas do mapa.** Ver "Rodada 29" (antes de "Convenções"). Pedido do dono em 19/10 (5 frentes): (1) notas do mapa com resposta/reação **(feita)**, (2) arrastar/reordenar servidores e DMs com pastinhas, (3) cargos, categorias/separadores e mais tipos de canal, (4) loja e pedidos de comida/produto no mapa (**NÃO começada: decidir modelo A, Pix direto, ou B, com entregador/gateway**), (5) identidade visual de startup (o professor achou que "parece projeto de software"). **Depois do deploy: `python atualizar_banco.py` (passo 36: `geo_note.respostas_modo`; as tabelas `geo_note_resposta` e `geo_note_reacao` nascem pelo create_all). Novidade 29 já está em `novidades.py`.**
 
 **Rodada 29 (19/10/2026, frente 3 do plano das frentes): cargos por servidor, categorias/separadores, tipos de canal e personalização do servidor.** Ver "Rodada 29" (antes de "Convenções"). **Depois do deploy: `python atualizar_banco.py` (passo 38: colunas de `server` e `channel`; as tabelas `server_role`, `member_role` e `channel_category` nascem pelo create_all; o boot também cria as colunas).** Arquivos novos: `app/cargos.py`, `cargos_events.py`, `static/js/cargos.js`, `css/cargos.css`, testes `fumaca_cargos.py` e `fumaca_categorias.py`. Novidade 29 já está em `novidades.py` (renumere se colidir no merge).
@@ -921,12 +923,9 @@ metade laranja quando os dois ao mesmo tempo.
   sem suporte, cai pra gravar em memória e baixar no final) e escreve os
   chunks incrementalmente (`FileSystemWritableFileStream`), pra não estourar
   memória em calls longas.
-- **Clipar**: um segmento de ~30s roda sempre em background durante a call
-  (`iniciarBufferClipe`/`abrirNovoSegmentoBuffer`) — quando fecha, vira "o
-  último clipe pronto" e um novo começa. Automático liga por um switch e usa
-  uma **heurística** (não IA de verdade — o projeto não tem infra pra isso):
-  dispara quando 2+ pessoas ficam com `.is-speaking` ao mesmo tempo por
-  alguns segundos seguidos.
+- **Clipar (REFEITO na Rodada 34: tudo mora em `static/js/clipes.js`, veja "Rodada 34" no fim; o que está abaixo sobre buffer de 30 s, `.is-speaking` e a tela de edição é
+  histórico)**: `iniciarBufferClipe()`/`pararBufferClipe()` do `chat.html` viraram ganchos finos pra `Clipes.aoEntrarNaCall()`/`aoSairDaCall()`. O `criarCompositor` do chat
+  só serve ao **Gravar**; o clipe usa o compositor do próprio `clipes.js`.
 - `criarCompositor(altura, fpsDesenho)` ganhou um segundo parâmetro: o
   buffer de clipe (sempre rodando, ninguém assiste em tempo real) desenha a
   só 15fps; "Gravar" manual continua em 30fps. Antes desenhava no ritmo do
@@ -944,9 +943,8 @@ correção foi trocar por um único segmento contínuo de ~30s por vez (com
 fechar, vira o clipe pronto, e um novo começa. Qualquer ideia futura de
 "buffer circular" de vídeo no navegador esbarra nesse mesmo limite.
 
-A tela de edição do clipe só ajusta a prévia (não recodifica o arquivo —
-cortar de verdade um webm no navegador sem servidor precisaria de algo como
-ffmpeg.wasm, fora de escopo por ora).
+(Rodada 34: o corte agora É de verdade, sem ffmpeg: toca o trecho num `<video>` escondido e grava de novo com `MediaRecorder`; e o "buffer circular" virou DOIS gravadores
+defasados, cada um com o cabeçalho próprio, em vez de colar pedaços.)
 
 ## Prévia de quem já está numa call
 
@@ -1250,6 +1248,7 @@ python testes/fumaca_seguranca.py  # Rodada 30: peer_id da call só pra quem ent
 python testes/fumaca_guardiao.py  # Rodada 31: Guardião (triagem local, IA simulada, mensagem/imagem retida, automutilação = alerta, IA fora do ar, painel do Estúdio) e Termos/LGPD obrigatórios
 python testes/fumaca_pagamentos.py # Rodada 32: gateway (simulado/Asaas simulado), liberar a loja, pedido pago pelo app, webhook, split, o que o código promete
 python testes/fumaca_loja_mapa.py  # Rodada 32: plantar loja no mapa (presença, área aproximada, alcance, esconder, regra 6)
+python testes/fumaca_clipes.py     # Rodada 34: clipes da call (chama o testes/clipes_logica.js no Node: detector de momentos e armazém de 20 min; ganchos do chat, animações só em transform/opacity, XSS, upload de vídeo até 25 MB)
 python testes/fumaca_olimpo.py     # Rodada 32: Olimpo grátis/pago, Premium do Passe, insígnia Ômega que some no vencimento
 python testes/fumaca_push.py       # notificações push (chaves, inscrição, quem recebe)
 python testes/fumaca_insignias.py  # Beta pra todos, BAZINGA por servidor, Alpha por nome
@@ -2679,6 +2678,21 @@ Sete blocos, cada um num commit, testados no navegador com servidor descartável
 - **Notificações com foto** (`push.py::icone_de_notificacao`, SW, `avisoDoNavegador`): o push leva `icone` (DM, ligação e pedido = foto da pessoa; menção = foto do servidor, se não tiver, a do autor); só endereço do site ou `https`, e a foto do Cloudinary vai em 192 px quadrada PNG. O aviso do navegador/Windows (que é o único no app do Windows, sem service worker) agora aparece quando a janela está escondida OU sem foco (`!document.hidden && document.hasFocus()` barra), e clicar abre a conversa e traz o app da bandeja (`window.panteao.mostrarJanela` -> IPC `janela:mostrar`). **Não testado**: aviso real no Windows/Android (só o objeto `Notification` simulado e o payload do push), foto do servidor em menção (o servidor de teste não tinha ícone).
 - **Pegadinhas**: (1) Flask cacheia o template com `debug=False`: editou `chat.html`, REINICIE o servidor de teste (perdi tempo olhando JS velho); (2) o service worker guarda `/static` por URL: no painel, `getRegistrations()` + `caches.delete` + recarregar; (3) com o painel do navegador escondido, animações CSS ficam no 1º quadro: pra conferir, desligue a animação do elemento; (4) heredoc de shell com `'''` quebra: scripts de patch com a ferramenta de arquivo (reafirmando); (5) o `contextmenu`/arrasto de cargos usa `pointerdown` no `.cg-grip` (60 ms) ou segurar a linha (320 ms).
 
+## Rodada 34 de 22/10/2026 — clipes da call: automático que aparece, sinal (!), pop-up, corte de verdade, mandar e baixar
+
+Pedido do dono (lista A de `pedidos-do-dono-22-10.md`): "o clipe automático nunca aparece, aparece vez ou outra e é muito rápido". Arquivos novos: `static/js/clipes.js` (global `Clipes`, mais `ClipesDetector` e `ClipesArmazem`, que são lógica pura e rodam no Node), `static/css/clipes.css`, `testes/clipes_logica.js` e `testes/fumaca_clipes.py`. No `chat.html` ficaram só ganchos (`Clipes.iniciar({...})` perto do `switch-clip-auto`, `iniciarBufferClipe`/`pararBufferClipe` finos, o botão Clipar) e o `#clip-alerta` no HTML; saíram a heurística antiga, a gaveta, o `#clip-edit-modal` e o CSS deles. **Sem coluna/tabela nova.** Visto no navegador com call SIMULADA (osciladores no lugar do microfone, vídeo de canvas, Cloudinary trocado por um gravador local); **não visto com call de verdade, 2 pessoas reais nem celular de verdade** (só 375 px emulado).
+- **Por que "nunca aparecia"**: (1) o gatilho exigia 2+ `.is-speaking` por 3 segundos seguidos, raríssimo; (2) o clipe era "o último segmento fechado", ou seja, os 30 s ANTES do momento (o momento nem entrava); (3) o compositor só ligava o áudio de quem já estava na call quando o buffer começou (quem entrou depois ficava mudo no clipe). Agora o compositor reconcilia as fontes a cada 1,5 s.
+- **Gatilhos** (`ClipesDetector`, 20 leituras de volume por segundo, um placar que esfria com constante de 5 s, dispara em 4 pontos): **pico** (volume acima de 2x o "normal" DE CADA PESSOA, que o detector aprende com a mediana dos picos de cada segundo; grito acima de 0,38 conta em dobro; piso de 0,09), **junto** (2 falando ao mesmo tempo ≈ 2 pts/s, 3+ ≈ 3 pts/s) e **risada** (rajadas regulares de 3,5 a 9 amostras, vales abaixo de 40% do pico, volume acima do normal da call). Mínimo de **45 s** entre clipes; sensibilidade baixa/normal/alta (`localStorage pnt_clip_sens`); o automático vem **LIGADO por padrão** (`pnt_clip_auto`; antes só ligava quem mexesse no interruptor). **Calibrado só com envelopes sintéticos** (`testes/clipes_logica.js`): o ajuste fino precisa de uma call de verdade. Se disparar demais, baixe a sensibilidade ou suba `GRITO`/`MIN_PICO` no topo do detector.
+- **Janela deslizante** (`criarJanela`): dois `MediaRecorder` defasados (cada um vive 40 s, um novo abre a cada 20 s), então o mais velho sempre tem 20 a 40 s e vira um arquivo válido na hora com `requestData()`. Disparou o gatilho: espera 6 s (pra pegar o resto do momento) e guarda. VP8 a 700 kbps + áudio 64 kbps: clipe de 40 s ≈ 4 MB. **O compositor desenha por `setInterval`, NÃO por `requestAnimationFrame`**: o rAF para com a janela escondida e, sem quadros, o `MediaRecorder` nem começa (achado testando: zero pedaços por 9 s). A janela escondida ainda estrangula o `setInterval` pra ~1 quadro por segundo (o vídeo do clipe fica quase parado, o áudio segue).
+- **Sinal (!)**: `#clip-alerta` no canto de cima à direita da tela da call (some quando não há clipe; some junto com a call). Clipe novo: ele chacoalha (`clChega`), um anel pulsa enquanto houver não visto, mostra o número de novos e uma pílula "Novo clipe · Risada" desliza ao lado por 4,5 s. Clicar abre o **pop-up** (`#clipes-modal`, `.modal-overlay`): lista em cartões (miniatura do momento, motivo, hora, "some em N min" e barra de vida; chips **Novo** / **Visto** / "Mandado pra X"/"Baixado"), opções (automático, sensibilidade, "Clipar agora"), e a vista de ver/cortar. ESC volta um nível.
+- **Vida do clipe**: 20 minutos (`ClipesArmazem.TTL_MS`; varredura a cada 5 s), no máximo 12 (os mais velhos saem). Quando a **call acaba** (`disconnectCall` -> `pararBufferClipe` -> `Clipes.aoSairDaCall`) todos somem, o pop-up fecha e o sinal some. Tudo na memória do navegador de quem clipou (blobs); nada vai pro servidor até a pessoa mandar.
+- **Cortar de verdade** (sem ffmpeg): duas alças na linha do tempo (arrastar ou setas; mínimo 1 s) e "Cortar o trecho": `cortarArquivo()` toca o trecho num `<video>` escondido, desenha num canvas, manda o áudio por `createMediaElementSource` -> `MediaStreamDestination` e **grava de novo** com `MediaRecorder`. **Leva o tempo do trecho** (o botão avisa; tem barra e "Cancelar") e recodifica a 1 Mbps. "Desfazer o corte" volta o original. Ao mandar/baixar com um trecho escolhido e não aplicado, o corte roda antes. Webm do `MediaRecorder` não traz duração: `medirDuracao()` pula pra `currentTime = 1e101` pra o Chrome descobrir (cai na duração medida na gravação se não conseguir). Só vale no Chrome/Edge/Opera (Safari não grava webm).
+- **Mandar**: "Mandar pra alguém" (amigos aceitos; o da call de DM vem primeiro) -> `enviar_mensagem_direta` e "Mandar no chat" (canais de texto e de mídia de todos os servidores, o da call primeiro) -> `enviar_mensagem`, os mesmos eventos de sempre (a outra pessoa recebe ao vivo; regra 6 já vem deles). O upload é `/api/upload` e fica em cache no clipe (mandar de novo não sobe de novo). "Baixar no PC" gera `pantheon-clipe-AAAAMMDD-HHMMSS.webm`. Depois de agir volta pra lista com o cartão em destaque (pulinho e anel verde).
+- **Bug que estava no upload**: o `MAX_CONTENT_LENGTH` global (5 MB) valia também pro `/api/upload`, então vídeo acima de 5 MB (clipe incluído) dava "Imagem grande demais (máximo 5 MB)" mesmo a rota prometendo 25 MB. `_TETO_POR_ROTA['/api/upload']` agora é 26 MB (a rota confere vídeo 25 MB e imagem 8 MB) e o 413 dessa rota tem mensagem própria.
+- **Ganchos pra teste no navegador**: `Clipes._cfg({pos, vida, passo, minMs, ttl})` (tempos), `Clipes._forcar('risada'|'pico'|'junto')` (dispara um momento), `Clipes._estado()`, `Clipes._gravadores()`. Receita: servidor descartável com Cloudinary trocado, `window.__setup` com osciladores (`createOscillator` -> `GainNode` -> `MediaStreamDestination`) no lugar do `myMicStream`, um `.video-card` falso com vídeo de canvas, `inCall = true`, `callMostrar('cheia')`, `iniciarBufferClipe()`.
+- **Limites assumidos**: a mídia da call é P2P, então só quem clipa vê/ouve; o clipe contém a voz de todo mundo e **os outros NÃO são avisados** (o "Gravar" avisa, o buffer sempre foi silencioso; como o automático agora vem ligado, vale decidir com o dono se avisa na call ou volta o padrão pra desligado); janela do navegador coberta/minimizada = vídeo quase parado; clipe não passa de 12 na memória; áudio do player de Música (YouTube) não entra; Safari não grava webm.
+- **Sessão irmã**: a do botão "+" da call (`call_ui.js`) reescreve a barra de botões e mantém os ids `#btn-main-clip`, `#media-popup` (`#pop-btn-gravar`, `#pop-btn-clipar`, `#switch-clip-auto`) e `#clip-alerta`; o sinal (!) é todo do `clipes.js`.
+
 # Convenções
 
 - Nomes de eventos de socket, funções e variáveis em **português**
@@ -2865,12 +2879,8 @@ produção.
 - **Vídeo como foto/faixa**: resolvido sem ffmpeg (ver "Vídeo (mp4/webm/mov) como foto..."). Limites: só os 6 s iniciais, sem áudio, sem escolher o trecho.
 - **Girar GIF 90°** não existe (só em foto parada) — o dono pediu pra tirar o botão.
 - **Menu de contexto da mensagem** (⋯) não tem "Denunciar mensagem" — só nota/servidor do mapa.
-- **Clipe automático é heurística, não IA**: dispara por volume simultâneo
-  de 2+ pessoas, não por análise de conteúdo. Documentado como decisão
-  consciente (ver seção "Gravar e clipar a call"), não como bug.
-- **Trim do clipe não recodifica**: a tela de edição só ajusta a prévia
-  (in/out points); o arquivo enviado/baixado é o clipe inteiro. Cortar de
-  verdade precisaria de algo como ffmpeg.wasm.
+- **Clipe automático é heurística, não IA** (Rodada 34: agora com 3 gatilhos, pico de volume, risada e gente falando junto; ver "Rodada 34"). Decisão consciente, não bug.
+- ~~Trim do clipe não recodifica~~ (resolvido na Rodada 34: o corte regrava o trecho no navegador, sem ffmpeg).
 - **Decorações de perfil**: viraram o laboratório da Rodada 5 (só os dois testers). Abrir para todo mundo (loja) fica para depois da economia;
   o texto abaixo é histórico: ficaram de fora
   desta rodada por decisão — a Bazinga não tem produto tipo Nitro pra

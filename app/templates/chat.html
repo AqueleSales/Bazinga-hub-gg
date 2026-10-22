@@ -706,32 +706,6 @@
         .media-popup-switch input:checked + .chave { background: var(--clip-color); }
         .media-popup-switch input:checked + .chave::before { transform: translateX(14px); }
 
-        /* Aviso de clipe automático */
-        .clip-alerta {
-            position: absolute; top: 18px; left: 50%; transform: translateX(-50%) scale(0); z-index: 12;
-            width: 40px; height: 40px; border-radius: 50%; background: var(--clip-color); color: #fff;
-            display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer;
-            box-shadow: 0 6px 18px rgba(255,140,26,.5); transition: transform .22s cubic-bezier(.34,1.56,.64,1);
-        }
-        .clip-alerta.visivel { transform: translateX(-50%) scale(1); animation: chacoalhar 2.2s ease-in-out infinite; }
-        @keyframes chacoalhar { 0%, 100% { transform: translateX(-50%) scale(1) rotate(0); } 10% { transform: translateX(-50%) scale(1) rotate(-8deg); } 20% { transform: translateX(-50%) scale(1) rotate(8deg); } 30% { transform: translateX(-50%) scale(1) rotate(0); } }
-
-        .clip-gaveta {
-            position: absolute; top: 64px; left: 50%; transform: translateX(-50%) translateY(-10px); z-index: 12;
-            width: 320px; max-height: 0; overflow: hidden; background: var(--bg-quaternary); border-radius: 12px;
-            box-shadow: 0 12px 28px rgba(0,0,0,.5); opacity: 0; transition: max-height .22s, opacity .18s, transform .18s;
-        }
-        .clip-gaveta.aberta { max-height: 340px; opacity: 1; transform: translateX(-50%) translateY(0); overflow-y: auto; }
-        .clip-gaveta-item { display: flex; gap: 10px; align-items: center; padding: 9px 12px; cursor: pointer; transition: background .12s; }
-        .clip-gaveta-item:hover { background: rgba(255,255,255,.06); }
-        .clip-gaveta-item video { width: 72px; height: 40px; border-radius: 6px; background: #000; object-fit: cover; pointer-events: none; }
-        .clip-gaveta-item .txt { font-size: 12.5px; color: var(--text-normal); }
-        .clip-gaveta-vazia { padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
-
-        .clip-trim-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
-        .clip-trim-row input[type="range"] { flex: 1; }
-        .clip-trim-row span { font-size: 11px; color: var(--text-muted); width: 38px; flex-shrink: 0; }
-
         /* ==========================================================================
            6. MENUS DE CONTEXTO E MODAIS GERAIS
            ========================================================================== */
@@ -3002,6 +2976,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loja_mapa.css') }}?v={{ loja_mapa_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conexoes.css') }}?v={{ conexoes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/clipes.css') }}?v={{ clipes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
@@ -3338,7 +3313,6 @@
                         <div class="clip-alerta" id="clip-alerta" title="Achei um momento pra clipar">
                             <i class="fa-solid fa-exclamation"></i>
                         </div>
-                        <div class="clip-gaveta" id="clip-gaveta"></div>
 
                         <div class="call-controls-bar">
                             <button class="call-btn" id="btn-main-mic" title="Silenciar"><i class="fa-solid fa-microphone"></i></button>
@@ -4334,31 +4308,6 @@
         </div>
     </div>
 
-    <!-- Edição do clipe -->
-    <div id="clip-edit-modal" class="modal-overlay">
-        <div class="bazinga-modal" style="width: 560px;">
-            <div class="modal-header" style="position: relative;">
-                <h2>Editar clipe</h2>
-                <p>Ajuste o começo e o fim, depois manda no chat ou salva no PC.</p>
-                <i class="fa-solid fa-xmark modal-close-x" id="btn-fechar-edicao-clipe"></i>
-            </div>
-            <div class="modal-content">
-                <video id="clip-edit-video" controls style="width:100%; border-radius: 8px; background:#000; max-height: 320px;"></video>
-                <div class="clip-trim-row">
-                    <span id="clip-trim-inicio-label">0.0s</span>
-                    <input type="range" id="clip-trim-inicio" min="0" max="100" value="0" class="discord-slider">
-                    <input type="range" id="clip-trim-fim" min="0" max="100" value="100" class="discord-slider">
-                    <span id="clip-trim-fim-label">30.0s</span>
-                </div>
-                <p style="color: var(--text-muted); font-size: 12px;">O corte aqui é só de prévia (não recodifica o arquivo) - o vídeo enviado/baixado é o clipe inteiro.</p>
-            </div>
-            <div class="modal-footer" style="justify-content: space-between;">
-                <button class="btn-cancel" id="btn-salvar-clipe-pc"><i class="fa-solid fa-download"></i> Salvar no PC</button>
-                <button class="btn btn-primary" id="btn-enviar-clipe-chat"><i class="fa-solid fa-paper-plane"></i> Mandar no chat</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal Upload Avatar -->
     <div class="modal-overlay" id="avatar-upload-modal">
         <div class="bazinga-modal" style="width: 440px;">
@@ -4989,6 +4938,7 @@
     <script src="{{ url_for('static', filename='js/loja_mapa.js') }}?v={{ loja_mapa_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/clipes.js') }}?v={{ clipes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
@@ -13640,24 +13590,16 @@
         // ==========================================
         // GRAVAR A CALL + CLIPAR (manual e automático)
         // ------------------------------------------------------------
-        // "Gravar" salva a call inteira pro PC de quem clicou. "Clipar"
-        // pega os últimos ~30s de um buffer circular que fica rodando desde
-        // que a call começa (ver iniciarBufferClipe, chamado no fim de
-        // initVoiceChannel). Nenhum dos dois manda nada pro servidor -
-        // tudo acontece no navegador de quem gravou/clipou.
+        // "Gravar" salva a call inteira pro PC de quem clicou. Os CLIPES (manual e
+        // automático, o sinal (!), o pop-up, cortar e mandar) moram em static/js/clipes.js;
+        // aqui ficam só os ganchos finos (iniciarBufferClipe/pararBufferClipe, o botão
+        // Clipar e o interruptor). Nada disso manda nada pro servidor - tudo acontece
+        // no navegador de quem gravou/clipou (a mídia da call é P2P).
         // ==========================================
         let gravandoCall = false;
         let clipandoAuto = false;
         let mediaGravador = null;
         let compositorGravacao = null;
-        let compositorBuffer = null;
-        let bufferGravador = null;
-        const DURACAO_SEGMENTO_MS = 30000;
-        let candidatosAutoClip = [];
-        let pollerAutoClipId = null;
-        let contadorFalandoJunto = 0;
-        let ultimoAutoClipEm = 0;
-        let clipeAtualBlob = null;
 
         function mimeTypeSuportado(opcoes) {
             return opcoes.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
@@ -13743,63 +13685,9 @@
             return { stream: streamFinal, parar() { ativo = false; audioCtx.close().catch(() => {}); } };
         }
 
-        // ---- Buffer dos últimos ~30s, sempre rodando durante a call ----
-        // Nada de concatenar Blobs de sessões diferentes do MediaRecorder pra
-        // simular um "circular buffer" - testei e só o primeiro pedaço toca
-        // (cada start()/stop() gera um cabeçalho Matroska próprio, e colar
-        // vários um atrás do outro não vira um arquivo válido). Em vez disso:
-        // um segmento de ~30s sempre gravando, com timeslice (os chunks de UMA
-        // MESMA sessão SÃO concatenáveis); quando fecha, vira "o último clipe
-        // pronto" e um novo começa. "Clipar" pega esse último pronto - às
-        // vezes vai ter alguns segundos a mais de atraso do que os 30s exatos
-        // de agora, mas sempre é um arquivo inteiro e tocável.
-        let segmentoCompleto = null;
-        let chunksSegmentoAtual = [];
-
-        function iniciarBufferClipe() {
-            if (compositorBuffer) return;
-            try { compositorBuffer = criarCompositor(480, 15); }
-            catch(e) { compositorBuffer = null; return; }
-            segmentoCompleto = null; chunksSegmentoAtual = [];
-            abrirNovoSegmentoBuffer();
-        }
-
-        function abrirNovoSegmentoBuffer() {
-            if (!compositorBuffer) return;
-            chunksSegmentoAtual = [];
-            const mime = mimeTypeSuportado(['video/webm;codecs=vp8,opus', 'video/webm']);
-            let rec;
-            try { rec = new MediaRecorder(compositorBuffer.stream, mime ? { mimeType: mime } : undefined); }
-            catch(e) { return; }
-            rec.ondataavailable = e => { if (e.data && e.data.size) chunksSegmentoAtual.push(e.data); };
-            rec.onstop = () => {
-                if (chunksSegmentoAtual.length) segmentoCompleto = new Blob(chunksSegmentoAtual, { type: 'video/webm' });
-                if (compositorBuffer) abrirNovoSegmentoBuffer();
-            };
-            // Sem timeslice de propósito: só um chunk cheio, entregue no
-            // stop(). Testei com timeslice e o navegador só soltava os
-            // pedaços intermediários de forma inconsistente.
-            rec.start();
-            bufferGravador = rec;
-            setTimeout(() => { if (rec.state !== 'inactive') rec.stop(); }, DURACAO_SEGMENTO_MS);
-        }
-
-        function pararBufferClipe() {
-            if (bufferGravador && bufferGravador.state !== 'inactive') { bufferGravador.onstop = null; bufferGravador.stop(); }
-            bufferGravador = null;
-            if (compositorBuffer) { compositorBuffer.parar(); compositorBuffer = null; }
-            segmentoCompleto = null; chunksSegmentoAtual = [];
-            pararDeteccaoAutomatica();
-        }
-
-        function montarClipeDoBuffer() {
-            // Prefere o último segmento fechado (~30s inteiros). Só usa o que
-            // já foi gravado do segmento atual se a call ainda não completou
-            // os primeiros 30s (senão o primeiro clipe da call nunca sairia).
-            if (segmentoCompleto) return segmentoCompleto;
-            if (chunksSegmentoAtual.length) return new Blob(chunksSegmentoAtual, { type: 'video/webm' });
-            return null;
-        }
+        // ---- Clipes da call: janela deslizante de ~30s, detecção automática, sinal (!), pop-up (static/js/clipes.js) ----
+        function iniciarBufferClipe() { try { Clipes.aoEntrarNaCall(); } catch (e) { console.error('[clipes]', e); } }   // clipe nunca derruba a call
+        function pararBufferClipe() { try { Clipes.aoSairDaCall(); } catch (e) { console.error('[clipes]', e); } }
 
         // ---- Gravar a call inteira pro PC ----
         document.querySelectorAll('#rec-res-group .q-btn').forEach(btn => {
@@ -13895,121 +13783,37 @@
 
         document.getElementById('pop-btn-clipar').addEventListener('click', () => {
             fecharPopupMedia();
-            const blob = montarClipeDoBuffer();
-            if (!blob) { showToast('Ainda não juntei 30s pra clipar - espera mais um pouco.', 'warning'); return; }
-            abrirEdicaoClipe(blob);
+            Clipes.clipar();
         });
 
-        document.getElementById('switch-clip-auto').addEventListener('change', (e) => {
-            clipandoAuto = e.target.checked;
-            atualizarIconeMedia();
-            if (clipandoAuto) iniciarDeteccaoAutomatica(); else pararDeteccaoAutomatica();
-        });
+        document.getElementById('switch-clip-auto').addEventListener('change', (e) => Clipes.definirAuto(e.target.checked));
 
-        // ---- Detecção automática: heurística, não é IA de verdade.
-        // Dispara quando 2+ pessoas ficam "falando"/altas ao mesmo tempo por
-        // alguns segundos seguidos (ex.: todo mundo rindo/gritando junto),
-        // reaproveitando o .is-speaking que monitorarVolume já mantém. ----
-        function iniciarDeteccaoAutomatica() {
-            if (pollerAutoClipId) return;
-            if (!compositorBuffer) iniciarBufferClipe();
-            pollerAutoClipId = setInterval(() => {
-                const falando = document.querySelectorAll('#video-grid .video-card.is-speaking').length;
-                contadorFalandoJunto = falando >= 2 ? contadorFalandoJunto + 1 : 0;
-
-                if (contadorFalandoJunto >= 3 && Date.now() - ultimoAutoClipEm > 60000) {
-                    ultimoAutoClipEm = Date.now();
-                    contadorFalandoJunto = 0;
-                    const blob = montarClipeDoBuffer();
-                    if (blob) {
-                        candidatosAutoClip.unshift({ blob, hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
-                        candidatosAutoClip = candidatosAutoClip.slice(0, 5);
-                        document.getElementById('clip-alerta').classList.add('visivel');
-                    }
-                }
-            }, 1000);
-        }
-        function pararDeteccaoAutomatica() {
-            if (pollerAutoClipId) { clearInterval(pollerAutoClipId); pollerAutoClipId = null; }
-            candidatosAutoClip = [];
-            document.getElementById('clip-alerta').classList.remove('visivel');
-            document.getElementById('clip-gaveta').classList.remove('aberta');
-        }
-
-        document.getElementById('clip-alerta').addEventListener('click', () => {
-            const gaveta = document.getElementById('clip-gaveta');
-            if (!candidatosAutoClip.length) {
-                gaveta.innerHTML = '<div class="clip-gaveta-vazia">Nenhum clipe ainda</div>';
-            } else {
-                gaveta.innerHTML = candidatosAutoClip.map((c, i) =>
-                    `<div class="clip-gaveta-item" data-i="${i}"><video muted></video><div class="txt">Momento às ${esc(c.hora)}</div></div>`
-                ).join('');
-                gaveta.querySelectorAll('.clip-gaveta-item').forEach(item => {
-                    const i = parseInt(item.getAttribute('data-i'));
-                    const video = item.querySelector('video');
-                    video.src = URL.createObjectURL(candidatosAutoClip[i].blob);
-                    item.addEventListener('mouseenter', () => video.play().catch(() => {}));
-                    item.addEventListener('mouseleave', () => { video.pause(); video.currentTime = 0; });
-                    item.addEventListener('click', () => {
-                        gaveta.classList.remove('aberta');
-                        document.getElementById('clip-alerta').classList.remove('visivel');
-                        abrirEdicaoClipe(candidatosAutoClip[i].blob);
-                    });
-                });
-            }
-            gaveta.classList.toggle('aberta');
-        });
-
-        // ---- Tela de edição do clipe ----
-        function abrirEdicaoClipe(blob) {
-            clipeAtualBlob = blob;
-            const video = document.getElementById('clip-edit-video');
-            video.src = URL.createObjectURL(blob);
-            video.onloadedmetadata = () => {
-                const dur = video.duration && isFinite(video.duration) ? video.duration : 30;
-                document.getElementById('clip-trim-inicio').max = dur;
-                document.getElementById('clip-trim-fim').max = dur;
-                document.getElementById('clip-trim-inicio').value = 0;
-                document.getElementById('clip-trim-fim').value = dur;
-                document.getElementById('clip-trim-inicio-label').textContent = '0.0s';
-                document.getElementById('clip-trim-fim-label').textContent = dur.toFixed(1) + 's';
-            };
-            document.getElementById('clip-edit-modal').style.display = 'flex';
-        }
-
-        document.getElementById('clip-trim-inicio').addEventListener('input', (e) => {
-            document.getElementById('clip-edit-video').currentTime = parseFloat(e.target.value);
-            document.getElementById('clip-trim-inicio-label').textContent = parseFloat(e.target.value).toFixed(1) + 's';
-        });
-        document.getElementById('clip-trim-fim').addEventListener('input', (e) => {
-            document.getElementById('clip-trim-fim-label').textContent = parseFloat(e.target.value).toFixed(1) + 's';
-        });
-        document.getElementById('btn-fechar-edicao-clipe').addEventListener('click', () => {
-            document.getElementById('clip-edit-modal').style.display = 'none';
-        });
-
-        document.getElementById('btn-salvar-clipe-pc').addEventListener('click', () => {
-            if (!clipeAtualBlob) return;
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(clipeAtualBlob); a.download = `bazinga-clipe-${Date.now()}.webm`; a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-        });
-
-        document.getElementById('btn-enviar-clipe-chat').addEventListener('click', async () => {
-            if (!clipeAtualBlob || !currentChannelId) return;
-            const botao = document.getElementById('btn-enviar-clipe-chat');
-            botao.disabled = true; botao.textContent = 'Enviando...';
-            try {
-                const arquivo = new File([clipeAtualBlob], `clipe-${Date.now()}.webm`, { type: 'video/webm' });
-                const { url, tipo, nome } = await uploadMidiaCompleto(arquivo);
-                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: '', anexo_url: url, anexo_tipo: tipo, anexo_nome: nome });
-                showToast('Clipe mandado no chat!', 'success');
-                document.getElementById('clip-edit-modal').style.display = 'none';
-            } catch(e) {
-                showToast('Não consegui mandar o clipe: ' + e.message, 'error');
-            } finally {
-                botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Mandar no chat';
-            }
+        // CLIPES DA CALL: static/js/clipes.js. A mídia da call é P2P, então tudo (buffer, detecção, corte) acontece AQUI, no navegador de quem clipa;
+        // o servidor só entra quando a pessoa manda o clipe pra alguém (/api/upload e os eventos de mensagem de sempre).
+        Clipes.iniciar({
+            esc, escUrl, toast: (m, t) => showToast(m, t),
+            micStream: () => myMicStream,
+            amigos: () => (amizades && amizades.amigos) || [],
+            destinoDaCall: () => {                                   // numa call de DM, o amigo da outra ponta aparece primeiro na lista
+                const m = /^dm_(\d+)_(\d+)$/.exec(String(currentVoiceChannelId || ''));
+                if (!m) return {};
+                return { amigo: Number(m[1]) === Number(currentUserId) ? Number(m[2]) : Number(m[1]) };
+            },
+            canais: () => {                                          // canais de texto de cada servidor; o servidor da call vem primeiro
+                const cid = String(currentVoiceChannelId || '');
+                return (meUserServers || []).map(sv => ({
+                    servidor: sv.name, daCall: (sv.channels || []).some(c => String(c.id) === cid),
+                    canais: (sv.channels || []).filter(c => c.type === 'text' || c.type === 'midia').map(c => ({ id: c.id, name: c.name })),
+                })).filter(g => g.canais.length).sort((a, b) => Number(b.daCall) - Number(a.daCall));
+            },
+            upload: (arquivo) => uploadMidiaCompleto(arquivo),
+            enviarDM: (id, dados) => socket.emit('enviar_mensagem_direta', { target_id: id, ...dados }),
+            enviarCanal: (id, dados) => socket.emit('enviar_mensagem', { canal_id: id, ...dados }),
+            aoMudarAuto: (on) => {
+                clipandoAuto = on;
+                const sw = document.getElementById('switch-clip-auto'); if (sw) sw.checked = on;
+                atualizarIconeMedia();
+            },
         });
 
         let micMuted = false; let deafened = false; let micMutedBeforeDeafen = false;
