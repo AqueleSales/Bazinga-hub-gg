@@ -49,7 +49,9 @@ body.arr-ativo * { cursor: grabbing !important; }
 
 /* ---------- pastinhas ---------- */
 .pasta { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
-.pasta-fundo { position: absolute; left: 7px; right: 7px; top: -3px; bottom: -3px; border-radius: 28px; background: color-mix(in srgb, var(--pc) 15%, transparent); border: 2px solid color-mix(in srgb, var(--pc) 42%, transparent); opacity: 0; transition: opacity .22s ease; pointer-events: none; }
+.pasta-fundo { position: absolute; left: 6px; right: 6px; top: -6px; bottom: -6px; border-radius: 26px; background: color-mix(in srgb, var(--pc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--pc) 38%, transparent); box-sizing: border-box; opacity: 0; transition: opacity .22s ease; pointer-events: none; }
+/* o retângulo da pasta é o mesmo espaço (6 px) dos 4 lados do ícone, e o que passa dele (brilho de efeito de servidor) é cortado nele */
+.pasta.aberta { margin-top: 6px; margin-bottom: 14px; }
 .pasta.aberta > .pasta-fundo { opacity: 1; }
 .pasta > .pasta-cabeca { margin-bottom: 6px; z-index: 1; }
 .pasta:not(.aberta) > .pasta-cabeca { margin-bottom: 0; }
@@ -66,9 +68,10 @@ body.arr-ativo * { cursor: grabbing !important; }
 .pasta.aberta > .pasta-nome { display: block; }
 .pasta-envolve { width: 100%; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .27s cubic-bezier(.2, .8, .2, 1); z-index: 1; }
 .pasta.aberta > .pasta-envolve { grid-template-rows: 1fr; }
-.pasta-lista { min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; width: 100%; }
+.pasta-envolve { justify-items: center; }
+.pasta-lista { min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; width: calc(100% - 12px); border-radius: 0 0 26px 26px; }
 .pasta.aberta > .pasta-envolve > .pasta-lista { padding: 2px 0 0; }
-.pasta-lista > .server-wrapper:last-child { margin-bottom: 6px; }
+.pasta-lista > .server-wrapper:last-child { margin-bottom: 0; }
 .pasta-editar { display: none; position: absolute; top: -5px; left: calc(50% + 14px); width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .2); background: var(--bg-secondary); color: var(--text-muted); font-size: 10px; align-items: center; justify-content: center; cursor: pointer; z-index: 4; }
 .pasta-editar:hover, .pasta-editar:focus-visible { color: var(--text-header); background: var(--pc); border-color: transparent; }
 .pasta.aberta > .pasta-cabeca .pasta-editar { display: flex; }

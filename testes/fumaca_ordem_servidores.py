@@ -240,6 +240,11 @@ with app.app_context():
     ok("ordem.js" in html and "ordem.css" in html and 'Ordem.iniciar(' in html and 'Ordem.desenharServidores(' in html, 'o chat.html liga o Ordem (CSS, JS, iniciar e a barra de servidores)')
     ok('Ordem.subirDM(card)' in html and 'Ordem.htmlMenuDM' in html and 'Ordem.acaoMenuDM' in html, 'mensagem nova na DM e o menu do contato passam pelo Ordem')
     ok(re.search(r'(?<!\.)animation:[^;]*(left|top|width|height)', css) is None, 'o CSS novo não anima left/top/width/height (só transform/opacity)')
+    # Rodada 33: o retângulo da pasta tem o mesmo espaço dos 4 lados, borda fina, e corta o brilho de efeito de servidor
+    fundo = re.search(r'\.pasta-fundo \{([^}]*)\}', css).group(1)
+    ok('border: 1px' in fundo and 'top: -6px' in fundo and 'bottom: -6px' in fundo and 'left: 6px' in fundo, 'a pasta: borda fina (1px) e 6 px de respiro nos 4 lados do ícone')
+    lista = re.search(r'\.pasta-lista \{([^}]*)\}', css).group(1)
+    ok('overflow: hidden' in lista and 'calc(100% - 12px)' in lista, 'a lista da pasta tem a largura do retângulo e corta o que passa dele (brilho do efeito de servidor não vaza)')
     nov = open(os.path.join(RAIZ, 'novidades.py'), encoding='utf-8').read()
     ok("'id': 29" in nov and 'pastinhas' in nov.lower(), 'novidade 29 no topo do app/novidades.py')
 
