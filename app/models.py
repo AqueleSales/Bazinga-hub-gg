@@ -130,6 +130,8 @@ class Person(db.Model):
     termos_aceitos_em = db.Column(db.DateTime, nullable=True)
     # Assinatura Olimpo (o "nitro" do Pantheon, Rodada 32): vale até esta data. NULL = nunca teve. Regras em app/olimpo.py.
     olimpo_ate = db.Column(db.DateTime, nullable=True)
+    # Preferências da conta (Notificações por tipo, Acessibilidade, formato da hora): JSON só com o que difere do padrão, validado em app/preferencias.py. Anulável.
+    preferencias = db.Column(db.Text, nullable=True)
     # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
     # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
     equipados = db.Column(db.Text, nullable=True)

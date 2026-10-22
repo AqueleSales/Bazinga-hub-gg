@@ -167,6 +167,7 @@ def create_app():
                 'ordem_css_v': _versao_estatico('css/ordem.css'), 'ordem_js_v': _versao_estatico('js/ordem.js'),
                 'call_ui_css_v': _versao_estatico('css/call_ui.css'), 'call_ui_js_v': _versao_estatico('js/call_ui.js'),
                 'atividades_css_v': _versao_estatico('css/atividades.css'), 'atividades_js_v': _versao_estatico('js/atividades.js'),
+                'config_usuario_css_v': _versao_estatico('css/config_usuario.css'), 'config_usuario_js_v': _versao_estatico('js/config_usuario.js'),
                 'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'novidade_atual': novidade_atual()}
 
     with app.app_context():

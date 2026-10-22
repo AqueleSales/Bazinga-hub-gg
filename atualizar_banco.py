@@ -320,6 +320,9 @@ def atualizar_banco():
             add_column_se_nao_existir("server_role", "icone VARCHAR(16)")
             add_column_se_nao_existir("server_role", "automatico BOOLEAN")
 
+            # 43. Preferências da conta (Rodada 34): notificações por tipo, acessibilidade e formato da hora, em JSON (app/preferencias.py).
+            add_column_se_nao_existir("person", "preferencias TEXT")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

@@ -70,7 +70,7 @@ ok(all(push.icone_de_notificacao(x) is None for x in ('javascript:alert(1)', 'ht
 sw = ler('app', 'main', 'routes.py')
 ok("icon: d.icone || '/static/img/icone-192.png'" in sw, 'o service worker desenha a foto do aviso (sem foto, o logo)')
 html = ler('app', 'templates', 'chat.html')
-ok('function avisoDoNavegador(titulo, corpo, icone, alvo)' in html and 'iconeDoAviso(icone)' in html and 'document.hasFocus()' in html, 'o aviso do navegador/Windows tem foto e aparece também com a janela sem foco')
+ok('function avisoDoNavegador(titulo, corpo, icone, alvo, tipo)' in html and 'iconeDoAviso(icone)' in html and 'document.hasFocus()' in html, 'o aviso do navegador/Windows tem foto e aparece também com a janela sem foco')
 ok(all(x in html for x in ("avisoDoNavegador(d.usuario, trecho, d.avatar", "quer ser seu amigo`, 'Abra o app", 'está te ligando`, d.tipo', 'srv && srv.iconUrl')), 'DM, pedido de amizade, ligação e menção (foto do servidor) usam o aviso com foto')
 ok("mostrarJanela: () => ipcRenderer.send('janela:mostrar')" in ler('desktop', 'preload.js') and "ipcMain.on('janela:mostrar'" in ler('desktop', 'main.js'), 'clicar no aviso traz o app do Windows de volta, mesmo escondido na bandeja')
 

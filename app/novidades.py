@@ -9,6 +9,25 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 38, 'data': '22/10/2026', 'titulo': 'Configurações maiores e mais completas, e a Brasa',
+        'itens': [
+            {'icone': 'fa-gear', 'titulo': 'Configurações maiores, em grupos, com busca',
+             'texto': 'A janela ficou mais larga e alta, com o menu dividido em grupos (usuário, cobrança, app e apps) e uma busca no topo: digite "som", "texto" ou "pagamento" e ela leva direto à opção.'},
+            {'icone': 'fa-bell', 'titulo': 'Notificações por tipo',
+             'texto': 'Em Notificações você escolhe, por tipo (mensagens diretas, menções, pedidos de amizade, ligações, Bazar e notas do mapa), de quais quer ser avisado. Vale na conta, em todos os aparelhos. Sons, aviso na área de trabalho e aviso com o app fechado mudaram pra lá.'},
+            {'icone': 'fa-receipt', 'titulo': 'Cobrança',
+             'texto': 'Veja o histórico de dracmas (tudo que você ganhou e gastou) e dos Pix que você pagou e recebeu pelo app, com os métodos de pagamento explicados.'},
+            {'icone': 'fa-universal-access', 'titulo': 'Acessibilidade, idioma e horário',
+             'texto': 'Tamanho do texto do chat, densidade da interface, links sublinhados, reduzir movimento e relógio de 12 ou 24 horas. Ficam salvos na conta.'},
+            {'icone': 'fa-user-shield', 'titulo': 'Dados e privacidade',
+             'texto': 'Um lugar só pra ver quem vê o quê e o que o Pantheon guarda, e pra baixar uma cópia dos seus dados.'},
+            {'icone': 'fa-microphone', 'titulo': 'Voz e vídeo em sub-abas',
+             'texto': 'Voz, Avançado, Sons e Transmissão. Os seletores de microfone e alto-falante agora valem de verdade, e dá pra ajustar o volume da call e dos sons do app.'},
+            {'icone': 'fa-fire', 'titulo': 'Olimpo agora é Brasa',
+             'texto': 'O plano com a trilha Premium do Passe e a insígnia Ômega de lava mudou de nome: agora é Brasa, e tem uma aba só dele nas configurações. Quem já tinha continua com tudo.'},
+        ],
+    },
+    {
         'id': 37, 'data': '22/10/2026', 'titulo': 'Call renovada: botão +, xadrez, zoom e grade que se ajusta',
         'itens': [
             {'icone': 'fa-plus', 'titulo': 'Um botão só: o +',
@@ -39,13 +58,13 @@ NOVIDADES = [
         ],
     },
     {
-        'id': 35, 'data': '22/10/2026', 'titulo': 'Compre pelo mapa, pague pelo app e conheça o Olimpo',
+        'id': 35, 'data': '22/10/2026', 'titulo': 'Compre pelo mapa, pague pelo app e conheça a Brasa',
         'itens': [
             {'icone': 'fa-store', 'titulo': 'Plante a sua loja no mapa',
              'texto': 'O botão Plantar agora tem duas opções: servidor ou loja (a loja só aparece para quem tem uma no Bazar). Quem passar por perto vê o pino, abre a prévia e entra na sua loja. Vende de casa? Escolha mostrar só a área aproximada.'},
             {'icone': 'fa-qrcode', 'titulo': 'Pague pelo app',
              'texto': 'Lojas liberadas pela equipe recebem pelo app: o comprador paga por Pix dentro do pedido e a confirmação é automática, sem conferir comprovante. Peça a liberação em Minha lojinha > Dados e Pix.'},
-            {'icone': 'fa-bolt', 'titulo': 'Olimpo (grátis por enquanto)',
+            {'icone': 'fa-bolt', 'titulo': 'Brasa (grátis por enquanto)',
              'texto': 'Libera a trilha Premium do Passe e dá a insígnia Ômega: as peças se juntam, a lava esfria e raios correm por dentro. Ative no topo do Passe de Batalha.'},
         ],
     },
