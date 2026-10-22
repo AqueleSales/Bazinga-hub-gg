@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app, Response
+from flask import Blueprint, render_template, session, jsonify, redirect, url_for, request, current_app, Response, send_from_directory
 from sqlalchemy.exc import OperationalError, PendingRollbackError, SQLAlchemyError
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload
@@ -277,6 +277,14 @@ def abrir():
     return render_template("abrir.html", usuario_atual=usuario)
 
 
+@main_bp.route("/favicon.ico")
+def favicon():
+    """O navegador pede /favicon.ico sozinho (aba, atalho, histórico): sem esta rota aparecia o ícone antigo em cache ou um genérico."""
+    resposta = send_from_directory(os.path.join(current_app.static_folder, 'img'), 'favicon.ico', mimetype='image/x-icon')
+    resposta.headers['Cache-Control'] = 'public, max-age=86400'
+    return resposta
+
+
 @main_bp.route("/manifest.webmanifest")
 def manifest():
     """Manifesto do PWA - é o que faz o botão 'Instalar app' existir de verdade
@@ -298,6 +306,9 @@ def manifest():
              "sizes": "192x192", "type": "image/png", "purpose": "any"},
             {"src": url_for('static', filename='img/icone-512.png'),
              "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            # versão "cheia" (sem cantos arredondados, com margem de segurança): o Android recorta em círculo/gota sem cortar o templo
+            {"src": url_for('static', filename='img/icone-maskable-512.png'),
+             "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
             {"src": url_for('static', filename='img/logo.svg'),
              "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
             # silhueta branca: o Android usa pra o ícone pequeno das notificações e pro ícone temático

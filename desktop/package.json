@@ -1,7 +1,7 @@
 {
   "name": "panteao-desktop",
   "productName": "Pantheon",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Casca desktop do Pantheon (carrega o site e cuida de login, tray e atualização).",
   "main": "main.js",
   "private": true,
