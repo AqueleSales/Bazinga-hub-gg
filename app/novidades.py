@@ -9,6 +9,21 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 36, 'data': '22/10/2026', 'titulo': 'Cargos mais fáceis, pasta redonda, notificação com foto e mais',
+        'itens': [
+            {'icone': 'fa-shield-halved', 'titulo': 'Cargos com interruptores e arrastar',
+             'texto': 'As permissões viraram interruptores, agrupadas por assunto. Pra mudar a ordem dos cargos, segure e arraste (sem setinhas). Cada cargo ganhou ícone de emoji e a opção de ser dado sozinho a quem entrar no servidor.'},
+            {'icone': 'fa-image', 'titulo': 'Banner do servidor',
+             'texto': 'Em Configurações do servidor você escolhe um banner. Ele aparece no topo da lista de canais e no cartão do servidor no mapa, sumindo aos poucos pra esquerda pra não cobrir o nome.'},
+            {'icone': 'fa-store', 'titulo': 'Loja no mapa com vitrine',
+             'texto': 'O cartão da loja agora tem animação e mostra alguns produtos com o preço, trocando sozinho. E o botão Estou aqui, no topo do mapa, acerta a sua posição quando o PC chuta pelo Wi-Fi.'},
+            {'icone': 'fa-bell', 'titulo': 'Notificações com a foto',
+             'texto': 'O aviso no canto da tela (Windows e celular) mostra a foto de quem te escreveu ou do servidor, como no WhatsApp, e aparece também quando o app está aberto mas você está em outra janela.'},
+            {'icone': 'fa-box-open', 'titulo': 'Inventário organizado e ícone novo',
+             'texto': 'O inventário tem uma seção por tipo, filtro por tipo de efeito, tema e busca. O ícone do Pantheon (app do Windows, celular e aba) agora é o novo, preto e dourado. O emoji do canal se escolhe num seletor, e a pasta de servidores ficou mais certinha.'},
+        ],
+    },
+    {
         'id': 35, 'data': '22/10/2026', 'titulo': 'Compre pelo mapa, pague pelo app e conheça o Olimpo',
         'itens': [
             {'icone': 'fa-store', 'titulo': 'Plante a sua loja no mapa',
