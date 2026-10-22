@@ -713,7 +713,7 @@ def _notificar_mencoes(autor, canal, msg):
                     'autor': autor.name, 'trecho': trecho, 'msg_id': msg.id
                 }, to=sala_pessoal(alvo.id))
                 criar_notificacao(alvo.id, 'mencao', f'{autor.name} te citou em #{canal.name}', trecho,
-                                  de_id=autor.id, ref=f'{canal.server_id}:{canal.id}')
+                                  de_id=autor.id, ref=f'{canal.server_id}:{canal.id}', icone=(srv.icon_url or autor.avatar))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MENCOES] {e}")
@@ -1297,7 +1297,7 @@ def chamar_amigo(dados):
     if not esta_online(amigo_id):
         # Sem app aberto não dá pra tocar, mas o aviso no aparelho diz que a pessoa tentou ligar.
         push_se_ausente(amigo_id, f'Ligação perdida de {usuario.name}', 'Tentou falar com você agora.',
-                        tag=f'chamada-{usuario.id}', extra={'tipo': 'dm', 'de_id': usuario.id}, url=f'/chat?dm={usuario.id}')
+                        tag=f'chamada-{usuario.id}', extra={'tipo': 'dm', 'de_id': usuario.id, 'icone': usuario.avatar}, url=f'/chat?dm={usuario.id}')
         emit('chamada_recusada', {'por_nome': 'A pessoa', 'offline': True})
         return
 
@@ -1308,7 +1308,7 @@ def chamar_amigo(dados):
     }, to=sala_pessoal(amigo_id))
     # App aberto mas em segundo plano (celular bloqueado): o push é o que faz o aparelho avisar.
     push_se_ausente(amigo_id, f'{usuario.name} está te ligando', 'Toque pra atender.',
-                    tag=f'ligando-{usuario.id}', extra={'tipo': 'chamada', 'de_id': usuario.id, 'urgente': True},
+                    tag=f'ligando-{usuario.id}', extra={'tipo': 'chamada', 'de_id': usuario.id, 'urgente': True, 'icone': usuario.avatar},
                     url=f'/chat?dm={usuario.id}')
 
 
@@ -3494,7 +3494,7 @@ def _aceitar_pedido(pedido, quem_aceitou):
         }, to=sala_pessoal(solicitante_id))
         criar_notificacao(solicitante_id, 'amizade', f'{quem_aceitou.name} quer ser seu amigo',
                           'Vocês já tinham trocado mensagens. O pedido vale por 24 horas.',
-                          de_id=quem_aceitou.id, ref=str(quem_aceitou.id))
+                          de_id=quem_aceitou.id, ref=str(quem_aceitou.id), icone=quem_aceitou.avatar)
         emit('pedido_amizade_enviado', {'para': solicitante.name, 'para_id': solicitante_id}, to=sala_pessoal(quem_aceitou.id))
         emitir_amizades(quem_aceitou.id)
         emitir_amizades(solicitante_id)
@@ -3510,7 +3510,7 @@ def _aceitar_pedido(pedido, quem_aceitou):
     emit('pedido_amizade_respondido', {'aceito': True, 'amigo': pessoa_para_json_amigo(quem_aceitou)},
          to=sala_pessoal(solicitante_id))
     criar_notificacao(solicitante_id, 'amizade', f'{quem_aceitou.name} aceitou seu pedido de amizade',
-                      de_id=quem_aceitou.id, ref=str(quem_aceitou.id))
+                      de_id=quem_aceitou.id, ref=str(quem_aceitou.id), icone=quem_aceitou.avatar)
     emitir_amizades(quem_aceitou.id)
     emitir_amizades(solicitante_id)
 
@@ -3585,7 +3585,7 @@ def enviar_pedido_amizade(dados):
                     'pedido_id': existente.id
                 }, to=sala_pessoal(alvo.id))
                 criar_notificacao(alvo.id, 'amizade', f'{usuario.name} quer ser seu amigo',
-                                  'O pedido vale por 24 horas.', de_id=usuario.id, ref=str(usuario.id))
+                                  'O pedido vale por 24 horas.', de_id=usuario.id, ref=str(usuario.id), icone=usuario.avatar)
                 emitir_amizades(usuario.id)
                 emitir_amizades(alvo.id)
             else:
@@ -3605,7 +3605,7 @@ def enviar_pedido_amizade(dados):
             'pedido_id': pedido.id
         }, to=sala_pessoal(alvo.id))
         criar_notificacao(alvo.id, 'amizade', f'{usuario.name} quer ser seu amigo',
-                          'O pedido vale por 24 horas.', de_id=usuario.id, ref=str(usuario.id))
+                          'O pedido vale por 24 horas.', de_id=usuario.id, ref=str(usuario.id), icone=usuario.avatar)
         emitir_amizades(usuario.id)
         emitir_amizades(alvo.id)
     except Exception as e:
@@ -3850,7 +3850,7 @@ def notificacao_json(n):
     }
 
 
-def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None, agrupar=False):
+def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None, agrupar=False, icone=None):
     """Guarda na caixa de entrada e avisa a sala pessoal. Nunca quebra quem chamou."""
     try:
         def preparar():
@@ -3873,6 +3873,8 @@ def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None
         # Aviso no aparelho (só se a pessoa não está olhando o app). DM abre a conversa ao tocar.
         try:
             extra = {'tipo': tipo, 'de_id': de_id, 'ref': ref}
+            if icone:
+                extra['icone'] = icone       # foto de quem escreveu ou do servidor: é o que o aviso do aparelho desenha
             url = f'/chat?dm={de_id}' if tipo == 'dm' and de_id else '/chat'
             push_se_ausente(destino_id, titulo, texto or '', tag=f'{tipo}-{de_id or ref or ""}', extra=extra, url=url)
         except Exception as e:
@@ -4085,7 +4087,7 @@ def on_enviar_mensagem_direta(data):
             if not silenciou:
                 resumo = texto[:140] if texto else ('📎 ' + (anexo_nome or 'Anexo'))
                 criar_notificacao(target_id, 'dm', usuario.name, resumo, de_id=usuario.id,
-                                  ref=str(usuario.id), agrupar=True)
+                                  ref=str(usuario.id), agrupar=True, icone=usuario.avatar)
 
         resultado_xp = conceder_xp_por_mensagem(usuario)
         if resultado_xp:

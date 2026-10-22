@@ -85,6 +85,21 @@ def _enviar_um(sub, texto, priv):
         return True
 
 
+def icone_de_notificacao(url):
+    """Foto que o aviso mostra (a da pessoa que escreveu ou a do servidor), como no WhatsApp. Só endereço do próprio site ou https;
+    foto do Cloudinary vem em 192 px quadrada e em PNG (o aviso do sistema não precisa de mais e não anima)."""
+    if not isinstance(url, str):
+        return None
+    u = url.strip()
+    if not u or len(u) > 400 or any(ch in u for ch in ' "\'<>\\') or u.startswith('//'):
+        return None
+    if u.startswith('/'):
+        return u
+    if u.startswith('https://res.cloudinary.com/') and '/image/upload/' in u:
+        return u.replace('/image/upload/', '/image/upload/c_fill,w_192,h_192,f_png/', 1)
+    return u if u.startswith('https://') else None
+
+
 def enviar_push(pessoa_id, titulo, corpo='', url='/chat', tag=None, extra=None):
     """Agenda o envio em segundo plano (nunca atrasa nem quebra quem chamou). Devolve True se havia alguma inscrição."""
     try:
@@ -93,7 +108,11 @@ def enviar_push(pessoa_id, titulo, corpo='', url='/chat', tag=None, extra=None):
         if not subs:
             return False
         priv = vapid_instancia()
-        texto = json.dumps({'titulo': (titulo or '')[:100], 'corpo': (corpo or '')[:160], 'url': url, 'tag': tag, **(extra or {})})
+        extra = dict(extra or {})
+        icone = icone_de_notificacao(extra.pop('icone', None))
+        if icone:
+            extra['icone'] = icone
+        texto = json.dumps({'titulo': (titulo or '')[:100], 'corpo': (corpo or '')[:160], 'url': url, 'tag': tag, **extra})
         app = current_app._get_current_object()
 
         def tarefa():

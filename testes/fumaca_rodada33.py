@@ -62,6 +62,18 @@ ok(open(os.path.join(dk, 'assets', 'logo.svg'), encoding='utf-8').read() == open
 tray = Image.open(os.path.join(dk, 'assets', 'tray.png')).convert('RGB')
 ok(sum(tray.getpixel((64, 6))) < 200 and tray.size == (128, 128), 'a bandeja tem o logo atual (fundo escuro, não o degradê roxo)')
 
+# ---------------- 7. notificações com foto ----------------
+import app.push as push
+ok(push.icone_de_notificacao('https://res.cloudinary.com/x/image/upload/v1/a.png') == 'https://res.cloudinary.com/x/image/upload/c_fill,w_192,h_192,f_png/v1/a.png', 'foto do Cloudinary vai pequena e em PNG')
+ok(push.icone_de_notificacao('/static/uploads/a.png') == '/static/uploads/a.png' and push.icone_de_notificacao('https://media.giphy.com/a.gif') == 'https://media.giphy.com/a.gif', 'foto do próprio site e https passam')
+ok(all(push.icone_de_notificacao(x) is None for x in ('javascript:alert(1)', 'http://x/a.png', '//x/a.png', 'https://x/a b.png', '"><img', 123, None, 'https://x/' + 'a' * 500)), 'endereço perigoso, http, protocolo relativo, espaço, aspa, tipo errado e gigante viram vazio')
+sw = ler('app', 'main', 'routes.py')
+ok("icon: d.icone || '/static/img/icone-192.png'" in sw, 'o service worker desenha a foto do aviso (sem foto, o logo)')
+html = ler('app', 'templates', 'chat.html')
+ok('function avisoDoNavegador(titulo, corpo, icone, alvo)' in html and 'iconeDoAviso(icone)' in html and 'document.hasFocus()' in html, 'o aviso do navegador/Windows tem foto e aparece também com a janela sem foco')
+ok(all(x in html for x in ("avisoDoNavegador(d.usuario, trecho, d.avatar", "quer ser seu amigo`, 'Abra o app", 'está te ligando`, d.tipo', 'srv && srv.iconUrl')), 'DM, pedido de amizade, ligação e menção (foto do servidor) usam o aviso com foto')
+ok("mostrarJanela: () => ipcRenderer.send('janela:mostrar')" in ler('desktop', 'preload.js') and "ipcMain.on('janela:mostrar'" in ler('desktop', 'main.js'), 'clicar no aviso traz o app do Windows de volta, mesmo escondido na bandeja')
+
 print()
 print('TUDO OK' if not falhas else f'{len(falhas)} FALHA(S):\n  - ' + '\n  - '.join(falhas))
 sys.exit(1 if falhas else 0)

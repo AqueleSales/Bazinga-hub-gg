@@ -277,6 +277,8 @@ ipcMain.handle('localizacao:navegador', (e) => {
   return true;
 });
 
+ipcMain.on('janela:mostrar', (e) => { if (vemDoApp(e)) mostrarJanela(); });
+
 ipcMain.handle('sistema:reiniciar', (e) => {
   if (!vemDoApp(e)) return;
   saindo = true;

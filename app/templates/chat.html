@@ -7312,6 +7312,7 @@
         socket.on('pedido_amizade_recebido', (d) => {
             showToast(`${d.de_nome} quer ser seu amigo!`, 'info');
             tocarSom('amizade');
+            avisoDoNavegador(`${d.de_nome} quer ser seu amigo`, 'Abra o app pra responder.', d.de_avatar, { de_id: d.de_id });
             if (document.getElementById('add-friend-modal').style.display === 'flex') {
                 socket.emit('listar_pedidos_pendentes');
             }
@@ -14289,16 +14290,27 @@
         }
 
         // aviso do navegador quando a aba está em segundo plano
-        function avisoDoNavegador(titulo, corpo) {
+        // Foto do aviso: a de quem escreveu (DM, pedido, ligação) ou a do servidor (menção), como no WhatsApp. Foto do Cloudinary vem pequena e em PNG.
+        function iconeDoAviso(url) {
+            const u = escUrl(url || '');
+            if (!u) return '/static/img/icone-192.png';
+            return u.startsWith('https://res.cloudinary.com/') && u.includes('/image/upload/') ? u.replace('/image/upload/', '/image/upload/c_fill,w_192,h_192,f_png/') : u;
+        }
+        // aparece no canto da tela (Windows e navegador) quando você não está olhando o app: janela escondida, minimizada ou em segundo plano
+        function avisoDoNavegador(titulo, corpo, icone, alvo) {
             try {
-                if (!document.hidden || !avisoLigado() || !('Notification' in window) || Notification.permission !== 'granted') return;
+                if ((!document.hidden && document.hasFocus()) || !avisoLigado() || !('Notification' in window) || Notification.permission !== 'granted') return;
                 if (typeof perfilMeu !== 'undefined' && perfilMeu.status === 'dnd') return;
                 // Aparelho com push ligado: o servidor já manda o aviso pelo service worker (com som, ícone do app e toque que
                 // abre a conversa). Mandar este também dava DOIS avisos pro mesmo recado.
                 if (window.pushNesteAparelho) return;
                 // `tag` por remetente: várias mensagens da mesma pessoa trocam o aviso em vez de empilhar um por mensagem.
-                const n = new Notification(titulo, { body: corpo, icon: '/static/img/icone-192.png', badge: '/static/img/icone-badge.png', tag: 'pnt-' + titulo, silent: true });
-                n.onclick = () => { window.focus(); n.close(); };
+                const n = new Notification(titulo, { body: corpo, icon: iconeDoAviso(icone), badge: '/static/img/icone-badge.png', tag: 'pnt-' + titulo, silent: true });
+                n.onclick = () => {
+                    try { if (window.panteao && window.panteao.mostrarJanela) window.panteao.mostrarJanela(); } catch (e) {}   // o app do Windows pode estar escondido na bandeja
+                    window.focus(); n.close();
+                    if (alvo && alvo.de_id) { const el = document.getElementById('dm-' + alvo.de_id); if (el) el.click(); }
+                };
             } catch (e) {}
         }
 
@@ -14928,7 +14940,7 @@
                 } else if (document.hidden && !mudo) {
                     tocarSom('msg');
                 }
-                if (!mudo) avisoDoNavegador(d.usuario, trecho);
+                if (!mudo) avisoDoNavegador(d.usuario, trecho, d.avatar, { de_id: d.usuario_id });
             }
         }
 
@@ -15150,7 +15162,11 @@
             }
         }, { once: true });
 
-        socket.on('mencao_recebida', () => { tocarSom('mencao'); });
+        socket.on('mencao_recebida', (d) => {
+            tocarSom('mencao');
+            const srv = (typeof meUserServers !== 'undefined' ? meUserServers : []).find(x => Number(x.id) === Number(d.server_id));
+            avisoDoNavegador(`${d.autor} em #${d.canal_nome}${srv ? ' · ' + srv.name : ''}`, d.trecho, srv && srv.iconUrl);
+        });
 
         // ---------- ROLAGEM: histórico antigo + foto que carrega depois ----------
         function ligarHistorico(container, urlDe, aoRenderizar) {
@@ -15283,7 +15299,10 @@
         }
         socket.on('chamada_recebida', (d) => {
             // o listener antigo já guardou a chamada em chamadaRecebidaDe (ou recusou na hora se estava ocupado)
-            if (chamadaRecebidaDe && Number(chamadaRecebidaDe.de_id) === Number(d.de_id)) iniciarToque('toque');
+            if (chamadaRecebidaDe && Number(chamadaRecebidaDe.de_id) === Number(d.de_id)) {
+                iniciarToque('toque');
+                avisoDoNavegador(`${d.de_nome} está te ligando`, d.tipo === 'video' ? 'Chamada de vídeo' : 'Chamada de voz', d.de_avatar, { de_id: d.de_id });
+            }
         });
         ['chamada_aceita', 'chamada_recusada', 'chamada_cancelada', 'chamada_resolvida'].forEach(ev => socket.on(ev, pararToque));
         ['btn-aceitar-chamada', 'btn-recusar-chamada', 'btn-cancelar-chamada'].forEach(id => document.getElementById(id)?.addEventListener('click', pararToque));

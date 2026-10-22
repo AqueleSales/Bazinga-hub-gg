@@ -346,7 +346,7 @@ def service_worker():
 _SW_TEMPLATE = r"""
 const VERSAO = '__VERSAO__';
 
-// ---- Notificações push: o servidor manda JSON {titulo, corpo, url, tag, urgente, tipo, de_id} ----
+// ---- Notificações push: o servidor manda JSON {titulo, corpo, url, tag, urgente, tipo, de_id, icone} ----
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (er) { d = { corpo: e.data ? e.data.text() : '' }; }
@@ -354,7 +354,7 @@ self.addEventListener('push', e => {
     body: d.corpo || '',
     tag: d.tag || undefined,
     renotify: !!d.tag,
-    icon: '/static/img/icone-192.png',
+    icon: d.icone || '/static/img/icone-192.png',   // a foto de quem escreveu / do servidor (como o WhatsApp); sem foto, o logo do app
     // O Android desenha o ícone pequeno da barra de status só pelo canal alfa: precisa ser uma silhueta branca sobre
     // fundo transparente. Com o PNG colorido ele virava um quadrado branco, ou o navegador usava o ícone dele (o "G").
     badge: '/static/img/icone-badge.png',

@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('panteao', {
     return () => ipcRenderer.removeListener('localizacao:chegou', f);
   },
   reiniciar: () => ipcRenderer.invoke('sistema:reiniciar'),
+  // clicou no aviso (foto de quem escreveu): traz a janela de volta, mesmo escondida na bandeja
+  mostrarJanela: () => ipcRenderer.send('janela:mostrar'),
   // atualização do próprio app (instalador): estado, instalar, procurar e ouvir mudanças
   atualizacaoEstado: () => ipcRenderer.invoke('atualizacao:get'),
   atualizacaoInstalar: () => ipcRenderer.invoke('atualizacao:instalar'),

@@ -61,10 +61,14 @@ with app.app_context():
     ok(PushSub.query.filter_by(person_id=ids['Beto']).count() == 1, 'Inscrever de novo não duplica')
 
     # Beto conectado mas com o app em segundo plano: recebe push
+    Person.query.get(ids['Ana']).avatar = 'https://res.cloudinary.com/demo/image/upload/v1/ana.webp'; db.session.commit()
     beto.emit('visibilidade', {'visivel': False}); beto.get_received()
     ana.emit('enviar_mensagem_direta', {'target_id': ids['Beto'], 'texto': 'oi beto, tudo bem?'}); ana.get_received(); beto.get_received()
     ok(len(enviados) == 1 and 'Ana' in enviados[0][1] and 'oi beto' in enviados[0][1] and '/chat?dm=' in enviados[0][1],
        'App em segundo plano: Beto recebe push com nome, texto e atalho pra conversa')
+
+    ok('"icone": "https://res.cloudinary.com/demo/image/upload/c_fill,w_192,h_192,f_png/v1/ana.webp"' in enviados[0][1],
+       'o push leva a FOTO de quem escreveu (192 px, PNG), como o WhatsApp')
 
     # app visível: sem push (o aviso dentro do app já basta)
     enviados.clear()
@@ -88,6 +92,7 @@ with app.app_context():
     beto.emit('visibilidade', {'visivel': False})
     ana.emit('chamar_amigo', {'amigo_id': ids['Beto'], 'tipo': 'voz'}); ana.get_received()
     ok(any('te ligando' in d for _, d in enviados), 'Ligação chega como push "está te ligando"')
+    ok(any('te ligando' in d and '"icone"' in d for _, d in enviados), '...com a foto de quem liga')
 
     # inscrição que o navegador recusa (410) é apagada
     enviados.clear()
