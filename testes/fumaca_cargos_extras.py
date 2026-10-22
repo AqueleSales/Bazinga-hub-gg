@@ -138,6 +138,8 @@ with app.app_context():
     ok('pedirMembros' in js and 'idsAntes' in js, 'a lista de membros só é pedida de novo quando o conjunto de cargos muda')
     ok('cfg-banner-linha' in open(os.path.join(RAIZ, 'app', 'templates', 'chat.html'), encoding='utf-8').read() and 'cx-banner-escolher-r' in js,
        'o banner também se escolhe no popup rápido do servidor')
+    ok('id="cx-icone-btn"' in js and 'type="hidden" id="cx-icone"' in js and 'type="text" id="cx-icone"' not in js and 'abrirEmojiPicker(e.currentTarget' in js,
+       'o ícone do canal se escolhe no seletor de emoji (não se digita)')
     ok('mask-image' in css and 'to left' in css, 'o banner do cabeçalho some da direita pra esquerda (o nome não fica sobre a imagem)')
 
 print()

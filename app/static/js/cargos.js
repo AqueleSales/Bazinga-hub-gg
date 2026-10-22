@@ -334,6 +334,15 @@ const Cargos = (() => {
     // modal de criar/editar canal: tipos, ícone, categoria e limite
     // ---------------------------------------------------------------------
     let modalPronto = false, modalTipoInicial = 'text';
+    /** O valor mora num campo escondido (#cx-icone, lido por camposDoModal); o botão só mostra. */
+    function definirIconeDoCanal(emoji) {
+        const campo = document.getElementById('cx-icone'), v = document.getElementById('cx-icone-v');
+        if (!campo || !v) return;
+        campo.value = emoji || '';
+        v.innerHTML = emoji ? E(emoji) : '<i class="fa-regular fa-face-smile"></i>';
+        if (emoji) C.emojificar(v);
+        const x = document.getElementById('cx-icone-tirar'); if (x) x.style.display = emoji ? '' : 'none';
+    }
     function prepararModal() {
         if (modalPronto) return;
         const grupo = document.getElementById('channel-type-group');
@@ -345,7 +354,11 @@ const Cargos = (() => {
         blocoNome.insertAdjacentHTML('afterend', `
             <div class="cx-extra" id="cx-extra">
                 <div id="cx-icone-box"><label class="bz-label">Ícone <span class="cx-op">(emoji, opcional)</span></label>
-                    <input type="text" id="cx-icone" class="bz-input" maxlength="8" placeholder="😀" style="padding-left:12px;"></div>
+                    <div class="cx-icone-linha">
+                        <button type="button" id="cx-icone-btn" class="cg-icone-btn" data-abre-emoji title="Escolher um emoji"><span id="cx-icone-v"></span></button>
+                        <button type="button" id="cx-icone-tirar" class="cg-mini" title="Tirar o ícone"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <input type="hidden" id="cx-icone"></div>
                 <div id="cx-cat-box"><label class="bz-label">Categoria</label>
                     <select id="cx-categoria" class="bz-input" style="padding-left:12px;"></select></div>
                 <div id="cx-limite-box"><label class="bz-label">Limite de pessoas <span class="cx-op">(vazio = sem limite)</span></label>
@@ -355,6 +368,12 @@ const Cargos = (() => {
                 <button class="btn-cancel" id="cx-perm-abrir" type="button"><i class="fa-solid fa-shield-halved"></i> Permissões do canal</button>
                 <span class="cx-op">Quem pode ver, escrever, falar, apagar e fixar só neste canal, por cargo.</span>
             </div>`);
+        // o ícone do canal se escolhe no seletor de emoji do app (como nas notas e nos eventos), não digitando
+        document.getElementById('cx-icone-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof abrirEmojiPicker === 'function') abrirEmojiPicker(e.currentTarget, (emoji) => definirIconeDoCanal(emoji));
+        });
+        document.getElementById('cx-icone-tirar').addEventListener('click', () => definirIconeDoCanal(''));
         document.getElementById('cx-perm-abrir').addEventListener('click', () => {
             const srv = C.servidorAtivo(), id = document.getElementById('cx-perm-abrir').dataset.canal;
             if (srv && id) abrirPermissoes(canalPorId(srv, id));
@@ -390,7 +409,7 @@ const Cargos = (() => {
             caixaPerm.style.display = mostrar ? '' : 'none';
             document.getElementById('cx-perm-abrir').dataset.canal = editando ? canal.id : '';
         }
-        document.getElementById('cx-icone').value = editando ? (canal.icone || '') : '';
+        definirIconeDoCanal(editando ? (canal.icone || '') : '');
         document.getElementById('cx-limite').value = editando && canal.limite ? canal.limite : '';
         // categoria: só quando já existem categorias de verdade (servidor antigo mostra as duas seções "virtuais")
         const sel = document.getElementById('cx-categoria');
