@@ -25,10 +25,12 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
 from . import loja as armazem
 from .notas_mapa import modo_valido as modo_resposta_valido
 from . import cargos
+from . import guardiao
+from . import termos
 from . import ordem
 from .passe import titulo_publico
 from .efeitos import mapa_para_cliente as efeitos_custom_mapa
-from .bazar import contar_pendencias as bazar_pendencias
+from .bazar import contar_pendencias as bazar_pendencias, ids_dos_admins as bazar_ids_dos_admins
 from .cosmeticos import (CATALOGO, PACOTES, TEMAS, TIPOS_COLUNA, TIPOS_JSON, TIPOS_EQUIPAVEIS, item_exclusivo, efeito_servidor_valido,
                          posses_da_pessoa, equipados_da_pessoa, definir_slot, badges_do_conjunto,
                          catalogo_para_json, patentes_para_json, patente_do_nivel, valor_atual_do_slot)
@@ -40,7 +42,10 @@ def usuario_logado():
     if not user_id:
         return None
     try:
-        return com_retry(lambda: Person.query.options(joinedload(Person.role)).get(user_id))
+        pessoa = com_retry(lambda: Person.query.options(joinedload(Person.role)).get(user_id))
+        if pessoa is not None and termos.barrada(pessoa):
+            return None     # ainda não aceitou os Termos (LGPD): o socket não responde até aceitar
+        return pessoa
     except SQLAlchemyError as e:
         db.session.rollback()
         # Se isso aparecer, o banco provavelmente está com colunas faltando -
@@ -714,6 +719,52 @@ def _notificar_mencoes(autor, canal, msg):
         print(f"[ERRO MENCOES] {e}")
 
 
+
+# ==========================================
+# GUARDIÃO (segurança com IA, Rodada 31): a mensagem passa por aqui ANTES de sair. Regras em app/guardiao.py.
+# ==========================================
+def _guardiao_avaliar(usuario, origem, texto, canal=None, alvo_id=None, temp_id=None):
+    """True se a mensagem foi RETIDA (não pode sair). Retida = vira caso "em análise" pros responsáveis e quem enviou é avisado.
+    Automutilação não retém: a mensagem sai e abre um alerta. Qualquer falha aqui LIBERA a mensagem (o Guardião nunca derruba o chat)."""
+    try:
+        if not texto or not guardiao.ligado() or (origem == 'dm' and not guardiao.dms_vigiadas()):
+            return False
+        guardado = []
+
+        def historico():
+            if origem == 'canal':
+                msgs = Message.query.filter_by(channel_id=canal.id).order_by(Message.id.desc()).limit(6).all()
+                lista = [(m.person_id, m.text) for m in reversed(msgs) if m.text]
+            else:
+                msgs = DirectMessage.query.filter(or_(
+                    and_(DirectMessage.sender_id == usuario.id, DirectMessage.receiver_id == alvo_id),
+                    and_(DirectMessage.sender_id == alvo_id, DirectMessage.receiver_id == usuario.id)
+                )).order_by(DirectMessage.id.desc()).limit(6).all()
+                lista = [(m.sender_id, m.content) for m in reversed(msgs) if m.content]
+            guardado.extend(lista)
+            return lista
+
+        v = guardiao.avaliar_texto(texto, usuario.id, historico)
+        if not (v['reter'] or v['alerta']):
+            return False
+        ctx, _ = guardiao.montar_contexto(guardado) if guardado else ('', {})
+        caso = guardiao.registrar_caso('canal' if origem == 'canal' else 'dm', usuario.id, v, trecho=texto, contexto=ctx, alvo_id=alvo_id,
+                                       server_id=canal.server_id if canal is not None else None, canal_id=canal.id if canal is not None else None)
+        for admin_id in bazar_ids_dos_admins():
+            if admin_id != usuario.id:
+                criar_notificacao(admin_id, 'sistema', 'Guardião: caso em análise', f'{v.get("categoria") or "suspeita"} (gravidade {v.get("gravidade")}) · caso #{caso.id}')
+        if not v['reter']:
+            return False
+        if temp_id:
+            emit('mensagem_recusada', {'temp_id': temp_id}, to=request.sid)
+        emit('erro_bazinga', {'msg': 'Sua mensagem foi retida para análise de segurança. Se foi engano, uma pessoa responsável vai liberar.'})
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO GUARDIAO] {e}")
+        return False
+
+
 @socketio.on('enviar_mensagem')
 def lidar_com_mensagem(dados):
     usuario = usuario_logado()
@@ -762,6 +813,10 @@ def lidar_com_mensagem(dados):
             if temp:
                 emit('mensagem_recusada', {'temp_id': temp, 'canal_id': canal.id}, to=request.sid)
             return
+
+    # Guardião: a mensagem só sai se passar pela triagem/IA (o que é retido fica "em análise" pros responsáveis).
+    if _guardiao_avaliar(usuario, 'canal', texto, canal=canal, temp_id=temp_id_seguro(dados)):
+        return
 
     # Resposta: só vale citar mensagem DESTE canal (o resumo vem do banco, não do cliente).
     resposta = None
@@ -3955,6 +4010,10 @@ def on_enviar_mensagem_direta(data):
         oculto_pro_destino = False
         if rel and rel.status == 'pending':
             oculto_pro_destino = oculta_pra(rel, target_id)
+
+        # Guardião (Anotações, a conversa consigo mesmo, não passa).
+        if target_id != usuario.id and _guardiao_avaliar(usuario, 'dm', texto, alvo_id=target_id, temp_id=temp_id_seguro(data)):
+            return
 
         # Resposta: só vale citar mensagem DESTA conversa.
         resposta = None

@@ -15,7 +15,7 @@ from functools import wraps
 from flask import Blueprint, abort, jsonify, render_template, request, session
 from sqlalchemy import or_
 
-from . import passe, efeitos, explorar, admin_dados
+from . import passe, efeitos, explorar, admin_dados, guardiao
 from .bazar import eh_admin, ids_dos_admins, definir_admin
 from .cosmeticos import CATALOGO, ROTULO_TIPO, RARIDADES
 from .models import db, Person, Posse
@@ -382,4 +382,34 @@ def servidores_despublicar(pessoa, sid):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN SERVIDORES] {e}")
+        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+
+
+# ------------------------------------------------------------
+# Guardião (segurança com IA): o que foi retido fica "em análise" até uma pessoa decidir
+# ------------------------------------------------------------
+@admin_bp.route('/api/guardiao')
+@so_admin
+def guardiao_lista(pessoa):
+    status = request.args.get('status', 'em_analise')
+    return jsonify({'casos': guardiao.listar_casos(status, 50, request.args.get('antes')), 'estado': guardiao.estado(),
+                    'em_analise': guardiao.contar_em_analise()})
+
+
+@admin_bp.route('/api/guardiao/<int:cid>', methods=['POST'])
+@so_admin
+def guardiao_decidir(pessoa, cid):
+    d = _json()
+    try:
+        caso = guardiao.decidir_caso(cid, pessoa.id, d.get('acao'), d.get('nota'))
+        if caso.status == 'liberado' and caso.person_id and caso.person_id != pessoa.id:
+            guardiao.notificar_fora_do_socket(caso.person_id, 'Sua mensagem foi liberada',
+                                              'A análise de segurança acabou e viu que estava tudo bem. Pode enviar de novo, desculpe o transtorno.')
+        return jsonify({'ok': True, 'status': caso.status})
+    except guardiao.ErroGuardiao as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ADMIN GUARDIAO] {e}")
         return jsonify({'erro': f'Erro inesperado: {e}'}), 500

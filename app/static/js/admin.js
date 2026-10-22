@@ -764,6 +764,41 @@
     }
     VISTAS.servidores = vServidores;
 
+    // ------------------------------------------------------------
+    // Guardião: o que a IA reteve fica "em análise" até uma pessoa decidir
+    // ------------------------------------------------------------
+    const ROTULO_CASO = { canal: 'Mensagem de canal', dm: 'Mensagem privada', imagem: 'Imagem', call: 'Chamada' };
+    const ROTULO_STATUS = { em_analise: 'Em análise', liberado: 'Liberado', confirmado: 'Violação confirmada', apagado: 'Conteúdo apagado' };
+    const GRAV = { 1: 'leve', 2: 'média', 3: 'grave' };
+    async function vGuardiao() {
+        const filtro = E.filtroGuardiao || 'em_analise';
+        const d = await api('/guardiao?status=' + encodeURIComponent(filtro));
+        const est = d.estado || {};
+        main.innerHTML = `<h1>Guardião</h1><p class="es-sub">A IA e a triagem de palavras olham as mensagens e imagens antes de saírem. O que parece perigoso <b>não é entregue</b> e fica aqui <b>em análise</b>. Você decide: <b>liberar</b> (engano; a pessoa é avisada), <b>confirmar</b> a violação ou <b>apagar</b> o conteúdo guardado. Automutilação não bloqueia a mensagem: gera um alerta para alguém ajudar.</p>
+            <div class="es-cartao" style="margin-bottom:14px"><b>Estado:</b> ${est.ligado ? '<span style="color:var(--ok,#3fb27f)">ligado</span>' : '<span style="color:#ff8e8e">desligado (falta GEMINI_API_KEY)</span>'} · DMs ${est.dms ? 'vigiadas' : 'fora'} · modelos: ${esc((est.modelos || []).join(', '))}${est.em_pausa ? ' · <b style="color:#ffb86b">IA em pausa (vale só a triagem grave)</b>' : ''}${est.ultimo_erro ? ` <small style="color:var(--muda)">último erro: ${esc(est.ultimo_erro)}</small>` : ''}</div>
+            <div class="es-linha" style="margin-bottom:12px"><label>Mostrar <select id="gd-f">${Object.keys(ROTULO_STATUS).concat(['todos']).map((k) => `<option value="${k}" ${k === filtro ? 'selected' : ''}>${k === 'todos' ? 'Todos' : ROTULO_STATUS[k]}</option>`).join('')}</select></label> <span style="color:var(--muda)">${fmt(d.em_analise)} em análise agora</span></div>
+            ${d.casos.map((c) => `<div class="es-cartao" style="margin-bottom:12px" data-caso="${c.id}">
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:baseline"><b>#${c.id} · ${esc(ROTULO_CASO[c.origem] || c.origem)}</b>
+                <span class="es-tag">${esc(c.categoria || 'suspeita')} · ${esc(GRAV[c.gravidade] || '?')}</span>
+                <span style="color:var(--muda)">${esc(c.criado_em)} · ${c.fonte === 'regra' ? 'triagem (IA fora do ar)' : 'IA'}</span>
+                <span style="margin-left:auto">${esc(ROTULO_STATUS[c.status] || c.status)}</span></div>
+                <div style="margin:6px 0">De <b>${c.autor ? esc(c.autor.nome) : '?'}</b> ${c.autor && c.autor.username ? `<small>@${esc(c.autor.username)}</small>` : ''} <small style="color:var(--muda)">id ${c.autor ? c.autor.id : '?'}</small>${c.alvo ? ` para <b>${esc(c.alvo.nome)}</b> <small style="color:var(--muda)">id ${c.alvo.id}</small>` : ''}${c.canal_id ? ` · canal ${c.canal_id}` : ''}${c.server_id ? ` · servidor ${c.server_id}` : ''}</div>
+                <div style="color:var(--muda);margin-bottom:6px">${esc(c.motivo || '')}</div>
+                ${c.trecho ? `<div style="background:var(--fundo2,#1b1e24);border-radius:8px;padding:8px 10px;white-space:pre-wrap;word-break:break-word">${esc(c.trecho)}</div>` : ''}
+                ${c.anexo_url && /^https:\/\/res\.cloudinary\.com\//.test(c.anexo_url) ? `<div style="margin-top:8px"><img src="${esc(c.anexo_url)}" alt="imagem retida" style="max-width:240px;max-height:200px;border-radius:8px"></div>` : ''}
+                ${c.contexto ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muda)">Conversa antes</summary><div style="white-space:pre-wrap;color:var(--muda);padding:6px 0">${esc(c.contexto)}</div></details>` : ''}
+                ${c.nota ? `<div style="margin-top:6px"><small>Nota: ${esc(c.nota)}</small></div>` : ''}
+                ${c.status === 'em_analise' ? `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="es-btn mini" data-a="liberar">Liberar (engano)</button><button class="es-btn mini perigo" data-a="confirmar">Confirmar violação</button><button class="es-btn mini" data-a="apagar">Apagar conteúdo</button></div>` : ''}
+            </div>`).join('') || '<div class="es-vazio">Nada por aqui.</div>'}`;
+        $('#gd-f').addEventListener('change', (e) => { E.filtroGuardiao = e.target.value; vGuardiao(); });
+        main.querySelectorAll('[data-caso] button[data-a]').forEach((b) => b.addEventListener('click', async () => {
+            const id = b.closest('[data-caso]').dataset.caso;
+            const nota = b.dataset.a === 'liberar' ? '' : (prompt('Nota (opcional) para o registro:') || '');
+            try { await api('/guardiao/' + id, 'POST', { acao: b.dataset.a, nota }); toast('Caso #' + id + ' atualizado.', 'ok'); vGuardiao(); } catch (e) { /* api já mostra o erro */ }
+        }));
+    }
+    VISTAS.guardiao = vGuardiao;
+
     window.addEventListener('beforeunload', (e) => { if (E.mudancas.size) { e.preventDefault(); e.returnValue = ''; } });
     ir((location.hash || '#geral').slice(1) in VISTAS ? (location.hash || '#geral').slice(1) : 'geral');
 })();

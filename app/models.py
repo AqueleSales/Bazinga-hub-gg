@@ -125,6 +125,9 @@ class Person(db.Model):
     # ordenou). Formato e validação em app/ordem.py; vivem na conta pra valer em qualquer aparelho (Rodada 29).
     ordem_servidores = db.Column(db.Text, nullable=True)
     ordem_dms = db.Column(db.Text, nullable=True)
+    # Aceite dos Termos e da Política de Privacidade (LGPD): versão aceita e quando. NULL = nunca aceitou (ver app/termos.py).
+    termos_versao = db.Column(db.String(16), nullable=True)
+    termos_aceitos_em = db.Column(db.DateTime, nullable=True)
     # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
     # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
     equipados = db.Column(db.Text, nullable=True)
@@ -940,3 +943,31 @@ class Conexao(db.Model):
     atualizado_em = db.Column(db.DateTime, nullable=True)    # quando os dados foram buscados (o cache vale por horas)
     erro = db.Column(db.String(140), nullable=True)          # por que a última busca falhou (só o dono vê)
     criado_em = db.Column(db.DateTime, default=br_now)
+
+
+# ==========================================
+# GUARDIÃO (segurança com IA, Rodada 31)
+# ------------------------------------------------------------
+# Só o que foi RETIDO vira linha aqui (mensagem ou imagem que a triagem/IA achou suspeita): fica "em análise" até uma pessoa responsável
+# decidir no Estúdio. O que passa direto não é guardado. Regras em app/guardiao.py. A tabela nasce pelo create_all (sem ALTER).
+# ==========================================
+class GuardiaoCaso(db.Model):
+    __tablename__ = 'guardiao_caso'
+    id = db.Column(db.Integer, primary_key=True)
+    criado_em = db.Column(db.DateTime, default=br_now, index=True)
+    origem = db.Column(db.String(10), nullable=False)       # canal | dm | imagem | call
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True, index=True)   # quem tentou enviar
+    alvo_id = db.Column(db.Integer, nullable=True)           # DM: quem receberia
+    server_id = db.Column(db.Integer, nullable=True)
+    canal_id = db.Column(db.Integer, nullable=True)
+    trecho = db.Column(db.Text, nullable=True)               # o texto retido (até 2000)
+    contexto = db.Column(db.Text, nullable=True)             # as últimas mensagens da conversa, pra quem revisa entender (até ~1200)
+    anexo_url = db.Column(db.String(500), nullable=True)
+    categoria = db.Column(db.String(24), nullable=True)
+    gravidade = db.Column(db.SmallInteger, nullable=True)    # 1 leve, 2 média, 3 grave
+    motivo = db.Column(db.String(240), nullable=True)
+    fonte = db.Column(db.String(10), nullable=True)          # ia | regra (a IA estava fora do ar e a regra era grave)
+    status = db.Column(db.String(12), default='em_analise', index=True)   # em_analise | liberado | confirmado | apagado
+    revisado_por = db.Column(db.Integer, nullable=True)
+    revisado_em = db.Column(db.DateTime, nullable=True)
+    nota = db.Column(db.String(240), nullable=True)

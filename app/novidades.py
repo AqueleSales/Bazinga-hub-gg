@@ -9,6 +9,15 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 34, 'data': '21/10/2026', 'titulo': 'Segurança com IA e Termos de Uso',
+        'itens': [
+            {'icone': 'fa-robot', 'titulo': 'Guardião: mensagens e imagens são analisadas',
+             'texto': 'Para proteger a comunidade, uma IA olha o que é enviado nos bastidores. O que parecer perigoso (ameaça, golpe, conteúdo impróprio) não é entregue e fica em análise até uma pessoa responsável decidir. Se foi engano, ela libera.'},
+            {'icone': 'fa-file-contract', 'titulo': 'Termos e Política de Privacidade',
+             'texto': 'Agora o app pede o seu aceite dos Termos (LGPD), que explicam o que guardamos e como a análise de segurança funciona. Dá para ler a qualquer momento em /termos.'},
+        ],
+    },
+    {
         'id': 33, 'data': '21/10/2026', 'titulo': 'Chamadas mais seguras',
         'itens': [
             {'icone': 'fa-shield-halved', 'titulo': 'Só quem está na call entra na call',

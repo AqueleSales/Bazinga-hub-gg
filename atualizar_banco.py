@@ -303,6 +303,10 @@ def atualizar_banco():
             # 39. Permissão por canal (Rodada 29b): a tabela channel_overwrite nasce pelo create_all; aqui só a flag do canal (NULL = nenhuma sobrescrita).
             add_column_se_nao_existir("channel", "sobrescrita BOOLEAN")
 
+            # 40. Aceite dos Termos (LGPD) e Guardião (Rodada 31): a tabela guardiao_caso nasce pelo create_all; aqui só as colunas da pessoa.
+            add_column_se_nao_existir("person", "termos_versao VARCHAR(16)")
+            add_column_se_nao_existir("person", "termos_aceitos_em TIMESTAMP")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

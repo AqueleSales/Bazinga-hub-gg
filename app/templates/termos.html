@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Termos e Privacidade · {{ app_nome }}</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root { color-scheme: dark; --bg:#14161a; --card:#1c1f25; --borda:#2b2f38; --txt:#e8eaee; --muda:#9aa1ad; --acc:#c9a24a; --verde:#3fb27f; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--txt); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 18px 140px; }
+    h1 { font-size: 26px; margin: 8px 0 4px; }
+    h2 { font-size: 18px; margin: 30px 0 8px; color: var(--acc); }
+    .muda { color: var(--muda); font-size: 14px; }
+    .resumo { background: var(--card); border: 1px solid var(--borda); border-left: 4px solid var(--acc); border-radius: 10px; padding: 14px 18px; margin: 18px 0; }
+    .resumo ul { margin: 6px 0 0; }
+    ul { padding-left: 22px; }
+    a { color: var(--acc); }
+    .barra { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--borda); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); }
+    .barra form { max-width: 760px; margin: 0 auto; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .barra label { flex: 1; min-width: 220px; font-size: 14px; }
+    button { background: var(--acc); color: #171309; border: 0; border-radius: 10px; padding: 11px 20px; font: 600 15px system-ui; cursor: pointer; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .erro { color: #ff8e8e; font-size: 14px; }
+    .ok { color: var(--verde); }
+  </style>
+</head>
+<body>
+<main>
+  <p class="muda"><a href="{{ url_for('main.index') }}">&larr; {{ app_nome }}</a></p>
+  <h1>Termos de Uso e Política de Privacidade</h1>
+  <p class="muda">Versão {{ versao }} · em linguagem simples, de acordo com a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</p>
+
+  <div class="resumo">
+    <b>O resumo:</b>
+    <ul>
+      <li>Você entra com a sua conta Google; guardamos seu nome, e-mail e foto, e o que você mesmo cria no app.</li>
+      <li><b>Por segurança, o {{ app_nome }} usa inteligência artificial para analisar mensagens e imagens enviadas.</b> Isso acontece nos bastidores, sem aviso a cada envio, e vale para canais e conversas privadas.</li>
+      <li>Conteúdo que pareça perigoso pode ser <b>retido</b> (não é entregue) e revisado por uma pessoa responsável. O que passa normalmente não é guardado por esse sistema.</li>
+    </ul>
+  </div>
+
+  <h2>1. Quais dados coletamos</h2>
+  <ul>
+    <li><b>Conta:</b> nome, e-mail e foto do Google, e o que você escolhe no perfil (apelido, bio, status, enfeites, conexões que você adicionar).</li>
+    <li><b>Uso:</b> mensagens, anexos, servidores, amigos, pedidos e lojas do Bazar, moedas e itens do Armazém, nível e missões.</li>
+    <li><b>Localização:</b> só se você ligar a função do mapa; você pode desligar quando quiser (e há o Modo Fantasma).</li>
+    <li><b>Aparelho:</b> dados técnicos para o app funcionar e, se você permitir, o endereço de envio de notificações.</li>
+  </ul>
+
+  <h2>2. Segurança e moderação automática</h2>
+  <p>Para proteger a comunidade (principalmente menores de idade) de ameaças, golpes, aliciamento, conteúdo sexual, discurso de ódio, venda de drogas e exposição de dados pessoais, o {{ app_nome }} faz uma análise automática:</p>
+  <ul>
+    <li><b>O que é analisado:</b> textos de mensagens (em canais e conversas diretas) e imagens enviadas. Chamadas de voz e vídeo, vídeos e transmissões de tela também poderão ser analisados por meios automatizados quando esse recurso estiver ativo, com a retenção de trechos para revisão.</li>
+    <li><b>Como:</b> uma triagem no servidor e, quando necessário, um serviço de inteligência artificial de terceiros (Google Gemini). Ao consultá-lo, enviamos só o trecho suspeito e as últimas mensagens da conversa, sem nomes de contas.</li>
+    <li><b>O que acontece:</b> se o sistema entender que há violação, a mensagem ou imagem <b>não é entregue</b> e fica "em análise". Uma pessoa responsável decide se libera (engano) ou confirma. Casos de automutilação não bloqueiam a mensagem, mas geram um alerta para que alguém possa ajudar.</li>
+    <li><b>O que guardamos nesses casos:</b> quem enviou, para quem ou em qual canal, data e hora, o conteúdo retido, as mensagens de contexto, a categoria e o motivo. O que é entregue normalmente não é guardado por esse sistema.</li>
+    <li><b>Quem vê:</b> somente os administradores do {{ app_nome }}, e só dos casos retidos. Não vendemos esses dados nem os usamos para publicidade.</li>
+    <li><b>Erros acontecem:</b> a análise automática pode errar. Por isso decisões de bloqueio de conta e de remoção de servidor são sempre de uma pessoa.</li>
+  </ul>
+
+  <h2>3. Por que podemos fazer isso (base legal)</h2>
+  <p>Seu <b>consentimento</b>, dado ao aceitar estes termos (LGPD, art. 7º, I), além da <b>proteção da vida e da integridade</b> de pessoas e da <b>prevenção a fraudes e a abusos</b> (art. 7º, VII e art. 11, II, "g"). Você pode retirar o consentimento a qualquer momento deixando de usar o app e pedindo a exclusão da conta; como a análise de segurança é condição para usar uma comunidade segura, o uso do app depende dela.</p>
+
+  <h2>4. Por quanto tempo guardamos</h2>
+  <ul>
+    <li>Casos de segurança já decididos: até 12 meses; os que ainda estão em análise ficam até serem decididos.</li>
+    <li>Dados da conta: enquanto ela existir. Ao excluir a conta, apagamos o que não precisamos guardar por obrigação legal.</li>
+  </ul>
+
+  <h2>5. Seus direitos</h2>
+  <p>Você pode pedir confirmação de que tratamos seus dados, acesso, correção, anonimização, eliminação, portabilidade, informação sobre com quem compartilhamos e a revisão de decisões tomadas apenas por sistemas automatizados (LGPD, art. 18 e art. 20). Se uma mensagem sua foi retida por engano, peça a revisão.
+  {% if contato %}Fale com a gente em <b>{{ contato }}</b>.{% else %}Fale com o administrador do serviço pelo próprio app.{% endif %}</p>
+
+  <h2>6. Regras de convivência</h2>
+  <ul>
+    <li>Nada de ameaça, assédio, perseguição, golpe ou exposição de dados de outras pessoas.</li>
+    <li>Nada de conteúdo sexual envolvendo menores, nem aliciamento. Isso é crime e pode ser comunicado às autoridades competentes.</li>
+    <li>Nada de discurso de ódio, venda de drogas ou de produtos ilegais.</li>
+    <li>Nas compras entre pessoas (Bazar), o pagamento é feito direto entre vocês: o {{ app_nome }} não guarda nem devolve dinheiro.</li>
+  </ul>
+
+  <h2>7. Menores de idade</h2>
+  <p>Se você tem menos de 18 anos, use o app com o conhecimento de um responsável. Menores de 13 anos não devem criar conta.</p>
+
+  <h2>8. Mudanças</h2>
+  <p>Se algo importante mudar (principalmente o que coletamos ou como a segurança funciona), pediremos o seu aceite de novo.</p>
+  <p class="muda">Última atualização: {{ versao[8:10] }}/{{ versao[5:7] }}/{{ versao[0:4] }}.</p>
+</main>
+
+{% if pessoa and not aceito %}
+<div class="barra">
+  <form method="post" action="{{ url_for('main.termos_aceitar') }}">
+    <label><input type="checkbox" id="c" name="concordo" value="1"> Li e concordo com os Termos e a Política de Privacidade, inclusive com a análise automática de segurança.</label>
+    <button id="b" type="submit" disabled>Aceitar e continuar</button>
+    {% if erro %}<span class="erro">Marque a caixa para continuar.</span>{% endif %}
+  </form>
+</div>
+<script>document.getElementById('c').addEventListener('change', function () { document.getElementById('b').disabled = !this.checked; });</script>
+{% elif pessoa and aceito %}
+<div class="barra"><form onsubmit="return false"><span class="ok">Você aceitou esta versão em {{ aceito }}.</span> <a href="{{ url_for('main.chat') }}">Voltar ao app</a></form></div>
+{% endif %}
+</body>
+</html>

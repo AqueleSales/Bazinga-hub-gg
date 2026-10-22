@@ -22,6 +22,9 @@ from ..novidades import novidade_atual, novidades_para_cliente
 from ..events import sala_servidor, sala_pessoal, servidor_para_json, servidores_para_json, _estado_inventario
 from ..passe import titulo_publico
 from .. import ordem
+from .. import termos as termos_mod
+from .. import guardiao
+from ..bazar import ids_dos_admins as _ids_dos_admins
 from ..explorar import TEMAS_EXPLORAR
 from ..efeitos import mapa_para_cliente as efeitos_custom_mapa
 from ..cosmeticos import posses_da_pessoa, posses_com_regras, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
@@ -222,6 +225,34 @@ def entrar():
     # que a pessoa deve cair direto no chat.
     session['veio_do_entrar'] = True
     return render_template("entrar.html", erro=request.args.get('erro'))
+
+
+# ==========================================
+# TERMOS E PRIVACIDADE (LGPD): página pública; quem está logado e ainda não aceitou vê o botão de aceitar
+# ==========================================
+@main_bp.route("/termos")
+def termos_pagina():
+    pessoa = usuario_da_sessao()
+    aceito = None
+    if pessoa and termos_mod.aceitou(pessoa):
+        aceito = pessoa.termos_aceitos_em.strftime('%d/%m/%Y') if pessoa.termos_aceitos_em else 'uma data anterior'
+    return render_template("termos.html", versao=termos_mod.VERSAO, pessoa=pessoa, aceito=aceito, contato=termos_mod.contato(),
+                           erro=request.args.get('erro'))
+
+
+@main_bp.route("/termos/aceitar", methods=["POST"])
+def termos_aceitar():
+    pessoa = usuario_da_sessao()
+    if not pessoa:
+        return redirect(url_for('main.entrar'))
+    if request.form.get('concordo') != '1':
+        return redirect(url_for('main.termos_pagina', erro=1))
+
+    def gravar():
+        pessoa.termos_versao = termos_mod.VERSAO
+        pessoa.termos_aceitos_em = br_now()
+    comitar_com_retry(gravar)
+    return redirect(url_for('main.chat'))
 
 
 @main_bp.route("/abrir")
@@ -517,6 +548,9 @@ def chat():
             return redirect(url_for('main.index'))
         (usuario_atual, text_channels, voice_channels, default_channel, messages, amigos,
          servidores_iniciais, inventario_inicial, ordem_servidores_inicial, fixas_ids) = resultado
+        if termos_mod.barrada(usuario_atual):
+            # LGPD: sem aceitar os termos (e o aviso da análise de segurança) não entra no app.
+            return redirect(url_for('main.termos_pagina'))
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -782,6 +816,17 @@ def upload_imagem():
         if tamanho > LIMITE_IMAGEM:
             return jsonify({'error': 'Imagem muito pesada (máximo 8 MB)'}), 400
 
+    # Guardião: a imagem é vista pela IA ANTES de a URL voltar. Retida = sobe pra uma pasta separada (só pra os responsáveis revisarem),
+    # vira caso "em análise" e quem enviou recebe a recusa. Vídeo não passa por aqui (precisaria extrair quadros: ver Rodada 31).
+    veredito = None
+    if not e_video and guardiao.ligado():
+        try:
+            veredito = guardiao.avaliar_imagem(arquivo.stream.read())
+        except Exception as e:
+            print(f"[ERRO GUARDIAO IMAGEM] {e}")
+        arquivo.stream.seek(0)
+    retida = bool(veredito and veredito['reter'])
+
     # Vai pro Cloudinary, não pro disco local: o disco do Render free é
     # efêmero e some a cada restart/redeploy (avatar, ícone de servidor e
     # anexo de mensagem desapareciam sempre que o container reiniciava).
@@ -791,13 +836,24 @@ def upload_imagem():
             arquivo,
             public_id=nome_seguro,
             resource_type='video' if e_video else 'image',
-            folder='bazinga',
+            folder='bazinga_quarentena' if retida else 'bazinga',
         )
     except Exception as e:
         print(f"[ERRO UPLOAD] Falha ao enviar pro Cloudinary: {e}")
         return jsonify({'error': f'Não foi possível enviar o arquivo: {e}'}), 500
 
     url = resultado.get('secure_url')
+    if retida or (veredito and veredito.get('alerta')):
+        try:
+            caso = guardiao.registrar_caso('imagem', session['user_id'], veredito, anexo_url=url)
+            for admin_id in _ids_dos_admins():
+                if admin_id != session['user_id']:
+                    guardiao.notificar_fora_do_socket(admin_id, 'Guardião: imagem em análise', f'{veredito.get("categoria") or "suspeita"} (gravidade {veredito.get("gravidade")}) · caso #{caso.id}')
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO GUARDIAO CASO IMAGEM] {e}")
+    if retida:
+        return jsonify({'error': 'Essa imagem foi retida para análise de segurança. Se foi engano, uma pessoa responsável vai liberar.', 'retido': True}), 422
     return jsonify({'url': url, 'tipo': 'video' if e_video else 'image', 'tamanho': tamanho})
 
 

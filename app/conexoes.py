@@ -1019,7 +1019,7 @@ def cv_com_ia(texto):
     if not chave:
         raise ErroConexao('A IA ainda não está ligada neste servidor.')
     import requests
-    modelo = re.sub(r'[^A-Za-z0-9.\-]', '', os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash'))
+    modelo = re.sub(r'[^A-Za-z0-9.\-]', '', os.environ.get('GEMINI_MODEL', 'gemini-flash-lite-latest'))
     corpo = {'contents': [{'parts': [{'text': _PROMPT_CV + texto[:30_000]}]}],
              'generationConfig': {'responseMimeType': 'application/json', 'responseSchema': _ESQUEMA_CV, 'temperature': 0.1}}
     try:
