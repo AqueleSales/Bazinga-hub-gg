@@ -292,6 +292,7 @@ const Cosm = (() => {
         bazinga:      { nome: 'BAZINGA', desc: 'on top!', cor: '#3ddc6e' },
         coder:        { nome: 'Coder', desc: 'Mexeu no código por baixo do capô.', cor: '#22d3ee' },
         so_nos:       { nome: 'Só nós', desc: 'Uma sarça que arde e não se consome. Só quem começou isso tem.', cor: '#ff8a1f' },
+        olimpo:       { nome: 'Olimpo', desc: 'Quem sustenta o Pantheon. Uma letra Ômega de lava: o fim e o começo, com raios do Olimpo correndo por dentro.', cor: '#ff7a18' },
     };
     // Chama de 7 pontos (contorno em coordenadas 0-1, ponta em cima, "lambida" na esquerda), escalada pra caixa dada.
     const CHAMA = [[.50, 0], [.55, .18, .78, .28, .86, .55], [.94, .80, .78, 1, .50, 1], [.22, 1, .06, .80, .14, .55],
@@ -330,6 +331,7 @@ const Cosm = (() => {
         return `<circle class="bd-bz-part" cx="32" cy="32" r="${(1.5 + (i % 3) * .5).toFixed(1)}" fill="#7dffa0" style="--x:${(Math.cos(a) * r).toFixed(1)}px;--y:${(Math.sin(a) * r).toFixed(1)}px;--d:${(i * 0.06).toFixed(2)}s"/>`;
     }).join('');
 
+    let bdOmegaN = 0;      // ids únicos por desenho (máscara e degradê do Ômega)
     const DESENHO_BADGE = {
         // capacete de construção (no popover gira como objeto 3D: ver svgBadge3D)
         criador: () => `
@@ -394,6 +396,36 @@ const Cosm = (() => {
             <g class="bd-codigo" fill="none" stroke="#67e8f9" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 24 L14.5 32 L23 40"/><path d="M41 24 L49.5 32 L41 40"/><path d="M35.5 22 L28.5 42" stroke="#a5f3fc" stroke-width="3.6"/>
             </g>`,
+        // Ômega de lava (Olimpo): 5 peças voam e se encaixam, a lava ESFRIA (a crosta escurece e sobram só as rachaduras acesas) e raios correm pelo Ômega.
+        // A máscara (as 5 peças) recorta a lava; a animação mexe só nas peças, na crosta e nos raios. Parado (sem zoom/hover) é o Ômega inteiro e frio.
+        olimpo: () => {
+            const k = ++bdOmegaN;
+            const sem = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); };
+            const N = 7, T = 64 / N;
+            const pt = (i, j) => [i * T + (sem(i, j) - 0.5) * T * 0.7, j * T + (sem(j + 3, i + 7) - 0.5) * T * 0.7];
+            let placas = '';
+            for (let j = -1; j <= N; j++) for (let i = -1; i <= N; i++) {
+                const q = [pt(i, j), pt(i + 1, j), pt(i + 1, j + 1), pt(i, j + 1)];
+                const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
+                const enc = q.map(([x, y]) => `${(cx + (x - cx) * 0.84).toFixed(1)},${(cy + (y - cy) * 0.84).toFixed(1)}`).join(' ');
+                placas += `<polygon points="${enc}" fill="${['#1b0a07', '#26100a', '#150808', '#2d130b'][Math.floor(sem(i + 9, j + 5) * 4)]}"/>`;
+            }
+            const pecas = [['M5 50H24', -22, 8, -40, 6], ['M19 48C12 42 10 35 10 28', -18, -6, -50, 8.6], ['M10 28C10 16 19 8 32 8C45 8 54 16 54 28', 0, -26, 25, 8.6],
+                           ['M54 28C54 35 52 42 45 48', 18, -6, 50, 8.6], ['M40 50H59', 22, 8, 40, 6]];
+            const mascara = pecas.map(([d, x, y, r, w], n) => `<path class="om-pc om-pc${n}" d="${d}" stroke="#fff" stroke-width="${w}" ${n > 0 && n < 4 ? 'stroke-linecap="square"' : ''} fill="none" style="--ox:${x}px;--oy:${y}px;--or:${r}deg"/>`).join('');
+            const R1 = 'M7 50 L13 44 L10 37 L15 31 L10 25 L15 17 L22 13 L26 9 L32 13 L38 8 L44 12 L50 17 L54 24 L49 31 L55 37 L50 44 L57 50';
+            const R2 = 'M24 50 L19 44 L23 38 L16 33 L21 26 L14 20 L24 11 L30 16 L35 7 L42 14 L48 9 L53 18 L47 24 L53 31 L46 37 L50 44 L41 50';
+            const raio = (cls, d) => `<path class="om-raio ${cls} brilho" pathLength="100" d="${d}" stroke="#ff9d1f" stroke-width="3.4"/><path class="om-raio ${cls}" pathLength="100" d="${d}" stroke="#fffbe0" stroke-width="1.3"/>`;
+            return `<defs>
+              <radialGradient id="omG${k}" cx="50%" cy="48%" r="62%"><stop offset="0" stop-color="#fff0a0"/><stop offset=".32" stop-color="#ffb02e"/><stop offset=".68" stop-color="#ff5a14"/><stop offset="1" stop-color="#a81c08"/></radialGradient>
+              <mask id="omM${k}" maskUnits="userSpaceOnUse" x="-8" y="-8" width="80" height="80">${mascara}</mask></defs>
+            <g mask="url(#omM${k})">
+              <rect x="-8" y="-8" width="80" height="80" fill="url(#omG${k})"/>
+              <g class="om-crosta">${placas}</g>
+              <rect class="om-quente" x="-8" y="-8" width="80" height="80" fill="#ffe27a"/>
+              <g class="om-raios" fill="none" stroke-linejoin="round" stroke-linecap="round">${raio('r1', R1)}${raio('r2', R2)}</g>
+            </g>`;
+        },
         // sarça ardente: um arbusto verde envolto em fogo que não o consome; no zoom cai um raio e ela pega fogo
         so_nos: () => `
             <g class="bd-sc-fogo">

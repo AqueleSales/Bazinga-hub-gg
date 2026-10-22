@@ -2984,6 +2984,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/explorar.css') }}?v={{ explorar_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mapa_social.css') }}?v={{ mapa_social_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/notas_mapa.css') }}?v={{ notas_mapa_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/loja_mapa.css') }}?v={{ loja_mapa_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conexoes.css') }}?v={{ conexoes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
@@ -3215,8 +3216,8 @@
                         <button class="btn" style="background-color: var(--bg-tertiary); color: var(--text-normal); font-weight: 600; padding: 6px 12px;" onclick="abrirModalNota('create')">
                             <i class="fa-solid fa-comment-dots" style="color: var(--yellow-color);"></i> Deixar Nota
                         </button>
-                        <button class="btn btn-primary" style="background-color: var(--green-color); padding: 6px 12px; font-weight: 600;" onclick="abrirModalServidor('create')">
-                            <i class="fa-solid fa-location-dot"></i> Plantar Servidor
+                        <button class="btn btn-primary" style="background-color: var(--green-color); padding: 6px 12px; font-weight: 600;" onclick="LojaMapa.abrirPlantar()" title="Plantar um servidor ou a sua loja no mapa">
+                            <i class="fa-solid fa-location-dot"></i> Plantar
                         </button>
                         <button class="btn ms-bt" id="btn-mapa-amigos" type="button" title="Ver onde seus amigos estão no mapa"><i class="fa-solid fa-user-group"></i><span class="ms-rot"> Amigos no mapa</span></button>
                         <button class="btn ms-bt" id="btn-mapa-servidores" type="button" title="Servidores plantados no seu alcance"><i class="fa-solid fa-tower-broadcast"></i><span class="ms-rot"> Servidores perto</span></button>
@@ -4968,6 +4969,7 @@
     <script src="{{ url_for('static', filename='js/explorar.js') }}?v={{ explorar_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/mapa_social.js') }}?v={{ mapa_social_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/notas_mapa.js') }}?v={{ notas_mapa_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/loja_mapa.js') }}?v={{ loja_mapa_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
@@ -8050,6 +8052,9 @@
                         showToast("Sem conexão com o servidor. Recarregue a página e tente de novo.", "error");
                     }
                 }
+                else if (plantingMode === 'loja') {
+                    LojaMapa.plantarEm(e.latlng);
+                }
                 else if (plantingMode === 'server' && meUserServers[carrosselIndex]) {
                     const srv = meUserServers[carrosselIndex];
                     const vagasNum = lerValorLimite('server-tickets-input', 'server-tickets-unlimited-btn');
@@ -8369,7 +8374,8 @@
         }
 
         // O que chegou do servidor substitui o que está na tela (sem piscar quem já estava).
-        function sincronizarMapa(notas, servers) {
+        function sincronizarMapa(notas, servers, lojas) {
+            if (typeof LojaMapa !== 'undefined') LojaMapa.sincronizar(lojas);
             const idsNotas = new Set((notas || []).map(n => n.id));
             geoNotesAtivas.filter(n => !idsNotas.has(n.id)).forEach(n => removerDoMapa('nota', n.id));
             const idsSrv = new Set((servers || []).map(s => s.id));
@@ -8734,7 +8740,7 @@
                 if (d.raio_servidores_m) raioServidoresM = d.raio_servidores_m;
                 NotasMapa.definirReacoes(d.reacoes_permitidas);
                 if (!d.explorando && myMapMarker) { const p = myMapMarker.getLatLng(); desenharRaios(p.lat, p.lng); aplicarLimitesDoMapa(p.lat, p.lng); }
-                sincronizarMapa(d.notas, d.servers);
+                sincronizarMapa(d.notas, d.servers, d.lojas);
             });
 
             socket.on('nova_geonote', function(dados) {
@@ -11107,6 +11113,14 @@
             irAte: (nota) => MapaSocial.irAte(nota.marker.getLatLng(), 'Sua nota', nota.marker, 10),
             irParaMapa: () => { if (vistaAtual !== 'home') switchMainView('home'); },
         });
+        // LOJA NO MAPA (Rodada 32): o botão Plantar (servidor ou loja), o pino da loja e o cartão que abre a loja no Bazar.
+        LojaMapa.iniciar({
+            socket, esc, escUrl, toast: (m, t) => showToast(m, t), mapa: () => bazingaMap, meuId: () => currentUserId,
+            exigirLocalizacao: () => exigirLocalizacao(true),
+            abrirServidor: () => abrirModalServidor('create'),
+            preparar: () => prepararPlantio('loja'),
+            abrirLoja: (id) => { document.getElementById('btn-mercado').click(); document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click(); Bazar.abrirLojaDe(id); },
+        });
         socket.on('mapa_radar', (d) => MapaSocial.receberRadar(d));
         socket.on('mapa_servidor_previa', (p) => Explorar.previaMapa(p, (id) => socket.emit('entrar_servidor_pin', { server_id: id })));
         document.getElementById('btn-mapa-amigos').addEventListener('click', () => MapaSocial.abrirAmigos());
@@ -11129,6 +11143,8 @@
         socket.on('passe_resgatado', (r) => Passe.resgatado(r));
         socket.on('passe_erro', (d) => showToast(d.msg, 'error'));
         socket.on('titulos', (d) => Passe.titulosRecebidos(d));
+        socket.on('olimpo_estado', (d) => Passe.olimpoEstado(d));
+        socket.on('olimpo_cobranca', (d) => Passe.olimpoCobranca(d));
         socket.on('loja', (v) => Loja.receber(v));
         socket.on('compra_ok', (d) => Loja.compraOk(d));
         socket.on('compra_recusada', (d) => Loja.compraRecusada(d));
@@ -15388,7 +15404,7 @@
     <div id="mob-fab">
         <button class="fab-op" data-a="fantasma" type="button" title="Modo Fantasma"><i class="fa-solid fa-ghost"></i></button>
         <button class="fab-op" data-a="nota" type="button" title="Deixar nota"><i class="fa-solid fa-comment-dots"></i></button>
-        <button class="fab-op" data-a="servidor" type="button" title="Plantar servidor"><i class="fa-solid fa-location-dot"></i></button>
+        <button class="fab-op" data-a="servidor" type="button" title="Plantar servidor ou loja"><i class="fa-solid fa-location-dot"></i></button>
         <button class="fab-op" data-a="amigos" type="button" title="Amigos no mapa"><i class="fa-solid fa-user-group"></i></button>
         <button class="fab-op" data-a="servidores" type="button" title="Servidores perto"><i class="fa-solid fa-tower-broadcast"></i></button>
         <button class="fab-main" type="button" aria-label="Ações do mapa"><i class="fa-solid fa-plus"></i></button>
@@ -15691,7 +15707,7 @@
             else if (a === 'nota') abrirModalNota('create');
             else if (a === 'amigos') MapaSocial.abrirAmigos();
             else if (a === 'servidores') MapaSocial.abrirServidores();
-            else abrirModalServidor('create');
+            else LojaMapa.abrirPlantar();
         }));
         document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#mob-fab')) abrir(false); }, true);
 

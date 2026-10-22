@@ -110,3 +110,13 @@
 @media (max-width: 720px) { .pz-trilha-caixa.com-cap .pz-rotulos { padding-top: 60px; } }
 
 .pz-cap-tit { position: sticky; left: 4px; display: flex; flex-direction: column; width: max-content; max-width: 100%; }   /* o nome do canto acompanha a rolagem enquanto você está nele */
+
+/* ---- Olimpo (janela da assinatura) ---- */
+.pz-olimpo { text-align: center; max-width: 440px; }
+.pz-olimpo h3 { margin: 4px 0 2px; }
+.pz-oli-lista { list-style: none; padding: 0; margin: 14px 0; text-align: left; display: grid; gap: 8px; font-size: 14px; line-height: 1.45; }
+.pz-oli-lista i { width: 20px; color: #ff9d1f; }
+.pz-oli-pix { text-align: left; font-size: 14px; }
+.pz-oli-pix textarea { width: 100%; min-height: 64px; resize: none; font-size: 12px; margin: 6px 0; }
+.pz-oli-bot { display: flex; gap: 8px; flex-wrap: wrap; }
+.pz-oli-teste { background: rgba(224, 168, 46, .15); border-radius: 8px; padding: 6px 10px; }

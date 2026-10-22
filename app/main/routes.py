@@ -255,6 +255,18 @@ def termos_aceitar():
     return redirect(url_for('main.chat'))
 
 
+@main_bp.route("/webhooks/asaas", methods=["POST"])
+def webhook_asaas():
+    """Aviso de pagamento do Asaas. Sem login (quem chama é o gateway): vale pelo token no cabeçalho `asaas-access-token`
+    (ASAAS_WEBHOOK_TOKEN) e ainda reconfirma o pagamento na API. Ver app/pagamentos.py."""
+    from .. import pagamentos
+    from ..bazar_events import aplicar_pagamento_confirmado
+    status, texto, cobranca = pagamentos.processar_webhook_asaas(request.headers.get('asaas-access-token', ''), request.get_json(silent=True))
+    if cobranca is not None:
+        aplicar_pagamento_confirmado(cobranca)
+    return jsonify({'ok': status == 200, 'msg': texto}), status
+
+
 @main_bp.route("/abrir")
 def abrir():
     """Tela pós-login: continuar no navegador, abrir no Chrome ou instalar o app."""

@@ -124,7 +124,7 @@ const Passe = (() => {
                         <button type="button" class="pz-btn" id="pz-titulos"><i class="fa-solid fa-signature"></i> Meus títulos</button>
                         <button type="button" class="pz-btn" id="pz-ir"><i class="fa-solid fa-crosshairs"></i> Ir pro meu nível</button>
                         ${S.admin ? '<a class="pz-btn" href="/admin#passe" target="_blank" rel="noopener"><i class="fa-solid fa-screwdriver-wrench"></i> Estúdio</a>' : ''}
-                        ${S.premium ? '<span class="pz-chip ok"><i class="fa-solid fa-crown"></i> Trilha Premium liberada</span>' : '<span class="pz-chip" title="A trilha Premium chega junto com a assinatura"><i class="fa-solid fa-lock"></i> Trilha Premium: em breve</span>'}
+                        ${botaoOlimpo()}
                     </div>
                 </div></section>
             ${filtros}
@@ -151,7 +151,7 @@ const Passe = (() => {
         const r = l && l[trilha];
         if (!r) return;
         const est = estadoCel(r, trilha, n);
-        const msg = { resgatada: 'Você já resgatou.', pronta: 'Pronta pra resgatar!', trancada: 'Essa recompensa é da trilha Premium (em breve).', futura: `Disponível no nível ${n} do passe.`, invalida: 'Esta recompensa foi removida pela equipe.' }[est];
+        const msg = { resgatada: 'Você já resgatou.', pronta: 'Pronta pra resgatar!', trancada: 'Essa recompensa é da trilha Premium: ative o Olimpo para liberar.', futura: `Disponível no nível ${n} do passe.`, invalida: 'Esta recompensa foi removida pela equipe.' }[est];
         const desc = r.tipo === 'item' && r.item ? r.item.desc : r.tipo === 'titulo' ? (r.titulo.descricao || 'Um título pra equipar ao lado do seu nome.') : r.tipo === 'tema' ? 'Um tema exclusivo da temporada, pra usar no app inteiro.' : `${num(r.quantidade)} moedas na sua carteira.`;
         fecharModal();
         const m = document.createElement('div');
@@ -198,6 +198,60 @@ const Passe = (() => {
     }
 
     // ---------------------------------------------------------------------
+    // OLIMPO (a assinatura): botão no topo do passe e a janela com o que ele dá. Preço, gratuidade e pagamento são do servidor (olimpo.py).
+    // ---------------------------------------------------------------------
+    let oliCobranca = null;
+    const brlOli = (c) => 'R$ ' + (Number(c) / 100).toFixed(2).replace('.', ',');
+    function botaoOlimpo() {
+        const o = (S && S.olimpo) || {};
+        if (o.ativo) return `<button type="button" class="pz-btn" id="pz-olimpo" title="Seu Olimpo vale até ${esc(o.ate || '')}"><i class="fa-solid fa-bolt"></i> ${esc(o.nome || 'Olimpo')} ativo até ${esc(o.ate || '')}</button>`;
+        if (S && S.premium) return '<span class="pz-chip ok"><i class="fa-solid fa-crown"></i> Trilha Premium liberada</span>';
+        return `<button type="button" class="pz-btn primario" id="pz-olimpo"><i class="fa-solid fa-bolt"></i> Ativar ${esc(o.nome || 'Olimpo')}${o.gratis ? ' (grátis)' : ''}</button>`;
+    }
+    function fecharOlimpo() { const m = document.getElementById('pz-olimpo-modal'); if (m) m.remove(); oliCobranca = null; }
+    function abrirOlimpo() {
+        const o = (S && S.olimpo) || {};
+        fecharOlimpo();
+        const omega = (typeof Cosm !== 'undefined' && Cosm.svgBadge) ? Cosm.svgBadge('olimpo') : '';
+        const m = document.createElement('div');
+        m.id = 'pz-olimpo-modal'; m.className = 'modal-overlay pz-modal-fundo';
+        const nome = esc(o.nome || 'Olimpo');
+        const ativar = o.gratis
+            ? `<button type="button" class="pz-btn primario" id="pz-oli-ativar"><i class="fa-solid fa-bolt"></i> ${o.ativo ? `Renovar +${Number(o.dias_por_periodo) || 30} dias (grátis)` : `Ativar por ${Number(o.dias_por_periodo) || 30} dias (grátis)`}</button>`
+            : `<button type="button" class="pz-btn primario" id="pz-oli-ativar"><i class="fa-solid fa-qrcode"></i> ${o.ativo ? 'Renovar' : 'Assinar'} por ${brlOli(o.preco_cent)} / ${Number(o.dias_por_periodo) || 30} dias</button>`;
+        m.innerHTML = `<div class="pz-modal pz-olimpo" role="dialog" aria-modal="true"><button type="button" class="pz-x" id="pz-oli-x" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+            <div class="orb-ico bd bd-wrap-olimpo orb-grande" style="--pt-tam:120px;--bd-cor:#ff7a18;margin:0 auto 6px">${omega}</div>
+            <h3>${nome}</h3>
+            <span class="pz-modal-tipo">${o.gratis ? 'Grátis por enquanto' : 'Assinatura'}${o.ativo ? ` · ativo até ${esc(o.ate || '')}` : ''}</span>
+            <ul class="pz-oli-lista"><li><i class="fa-solid fa-crown"></i> <b>Trilha Premium</b> do Passe de Batalha liberada (todas as recompensas dos dois lados).</li>
+                <li><i class="fa-solid fa-gem"></i> A insígnia <b>Ômega de lava</b> no seu perfil: as peças se juntam, a lava esfria e raios correm por dentro.</li>
+                <li><i class="fa-solid fa-heart"></i> Você ajuda o Pantheon a crescer.</li></ul>
+            <div id="pz-oli-corpo">${ativar}</div></div>`;
+        document.body.appendChild(m);
+        m.addEventListener('mousedown', (e) => { if (e.target === m) fecharOlimpo(); });
+    }
+    function olimpoCobranca(c) {
+        const corpo = document.getElementById('pz-olimpo-modal') && document.getElementById('pz-oli-corpo');
+        if (!corpo) return;
+        oliCobranca = c;
+        corpo.innerHTML = `<div class="pz-oli-pix">
+            ${c.modo_teste ? '<p class="pz-oli-teste"><i class="fa-solid fa-flask"></i> <b>MODO TESTE:</b> ninguém é cobrado de verdade.</p>' : ''}
+            <p>Pague <b>${brlOli(c.valor_cent)}</b> pelo Pix copia e cola. O Olimpo liga sozinho quando o pagamento for confirmado.</p>
+            <textarea readonly id="pz-oli-cc">${esc(c.copia_cola)}</textarea>
+            <div class="pz-oli-bot"><button type="button" class="pz-btn" id="pz-oli-copiar"><i class="fa-regular fa-copy"></i> Copiar código</button>${c.simulada ? '<button type="button" class="pz-btn primario" id="pz-oli-simular"><i class="fa-solid fa-flask"></i> Simular pagamento (teste)</button>' : ''}</div></div>`;
+        corpo.querySelector('#pz-oli-copiar')?.addEventListener('click', () => { const t = corpo.querySelector('#pz-oli-cc'); navigator.clipboard.writeText(t.value).then(() => ctx.toast('Código copiado!', 'success')).catch(() => { t.select(); }); });
+    }
+    function olimpoEstado(d) {
+        if (S && d && d.estado) S.olimpo = d.estado;
+        if (d && d.ativado) {
+            fecharOlimpo();
+            ctx.toast(`${(d.estado && d.estado.nome) || 'Olimpo'} ativado até ${(d.estado && d.estado.ate) || ''}! Trilha Premium liberada.`, 'success');
+            ctx.emitir('passe_pedir', {});
+            ctx.emitir('listar_inventario', {});
+        } else if (S) desenhar();
+    }
+
+    // ---------------------------------------------------------------------
     // API
     // ---------------------------------------------------------------------
     function iniciar(contexto) {
@@ -208,12 +262,16 @@ const Passe = (() => {
             if (e.target.closest('#pz-tudo')) { ctx.emitir('passe_resgatar', { todos: true }); return; }
             if (e.target.closest('#pz-titulos')) { abrirTitulos(); return; }
             if (e.target.closest('#pz-ir')) { irParaNivel(false); return; }
+            if (e.target.closest('#pz-olimpo')) { abrirOlimpo(); return; }
+            if (e.target.closest('#pz-oli-ativar')) { ctx.emitir('olimpo_ativar', {}); return; }
+            if (e.target.closest('#pz-oli-simular')) { ctx.emitir('olimpo_simular', {}); return; }
+            if (e.target.closest('#pz-oli-x')) { fecharOlimpo(); return; }
             const f = e.target.closest('#passe .pz-filtro');
             if (f) { filtro = f.dataset.f || ''; desenhar(); }
         });
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            const m = document.getElementById('pz-modal') || document.getElementById('pz-titulos-modal');
+            const m = document.getElementById('pz-modal') || document.getElementById('pz-titulos-modal') || document.getElementById('pz-olimpo-modal');
             if (m) { e.stopImmediatePropagation(); m.remove(); }
         }, true);
     }
@@ -244,6 +302,7 @@ const Passe = (() => {
             try { ctx.somResgate && ctx.somResgate(); } catch (e) { /* som é enfeite */ }
         },
         titulosRecebidos(d) { T = d; desenharTitulos(); },
+        olimpoEstado, olimpoCobranca,
         abrirTitulos,
     };
 })();

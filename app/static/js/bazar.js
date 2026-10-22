@@ -61,7 +61,8 @@ const Bazar = (() => {
     // selo de reputação (o servidor calcula: verificada / confiável / nova)
     const REP = { verificada: ['fa-circle-check', 'Verificada', 'Um administrador conferiu quem está por trás desta loja.'], confiavel: ['fa-shield-heart', 'Confiável', 'Várias vendas concluídas e nota alta.'],
                   nova: ['fa-seedling', 'Loja nova', 'Ainda com pouco histórico: o valor dos produtos tem um limite até concluir as primeiras vendas.'] };
-    const repHtml = (l) => (REP[l.reputacao] ? `<span class="bz-rep ${esc(l.reputacao)}" title="${esc(REP[l.reputacao][2])}"><i class="fa-solid ${REP[l.reputacao][0]}"></i> ${REP[l.reputacao][1]}</span>` : '');
+    const appHtml = (l) => (l.pague_no_app ? '<span class="bz-rep verificada" title="O pagamento é feito dentro do app, com confirmação automática."><i class="fa-solid fa-qrcode"></i> Pague pelo app</span>' : '');
+    const repHtml = (l) => appHtml(l) + (REP[l.reputacao] ? `<span class="bz-rep ${esc(l.reputacao)}" title="${esc(REP[l.reputacao][2])}"><i class="fa-solid ${REP[l.reputacao][0]}"></i> ${REP[l.reputacao][1]}</span>` : '');
     const coracao = (l) => `<button type="button" class="bz-fav ${favs.has(l.id) ? 'on' : ''}" data-a="fav" data-id="${Number(l.id)}" aria-label="${favs.has(l.id) ? 'Tirar dos favoritos' : 'Favoritar a loja'}" title="${favs.has(l.id) ? 'Tirar dos favoritos' : 'Favoritar a loja'}"><i class="fa-${favs.has(l.id) ? 'solid' : 'regular'} fa-heart"></i></button>`;
     const distHtml = (l) => (l.distancia_km != null ? `<span class="bz-dist"><i class="fa-solid fa-location-dot"></i> ~${Number(l.distancia_km)} km</span>` : '');
 
@@ -439,10 +440,11 @@ const Bazar = (() => {
     // ---------------------------------------------------------------------
     const PASSOS = [['aguardando', 'Pedido'], ['aceito', 'Aceito'], ['pago', 'Pago'], ['confirmado', 'Confirmado'], ['concluido', 'Concluído']];
 
-    function htmlPasso(status) {
+    function htmlPasso(status, app) {
         if (status === 'recusado' || status === 'cancelado') return `<span class="bz-status ${status}">${status === 'recusado' ? 'Recusado' : 'Cancelado'}</span>`;
-        const i = PASSOS.findIndex((x) => x[0] === status);
-        return `<div class="bz-passos">${PASSOS.map(([id, nome], k) => `<span class="bz-passo ${k < i ? 'feito' : k === i ? 'atual' : ''}">${k < i ? '✓ ' : ''}${nome}</span>`).join('')}</div>`;
+        const passos = app ? PASSOS.filter((x) => x[0] !== 'pago').map((x) => (x[0] === 'confirmado' ? ['confirmado', 'Pago'] : x)) : PASSOS;
+        const i = passos.findIndex((x) => x[0] === status);
+        return `<div class="bz-passos">${passos.map(([id, nome], k) => `<span class="bz-passo ${k < i ? 'feito' : k === i ? 'atual' : ''}">${k < i ? '✓ ' : ''}${nome}</span>`).join('')}</div>`;
     }
 
     function acoesDoPedido(p) {
@@ -451,7 +453,8 @@ const Bazar = (() => {
         const v = p.papel === 'vendedor';
         switch (p.status) {
             case 'aguardando': return v ? b('aceitar', '<i class="fa-solid fa-check"></i> Aceitar pedido', 'verde') + b('recusar', 'Recusar', 'perigo', 'Recusar este pedido?') : b('cancelar', 'Cancelar pedido', 'sec', 'Cancelar o pedido?');
-            case 'aceito': return v ? b('cancelar', 'Cancelar pedido', 'sec', 'Cancelar o pedido? O estoque reservado volta.') : b('paguei', '<i class="fa-solid fa-circle-check"></i> Já paguei', 'verde', 'Confirma que você já fez o Pix? O vendedor vai conferir.') + b('cancelar', 'Cancelar', 'sec', 'Cancelar o pedido?');
+            case 'aceito': if (p.pagamento === 'app') return v ? b('cancelar', 'Cancelar pedido', 'sec', 'Cancelar o pedido? O estoque reservado volta.') : (p.cobranca ? '' : `<button type="button" class="bz-btn verde" data-a="pagar-app" data-id="${Number(p.id)}"><i class="fa-solid fa-qrcode"></i> Pagar pelo app</button>`) + b('cancelar', 'Cancelar', 'sec', 'Cancelar o pedido?');
+                return v ? b('cancelar', 'Cancelar pedido', 'sec', 'Cancelar o pedido? O estoque reservado volta.') : b('paguei', '<i class="fa-solid fa-circle-check"></i> Já paguei', 'verde', 'Confirma que você já fez o Pix? O vendedor vai conferir.') + b('cancelar', 'Cancelar', 'sec', 'Cancelar o pedido?');
             case 'pago': return v ? b('confirmar', '<i class="fa-solid fa-circle-check"></i> Recebi o Pix', 'verde', 'Confirma que o Pix caiu na sua conta? Isso libera a entrega.') + b('nao_recebi', 'Não recebi', 'perigo', 'O Pix não apareceu? O pedido volta pra "aceito".') : '';
             case 'confirmado': return v ? '' : b('recebi', '<i class="fa-solid fa-box-open"></i> Recebi o produto', 'verde', 'Confirma que recebeu? Isso conclui o pedido.');
             default: return '';
@@ -462,14 +465,20 @@ const Bazar = (() => {
         const v = p.papel === 'vendedor';
         let dica = '';
         if (p.status === 'aguardando') dica = v ? 'Aceite pra liberar o Pix pro comprador (a sua chave Pix da loja precisa estar cadastrada).' : 'Aguardando o vendedor aceitar. Você será avisado.';
-        else if (p.status === 'aceito') dica = v ? 'Aguardando o comprador pagar.' : '';
+        else if (p.status === 'aceito') dica = v ? (p.pagamento === 'app' ? 'Aguardando o comprador pagar pelo app. O pagamento é confirmado sozinho, sem você precisar conferir nada.' : 'Aguardando o comprador pagar.') : (p.pagamento === 'app' ? 'Pague pelo app: o pagamento é confirmado automaticamente e o dinheiro vai direto para a loja.' : '');
         else if (p.status === 'pago') dica = v ? 'O comprador diz que pagou. Confira no app do seu banco e confirme.' : 'Aguardando o vendedor conferir o Pix.';
-        else if (p.status === 'confirmado') dica = v ? 'Pix confirmado. Entregue e aguarde o comprador confirmar o recebimento.' : '';
+        else if (p.status === 'confirmado') dica = v ? (p.pagamento === 'app' ? 'Pagamento confirmado pelo app. Prepare e entregue; o comprador confirma o recebimento.' : 'Pix confirmado. Entregue e aguarde o comprador confirmar o recebimento.') : (p.pagamento === 'app' ? 'Pagamento confirmado! Agora é só receber e confirmar aqui.' : '');
         const pix = p.pix && p.status === 'aceito' ? `<div class="bz-pix"><div class="qr" id="bz-qr"></div><div>
                 <h4>Pague ${brl(p.pix.valor_cent)} por Pix</h4>
                 <p>Recebedor: <b>${esc(p.pix.nome)}</b> · chave ${esc(p.pix.chave_mascarada)}.<br>Abra o app do seu banco, escolha <b>Pix copia e cola</b> (ou leia o QR) e <b>confira se o nome do recebedor bate</b> antes de pagar.</p>
                 <textarea readonly id="bz-cc">${esc(p.pix.copia_cola)}</textarea>
                 <div style="margin-top:8px"><button type="button" class="bz-btn pq" data-a="copiar"><i class="fa-regular fa-copy"></i> Copiar código</button></div></div></div>` : '';
+        const testeAviso = p.pagamento === 'app' && p.modo_teste ? '<div class="bz-como" style="border-color:#e0a82e"><b><i class="fa-solid fa-flask"></i> MODO TESTE:</b> nenhum dinheiro de verdade é cobrado neste pedido.</div>' : '';
+        const appPix = p.pagamento === 'app' && p.cobranca && p.status === 'aceito' ? `<div class="bz-pix"><div class="qr" id="bz-qr"></div><div>
+                <h4>Pague ${brl(p.cobranca.valor_cent)} pelo app</h4>
+                <p>${p.cobranca.simulada ? 'Este é um <b>código de teste</b>: não funciona em nenhum banco. Use o botão abaixo para simular o pagamento.' : 'Abra o app do seu banco, escolha <b>Pix copia e cola</b> (ou leia o QR). O pedido é confirmado sozinho assim que o pagamento cair.'}<br><small>Válido até ${esc(p.cobranca.expira_em || '')}.</small></p>
+                <textarea readonly id="bz-cc">${esc(p.cobranca.copia_cola)}</textarea>
+                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="bz-btn pq" data-a="copiar"><i class="fa-regular fa-copy"></i> Copiar código</button>${p.cobranca.simulada ? `<button type="button" class="bz-btn pq verde" data-a="simular-pag" data-id="${Number(p.id)}"><i class="fa-solid fa-flask"></i> Simular pagamento (teste)</button>` : ''}</div></div></div>` : '';
         const entrega = p.entrega ? `<div class="bz-entrega"><b><i class="fa-solid fa-gift"></i> ${v ? 'Instrução de entrega (só o comprador de um pedido confirmado vê)' : 'Sua entrega'}</b>${esc(p.entrega)}</div>` : '';
         const aval = p.status === 'concluido' ? (p.pode_avaliar
             ? `<div class="bz-como"><b>Como foi a compra?</b><div class="bz-estrelas" id="bz-estrelas">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-a="estrela" data-n="${n}" class="${n <= (ed_aval.nota || 0) ? 'on' : ''}">★</button>`).join('')}</div>
@@ -495,11 +504,12 @@ const Bazar = (() => {
         const abrirDisputa = p.pode_disputar ? `<button type="button" class="bz-link" data-a="disputa-abrir" data-id="${Number(p.id)}"><i class="fa-solid fa-scale-balanced"></i> Algo deu errado? Abrir uma disputa</button>` : '';
         return `${topoModal(p.produto_nome, `${v ? 'Comprador' : 'Vendedor'}: ${outro.nome || '?'} · ${p.quantidade}x · ${brl(p.total_cent)} · ${p.loja_nome}`)}
             <div class="bz-card-corpo">
-                ${htmlPasso(p.status)}
+                ${htmlPasso(p.status, p.pagamento === 'app')}
+                ${testeAviso}
                 ${disputa}
                 ${dica && !p.em_disputa ? `<div class="bz-como">${esc(dica)}</div>` : ''}
                 ${p.nota ? `<div class="bz-como"><b>Recado do comprador:</b> ${esc(p.nota)}</div>` : ''}
-                ${como}${pix}${entrega}
+                ${como}${pix}${appPix}${entrega}
                 <div style="display:flex;gap:10px;flex-wrap:wrap">${acoesDoPedido(p)}</div>
                 ${aval}${conversa}
                 ${abrirDisputa ? `<div>${abrirDisputa}</div>` : ''}
@@ -515,6 +525,7 @@ const Bazar = (() => {
         el.dataset.pedido = p.id;
         const m = el.querySelector('#bz-msgs'); if (m) m.scrollTop = m.scrollHeight;
         if (p.pix && p.status === 'aceito' && ctx.qr) { const q = el.querySelector('#bz-qr'); if (q) ctx.qr(q, p.pix.copia_cola); }
+        else if (p.cobranca && p.status === 'aceito' && ctx.qr) { const q = el.querySelector('#bz-qr'); if (q) ctx.qr(q, p.cobranca.copia_cola); }
     }
 
     function abrirPedido(id) {
@@ -559,6 +570,19 @@ const Bazar = (() => {
     const previaHtml = () => `<div class="bz-ed-prev"><div class="bz-campo" style="margin-bottom:8px">Como o feed mostra a sua loja</div><div id="bz-previa">${htmlLoja(previaLoja(), true)}</div></div>`;
     const botaoSalvarLoja = () => `<div class="cheio"><button type="button" class="bz-btn" data-a="ed-salvar-loja" ${ed.salvando ? 'disabled' : ''}>${ed.salvando ? '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...' : `<i class="fa-solid fa-floppy-disk"></i> ${minha ? 'Salvar' : 'Abrir minha lojinha'}`}</button></div>`;
 
+    function blocoCheckout() {
+        if (!minha) return '';
+        const pg = minha.pagamentos || {};
+        const caixa = (corpo) => `<div class="bz-campo cheio" style="border-top:2px solid var(--bg-tertiary);padding-top:12px"><b><i class="fa-solid fa-qrcode"></i> Receber pelo app</b>${corpo}</div>`;
+        if (!pg.provedor) return caixa('<small>O pagamento pelo app ainda não está ligado neste servidor. Por enquanto os pedidos são pagos por Pix direto.</small>');
+        const teste = pg.modo_teste ? '<small style="color:#e0a82e"><b>Modo teste:</b> ninguém é cobrado de verdade.</small>' : '';
+        const st = minha.checkout || '';
+        if (st === 'liberado') return caixa(`<small>Ativo. Os pedidos aceitos da sua loja são pagos pelo app: o Pix é confirmado sozinho e o dinheiro vai direto para a sua carteira, sem você conferir nada.</small>${teste}`);
+        if (st === 'pedido') return caixa(`<small><i class="fa-solid fa-hourglass-half"></i> Pedido enviado. A equipe vai analisar e te avisar. Até lá, vale o Pix direto.</small>${teste}`);
+        if (st === 'negado') return caixa('<small>A equipe não liberou por enquanto. Você segue vendendo por Pix direto.</small>');
+        return caixa(`<small>O comprador paga dentro do app (Pix com confirmação automática) e o Pantheon nunca guarda o seu dinheiro. A equipe precisa liberar a sua loja antes.</small>${teste}<div><button type="button" class="bz-btn sec pq" data-a="pedir-checkout"><i class="fa-solid fa-paper-plane"></i> Pedir liberação</button></div>`);
+    }
+
     function formDados() {
         const d = ed.loja, L = cat.limites;
         return `<div class="bz-ed-grid"><div class="bz-form">
@@ -571,6 +595,7 @@ const Bazar = (() => {
             ${campo('Chave Pix', 'pix_chave', d.pix_chave, 80, 'CPF, CNPJ, telefone (+55...), e-mail ou chave aleatória.')}
             ${campo('Nome do recebedor', 'pix_nome', d.pix_nome, 25, 'Como aparece no banco do comprador.')}
             ${campo('Cidade do recebedor', 'pix_cidade', d.pix_cidade, 15, '')}
+            ${blocoCheckout()}
             <label class="bz-campo" style="flex-direction:row;align-items:center;gap:10px;text-transform:none;font-size:14px"><input type="checkbox" data-campo="aberta" ${d.aberta ? 'checked' : ''}> Loja aberta (desmarque pra sair do feed sem apagar nada)</label>
             ${botaoSalvarLoja()}
         </div>${previaHtml()}</div>`;
@@ -948,6 +973,9 @@ const Bazar = (() => {
             case 'moderar': ctx.confirmar(b.dataset.acao === 'remover' ? 'Remover?' : 'Restaurar?', b.dataset.acao === 'remover' ? 'Isso derruba o item e dispensa as denúncias.' : 'O item volta a aparecer e as denúncias são dispensadas.',
                 () => ctx.emitir('bazar_moderar', { tipo: b.dataset.t, alvo_id: Number(id), acao: b.dataset.acao })); break;
             case 'copiar': { const t = modalDe('pedido').querySelector('#bz-cc'); if (t) { navigator.clipboard.writeText(t.value).then(() => ctx.toast('Código Pix copiado! Cole no app do banco.', 'success')).catch(() => { t.select(); ctx.toast('Copie com Ctrl+C.', 'info'); }); } break; }
+            case 'pagar-app': ctx.emitir('bazar_pagar', { pedido_id: Number(id) }); break;
+            case 'simular-pag': ctx.confirmar('Simular pagamento', 'Isso é só um TESTE: marca o pedido como pago sem cobrar nada. Continuar?', () => ctx.emitir('bazar_simular_pagamento', { pedido_id: Number(id) })); break;
+            case 'pedir-checkout': ctx.confirmar('Receber pelo app', 'Vamos pedir pra equipe liberar a sua loja. Enquanto isso você segue vendendo com Pix direto. Enviar o pedido?', () => ctx.emitir('bazar_checkout_pedir', {})); break;
             case 'agir': {
                 const rodar = () => ctx.emitir('bazar_agir', { pedido_id: Number(id), acao: b.dataset.acao });
                 if (b.dataset.conf) ctx.confirmar('Confirmar', b.dataset.conf, rodar); else rodar();
@@ -1131,6 +1159,7 @@ const Bazar = (() => {
                 if (secao === 'dados' && minha && !minha.produtos.length) secao = 'produtos';
             } else if (d.salvo === 'produto') { ctx.toast('Produto salvo!', 'success'); ed.prod = null; }
             else if (d.salvo === 'apagado') ctx.toast('Produto removido.', 'info');
+            else if (d.salvo === 'checkout') ctx.toast('Pedido enviado! A equipe vai analisar e te avisar.', 'success');
             else if (!ed.loja.nome && minha) ed.loja = rascunhoLoja();
             if (vista === 'painel') desenharPainel();
         }

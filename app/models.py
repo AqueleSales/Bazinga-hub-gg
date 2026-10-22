@@ -128,6 +128,8 @@ class Person(db.Model):
     # Aceite dos Termos e da Política de Privacidade (LGPD): versão aceita e quando. NULL = nunca aceitou (ver app/termos.py).
     termos_versao = db.Column(db.String(16), nullable=True)
     termos_aceitos_em = db.Column(db.DateTime, nullable=True)
+    # Assinatura Olimpo (o "nitro" do Pantheon, Rodada 32): vale até esta data. NULL = nunca teve. Regras em app/olimpo.py.
+    olimpo_ate = db.Column(db.DateTime, nullable=True)
     # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
     # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
     equipados = db.Column(db.Text, nullable=True)
@@ -695,6 +697,15 @@ class BazarLoja(db.Model):
     verificada = db.Column(db.Boolean, default=False)           # selo "verificada": só um admin dá
     lat = db.Column(db.Float, nullable=True)                    # "perto de mim": posição ARREDONDADA (0,01° ~ 1 km), só se o dono pediu pra aparecer
     lng = db.Column(db.Float, nullable=True)
+    # Rodada 32 (colunas novas: o boot cria sozinho; tratar None como falso/vazio)
+    # Receber pelo app (checkout): None = nunca pediu | 'pedido' = espera um admin | 'liberado' | 'negado'. wallet_id = a carteira da loja no gateway (split).
+    checkout_status = db.Column(db.String(10), nullable=True)
+    wallet_id = db.Column(db.String(64), nullable=True)
+    # Pino da loja no mapa (plantar loja). Diferente de lat/lng acima (que é só "perto de mim", arredondada e sem pino): aqui o dono escolhe o ponto.
+    # pino_aprox = o ponto é arredondado (~300 m) pra quem vende de casa não expor o endereço.
+    pino_lat = db.Column(db.Float, nullable=True)
+    pino_lng = db.Column(db.Float, nullable=True)
+    pino_aprox = db.Column(db.Boolean, nullable=True)
 
     owner = db.relationship('Person', foreign_keys=[owner_id])
 
@@ -746,6 +757,9 @@ class BazarPedido(db.Model):
     entrega_modo = db.Column(db.String(10), nullable=True)                # envio | retirada | digital | combinar
     frete_cent = db.Column(db.Integer, nullable=True)
     endereco = db.Column(db.String(300), nullable=True)
+    # Rodada 32: como esse pedido é pago. 'pix' = Pix direto entre as pessoas (o comprador avisa que pagou, o vendedor confere);
+    # 'app' = cobrança pelo gateway (o app confirma sozinho; ver app/pagamentos.py). Decidido na hora de ACEITAR. NULL = pedido antigo = 'pix'.
+    pagamento = db.Column(db.String(4), nullable=True)
 
     produto = db.relationship('BazarProduto')
     loja = db.relationship('BazarLoja')
@@ -971,3 +985,23 @@ class GuardiaoCaso(db.Model):
     revisado_por = db.Column(db.Integer, nullable=True)
     revisado_em = db.Column(db.DateTime, nullable=True)
     nota = db.Column(db.String(240), nullable=True)
+
+
+# ==========================================
+# COBRANÇAS (Rodada 32): uma linha por Pix cobrado pelo app (pedido do Bazar ou assinatura Olimpo). Quem cobra de verdade é o gateway
+# (app/pagamentos.py); o Pantheon não guarda dinheiro. `ext_id` = o id da cobrança lá (único). Nasce pelo create_all (sem ALTER).
+# ==========================================
+class Cobranca(db.Model):
+    __tablename__ = 'cobranca'
+    id = db.Column(db.Integer, primary_key=True)
+    provedor = db.Column(db.String(10), nullable=False)               # simulado | asaas
+    ext_id = db.Column(db.String(64), nullable=False, unique=True)
+    tipo = db.Column(db.String(8), nullable=False)                    # pedido | olimpo
+    ref_id = db.Column(db.Integer, nullable=False, index=True)        # id do pedido ou da pessoa
+    pessoa_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True, index=True)   # quem paga
+    valor_cent = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(10), default='aberta', index=True)   # aberta | paga | expirada | cancelada
+    payload = db.Column(db.String(600), nullable=True)                # o Pix "copia e cola"
+    expira_em = db.Column(db.DateTime, nullable=True)
+    criada_em = db.Column(db.DateTime, default=br_now)
+    paga_em = db.Column(db.DateTime, nullable=True)

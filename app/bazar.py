@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from .models import (db, br_now, Person, BazarLoja, BazarProduto, BazarPedido, BazarMensagem, BazarAvaliacao,
                      BazarFavorito, BazarAnuncio, BazarDisputa, BazarBanimento,
                      Denuncia, ConfigApp, Friendship, GeoNote, GeoNoteResposta, MapServer)
+from . import pagamentos
 from .utils import (comitar_com_retry, url_de_imagem_ok, texto_tem_link, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, distancia_m)
 
 
@@ -321,18 +322,85 @@ def reputacao(l):
     return 'nova' if vendas < VENDAS_PARA_LIBERAR else 'comum'
 
 
+# ---------------------------------------------------------------------------
+# LOJA NO MAPA (plantar loja, Rodada 32)
+# ---------------------------------------------------------------------------
+GRADE_APROX = 0.003      # ~330 m: quem vende de casa planta só a ÁREA (o ponto é arredondado pra essa grade), nunca a porta
+
+
+def loja_pino_json(l, aprox=None):
+    """O que sai no mapa: só o necessário pra um cartão de prévia. Nada de Pix, carteira, e-mail nem endereço."""
+    return {'id': l.id, 'nome': l.nome, 'categoria': l.categoria, 'cor': CORES.get(l.cor, CORES['ambar']), 'toldo': l.toldo,
+            'logo_url': l.logo_url, 'regiao': l.regiao or '', 'nota': nota_media(l), 'nota_qtd': l.nota_qtd or 0, 'lat': l.pino_lat, 'lng': l.pino_lng,
+            'aprox': bool(l.pino_aprox), 'pague_no_app': checkout_ativo(l), 'reputacao': reputacao(l), 'dono_id': l.owner_id}
+
+
+def lojas_no_mapa(a, b, c, d):
+    """Lojas com pino dentro da caixa (lat a..b, lng c..d). Loja fechada, escondida pela moderação ou de dono banido não aparece."""
+    q = BazarLoja.query.filter(BazarLoja.pino_lat.isnot(None), BazarLoja.pino_lat.between(a, b), BazarLoja.pino_lng.between(c, d),
+                               or_(BazarLoja.aberta.is_(None), BazarLoja.aberta == True),            # noqa: E712
+                               or_(BazarLoja.oculta.is_(None), BazarLoja.oculta == False),           # noqa: E712
+                               BazarLoja.owner_id.notin_(_subq_banidos()))
+    return [loja_pino_json(l) for l in q.limit(300).all()]
+
+
+def plantar_loja(usuario, lat, lng, aprox=True):
+    """O dono planta (ou muda de lugar) o pino da própria loja. A checagem de presença (posição do aparelho, dentro do alcance) é de quem chama."""
+    _exigir_localizacao(usuario)
+    _exigir_nao_banido(usuario)
+    lat, lng = float(lat), float(lng)
+    if aprox:
+        lat, lng = round(round(lat / GRADE_APROX) * GRADE_APROX, 6), round(round(lng / GRADE_APROX) * GRADE_APROX, 6)
+    else:
+        lat, lng = round(lat, 5), round(lng, 5)
+
+    def preparar():
+        l = BazarLoja.query.filter_by(owner_id=usuario.id).first()
+        if not l:
+            raise ErroBazar('Abra a sua loja no Bazar antes de plantá-la no mapa.')
+        if l.oculta:
+            raise ErroBazar('A sua loja está em análise da moderação.')
+        if l.aberta is False:
+            raise ErroBazar('A sua loja está fechada. Abra-a antes de plantar.')
+        if BazarProduto.query.filter_by(loja_id=l.id, ativo=True).count() == 0:
+            raise ErroBazar('Cadastre pelo menos um produto antes de plantar a loja no mapa.')
+        l.pino_lat, l.pino_lng, l.pino_aprox = lat, lng, bool(aprox)
+        return l
+    return comitar_com_retry(preparar)
+
+
+def tirar_loja_do_mapa(usuario):
+    def preparar():
+        l = BazarLoja.query.filter_by(owner_id=usuario.id).first()
+        if not l or l.pino_lat is None:
+            raise ErroBazar('A sua loja não está no mapa.')
+        l.pino_lat = l.pino_lng = l.pino_aprox = None
+        return l
+    return comitar_com_retry(preparar)
+
+
+def checkout_ativo(l):
+    """A loja recebe PELO APP agora? Precisa ter sido liberada por um admin, o pagamento pelo app estar ligado e, no gateway real, ter carteira (split)."""
+    if not l or (l.checkout_status or '') != 'liberado':
+        return False
+    prov = pagamentos.provedor()
+    return bool(prov) and (prov == 'simulado' or bool(l.wallet_id))
+
+
 def loja_json(l, produtos=None, dono=False, dist_km=None):
     j = {'id': l.id, 'nome': l.nome, 'descricao': l.descricao or '', 'categoria': l.categoria, 'porte': l.porte,
          'regiao': l.regiao or '', 'cor': l.cor, 'toldo': l.toldo, 'logo_url': l.logo_url, 'banner_url': l.banner_url,
          'anuncio_titulo': l.anuncio_titulo or '', 'anuncio_texto': l.anuncio_texto or '', 'aberta': l.aberta is not False,
          'nota': nota_media(l), 'nota_qtd': l.nota_qtd or 0, 'vendas': l.vendas or 0, 'dono_id': l.owner_id,
          'dono_nome': l.owner.name if l.owner else '', 'pix_configurado': bool(l.pix_chave),
-         'verificada': bool(l.verificada), 'reputacao': reputacao(l), 'no_mapa': l.lat is not None}
+         'verificada': bool(l.verificada), 'reputacao': reputacao(l), 'no_mapa': l.lat is not None,
+         'checkout': l.checkout_status or '', 'pague_no_app': checkout_ativo(l), 'pino': l.pino_lat is not None}
     if dist_km is not None:
         j['distancia_km'] = dist_km
     if dono:
         j.update({'pix_chave': l.pix_chave or '', 'pix_nome': l.pix_nome or '', 'pix_cidade': l.pix_cidade or '', 'oculta': bool(l.oculta),
-                  'limite_novo_cent': LIMITE_LOJA_NOVA_CENT if (l.vendas or 0) < VENDAS_PARA_LIBERAR else None})
+                  'limite_novo_cent': LIMITE_LOJA_NOVA_CENT if (l.vendas or 0) < VENDAS_PARA_LIBERAR else None,
+                  'pino_aprox': bool(l.pino_aprox), 'pagamentos': pagamentos.estado()})
     if produtos is not None:
         j['produtos'] = produtos
     return j
@@ -400,7 +468,12 @@ def pedido_json(p, eu_id, com_mensagens=False, disputas=_SEM_MAPA):
     em_aberto = bool(d and d.status == 'aberta')
     j['em_disputa'] = em_aberto
     j['pode_disputar'] = _pode_disputar(p, papel) and not em_aberto
-    if papel == 'comprador' and p.status in PIX_VISIVEL and loja and loja.pix_chave:
+    j['pagamento'] = p.pagamento or 'pix'
+    if p.pagamento == 'app':
+        j['modo_teste'] = pagamentos.modo_teste()
+        vigente = pagamentos.cobranca_vigente('pedido', p.id) if (papel == 'comprador' and p.status == 'aceito') else None
+        j['cobranca'] = pagamentos.cobranca_json(vigente) if vigente else None
+    if papel == 'comprador' and p.status in PIX_VISIVEL and p.pagamento != 'app' and loja and loja.pix_chave:
         j['pix'] = {'nome': loja.pix_nome or '', 'chave_mascarada': chave_mascarada(loja.pix_chave), 'valor_cent': p.total_cent,
                     'copia_cola': pix_copia_cola(loja.pix_chave, loja.pix_nome or (loja.owner.name if loja.owner else ''),
                                                  loja.pix_cidade or '', p.total_cent, f'PNT{p.id}')}
@@ -1009,25 +1082,34 @@ def agir_no_pedido(usuario, pedido_id, acao):
     def preparar():
         p = BazarPedido.query.get(int(pedido_id)) if str(pedido_id).isdigit() else None
         papel = None
+        modo_pagamento = None
         if p:
             papel = 'vendedor' if p.vendedor_id == usuario.id else 'comprador' if p.comprador_id == usuario.id else None
         if not papel:
             raise ErroBazar('Pedido não encontrado.')
         if BazarDisputa.query.filter_by(pedido_id=p.id, status='aberta').first():
             raise ErroBazar('Esse pedido está em disputa: um administrador está analisando. Você segue podendo conversar no pedido.')
+        if (p.pagamento or 'pix') == 'app' and acao in ('paguei', 'confirmar', 'nao_recebi'):
+            raise ErroBazar('O pagamento desse pedido é confirmado pelo app: não precisa avisar que pagou.')
         novo = TRANSICOES.get((p.status, papel, acao))
         if not novo:
             raise ErroBazar('Essa ação não vale mais: o pedido mudou de estado. A tela foi atualizada.')
         if acao == 'aceitar':
             _exigir_nao_banido(usuario)
             _exigir_localizacao(usuario)
-            if not (p.loja and p.loja.pix_chave):
+            if checkout_ativo(p.loja):
+                modo_pagamento = 'app'
+            elif p.loja and p.loja.pix_chave:
+                modo_pagamento = 'pix'
+            else:
                 raise ErroBazar('Cadastre a sua chave Pix na loja antes de aceitar pedidos.')
         r = db.session.execute(update(BazarPedido).where(BazarPedido.id == p.id, BazarPedido.status == p.status)
                                .values(status=novo, atualizado_em=br_now()))
         if r.rowcount != 1:
             raise ErroBazar('Essa ação não vale mais: o pedido mudou de estado. A tela foi atualizada.')
         db.session.refresh(p)
+        if modo_pagamento:
+            p.pagamento = modo_pagamento
         qtd = p.quantidade or 1
         if acao == 'aceitar' and p.produto and p.produto.estoque is not None:
             ok = db.session.execute(update(BazarProduto).where(BazarProduto.id == p.produto_id, BazarProduto.estoque >= qtd)
@@ -1043,12 +1125,110 @@ def agir_no_pedido(usuario, pedido_id, acao):
     return BazarPedido.query.get(pid)
 
 
+def pagar_pelo_app(usuario, pedido_id):
+    """O comprador pede o Pix de um pedido ACEITO que é pago pelo app. Reusa a cobrança em aberto (clique duplo não cobra duas vezes)."""
+    _exigir_nao_banido(usuario)
+    p = BazarPedido.query.get(int(pedido_id)) if str(pedido_id).isdigit() else None
+    if not p or p.comprador_id != usuario.id:
+        raise ErroBazar('Pedido não encontrado.')
+    if p.status != 'aceito' or (p.pagamento or 'pix') != 'app':
+        raise ErroBazar('Esse pedido não está esperando pagamento pelo app.')
+    if BazarDisputa.query.filter_by(pedido_id=p.id, status='aberta').first():
+        raise ErroBazar('Esse pedido está em disputa.')
+    existente = pagamentos.cobranca_aberta('pedido', p.id)
+    if existente:
+        return existente
+    try:
+        return pagamentos.criar_cobranca('pedido', p.id, p.total_cent, usuario, f'Pedido #{p.id}: {p.produto_nome}'[:200], wallet_id=p.loja.wallet_id if p.loja else None)
+    except pagamentos.ErroPagamento as e:
+        raise ErroBazar(str(e))
+
+
+def confirmar_pagamento_pedido(c):
+    """A cobrança foi PAGA (confirmada pelo gateway): o pedido aceito vira 'confirmado' (UPDATE condicional). Devolve o pedido, ou None se ele
+    já não estava esperando (cancelado no meio): nesse caso o dinheiro entrou e precisa de reembolso manual, por isso o log."""
+    r = db.session.execute(update(BazarPedido).where(BazarPedido.id == c.ref_id, BazarPedido.status == 'aceito', BazarPedido.pagamento == 'app')
+                           .values(status='confirmado', atualizado_em=br_now()))
+    db.session.commit()
+    if r.rowcount != 1:
+        print(f'[PAGAMENTOS] cobrança {c.id} paga, mas o pedido {c.ref_id} não estava esperando pagamento: REEMBOLSO MANUAL NECESSÁRIO')
+        return None
+    return BazarPedido.query.get(c.ref_id)
+
+
+def pedir_checkout(usuario):
+    """O dono da loja pede pra receber pelo app. Um admin decide (Estúdio > Lojas). Antes: a loja precisa existir, estar limpa e ter produto."""
+    _exigir_nao_banido(usuario)
+    if not pagamentos.provedor():
+        raise ErroBazar('O pagamento pelo app ainda não está ligado neste servidor.')
+
+    def preparar():
+        l = BazarLoja.query.filter_by(owner_id=usuario.id).first()
+        if not l:
+            raise ErroBazar('Abra a sua loja primeiro.')
+        if l.oculta:
+            raise ErroBazar('A sua loja está em análise da moderação.')
+        if (l.checkout_status or '') == 'liberado':
+            raise ErroBazar('A sua loja já recebe pelo app.')
+        if (l.checkout_status or '') == 'pedido':
+            raise ErroBazar('O seu pedido já está na fila: um administrador vai analisar.')
+        if BazarProduto.query.filter_by(loja_id=l.id, ativo=True).count() == 0:
+            raise ErroBazar('Cadastre pelo menos um produto antes de pedir pra receber pelo app.')
+        l.checkout_status = 'pedido'
+    comitar_com_retry(preparar)
+    return minha_loja(usuario)
+
+
+def lojas_para_admin(admin, filtro='pedido', limite=60):
+    _exigir_admin(admin)
+    q = BazarLoja.query.options(joinedload(BazarLoja.owner))
+    if filtro in ('pedido', 'liberado', 'negado'):
+        q = q.filter(BazarLoja.checkout_status == filtro)
+    lojas = q.order_by(BazarLoja.id.desc()).limit(limite).all()
+    return [{'id': l.id, 'nome': l.nome, 'dono': l.owner.name if l.owner else '', 'username': (l.owner.username if l.owner else '') or '',
+             'dono_id': l.owner_id, 'vendas': l.vendas or 0, 'verificada': bool(l.verificada), 'porte': l.porte, 'checkout': l.checkout_status or '',
+             'wallet_id': l.wallet_id or '', 'produtos': BazarProduto.query.filter_by(loja_id=l.id, ativo=True).count(),
+             'criada_em': l.created_at.strftime('%d/%m/%Y') if l.created_at else ''} for l in lojas]
+
+
+_RE_WALLET = re.compile(r'^[0-9a-zA-Z\-]{8,64}$')
+
+
+def decidir_checkout(admin, loja_id, acao, wallet_id=None):
+    """liberar (no gateway real exige a carteira da loja) | negar | revogar. A carteira só entra por aqui: o dono da loja nunca a escolhe."""
+    _exigir_admin(admin)
+    if acao not in ('liberar', 'negar', 'revogar'):
+        raise ErroBazar('Ação inválida.')
+    wallet = (wallet_id or '').strip() or None
+    if wallet and not _RE_WALLET.match(wallet):
+        raise ErroBazar('Carteira inválida.')
+
+    def preparar():
+        l = BazarLoja.query.get(int(loja_id)) if str(loja_id).isdigit() else None
+        if not l:
+            raise ErroBazar('Loja não encontrada.')
+        if acao == 'liberar':
+            if pagamentos.provedor() == 'asaas' and not (wallet or l.wallet_id):
+                raise ErroBazar('No gateway real a loja precisa de uma carteira (walletId do Asaas) para receber o split.')
+            l.checkout_status = 'liberado'
+            if wallet:
+                l.wallet_id = wallet
+        elif acao == 'negar':
+            l.checkout_status = 'negado'
+        else:
+            l.checkout_status = None
+        return l
+    l = comitar_com_retry(preparar)
+    return l
+
+
 def _efeitos_do_fim(p, novo):
     """O que acontece quando o pedido TERMINA (por ação das pontas, por decisão de admin ou por banimento): estoque volta se cancelou/recusou,
     vendas contam se concluiu, e o endereço de entrega é apagado (acabou: ninguém precisa mais dele)."""
     qtd = p.quantidade or 1
     if novo in ('cancelado', 'recusado'):
         _liberar_estoque(p)
+        pagamentos.cancelar_cobrancas('pedido', p.id)
     elif novo == 'concluido':
         db.session.execute(update(BazarProduto).where(BazarProduto.id == p.produto_id)
                            .values(vendidos=func.coalesce(BazarProduto.vendidos, 0) + qtd))
@@ -1104,6 +1284,7 @@ def contar_pendencias(pessoa_id):
     """Quantos pedidos esperam uma ação DESTA pessoa (vendedor: novo ou pago; comprador: aceito ou confirmado)."""
     return BazarPedido.query.filter(
         or_(and_(BazarPedido.vendedor_id == pessoa_id, BazarPedido.status.in_(('aguardando', 'pago'))),
+            and_(BazarPedido.vendedor_id == pessoa_id, BazarPedido.status == 'confirmado', BazarPedido.pagamento == 'app'),
             and_(BazarPedido.comprador_id == pessoa_id, BazarPedido.status.in_(('aceito', 'confirmado'))))).count()
 
 

@@ -307,6 +307,15 @@ def atualizar_banco():
             add_column_se_nao_existir("person", "termos_versao VARCHAR(16)")
             add_column_se_nao_existir("person", "termos_aceitos_em TIMESTAMP")
 
+            # 41. Pagamentos pelo app, loja no mapa e Olimpo (Rodada 32): a tabela cobranca nasce pelo create_all; aqui só as colunas novas.
+            add_column_se_nao_existir("bazar_loja", "checkout_status VARCHAR(10)")
+            add_column_se_nao_existir("bazar_loja", "wallet_id VARCHAR(64)")
+            add_column_se_nao_existir("bazar_loja", "pino_lat DOUBLE PRECISION")
+            add_column_se_nao_existir("bazar_loja", "pino_lng DOUBLE PRECISION")
+            add_column_se_nao_existir("bazar_loja", "pino_aprox BOOLEAN")
+            add_column_se_nao_existir("bazar_pedido", "pagamento VARCHAR(4)")
+            add_column_se_nao_existir("person", "olimpo_ate TIMESTAMP")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

@@ -11,11 +11,13 @@ import time
 from flask import request
 from flask_socketio import emit
 
-from . import socketio, bazar
+from . import socketio, bazar, pagamentos, guardiao
 from .bazar import ErroBazar
 from .models import db, BazarLoja, BazarPedido
 from .utils import com_retry
-from .events import usuario_logado, sala_pessoal, criar_notificacao, centros_mapa, fontes_mapa
+from .events import (usuario_logado, sala_pessoal, criar_notificacao, centros_mapa, fontes_mapa, _exigir_presenca, _dentro_do_alcance,
+                     _emitir_perto)
+from .utils import coordenada_valida, RAIO_SERVIDORES_M
 
 _ultimo = {}
 
@@ -214,6 +216,138 @@ def bazar_pedir(dados):
         emit('bazar_pedido_aberto', {'pedido_id': p.id}, to=sala_pessoal(usuario.id))
 
     _executar('pedir', tarefa, ref='pedir')
+
+
+def aplicar_pagamento_confirmado(c):
+    """Depois que uma cobrança virou PAGA (webhook ou simulação): libera o que ela pagava e avisa as pontas. Funciona fora de um handler
+    (por isso `socketio.emit` e não `emit`). Devolve o pedido (ou None)."""
+    try:
+        if c.tipo == 'pedido':
+            p = bazar.confirmar_pagamento_pedido(c)
+            if not p:
+                return None
+            for pessoa_id in (p.comprador_id, p.vendedor_id):
+                socketio.emit('bazar_pedido', bazar.pedido_json(p, pessoa_id, com_mensagens=True), to=sala_pessoal(pessoa_id))
+                socketio.emit('bazar_pendencias', {'n': bazar.contar_pendencias(pessoa_id)}, to=sala_pessoal(pessoa_id))
+            guardiao.notificar_fora_do_socket(p.vendedor_id, 'Pedido pago pelo app', f'{p.produto_nome}: o pagamento foi confirmado. Pode preparar a entrega.')
+            guardiao.notificar_fora_do_socket(p.comprador_id, 'Pagamento confirmado', f'{p.produto_nome}: recebemos o seu pagamento.')
+            return p
+        if c.tipo == 'olimpo':
+            from . import olimpo
+            p = olimpo.aplicar_pagamento(c)
+            socketio.emit('olimpo_estado', {'estado': olimpo.estado(p), 'ativado': True}, to=sala_pessoal(p.id))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO APLICAR PAGAMENTO] {e}")
+    return None
+
+
+@socketio.on('bazar_pagar')
+def bazar_pagar(dados):
+    """O comprador pede o Pix do pedido aceito (pago pelo app). Responde com o pedido já trazendo a cobrança."""
+    usuario = usuario_logado()
+    if not usuario or _freio(usuario, 'pagar', 1.5):
+        return
+    dados = dados if isinstance(dados, dict) else {}
+
+    def tarefa():
+        c = bazar.pagar_pelo_app(usuario, dados.get('pedido_id'))
+        p = BazarPedido.query.get(c.ref_id)
+        emit('bazar_pedido', bazar.pedido_json(p, usuario.id, com_mensagens=True), to=sala_pessoal(usuario.id))
+
+    _executar('pagar', tarefa, ref=dados.get('pedido_id'))
+
+
+@socketio.on('bazar_simular_pagamento')
+def bazar_simular_pagamento(dados):
+    """MODO TESTE: o comprador "paga" sem dinheiro. Só existe com o provedor simulado e só pra quem foi cobrado (pagamentos.simular_pagamento confere)."""
+    usuario = usuario_logado()
+    if not usuario or _freio(usuario, 'simular', 1.0):
+        return
+    dados = dados if isinstance(dados, dict) else {}
+
+    def tarefa():
+        p = com_retry(lambda: BazarPedido.query.get(int(dados.get('pedido_id')))) if str(dados.get('pedido_id') or '').isdigit() else None
+        if not p or p.comprador_id != usuario.id:
+            raise ErroBazar('Pedido não encontrado.')
+        c = pagamentos.cobranca_vigente('pedido', p.id)
+        if not c:
+            raise ErroBazar('Gere o Pix primeiro.')
+        try:
+            c, nova = pagamentos.simular_pagamento(usuario.id, c.ext_id)
+        except pagamentos.ErroPagamento as e:
+            raise ErroBazar(str(e))
+        if nova:
+            aplicar_pagamento_confirmado(c)
+
+    _executar('simular pagamento', tarefa, ref=dados.get('pedido_id'))
+
+
+@socketio.on('bazar_checkout_pedir')
+def bazar_checkout_pedir(dados=None):
+    usuario = usuario_logado()
+    if not usuario or _freio(usuario, 'checkout', 1.5):
+        return
+
+    def tarefa():
+        loja = bazar.pedir_checkout(usuario)
+        emit('bazar_minha', {'loja': loja, 'salvo': 'checkout', 'banido': None}, to=sala_pessoal(usuario.id))
+        for admin_id in bazar.ids_dos_admins():
+            if admin_id != usuario.id:
+                criar_notificacao(admin_id, 'sistema', 'Loja pediu pra receber pelo app', f'{loja["nome"]} (de {usuario.name}). Veja em Estúdio > Lojas.')
+
+    _executar('pedir checkout', tarefa, ref='loja')
+
+
+@socketio.on('loja_mapa_minha')
+def loja_mapa_minha(dados=None):
+    """O botão "Plantar" pergunta se a pessoa tem loja (a opção Loja só aparece pra quem tem) e se ela já está no mapa."""
+    usuario = usuario_logado()
+    if not usuario:
+        return
+    l = com_retry(lambda: BazarLoja.query.filter_by(owner_id=usuario.id).first())
+    emit('loja_mapa_minha', {'tem': bool(l), 'loja': bazar.loja_pino_json(l) if l else None, 'no_mapa': bool(l and l.pino_lat is not None),
+                             'pode': bool(l and not l.oculta and l.aberta is not False)})
+
+
+@socketio.on('plantar_loja')
+def plantar_loja(dados):
+    usuario = usuario_logado()
+    if not usuario or _freio(usuario, 'plantar_loja', 1.5):
+        return
+    dados = dados if isinstance(dados, dict) else {}
+
+    def tarefa():
+        pos = coordenada_valida(dados.get('lat'), dados.get('lng'))
+        if not pos:
+            raise ErroBazar('Local inválido.')
+        if not _exigir_presenca():
+            return
+        if not _dentro_do_alcance(pos, RAIO_SERVIDORES_M):
+            raise ErroBazar('Esse ponto está fora do seu alcance.')
+        antes = com_retry(lambda: BazarLoja.query.filter_by(owner_id=usuario.id).first())
+        l = bazar.plantar_loja(usuario, pos[0], pos[1], aprox=bool(dados.get('aprox', True)))
+        j = bazar.loja_pino_json(l)
+        if antes is not None:
+            emit('loja_mapa_removida', {'id': l.id}, broadcast=True)      # mudou de lugar: quem via o pino velho o tira
+        _emitir_perto('loja_mapa_nova', j, l.pino_lat, l.pino_lng, RAIO_SERVIDORES_M, tambem_sid=request.sid)
+        emit('loja_mapa_ok', {'id': l.id, 'aprox': j['aprox']})
+
+    _executar('plantar loja', tarefa, ref='plantar_loja')
+
+
+@socketio.on('tirar_loja_do_mapa')
+def tirar_loja_do_mapa_ev(dados=None):
+    usuario = usuario_logado()
+    if not usuario or _freio(usuario, 'tirar_loja', 1.0):
+        return
+
+    def tarefa():
+        l = bazar.tirar_loja_do_mapa(usuario)
+        emit('loja_mapa_removida', {'id': l.id}, broadcast=True)
+        emit('loja_mapa_ok', {'id': l.id, 'removida': True})
+
+    _executar('tirar loja do mapa', tarefa, ref='plantar_loja')
 
 
 @socketio.on('bazar_meus_pedidos')

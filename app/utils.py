@@ -981,7 +981,10 @@ def dados_do_mapa_perto(lat, lng, amigos_ids=None, viewer_id=None):
     servers = [servidor_mapa_para_json(s) for s in servers_db
                if distancia_m(lat, lng, s.lat, s.lng) <= RAIO_SERVIDORES_M]
 
-    return {'notas': notas, 'servers': servers,
+    from . import bazar
+    lojas = [l for l in bazar.lojas_no_mapa(a, b, c, d) if distancia_m(lat, lng, l['lat'], l['lng']) <= RAIO_SERVIDORES_M]
+
+    return {'notas': notas, 'servers': servers, 'lojas': lojas,
             'raio_notas_m': RAIO_NOTAS_M, 'raio_servidores_m': RAIO_SERVIDORES_M,
             'reacoes_permitidas': list(REACOES_NOTA)}
 

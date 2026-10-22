@@ -799,6 +799,30 @@
     }
     VISTAS.guardiao = vGuardiao;
 
+    // ------------------------------------------------------------
+    // Lojas e pagamento: quem pediu pra receber pelo app. O admin libera (e, no gateway real, cola a carteira da loja).
+    // ------------------------------------------------------------
+    const ROTULO_CHECKOUT = { '': 'Sem pedido', pedido: 'Pediu liberação', liberado: 'Recebe pelo app', negado: 'Negada' };
+    async function vLojas() {
+        const filtro = E.filtroLojas || 'pedido';
+        const d = await api('/lojas?filtro=' + encodeURIComponent(filtro));
+        const pg = d.pagamentos || {};
+        main.innerHTML = `<h1>Lojas e pagamento</h1><p class="es-sub">O dono da loja <b>pede</b> pra receber pelo app; você <b>libera</b>. Liberada, os pedidos aceitos dela são pagos pelo app (Pix com confirmação automática) e o valor vai direto pra carteira da loja: o Pantheon nunca guarda dinheiro. Antes de liberar, confira quem é a pessoa (a loja é de verdade? tem produtos? conta antiga?).</p>
+            <div class="es-cartao" style="margin-bottom:14px"><b>Gateway:</b> ${pg.provedor ? `<span style="color:#3fb27f">${esc(pg.provedor)}</span>${pg.modo_teste ? ' · <b style="color:#e0a82e">MODO TESTE (ninguém é cobrado de verdade)</b>' : ' · <b>produção</b>'}${pg.provedor === 'asaas' ? ` · webhook ${pg.webhook_configurado ? 'configurado' : '<b style="color:#ff8e8e">SEM token (defina ASAAS_WEBHOOK_TOKEN)</b>'}` : ''} · taxa do Pantheon ${esc(pg.taxa_pct)}%` : '<span style="color:#ff8e8e">desligado</span> (em produção: defina ASAAS_API_KEY, ou PAGAMENTOS=simulado só para testar)'}</div>
+            <div class="es-linha" style="margin-bottom:12px"><label>Mostrar <select id="lj-f">${[['pedido', 'Pediram liberação'], ['liberado', 'Já recebem pelo app'], ['negado', 'Negadas'], ['todas', 'Todas']].map(([k, n]) => `<option value="${k}" ${k === filtro ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+            <div class="es-cartao"><table class="es-tabela"><thead><tr><th>Loja</th><th>Dono</th><th>Produtos</th><th>Vendas</th><th>Situação</th><th>Carteira (gateway)</th><th></th></tr></thead><tbody>
+            ${d.lojas.map((l) => `<tr data-loja="${l.id}"><td><b>${esc(l.nome)}</b> <small style="color:var(--muda)">#${l.id} · desde ${esc(l.criada_em)}${l.verificada ? ' · verificada' : ''}</small></td><td>${esc(l.dono)} <small style="color:var(--muda)">@${esc(l.username)}</small></td><td>${l.produtos}</td><td>${l.vendas}</td><td>${esc(ROTULO_CHECKOUT[l.checkout] || l.checkout)}</td>
+                <td><input type="text" class="lj-w" value="${esc(l.wallet_id)}" placeholder="${pg.provedor === 'asaas' ? 'walletId do Asaas' : 'não precisa no teste'}" maxlength="64" style="width:170px"></td>
+                <td style="white-space:nowrap">${l.checkout !== 'liberado' ? '<button class="es-btn mini" data-a="liberar">Liberar</button> ' : '<button class="es-btn mini" data-a="liberar">Salvar carteira</button> '}${l.checkout === 'liberado' ? '<button class="es-btn mini perigo" data-a="revogar">Revogar</button>' : '<button class="es-btn mini perigo" data-a="negar">Negar</button>'}</td></tr>`).join('') || '<tr><td colspan="7" class="es-vazio">Nenhuma loja nesta lista.</td></tr>'}
+            </tbody></table></div>`;
+        $('#lj-f').addEventListener('change', (e) => { E.filtroLojas = e.target.value; vLojas(); });
+        main.querySelectorAll('tr[data-loja] button[data-a]').forEach((b) => b.addEventListener('click', async () => {
+            const tr = b.closest('tr'), id = tr.dataset.loja;
+            try { await api('/lojas/' + id + '/checkout', 'POST', { acao: b.dataset.a, wallet_id: tr.querySelector('.lj-w').value.trim() }); toast('Loja #' + id + ' atualizada.', 'ok'); vLojas(); } catch (e) { /* api já mostra o erro */ }
+        }));
+    }
+    VISTAS.lojas = vLojas;
+
     window.addEventListener('beforeunload', (e) => { if (E.mudancas.size) { e.preventDefault(); e.returnValue = ''; } });
     ir((location.hash || '#geral').slice(1) in VISTAS ? (location.hash || '#geral').slice(1) : 'geral');
 })();

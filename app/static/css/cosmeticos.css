@@ -1702,3 +1702,67 @@ body.mt-aberta { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
     .moldura-egide::before, .moldura-tridente::before, .placa-vinho_escuro, .banner-anim-trirreme, .ne-bronze { animation: none !important; }
 }
+
+/* ---- Insígnia Olimpo: Ômega de lava (peças que se juntam, lava que esfria, raios) ----
+   Parado é o Ômega inteiro e frio; no hover/zoom roda o ciclo de 11 s: 1) 5 peças voam e se encaixam (0 a 2,4 s) e a lava está acesa;
+   2) a crosta escurece e sobram só as rachaduras acesas (2,6 a 5,5 s); 3) três raios correm pelo Ômega (6 a 10 s); 4) as peças saem e recomeça.
+   Só transform/opacity/dash (barato); o body.rolando segura tudo. */
+.bd-svg.bd-olimpo { filter: drop-shadow(0 0 2.5px rgba(255, 110, 20, .65)); overflow: visible; }
+.bd-olimpo .om-pc { transform-box: fill-box; transform-origin: center; }
+.bd-olimpo .om-quente { opacity: 0; }
+.bd-olimpo .om-raio { opacity: 0; stroke-dasharray: 12 100; stroke-dashoffset: 12; }
+.bd-wrap-olimpo:hover .om-pc0, .orb-grande .bd-svg.bd-olimpo .om-pc0 { animation: omPeca0 11s infinite; }
+.bd-wrap-olimpo:hover .om-pc1, .orb-grande .bd-svg.bd-olimpo .om-pc1 { animation: omPeca1 11s infinite; }
+.bd-wrap-olimpo:hover .om-pc2, .orb-grande .bd-svg.bd-olimpo .om-pc2 { animation: omPeca2 11s infinite; }
+.bd-wrap-olimpo:hover .om-pc3, .orb-grande .bd-svg.bd-olimpo .om-pc3 { animation: omPeca3 11s infinite; }
+.bd-wrap-olimpo:hover .om-pc4, .orb-grande .bd-svg.bd-olimpo .om-pc4 { animation: omPeca4 11s infinite; }
+.bd-wrap-olimpo:hover .om-crosta, .orb-grande .bd-svg.bd-olimpo .om-crosta { animation: omCrosta 11s linear infinite; }
+.bd-wrap-olimpo:hover .om-quente, .orb-grande .bd-svg.bd-olimpo .om-quente { animation: omQuente 11s linear infinite; }
+.bd-wrap-olimpo:hover .om-raio, .orb-grande .bd-svg.bd-olimpo .om-raio { animation: omRaio 11s linear infinite; }
+.bd-wrap-olimpo:hover .om-raio.r2, .orb-grande .bd-svg.bd-olimpo .om-raio.r2 { animation-delay: .5s; }
+.bd-wrap-olimpo:hover .om-raio.brilho, .orb-grande .bd-svg.bd-olimpo .om-raio.brilho { animation-name: omRaioBrilho; }
+@keyframes omPeca0 {
+    0% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); animation-timing-function: cubic-bezier(.35, .1, .25, 1); }
+    10% { opacity: 1; transform: none; }
+    92% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    97%, 100% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); }
+}
+@keyframes omPeca1 {
+    0% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); animation-timing-function: cubic-bezier(.35, .1, .25, 1); }
+    13% { opacity: 1; transform: none; }
+    92% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    97%, 100% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); }
+}
+@keyframes omPeca2 {
+    0% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); animation-timing-function: cubic-bezier(.35, .1, .25, 1); }
+    16% { opacity: 1; transform: none; }
+    92% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    97%, 100% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); }
+}
+@keyframes omPeca3 {
+    0% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); animation-timing-function: cubic-bezier(.35, .1, .25, 1); }
+    19% { opacity: 1; transform: none; }
+    92% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    97%, 100% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); }
+}
+@keyframes omPeca4 {
+    0% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); animation-timing-function: cubic-bezier(.35, .1, .25, 1); }
+    22% { opacity: 1; transform: none; }
+    92% { opacity: 1; transform: none; animation-timing-function: ease-in; }
+    97%, 100% { opacity: 0; transform: translate(var(--ox), var(--oy)) rotate(var(--or)) scale(.5); }
+}
+@keyframes omCrosta { 0%, 24% { opacity: 0; } 50% { opacity: 1; } 92% { opacity: 1; } 97%, 100% { opacity: 0; } }
+@keyframes omQuente { 0%, 20% { opacity: 0; } 24% { opacity: .8; } 44% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes omRaio {
+    0%, 54% { opacity: 0; stroke-dashoffset: 12; }
+    56% { opacity: 1; stroke-dashoffset: 12; } 64% { opacity: 1; stroke-dashoffset: -100; } 65%, 69% { opacity: 0; stroke-dashoffset: -100; }
+    70% { opacity: 1; stroke-dashoffset: 12; } 78% { opacity: 1; stroke-dashoffset: -100; } 79%, 83% { opacity: 0; stroke-dashoffset: -100; }
+    84% { opacity: 1; stroke-dashoffset: 12; } 92% { opacity: 1; stroke-dashoffset: -100; } 93%, 100% { opacity: 0; stroke-dashoffset: 12; }
+}
+@keyframes omRaioBrilho {
+    0%, 54% { opacity: 0; stroke-dashoffset: 12; }
+    56% { opacity: .75; stroke-dashoffset: 12; } 64% { opacity: .75; stroke-dashoffset: -100; } 65%, 69% { opacity: 0; stroke-dashoffset: -100; }
+    70% { opacity: .75; stroke-dashoffset: 12; } 78% { opacity: .75; stroke-dashoffset: -100; } 79%, 83% { opacity: 0; stroke-dashoffset: -100; }
+    84% { opacity: .75; stroke-dashoffset: 12; } 92% { opacity: .75; stroke-dashoffset: -100; } 93%, 100% { opacity: 0; stroke-dashoffset: 12; }
+}
+@media (prefers-reduced-motion: reduce) { .bd-olimpo .om-pc, .bd-olimpo .om-crosta, .bd-olimpo .om-quente, .bd-olimpo .om-raio { animation: none !important; } }

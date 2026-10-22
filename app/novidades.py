@@ -9,6 +9,17 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 35, 'data': '22/10/2026', 'titulo': 'Compre pelo mapa, pague pelo app e conheça o Olimpo',
+        'itens': [
+            {'icone': 'fa-store', 'titulo': 'Plante a sua loja no mapa',
+             'texto': 'O botão Plantar agora tem duas opções: servidor ou loja (a loja só aparece para quem tem uma no Bazar). Quem passar por perto vê o pino, abre a prévia e entra na sua loja. Vende de casa? Escolha mostrar só a área aproximada.'},
+            {'icone': 'fa-qrcode', 'titulo': 'Pague pelo app',
+             'texto': 'Lojas liberadas pela equipe recebem pelo app: o comprador paga por Pix dentro do pedido e a confirmação é automática, sem conferir comprovante. Peça a liberação em Minha lojinha > Dados e Pix.'},
+            {'icone': 'fa-bolt', 'titulo': 'Olimpo (grátis por enquanto)',
+             'texto': 'Libera a trilha Premium do Passe e dá a insígnia Ômega: as peças se juntam, a lava esfria e raios correm por dentro. Ative no topo do Passe de Batalha.'},
+        ],
+    },
+    {
         'id': 34, 'data': '21/10/2026', 'titulo': 'Segurança com IA e Termos de Uso',
         'itens': [
             {'icone': 'fa-robot', 'titulo': 'Guardião: mensagens e imagens são analisadas',

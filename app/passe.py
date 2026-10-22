@@ -274,7 +274,8 @@ def estado(pessoa):
     agora = br_now()
     pp = com_retry(lambda: PassePessoa.query.filter_by(person_id=pessoa.id, temporada_id=snap['id']).first())
     xp = pp.xp if pp else 0
-    premium = bool(pp and pp.premium)
+    from . import olimpo
+    premium = bool(pp and pp.premium) or olimpo.ativo(pessoa)      # a assinatura Olimpo também libera a trilha Premium
     feitos = com_retry(lambda: {(r.nivel, r.trilha) for r in PasseResgate.query.filter_by(person_id=pessoa.id, temporada_id=snap['id']).all()})
     por_nivel = max(snap['xp_por_nivel'], 1)
     nivel = min(xp // por_nivel, snap['niveis'])
@@ -301,7 +302,7 @@ def estado(pessoa):
         'segundos_restantes': max(resta, 0) if resta is not None else None, 'catchup': _catchup_ativo(snap, agora), 'catchup_pct': snap['catchup_pct'],
         'xp': xp, 'nivel': nivel, 'niveis_total': snap['niveis'], 'xp_por_nivel': por_nivel,
         'xp_no_nivel': 0 if nivel >= snap['niveis'] else xp - nivel * por_nivel,
-        'premium': premium, 'niveis': niveis, 'capitulos': caps, 'capitulo_atual': cap_atual,
+        'premium': premium, 'olimpo': olimpo.estado(pessoa), 'niveis': niveis, 'capitulos': caps, 'capitulo_atual': cap_atual,
         'pendentes': sum(1 for l in niveis for t in TRILHAS if l.get(t) and l[t]['liberado'] and not l[t]['resgatado'] and not l[t].get('invalido')),
     }
 
@@ -356,7 +357,8 @@ def resgatar(pessoa, nivel=None, trilha=None):
         pp = PassePessoa.query.filter_by(person_id=pessoa.id, temporada_id=snap['id']).first()
         xp = pp.xp if pp else 0
         atual = min(xp // max(snap['xp_por_nivel'], 1), snap['niveis'])
-        premium = bool(pp and pp.premium)
+        from . import olimpo
+        premium = bool(pp and pp.premium) or olimpo.ativo(pessoa)
         feitos = {(r.nivel, r.trilha) for r in PasseResgate.query.filter_by(person_id=pessoa.id, temporada_id=snap['id']).all()}
         if nivel is not None:
             alvos = [(int(nivel), trilha)]

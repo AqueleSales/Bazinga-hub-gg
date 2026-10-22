@@ -4543,6 +4543,7 @@ def apagar_evento(dados):
 # Bazar da comunidade: handlers em outro arquivo. Fica no FIM de propósito (ele importa daqui usuario_logado, sala_pessoal e
 # criar_notificacao, que precisam já existir).
 from . import bazar_events  # noqa: E402,F401
+from . import olimpo_events  # noqa: E402,F401
 
 
 # Passe de Batalha (temporadas), títulos e escolha das missões semanais: handlers em outro arquivo, também no FIM (importa daqui).

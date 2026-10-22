@@ -15,7 +15,7 @@ from functools import wraps
 from flask import Blueprint, abort, jsonify, render_template, request, session
 from sqlalchemy import or_
 
-from . import passe, efeitos, explorar, admin_dados, guardiao
+from . import passe, efeitos, explorar, admin_dados, guardiao, bazar, pagamentos
 from .bazar import eh_admin, ids_dos_admins, definir_admin
 from .cosmeticos import CATALOGO, ROTULO_TIPO, RARIDADES
 from .models import db, Person, Posse
@@ -412,4 +412,39 @@ def guardiao_decidir(pessoa, cid):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN GUARDIAO] {e}")
+        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+
+
+# ------------------------------------------------------------
+# Lojas: quem pode receber pelo app (checkout). O dono pede; um admin libera e, no gateway real, cola a carteira (walletId) da loja.
+# ------------------------------------------------------------
+@admin_bp.route('/api/lojas')
+@so_admin
+def lojas_lista(pessoa):
+    filtro = request.args.get('filtro', 'pedido')
+    return jsonify({'lojas': bazar.lojas_para_admin(pessoa, filtro), 'pagamentos': pagamentos.estado()})
+
+
+@admin_bp.route('/api/lojas/<int:lid>/checkout', methods=['POST'])
+@so_admin
+def lojas_checkout(pessoa, lid):
+    d = _json()
+    try:
+        loja = bazar.decidir_checkout(pessoa, lid, d.get('acao'), d.get('wallet_id'))
+        if d.get('acao') in ('liberar', 'negar'):
+            guardiao.notificar_fora_do_socket(loja.owner_id, 'Sua loja pode receber pelo app' if d.get('acao') == 'liberar' else 'Pedido de pagamento pelo app negado',
+                                              'A partir de agora os pedidos aceitos são pagos pelo app, com Pix confirmado automaticamente.' if d.get('acao') == 'liberar'
+                                              else 'A equipe não liberou agora. Você segue podendo vender com Pix direto.')
+        try:
+            from . import socketio
+            socketio.emit('bazar_mudou', {'loja_id': loja.id})
+        except Exception:
+            pass
+        return jsonify({'ok': True, 'checkout': loja.checkout_status or ''})
+    except bazar.ErroBazar as e:
+        db.session.rollback()
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ADMIN LOJAS] {e}")
         return jsonify({'erro': f'Erro inesperado: {e}'}), 500
