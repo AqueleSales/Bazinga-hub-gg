@@ -1098,41 +1098,92 @@ const Cosm = (() => {
         }).join('')}</div>`;
     }
 
-    /** Desenha o inventário em `el`. ctx: { livres:[{tipo,valor,nome}], nome, avatarHtml, aba, temas, aoEquipar(id), aoRemover(tipo), aoAba(aba) } */
+    /** Ordem e nome (plural) das seções do inventário: cada tipo de item tem a sua, em vez de uma lista só misturada. */
+    const INV_SECOES = [['badge', 'Insígnias'], ['moldura', 'Molduras'], ['placa', 'Placas'], ['nome', 'Estilos de nome'], ['faixa', 'Faixas'],
+        ['efeito_avatar', 'Efeitos de avatar'], ['efeito_perfil', 'Efeitos de perfil'], ['efeito_fala', 'Efeitos de fala'], ['efeito_radar', 'Efeitos do radar'],
+        ['efeito_chat', 'Efeitos ao digitar'], ['pin_nota', 'Pins de nota'], ['som_call', 'Sons de entrada'], ['efeito_servidor', 'Efeitos de servidor'], ['pacote', 'Pacotes de tema']];
+    const INV_SUBS_EFEITO = [['todos', 'Todos os efeitos'], ['efeito_avatar', 'Avatar'], ['efeito_perfil', 'Perfil'], ['efeito_fala', 'Fala'], ['efeito_radar', 'Radar'],
+        ['efeito_chat', 'Ao digitar'], ['pin_nota', 'Pin de nota'], ['som_call', 'Som de entrada'], ['efeito_servidor', 'Servidor']];
+
+    /** Desenha o inventário em `el`. ctx: { livres:[{tipo,valor,nome}], nome, avatarHtml, aba, temas, aoEquipar(id), aoRemover(tipo), aoAba(aba) }
+     *  Os filtros (tipo de efeito, tema, origem e busca) ficam guardados em `el._invFiltro` e sobrevivem aos redesenhos que o servidor provoca. */
     function renderInventario(el, estado, ctx) {
         if (!el || !estado) return;
         ctx.temas = ctx.temas || {};
         ctx.equipados = estado.equipados || {};
         el._invCtx = ctx;          // o clique (ligado uma vez só) sempre lê o contexto mais recente
+        el._invEstado = estado;
         const aba = ctx.aba || 'tudo';
+        const f = el._invFiltro = el._invFiltro || { sub: 'todos', tema: '', origem: '', busca: '' };
+        if (aba !== 'efeito') f.sub = 'todos';
 
         const exclusivos = (estado.catalogo || []).map(d => ({ ...d, exclusivo: true }));
         const livres = (ctx.livres || []).map(d => ({ id: `${d.tipo}:${d.valor}`, tipo: d.tipo, valor: d.valor, nome: d.nome, raridade: 'comum', exclusivo: false }));
-        const dentro = (it) => aba === 'tudo' || it.tipo === aba || (aba === 'efeito' && TIPOS_EFEITO.includes(it.tipo));
+        const dentroDaAba = (it) => aba === 'tudo' || it.tipo === aba || (aba === 'efeito' && TIPOS_EFEITO.includes(it.tipo));
+        const naAba = [...exclusivos, ...livres].filter(dentroDaAba);
+        const nomeTema = (t) => ((ctx.temas || {})[t] || {}).nome || NOME_TEMA[t] || t;
+        const temas = [...new Set(naAba.map(i => i.tema).filter(Boolean))].sort((a, b) => nomeTema(a).localeCompare(nomeTema(b), 'pt'));
+
+        const filtrar = () => {
+            const q = (f.busca || '').trim().toLowerCase();
+            return naAba.filter(it => (f.sub === 'todos' || it.tipo === f.sub)
+                && (!f.tema || (f.tema === '_sem' ? !it.tema : it.tema === f.tema))
+                && (!f.origem || (f.origem === 'exclusivo' ? it.exclusivo : !it.exclusivo))
+                && (!q || `${it.nome} ${ROTULO_TIPO[it.tipo] || ''} ${it.tema ? nomeTema(it.tema) : ''}`.toLowerCase().includes(q)));
+        };
+        el._invPintar = () => {
+            const corpo = el.querySelector('.inv-corpo');
+            if (!corpo) return;
+            const itens = filtrar();
+            if (!itens.length) { corpo.innerHTML = '<div class="inv-vazio"><i class="fa-regular fa-face-meh"></i><br>Nada com esses filtros.</div>'; return; }
+            const porTipo = {};
+            itens.forEach(i => { (porTipo[i.tipo] = porTipo[i.tipo] || []).push(i); });
+            corpo.innerHTML = INV_SECOES.filter(([t]) => porTipo[t]).map(([t, rot]) => {
+                const lista = porTipo[t].slice().sort((a, b) => (b.exclusivo - a.exclusivo));
+                const ex = lista.filter(i => i.exclusivo).length;
+                return `<div class="inv-sec" data-sec="${t}"><div class="inv-sec-tit">${rot} <small>${lista.length}${ex && ex !== lista.length ? ` · ${ex} exclusivo${ex === 1 ? '' : 's'}` : ''}</small></div>
+                    <div class="inv-grade">${lista.map(i => tileItem(i, ctx)).join('')}</div></div>`;
+            }).join('');
+        };
 
         let corpo;
         if (aba === 'patentes') {
             corpo = `<p class="inv-dica">Seu nível é a experiência total acumulada, de 1 a 1000+. A patente muda a cada faixa e o ícone ganha mais animação quanto maior ela for. Passe o mouse num ícone pra ver o nome.</p><button type="button" class="inv-btn" data-acao="montanha" style="margin:0 0 14px"><i class="fa-solid fa-mountain-sun"></i> Ver a montanha das patentes</button>${htmlPatentesInv(estado)}`;
         } else {
-            const ex = exclusivos.filter(dentro), li = livres.filter(dentro);
-            const sec = (titulo, lista, dica) => lista.length
-                ? `<div class="inv-sec"><div class="inv-sec-tit">${titulo} <small>${lista.length}</small></div>${dica ? `<p class="inv-dica">${dica}</p>` : ''}<div class="inv-grade">${lista.map(i => tileItem(i, ctx)).join('')}</div></div>` : '';
-            corpo = sec('Exclusivos', ex, aba === 'tudo' ? 'Só você (e quem recebeu junto) tem estes. O servidor confere a posse antes de deixar equipar.' : '')
-                + sec('Livres', li);
-            if (!ex.length && !li.length) corpo = '<div class="inv-vazio"><i class="fa-regular fa-face-meh"></i><br>Nada por aqui ainda.</div>';
+            const contagem = (t) => naAba.filter(i => t === 'todos' || i.tipo === t).length;
+            const subs = aba === 'efeito'
+                ? `<div class="inv-subabas" role="tablist" aria-label="Tipo de efeito">${INV_SUBS_EFEITO.filter(([id]) => id === 'todos' || contagem(id)).map(([id, rot]) =>
+                    `<button type="button" class="inv-sub-aba ${f.sub === id ? 'on' : ''}" data-sub="${id}">${rot} <small>${contagem(id)}</small></button>`).join('')}</div>` : '';
+            const filtros = `<div class="inv-filtros">
+                <label class="inv-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-filtro="busca" placeholder="Buscar pelo nome..." value="${esc(f.busca)}" maxlength="40" autocomplete="off"></label>
+                <select data-filtro="tema" aria-label="Tema"><option value="">Todos os temas</option>${temas.map(t => `<option value="${esc(t)}" ${f.tema === t ? 'selected' : ''}>${esc(nomeTema(t))}</option>`).join('')}<option value="_sem" ${f.tema === '_sem' ? 'selected' : ''}>Sem tema</option></select>
+                <select data-filtro="origem" aria-label="Origem"><option value="">Exclusivos e livres</option><option value="exclusivo" ${f.origem === 'exclusivo' ? 'selected' : ''}>Só exclusivos</option><option value="livre" ${f.origem === 'livre' ? 'selected' : ''}>Só livres</option></select>
+            </div>`;
+            corpo = `${subs}${filtros}<div class="inv-corpo"></div>`;
         }
 
         el.innerHTML = `<div class="inv-topo">
             <div class="inv-abas" role="tablist">${INV_ABAS.map(([id, rot]) => `<button type="button" role="tab" class="inv-aba ${id === aba ? 'on' : ''}" data-aba="${id}">${rot}</button>`).join('')}</div>
             <div class="inv-resumo"><b>${exclusivos.length}</b> exclusivo${exclusivos.length === 1 ? '' : 's'} · ${livres.length} livres</div>
         </div>${corpo}`;
+        if (aba !== 'patentes') el._invPintar();
 
         if (!el._invLigado) {
             el._invLigado = true;
+            const redesenhar = () => renderInventario(el, el._invEstado, el._invCtx);
+            el.addEventListener('input', (e) => {
+                if (e.target.matches('[data-filtro="busca"]')) { el._invFiltro.busca = e.target.value; el._invPintar && el._invPintar(); }
+            });
+            el.addEventListener('change', (e) => {
+                const s = e.target.closest('select[data-filtro]');
+                if (s) { el._invFiltro[s.dataset.filtro] = s.value; redesenhar(); }
+            });
             el.addEventListener('click', (e) => {
                 const c = el._invCtx;
                 const aba2 = e.target.closest('.inv-aba');
                 if (aba2) { c.aoAba && c.aoAba(aba2.dataset.aba); return; }
+                const sub2 = e.target.closest('.inv-sub-aba');
+                if (sub2) { el._invFiltro.sub = sub2.dataset.sub; redesenhar(); return; }
                 if (e.target.closest('[data-acao="montanha"]')) { c.aoMontanha && c.aoMontanha(); return; }
                 const srvBtn = e.target.closest('[data-acao="servidor"]');
                 if (srvBtn) { c.aoServidor && c.aoServidor(srvBtn.closest('.inv-item').dataset.item.split(':')[1]); return; }

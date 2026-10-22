@@ -177,8 +177,10 @@
    INVENTÁRIO
    ========================================================================== */
 .inv-raiz { display: flex; flex-direction: column; gap: 16px; }
-.inv-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; position: sticky; top: -28px; z-index: 4; padding: 10px 0; margin-top: -10px;
-    background: linear-gradient(180deg, var(--bg-primary) 70%, transparent); }
+.inv-raiz { isolation: isolate; }
+/* a barra de abas fica por cima de TUDO e é opaca: antes o efeito de perfil (canvas) e a bolha dos itens passavam por cima dos chips ao rolar */
+.inv-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; position: sticky; top: -28px; z-index: 40; padding: 10px 0 12px; margin-top: -10px;
+    background: var(--bg-primary); box-shadow: 0 8px 10px -8px rgba(0, 0, 0, .55); }
 .inv-abas { display: flex; gap: 6px; flex-wrap: wrap; }
 .inv-aba { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--glass-borda); background: rgba(255, 255, 255, .04); color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .2s, color .2s, transform .15s, border-color .2s; }
 .inv-aba:hover { color: var(--text-header); background: rgba(255, 255, 255, .09); transform: translateY(-1px); }
@@ -191,7 +193,7 @@
 .inv-sec + .inv-sec { margin-top: 10px; }
 .inv-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; }
 
-.inv-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 12px 12px; border-radius: 16px; text-align: center; cursor: pointer;
+.inv-item { isolation: isolate; position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 12px 12px; border-radius: 16px; text-align: center; cursor: pointer;
     background: rgba(255, 255, 255, .04); border: 1px solid var(--glass-borda); transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), border-color .2s, background-color .2s, box-shadow .2s; }
 .inv-item:hover { transform: translateY(-3px); background: rgba(255, 255, 255, .075); }
 .inv-item.eq { border-color: var(--brand-color); background: rgba(114, 137, 218, .13); box-shadow: 0 0 0 1px var(--brand-color), 0 8px 24px rgba(114, 137, 218, .2); }
@@ -1766,3 +1768,19 @@ body.mt-aberta { overflow: hidden; }
     84% { opacity: .75; stroke-dashoffset: 12; } 92% { opacity: .75; stroke-dashoffset: -100; } 93%, 100% { opacity: 0; stroke-dashoffset: 12; }
 }
 @media (prefers-reduced-motion: reduce) { .bd-olimpo .om-pc, .bd-olimpo .om-crosta, .bd-olimpo .om-quente, .bd-olimpo .om-raio { animation: none !important; } }
+
+/* inventário: filtro por tipo de efeito, tema, origem e busca; uma seção por tipo de item */
+.inv-subabas { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 -4px; }
+.inv-sub-aba { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--glass-borda); background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: background-color .15s, color .15s; }
+.inv-sub-aba small { opacity: .65; font-weight: 600; margin-left: 2px; }
+.inv-sub-aba:hover { color: var(--text-header); background: rgba(255, 255, 255, .07); }
+.inv-sub-aba.on { color: var(--text-header); background: rgba(114, 137, 218, .22); border-color: var(--brand-color); }
+.inv-filtros { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.inv-filtros select, .inv-busca { height: 34px; border-radius: 10px; border: 1px solid var(--glass-borda); background: rgba(255, 255, 255, .05); color: var(--text-normal); font-size: 12.5px; }
+.inv-filtros select { padding: 0 10px; cursor: pointer; max-width: 190px; }
+.inv-busca { display: flex; align-items: center; gap: 8px; padding: 0 10px; flex: 1 1 180px; max-width: 280px; }
+.inv-busca i { color: var(--text-muted); font-size: 12px; }
+.inv-busca input { background: transparent; border: 0; outline: 0; color: inherit; font: inherit; width: 100%; min-width: 0; }
+.inv-corpo { display: flex; flex-direction: column; gap: 18px; }
+.inv-corpo > .inv-sec + .inv-sec { margin-top: 0; }
+.inv-corpo .inv-sec-tit { padding-bottom: 6px; border-bottom: 1px solid var(--glass-borda); margin-bottom: 10px; }
