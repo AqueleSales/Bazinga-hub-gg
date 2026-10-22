@@ -214,6 +214,8 @@ class ServerRole(db.Model):
     permissoes = db.Column(db.Integer, default=0)
     posicao = db.Column(db.Integer, default=1)
     destacar = db.Column(db.Boolean, nullable=True)           # mostra os membros desse cargo num grupo à parte na lista
+    icone = db.Column(db.String(16), nullable=True)           # emoji que aparece ao lado do nome do cargo (cargos.emoji_valido)
+    automatico = db.Column(db.Boolean, nullable=True)         # dado sozinho a quem entra no servidor (nunca um cargo com Administrador)
     membros = db.relationship('MemberRole', backref='cargo', lazy=True, cascade="all, delete-orphan")
     sobrescritas = db.relationship('ChannelOverwrite', backref='cargo', lazy=True, cascade="all, delete-orphan")
 

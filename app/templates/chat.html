@@ -2270,6 +2270,10 @@
         .balao-wrap a.leaflet-popup-close-button { color: #fff; top: 8px; right: 10px; font-size: 20px; z-index: 5; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
         .bsv { display: flex; flex-direction: column; }
         .bsv-capa { height: 78px; position: relative; background: linear-gradient(135deg, #5865F2, #3ba55d); }
+        /* banner do servidor: aparece mais forte na direita e some pra esquerda, pra nunca brigar com o ícone e o nome */
+        .bsv-banner { position: absolute; inset: 0; background-size: cover; background-position: center right; -webkit-mask-image: linear-gradient(to left, #000 0%, #000 35%, transparent 95%); mask-image: linear-gradient(to left, #000 0%, #000 35%, transparent 95%); animation: bsvBanner .5s ease backwards; }
+        @keyframes bsvBanner { from { opacity: 0; transform: scale(1.06); } }
+        @media (prefers-reduced-motion: reduce) { .bsv-banner { animation: none; } }
         .bsv-foto { position: absolute; left: 50%; bottom: -34px; transform: translateX(-50%); width: 68px; height: 68px; border-radius: 20px; border: 4px solid var(--bg-quaternary); background: var(--brand-color); overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 22px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
         .bsv-foto img { width: 100%; height: 100%; object-fit: cover; }
         .bsv-corpo { padding: 44px 18px 16px; text-align: center; }
@@ -3882,6 +3886,8 @@
                         <input type="file" id="cfg-icon-file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/quicktime" style="display:none;">
                     </div>
                 </div>
+
+                <div id="cfg-banner-linha"></div>
 
                 <div>
                     <label class="bz-label">Nome do servidor</label>
@@ -6313,6 +6319,7 @@
             montarPaletaDeCores('cfg-color-row', corServidorEscolhida, cor => { corServidorEscolhida = cor; });
             document.getElementById('cfg-explorar-on').checked = !!srv.publico;
             document.getElementById('cfg-explorar-tema').value = srv.temaExplorar || 'outros';
+            Cargos.aoAbrirPopup(srv);       // banner: zera o que não foi salvo e mostra o atual
 
             document.getElementById('server-config-modal').style.display = 'flex';
         }
@@ -6390,7 +6397,8 @@
                 server_id: activeMyServerId,
                 nome: nome,
                 descricao: document.getElementById('cfg-server-desc').value.trim(),
-                banner_color: corServidorEscolhida
+                banner_color: corServidorEscolhida,
+                ...Cargos.camposBanner()      // banner_url só vai se a pessoa mexeu
             };
             // Só manda icon_url se a pessoa realmente mexeu na foto.
             if (iconeServidorNovo !== undefined) payload.icon_url = iconeServidorNovo;
@@ -8669,6 +8677,7 @@
                 ? Number(ownerId) === Number(currentUserId)
                 : (owner === currentUserName);
 
+            const bannerMapa = escUrl((extras && extras.banner_url) || '');
             const corCapa = /^#[0-9a-fA-F]{6}$/.test((extras && extras.banner_color) || '') ? extras.banner_color : null;
             const capaEstilo = corCapa ? `background:linear-gradient(135deg, ${corCapa}, color-mix(in srgb, ${corCapa} 55%, #000));` : '';
             const botao = isFull
@@ -8684,7 +8693,7 @@
 
             srv.bindPopup(`
                 <div class="bsv">
-                    <div class="bsv-capa" style="${capaEstilo}"><div class="bsv-foto">${miolo}</div></div>
+                    <div class="bsv-capa" style="${capaEstilo}">${bannerMapa ? `<div class="bsv-banner" style="background-image:url('${bannerMapa}')"></div>` : ''}<div class="bsv-foto">${miolo}</div></div>
                     <div class="bsv-corpo">
                         <h3>${esc(nome)}</h3>
                         <div class="bsv-dono">👑 ${esc(owner)}</div>
@@ -8869,7 +8878,7 @@
                     dados.online ?? pino.online,
                     pino.serverId, pino.ownerId,
                     dados.icon_url !== undefined ? dados.icon_url : pino.iconUrl,
-                    { ...dados, efeito: dados.efeito !== undefined ? dados.efeito : (pino.extras || {}).efeito }
+                    { ...(pino.extras || {}), ...dados, efeito: dados.efeito !== undefined ? dados.efeito : (pino.extras || {}).efeito }
                 );
             });
 

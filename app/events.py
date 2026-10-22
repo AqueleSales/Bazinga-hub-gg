@@ -1758,6 +1758,7 @@ def editar_servidor(dados):
                 'id': pino.id,
                 'nome': srv.name,
                 'icon_url': srv.icon_url,
+                'banner_url': srv.banner_url, 'banner_color': srv.banner_color, 'description': srv.description,
                 'efeito': efeito_servidor_valido(srv.efeito),
                 'vagas': pino.max_tickets if pino.max_tickets else 'ilimitado',
                 'online': len(srv.members)
@@ -1987,8 +1988,10 @@ def entrar_servidor_pin(dados):
 
             def preparar():
                 srv.members.append(usuario)
+                cargos.dar_automaticos(srv, usuario)
 
             comitar_com_retry(preparar)
+            cargos.invalidar(srv.id)
 
         join_room(sala_servidor(srv.id))
         emit('servidor_discord_criado', servidor_para_json(srv, usuario))
@@ -4359,8 +4362,10 @@ def entrar_por_convite(dados):
         def preparar():
             srv.members.append(usuario)
             convite.uses = (convite.uses or 0) + 1
+            cargos.dar_automaticos(srv, usuario)
 
         comitar_com_retry(preparar)
+        cargos.invalidar(srv.id)
 
         join_room(sala_servidor(srv.id))
         emit('servidor_discord_criado', servidor_para_json(srv, usuario))

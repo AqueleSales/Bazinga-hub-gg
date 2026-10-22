@@ -15,6 +15,7 @@ from sqlalchemy import func
 
 from .models import db, Server, Channel, Person, server_members
 from .utils import com_retry, comitar_com_retry, eh_membro
+from . import cargos
 from .cargos import TIPOS_TEXTO, TIPOS_VOZ
 
 # (id, nome, ícone Font Awesome, cor)
@@ -155,8 +156,10 @@ def entrar(usuario, server_id):
     def preparar():
         if not eh_membro(usuario, s.id):
             s.members.append(usuario)
+            cargos.dar_automaticos(s, usuario)
 
     comitar_com_retry(preparar)
+    cargos.invalidar(s.id)
     return s, False
 
 

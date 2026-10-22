@@ -316,6 +316,10 @@ def atualizar_banco():
             add_column_se_nao_existir("bazar_pedido", "pagamento VARCHAR(4)")
             add_column_se_nao_existir("person", "olimpo_ate TIMESTAMP")
 
+            # 42. Cargo com ícone e "dar a quem entrar" (Rodada 33): colunas novas de server_role.
+            add_column_se_nao_existir("server_role", "icone VARCHAR(16)")
+            add_column_se_nao_existir("server_role", "automatico BOOLEAN")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

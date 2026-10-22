@@ -500,7 +500,7 @@ const Cargos = (() => {
         if (!ref) return;
         ref.insertAdjacentHTML('afterend', '<div class="context-menu-item" id="srv-menu-new-cat">Criar categoria <i class="fa-solid fa-folder-plus"></i></div>');
         const cfg = document.getElementById('srv-menu-config');
-        cfg.insertAdjacentHTML('afterend', '<div class="context-menu-item" id="srv-menu-config-completa">Cargos e configurações completas <i class="fa-solid fa-user-shield"></i></div>');
+        cfg.insertAdjacentHTML('afterend', '<div class="context-menu-item" id="srv-menu-config-completa">Cargos e mais configurações <i class="fa-solid fa-user-shield"></i></div>');
         cfg.classList.remove('owner-only');
         ['srv-menu-new-text', 'srv-menu-new-voice'].forEach(id => document.getElementById(id)?.classList.remove('owner-only'));
         document.getElementById('srv-menu-config-completa').addEventListener('click', () => { menu.style.display = 'none'; C.abrirConfigCompleta(); });
@@ -558,12 +558,9 @@ const Cargos = (() => {
                 <textarea id="cx-bv-texto" class="bz-input" maxlength="500" rows="3" style="padding:12px;resize:vertical;font-family:inherit;" placeholder="Ex.: Bem-vindo! Leia as regras e apresente-se no #geral."></textarea></div>
             <div class="sf-campo"><label class="bz-label">Canal que abre primeiro</label>
                 <select id="cx-bv-canal" class="bz-input" style="padding-left:12px;"></select></div>`);
-        document.getElementById('cx-banner-escolher').addEventListener('click', () => C.escolherImagem({
-            titulo: 'Banner do servidor', formato: 'faixa', sub: 'Aparece no topo da lista de canais.',
-            aoArquivo: async (f) => { try { C.toast('Enviando o banner...', 'info'); bannerNovo = await C.uploadMidia(f); pintarBanner(bannerNovo); C.toast('Pronto! Clique em Salvar alterações.', 'success'); } catch (e) { C.toast(e.message || 'Não deu pra enviar.', 'error'); } },
-            aoUrl: (url) => { bannerNovo = url; pintarBanner(url); C.toast('Clique em Salvar alterações.', 'info'); },
-        }));
+        document.getElementById('cx-banner-escolher').addEventListener('click', escolherBanner);
         document.getElementById('cx-banner-tirar').addEventListener('click', () => { bannerNovo = ''; pintarBanner(''); });
+        prepararPopupRapido();
         // Canais: botões novos
         const secCanais = conteudo.querySelector('.sf-secao[data-secao="canais"]');
         const botoes = secCanais.querySelector('div[style*="display:flex"]');
@@ -583,10 +580,35 @@ const Cargos = (() => {
     }
     let bannerNovo;      // undefined = não mexeu; '' = tirou
     function pintarBanner(url) {
-        const box = document.getElementById('cx-banner-previa');
         const u = C.escUrl(url);
-        if (box) { box.style.backgroundImage = u ? `url('${u}')` : ''; box.classList.toggle('vazio', !u); box.textContent = u ? '' : 'Sem banner'; }
+        ['cx-banner-previa', 'cx-banner-previa-r'].forEach((id) => {
+            const box = document.getElementById(id);
+            if (box) { box.style.backgroundImage = u ? `url('${u}')` : ''; box.classList.toggle('vazio', !u); box.textContent = u ? '' : 'Sem banner'; }
+        });
+        const t = document.getElementById('cx-banner-tirar-r'); if (t) t.style.display = u ? '' : 'none';
     }
+    function escolherBanner() {
+        C.escolherImagem({
+            titulo: 'Banner do servidor', formato: 'faixa', sub: 'Aparece no topo da lista de canais e no cartão do servidor no mapa.',
+            aoArquivo: async (f) => { try { C.toast('Enviando o banner...', 'info'); bannerNovo = await C.uploadMidia(f); pintarBanner(bannerNovo); C.toast('Pronto! Clique em Salvar.', 'success'); } catch (e) { C.toast(e.message || 'Não deu pra enviar.', 'error'); } },
+            aoUrl: (url) => { bannerNovo = url; pintarBanner(url); C.toast('Clique em Salvar.', 'info'); },
+        });
+    }
+    /** O banner também se escolhe no popup rápido, junto do ícone ("Editar foto"). */
+    function prepararPopupRapido() {
+        const linha = document.getElementById('cfg-banner-linha');
+        if (!linha || linha.dataset.pronto) return;
+        linha.dataset.pronto = '1';
+        linha.innerHTML = `<label class="bz-label">Banner do servidor <span class="cx-op">(opcional)</span></label>
+            <div class="bz-radio-desc" style="margin-bottom:8px;">Aparece no topo da lista de canais e no cartão do servidor no mapa, sumindo aos poucos pra esquerda pra não cobrir o nome.</div>
+            <div class="cx-banner"><div class="cx-banner-previa" id="cx-banner-previa-r"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-cancel" id="cx-banner-escolher-r" type="button" style="padding:8px 12px;font-size:13px;"><i class="fa-solid fa-image"></i> Escolher banner</button>
+            <button class="btn-cancel" id="cx-banner-tirar-r" type="button" style="padding:8px 12px;font-size:13px;color:var(--red-color);">Remover</button></div></div>`;
+        document.getElementById('cx-banner-escolher-r').addEventListener('click', escolherBanner);
+        document.getElementById('cx-banner-tirar-r').addEventListener('click', () => { bannerNovo = ''; pintarBanner(''); });
+    }
+    function aoAbrirPopup(srv) { prepararPopupRapido(); bannerNovo = undefined; pintarBanner((srv && srv.bannerUrl) || ''); }
+    function camposBanner() { return bannerNovo !== undefined ? { banner_url: bannerNovo } : {}; }
 
     /** Mostra só as abas que a pessoa pode usar. Devolve a 1ª dessas abas. */
     function ajustarAbas(srv) {
@@ -632,62 +654,183 @@ const Cargos = (() => {
     }
 
     // ----- aba CARGOS -----
-    function chipCargo(c) { return `<span class="cg-bolinha" style="background:${E(c.cor || '#99aab5')}"></span>`; }
+    // As permissões ficam agrupadas (o dono achou a lista única grande e confusa) e cada uma é um interruptor, não uma caixinha.
+    const GRUPOS_PERM = [
+        ['Servidor', ['administrador', 'gerenciar_servidor', 'gerenciar_cargos', 'criar_convite', 'gerenciar_eventos']],
+        ['Canais e mensagens', ['gerenciar_canais', 'apagar_mensagens', 'fixar_mensagens', 'ver_canais_privados', 'enviar_anuncios']],
+        ['Membros', ['expulsar']],
+        ['Voz', ['falar_voz', 'falar_palco']],
+    ];
+    function chipCargo(c) {
+        return c.icone ? `<span class="cg-icone">${E(c.icone)}</span>` : `<span class="cg-bolinha" style="background:${E(c.cor || '#99aab5')}"></span>`;
+    }
+    let editorSujo = false;          // há alteração não salva no editor aberto: um redesenho vindo do servidor não pode apagá-la
+    let salvandoCargo = false;
 
-    function desenharCargos(srv) {
+    function desenharCargos(srv, soLista) {
         const lista = document.getElementById('cg-lista'), ed = document.getElementById('cg-editor');
         if (!lista || !ed) return;
         const roles = (srv.cargos || []).slice().sort((a, b) => b.pos - a.pos);
         const pg = pode(srv, 'gerenciar_cargos');
         const contagem = {};
         (C.membros() || []).forEach(m => (m.cargos || []).forEach(id => { contagem[id] = (contagem[id] || 0) + 1; }));
-        if (cargoSel !== 'membro' && !roles.some(r => r.id === cargoSel)) cargoSel = roles.length ? roles[0].id : 'membro';
+        if (cargoSel !== 'membro' && !roles.some(r => r.id === cargoSel)) { cargoSel = roles.length ? roles[0].id : 'membro'; editorSujo = false; }
         lista.innerHTML = (pg ? '<button class="btn btn-primary cg-novo" id="cg-novo"><i class="fa-solid fa-plus"></i> Novo cargo</button>' : '')
-            + roles.map((r, i) => `<div class="cg-item ${r.id === cargoSel ? 'ativo' : ''} ${editavel(srv, r) ? '' : 'travado'}" data-id="${Number(r.id)}">
-                    ${chipCargo(r)}<span class="cg-nome">${E(r.nome)}</span><span class="cg-qtd">${contagem[r.id] || 0}</span>
-                    ${pg && editavel(srv, r) ? `<span class="cg-setas"><i class="fa-solid fa-arrow-up ${i === 0 ? 'off' : ''}" data-sobe="${Number(r.id)}"></i><i class="fa-solid fa-arrow-down ${i === roles.length - 1 ? 'off' : ''}" data-desce="${Number(r.id)}"></i></span>` : ''}</div>`).join('')
-            + `<div class="cg-item membro ${cargoSel === 'membro' ? 'ativo' : ''}" data-id="membro"><span class="cg-bolinha" style="background:#99aab5"></span><span class="cg-nome">Membro</span><span class="cg-qtd">todos</span></div>`;
+            + (pg && roles.some(r => editavel(srv, r)) ? '<div class="cg-dica"><i class="fa-solid fa-grip-vertical"></i> Segure e arraste um cargo pra mudar a ordem. O de cima manda.</div>' : '')
+            + roles.map((r) => `<div class="cg-item ${r.id === cargoSel ? 'ativo' : ''} ${editavel(srv, r) ? 'arrastavel' : 'travado'}" data-id="${Number(r.id)}">
+                    ${pg && editavel(srv, r) ? '<i class="fa-solid fa-grip-vertical cg-grip" title="Arraste pra mudar a ordem"></i>' : '<i class="fa-solid fa-lock cg-grip" title="Cargo do seu nível ou acima"></i>'}
+                    ${chipCargo(r)}<span class="cg-nome">${E(r.nome)}</span><span class="cg-qtd">${contagem[r.id] || 0}</span></div>`).join('')
+            + `<div class="cg-item membro ${cargoSel === 'membro' ? 'ativo' : ''}" data-id="membro"><i class="fa-solid fa-users cg-grip"></i><span class="cg-nome">Membro</span><span class="cg-qtd">todos</span></div>`;
         lista.querySelector('#cg-novo')?.addEventListener('click', () => C.pedirTexto('Novo cargo', 'Ele nasce no fundo da lista, sem permissões. Depois é só ajustar.', 'Nome do cargo',
             (v) => { v = (v || '').trim(); if (v) C.socket.emit('cargo_criar', { server_id: srv.id, nome: v }); }));
-        lista.querySelectorAll('.cg-item').forEach(el => el.addEventListener('click', (e) => {
-            if (e.target.closest('.cg-setas')) return;
-            cargoSel = el.dataset.id === 'membro' ? 'membro' : Number(el.dataset.id);
-            desenharCargos(srv);
+        lista.querySelectorAll('.cg-item').forEach(el => el.addEventListener('click', () => {
+            if (performance.now() < suprimirCliqueAte) return;
+            const novo = el.dataset.id === 'membro' ? 'membro' : Number(el.dataset.id);
+            if (novo === cargoSel) return;
+            const sair = () => { editorSujo = false; cargoSel = novo; desenharCargos(srv); };
+            if (editorSujo) C.confirmar('Descartar as alterações?', 'Você mexeu neste cargo e não salvou.', sair); else sair();
         }));
-        lista.querySelectorAll('[data-sobe],[data-desce]').forEach(b => b.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (b.classList.contains('off')) return;
-            const id = Number(b.dataset.sobe || b.dataset.desce), sobe = !!b.dataset.sobe;
-            const mexiveis = roles.filter(r => editavel(srv, r)).map(r => r.id);
-            const i = mexiveis.indexOf(id), j = sobe ? i - 1 : i + 1;
-            if (i < 0 || j < 0 || j >= mexiveis.length) return;
-            [mexiveis[i], mexiveis[j]] = [mexiveis[j], mexiveis[i]];
-            C.socket.emit('cargos_reordenar', { server_id: srv.id, ordem: mexiveis });
-        }));
+        if (pg) ligarArrastoDeCargos(lista);
+        if (soLista) return;
         desenharEditorDeCargo(srv, ed, roles);
     }
 
+    // ---- arrastar cargos (segurar e arrastar, como nas conversas e nos servidores; sem setinhas) ----
+    let suprimirCliqueAte = 0;
+    function ligarArrastoDeCargos(lista) {
+        if (lista.dataset.arrasto) return;           // a lista é a mesma entre redesenhos: liga uma vez só (os do `document` se acumulariam)
+        lista.dataset.arrasto = '1';
+        let s = null;
+        const srvAtual = () => C.servidorAtivo();
+        const linhas = () => [...lista.querySelectorAll('.cg-item.arrastavel')];
+        const reduzido = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        lista.addEventListener('pointerdown', (e) => {
+            if (s || (e.pointerType === 'mouse' && e.button !== 0)) return;
+            const el = e.target.closest('.cg-item.arrastavel');
+            if (!el) return;
+            const grip = !!e.target.closest('.cg-grip');
+            s = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, y: e.clientY, fase: 'segurando', grip };
+            s.t = setTimeout(() => { if (s && s.fase === 'segurando') comecar(); }, grip ? 60 : 320);
+        });
+        document.addEventListener('pointermove', (e) => {
+            if (!s || e.pointerId !== s.id) return;
+            s.y = e.clientY;
+            if (s.fase === 'segurando') { if (Math.hypot(e.clientX - s.x0, e.clientY - s.y0) > 8) desistir(); return; }
+            mover();
+        }, { passive: true });
+        document.addEventListener('touchmove', (e) => { if (s && s.fase === 'arrastando' && e.cancelable) e.preventDefault(); }, { passive: false });
+        document.addEventListener('pointerup', (e) => { if (s && e.pointerId === s.id) soltar(false); });
+        document.addEventListener('pointercancel', (e) => { if (s && e.pointerId === s.id) soltar(true); });
+        document.addEventListener('keydown', (e) => { if (s && s.fase === 'arrastando' && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); soltar(true); } }, true);
+
+        function desistir() { if (s) { clearTimeout(s.t); s = null; } }
+        function comecar() {
+            const el = s.el;
+            if (!el.isConnected) { desistir(); return; }
+            const r = el.getBoundingClientRect();
+            s.r0 = r; s.fase = 'arrastando'; s.dy = s.y - r.top;
+            const voo = el.cloneNode(true);
+            voo.classList.add('cg-voando');
+            voo.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
+            document.body.appendChild(voo);
+            s.voo = voo;
+            el.classList.add('cg-buraco');
+            document.body.classList.add('cg-arrastando');
+            requestAnimationFrame(() => { if (s && s.voo === voo) voo.classList.add('levantado'); });
+            try { window.getSelection().removeAllRanges(); } catch (e) { /* sem seleção */ }
+            mover();
+        }
+        function flip(fazer) {
+            const antes = new Map(linhas().map(l => [l, l.getBoundingClientRect().top]));
+            fazer();
+            if (reduzido()) return;
+            antes.forEach((top, l) => {
+                if (l === s.el) return;
+                const d = top - l.getBoundingClientRect().top;
+                if (d) l.animate([{ transform: `translateY(${d}px)` }, { transform: 'none' }], { duration: 170, easing: 'cubic-bezier(.16,.84,.44,1)' });
+            });
+        }
+        function mover() {
+            if (!s || s.fase !== 'arrastando') return;
+            const y = s.y;
+            s.voo.style.transform = `translateY(${y - s.dy - s.r0.top}px)`;
+            const outras = linhas().filter(l => l !== s.el);
+            let ref = null;
+            for (const l of outras) { const r = l.getBoundingClientRect(); if (y < r.top + r.height / 2) { ref = l; break; } }
+            const proximo = ref ? ref : (outras.length ? outras[outras.length - 1].nextSibling : s.el.nextSibling);
+            if (proximo !== s.el && proximo !== s.el.nextSibling) flip(() => lista.insertBefore(s.el, proximo));
+            // rola a janela de configurações quando o dedo chega perto da borda
+            const cont = lista.closest('.sf-conteudo');
+            if (cont) {
+                const cr = cont.getBoundingClientRect();
+                const passo = y < cr.top + 36 ? -9 : (y > cr.bottom - 36 ? 9 : 0);
+                if (passo && !s.rolando) { s.rolando = true; const laco = () => { if (!s || s.fase !== 'arrastando') return; const p = s.y < cr.top + 36 ? -9 : (s.y > cr.bottom - 36 ? 9 : 0); if (!p) { s.rolando = false; return; } cont.scrollTop += p; mover(); requestAnimationFrame(laco); }; requestAnimationFrame(laco); }
+            }
+        }
+        function soltar(cancelar) {
+            if (!s) return;
+            clearTimeout(s.t);
+            const e = s; s = null;
+            if (e.fase !== 'arrastando') return;
+            suprimirCliqueAte = performance.now() + 400;
+            const ordem = linhas().map(l => Number(l.dataset.id));
+            const r = e.el.getBoundingClientRect();
+            const fim = () => { if (!e.voo.isConnected) return; e.voo.remove(); e.el.classList.remove('cg-buraco'); document.body.classList.remove('cg-arrastando'); };
+            const srv = srvAtual();
+            if (cancelar && srv) { desenharCargos(srv, true); }
+            if (reduzido()) fim(); else {
+                e.voo.classList.remove('levantado');
+                const a = e.voo.animate([{ transform: e.voo.style.transform }, { transform: `translateY(${r.top - e.r0.top}px)` }], { duration: 160, easing: 'ease-out', fill: 'forwards' });
+                a.onfinish = fim; a.oncancel = fim;
+                setTimeout(fim, 400);          // reserva: com a janela em segundo plano a animação pode não terminar
+            }
+            if (!cancelar && srv) {
+                const antes = (srv.cargos || []).slice().sort((a, b) => b.pos - a.pos).filter(c => editavel(srv, c)).map(c => c.id);
+                if (ordem.join() !== antes.join()) C.socket.emit('cargos_reordenar', { server_id: srv.id, ordem });
+            }
+        }
+    }
+
+    function permissaoEmLinha(srv, id, marcadas, travadoTudo) {
+        const p = PERMISSOES.find(x => x[0] === id);
+        if (!p) return '';
+        const eu = ehDono(srv) || (srv.minhasPerms || []).includes(id);
+        const off = travadoTudo || !eu;
+        return `<label class="cg-perm ${off ? 'off' : ''}" title="${E(off && !travadoTudo ? 'Você não tem essa permissão, então não pode dá-la' : p[2])}">
+            <span class="cg-t"><b>${E(p[1])}</b><em>${E(p[2])}</em></span>
+            <input type="checkbox" class="cg-sw" data-perm="${id}" ${marcadas.has(id) ? 'checked' : ''} ${off ? 'disabled' : ''}></label>`;
+    }
     function caixasDePermissao(srv, marcadas, travadoTudo, semAdmin) {
-        return PERMISSOES.filter(p => !(semAdmin && p[0] === 'administrador')).map(([id, nm, desc]) => {
-            const eu = ehDono(srv) || (srv.minhasPerms || []).includes(id);
-            const off = travadoTudo || !eu;
-            return `<label class="cg-perm ${off ? 'off' : ''}" title="${E(off && !travadoTudo ? 'Você não tem essa permissão, então não pode dá-la' : desc)}">
-                <input type="checkbox" data-perm="${id}" ${marcadas.has(id) ? 'checked' : ''} ${off ? 'disabled' : ''}>
-                <span><b>${E(nm)}</b><em>${E(desc)}</em></span></label>`;
+        return GRUPOS_PERM.map(([titulo, ids]) => {
+            const itens = ids.filter(id => !(semAdmin && id === 'administrador')).map(id => permissaoEmLinha(srv, id, marcadas, travadoTudo)).join('');
+            return itens ? `<div class="cg-grupo"><div class="cg-grupo-t">${E(titulo)}</div>${itens}</div>` : '';
         }).join('');
+    }
+    function interruptor(id, titulo, desc, marcado, off) {
+        return `<label class="cg-perm ${off ? 'off' : ''}"><span class="cg-t"><b>${E(titulo)}</b><em>${E(desc)}</em></span>
+            <input type="checkbox" class="cg-sw" id="${id}" ${marcado ? 'checked' : ''} ${off ? 'disabled' : ''}></label>`;
     }
 
     function desenharEditorDeCargo(srv, ed, roles) {
         const pg = pode(srv, 'gerenciar_cargos');
+        editorSujo = false;
+        const marcarSujo = () => {
+            editorSujo = true;
+            const b = ed.querySelector('#cg-salvar, #cg-salvar-membro');
+            if (b) { b.disabled = false; b.querySelector('span').textContent = 'Salvar alterações'; }
+            ed.querySelector('.cg-rodape')?.classList.add('sujo');
+        };
         if (cargoSel === 'membro') {
             const marc = new Set(srv.permsMembro || []);
-            ed.innerHTML = `<h3>Membro <small>(todo mundo)</small></h3>
-                <p class="sf-desc" style="margin-bottom:12px;">O que qualquer pessoa do servidor pode fazer, tenha cargo ou não. Os outros cargos somam em cima disso.</p>
+            ed.innerHTML = `<h3><i class="fa-solid fa-users"></i> Membro <small>todo mundo</small></h3>
+                <p class="cg-ajuda">O que qualquer pessoa do servidor pode fazer, com ou sem cargo. Os outros cargos somam em cima disso.</p>
                 <div class="cg-perms">${caixasDePermissao(srv, marc, !pg, true)}</div>
-                ${pg ? '<button class="btn btn-primary" id="cg-salvar-membro" style="margin-top:14px;">Salvar permissões de Membro</button>' : ''}`;
-            ed.querySelector('#cg-salvar-membro')?.addEventListener('click', () => {
+                ${pg ? '<div class="cg-rodape"><span class="cg-aviso-sujo">Alterações não salvas</span><button class="btn btn-primary" id="cg-salvar-membro" disabled><span>Salvo</span></button></div>' : ''}`;
+            ed.querySelectorAll('input[data-perm]').forEach(i => i.addEventListener('change', marcarSujo));
+            ed.querySelector('#cg-salvar-membro')?.addEventListener('click', (ev) => {
                 const perms = [...ed.querySelectorAll('input[data-perm]:checked')].map(i => i.dataset.perm);
                 C.socket.emit('cargo_padrao', { server_id: srv.id, permissoes: perms });
+                carregandoBotao(ev.currentTarget);
             });
             return;
         }
@@ -696,32 +839,72 @@ const Cargos = (() => {
         const pode_editar = pg && editavel(srv, r);
         const marc = new Set(permsDoCargo(r));
         const cores = CORES.map(c => `<button type="button" class="cg-cor ${(r.cor || '') === c ? 'sel' : ''}" style="background:${c}" data-cor="${c}" ${pode_editar ? '' : 'disabled'}></button>`).join('');
-        ed.innerHTML = `<h3>${chipCargo(r)} ${E(r.nome)}</h3>
+        const temAdmin = marc.has('administrador');
+        ed.innerHTML = `<h3 id="cg-titulo">${chipCargo(r)} <span>${E(r.nome)}</span></h3>
             ${pode_editar ? '' : '<p class="cg-aviso"><i class="fa-solid fa-lock"></i> Cargo do seu nível ou acima: você só pode olhar.</p>'}
-            <label class="bz-label">Nome</label>
-            <input type="text" id="cg-nome" class="bz-input" maxlength="24" value="${E(r.nome)}" ${pode_editar ? '' : 'disabled'} style="padding-left:12px;">
-            <label class="bz-label" style="margin-top:14px;">Cor do nome</label>
+            <div class="cg-linha2">
+                <div><label class="cg-rot">Nome</label>
+                    <input type="text" id="cg-nome" class="bz-input" maxlength="24" value="${E(r.nome)}" ${pode_editar ? '' : 'disabled'} style="padding-left:12px;"></div>
+                <div><label class="cg-rot">Ícone</label>
+                    <button type="button" id="cg-icone" class="cg-icone-btn" data-abre-emoji ${pode_editar ? '' : 'disabled'} title="Escolher um emoji"><span id="cg-icone-v">${r.icone ? E(r.icone) : '<i class="fa-regular fa-face-smile"></i>'}</span></button>
+                    ${r.icone && pode_editar ? '<button type="button" id="cg-icone-tirar" class="cg-mini" title="Tirar o ícone"><i class="fa-solid fa-xmark"></i></button>' : ''}</div>
+            </div>
+            <label class="cg-rot">Cor do nome</label>
             <div class="cg-cores">${cores}<input type="color" id="cg-cor-livre" value="${E(r.cor || '#99aab5')}" ${pode_editar ? '' : 'disabled'} title="Outra cor">
                 <button type="button" class="cg-cor semcor ${r.cor ? '' : 'sel'}" data-cor="" title="Sem cor" ${pode_editar ? '' : 'disabled'}>∅</button></div>
-            <label class="cg-perm" style="margin-top:14px;"><input type="checkbox" id="cg-destacar" ${r.destacar ? 'checked' : ''} ${pode_editar ? '' : 'disabled'}>
-                <span><b>Mostrar os membros deste cargo separados</b><em>Na lista de membros eles ganham um grupo com o nome do cargo.</em></span></label>
-            <label class="bz-label" style="margin-top:14px;">Permissões</label>
+            <div class="cg-grupo"><div class="cg-grupo-t">Opções</div>
+                ${interruptor('cg-destacar', 'Mostrar os membros separados', 'Na lista de membros eles ganham um grupo com o nome do cargo.', r.destacar, !pode_editar)}
+                ${interruptor('cg-auto', 'Dar a quem entrar no servidor', 'Todo mundo que entrar já recebe este cargo. Não vale pra cargo com Administrador.', r.auto, !pode_editar || temAdmin)}</div>
             <div class="cg-perms">${caixasDePermissao(srv, marc, !pode_editar)}</div>
-            ${pode_editar ? `<div style="display:flex;gap:10px;margin-top:16px;"><button class="btn btn-primary" id="cg-salvar">Salvar cargo</button>
-                <button class="btn-cancel" id="cg-apagar" style="color:var(--red-color);">Apagar cargo</button></div>` : ''}`;
-        let corAtual = r.cor || '';
+            ${pode_editar ? `<div class="cg-rodape"><span class="cg-aviso-sujo">Alterações não salvas</span>
+                <button class="btn-cancel cg-apagar" id="cg-apagar"><i class="fa-solid fa-trash"></i> Apagar</button>
+                <button class="btn btn-primary" id="cg-salvar" disabled><span>Salvo</span></button></div>` : ''}`;
+        let corAtual = r.cor || '', iconeAtual = r.icone || '';
+        const pintarTitulo = () => {
+            const t = ed.querySelector('#cg-titulo');
+            if (t) t.innerHTML = `${chipCargo({ icone: iconeAtual, cor: corAtual })} <span>${E(ed.querySelector('#cg-nome').value || r.nome)}</span>`;
+        };
         ed.querySelectorAll('.cg-cor').forEach(b => b.addEventListener('click', () => {
-            corAtual = b.dataset.cor; ed.querySelectorAll('.cg-cor').forEach(x => x.classList.toggle('sel', x === b));
+            corAtual = b.dataset.cor; ed.querySelectorAll('.cg-cor').forEach(x => x.classList.toggle('sel', x === b)); pintarTitulo(); marcarSujo();
         }));
-        ed.querySelector('#cg-cor-livre')?.addEventListener('input', (e) => { corAtual = e.target.value; ed.querySelectorAll('.cg-cor').forEach(x => x.classList.remove('sel')); });
-        ed.querySelector('#cg-salvar')?.addEventListener('click', () => {
+        ed.querySelector('#cg-cor-livre')?.addEventListener('input', (e) => { corAtual = e.target.value; ed.querySelectorAll('.cg-cor').forEach(x => x.classList.remove('sel')); pintarTitulo(); marcarSujo(); });
+        ed.querySelector('#cg-nome')?.addEventListener('input', () => { pintarTitulo(); marcarSujo(); });
+        ed.querySelectorAll('.cg-sw').forEach(i => i.addEventListener('change', () => {
+            if (i.dataset.perm === 'administrador') {      // cargo com Administrador não pode ser automático
+                const auto = ed.querySelector('#cg-auto');
+                if (auto) { if (i.checked) auto.checked = false; auto.disabled = i.checked; auto.closest('.cg-perm').classList.toggle('off', i.checked); }
+            }
+            marcarSujo();
+        }));
+        ed.querySelector('#cg-icone')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof abrirEmojiPicker !== 'function') return;
+            abrirEmojiPicker(e.currentTarget, (emoji) => {
+                iconeAtual = emoji; ed.querySelector('#cg-icone-v').textContent = emoji; C.emojificar(ed.querySelector('#cg-icone')); pintarTitulo(); marcarSujo();
+            });
+        });
+        ed.querySelector('#cg-icone-tirar')?.addEventListener('click', () => { iconeAtual = ''; ed.querySelector('#cg-icone-v').innerHTML = '<i class="fa-regular fa-face-smile"></i>'; pintarTitulo(); marcarSujo(); });
+        ed.querySelector('#cg-salvar')?.addEventListener('click', (ev) => {
             const perms = [...ed.querySelectorAll('input[data-perm]:checked')].map(i => i.dataset.perm);
-            C.socket.emit('cargo_editar', { server_id: srv.id, cargo_id: r.id, nome: ed.querySelector('#cg-nome').value, cor: corAtual,
-                destacar: ed.querySelector('#cg-destacar').checked, permissoes: perms });
-            C.toast('Salvando cargo...', 'info');
+            C.socket.emit('cargo_editar', { server_id: srv.id, cargo_id: r.id, nome: ed.querySelector('#cg-nome').value, cor: corAtual, icone: iconeAtual,
+                destacar: ed.querySelector('#cg-destacar').checked, automatico: ed.querySelector('#cg-auto').checked, permissoes: perms });
+            carregandoBotao(ev.currentTarget);
         });
         ed.querySelector('#cg-apagar')?.addEventListener('click', () => C.confirmar(`Apagar o cargo ${r.nome}?`,
             'Quem tem esse cargo perde as permissões dele na hora. Isso não tem volta.', () => C.socket.emit('cargo_apagar', { server_id: srv.id, cargo_id: r.id })));
+    }
+    /** O botão Salvar vira "Salvando..." até o servidor responder (estrutura nova = deu certo; erro = volta pro normal; 8 s de segurança). */
+    function carregandoBotao(b) {
+        salvandoCargo = true;
+        b.disabled = true; b.querySelector('span').innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Salvando...';
+        clearTimeout(carregandoBotao.t);
+        carregandoBotao.t = setTimeout(() => { if (salvandoCargo) { salvandoCargo = false; b.disabled = false; b.querySelector('span').textContent = 'Salvar alterações'; } }, 8000);
+    }
+    function aoErrar() {
+        if (!salvandoCargo) return;
+        salvandoCargo = false; clearTimeout(carregandoBotao.t);
+        const b = document.querySelector('#cg-editor #cg-salvar, #cg-editor #cg-salvar-membro');
+        if (b) { b.disabled = false; b.querySelector('span').textContent = 'Salvar alterações'; }
     }
 
     // ----- aba CANAIS: categorias e canais organizados, com setas e "mover para" -----
@@ -888,7 +1071,7 @@ const Cargos = (() => {
             const nivelAlvo = nivelDe(srv, m.cargos);
             const posso_cargos = pode(srv, 'gerenciar_cargos') && !m.dono && (ehDono(srv) || souEu || nivelAlvo < meuN) && roles.some(r => editavel(srv, r));
             const posso_remover = pode(srv, 'expulsar') && !m.dono && !souEu && (ehDono(srv) || nivelAlvo < meuN);
-            const chips = meus.map(r => `<span class="cg-chip" style="--c:${E(r.cor || '#99aab5')}">${E(r.nome)}</span>`).join('');
+            const chips = meus.map(r => `<span class="cg-chip" style="--c:${E(r.cor || '#99aab5')}">${r.icone ? E(r.icone) + ' ' : ''}${E(r.nome)}</span>`).join('');
             return `<div class="sf-linha" data-membro="${Number(m.id)}">
                 <div class="av">${av ? `<img src="${av}">` : E((m.nome || '?')[0].toUpperCase())}</div>
                 <div class="txt"><div class="nm">${E(m.nome)}${souEu ? ' <span style="color:var(--text-muted);font-weight:500;">(você)</span>' : ''}</div>
@@ -922,7 +1105,7 @@ const Cargos = (() => {
         pop.innerHTML = `<div class="cg-pop-t">Cargos de ${E(m.nome)}</div>` + roles.map(r => {
             const tem = (m.cargos || []).includes(r.id);
             const fora = !ehDono(srv) && permsDoCargo(r).some(p => !(srv.minhasPerms || []).includes(p));
-            return `<label class="cg-pop-i ${fora ? 'off' : ''}" title="${fora ? 'Esse cargo tem permissão que você não tem' : ''}"><input type="checkbox" data-cargo="${Number(r.id)}" ${tem ? 'checked' : ''} ${fora ? 'disabled' : ''}>${chipCargo(r)} ${E(r.nome)}</label>`;
+            return `<label class="cg-pop-i ${fora ? 'off' : ''}" title="${fora ? 'Esse cargo tem permissão que você não tem' : ''}">${chipCargo(r)} <span class="cg-nome">${E(r.nome)}</span><input type="checkbox" class="cg-sw" data-cargo="${Number(r.id)}" ${tem ? 'checked' : ''} ${fora ? 'disabled' : ''}></label>`;
         }).join('');
         document.body.appendChild(pop);
         const r = ancora.getBoundingClientRect();
@@ -961,7 +1144,7 @@ const Cargos = (() => {
         destacados.forEach(c => {
             const doGrupo = resto.filter(m => (m.cargos || []).includes(c.id) && !destacados.some(o => o.pos > c.pos && (m.cargos || []).includes(o.id)));
             doGrupo.forEach(m => resto.splice(resto.indexOf(m), 1));
-            if (doGrupo.length) grupos.push(`<div class="channel-category" style="margin-top:12px;">${E(c.nome)} — ${doGrupo.length}</div>${doGrupo.map(linha).join('')}`);
+            if (doGrupo.length) grupos.push(`<div class="channel-category" style="margin-top:12px;">${c.icone ? E(c.icone) + ' ' : ''}${E(c.nome)} — ${doGrupo.length}</div>${doGrupo.map(linha).join('')}`);
         });
         if (!grupos.length) return null;
         return grupos.join('')
@@ -1002,7 +1185,7 @@ const Cargos = (() => {
         if (!cab) return;
         const u = C.escUrl(srv && srv.bannerUrl);
         cab.classList.toggle('com-banner', !!u);
-        cab.style.backgroundImage = u ? `linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.55)), url('${u}')` : '';
+        cab.style.setProperty('--banner-img', u ? `url('${u}')` : 'none');
     }
 
     // ---------------------------------------------------------------------
@@ -1039,6 +1222,8 @@ const Cargos = (() => {
     // ---------------------------------------------------------------------
     function aoReceberEstrutura(novo) {
         if (!novo || !novo.id) return;
+        const antes = C.servidorAtivo();
+        const idsAntes = antes && antes.id === novo.id ? (antes.cargos || []).map(c => c.id).sort().join() : null;
         C.trocarServidor(novo);
         const ativo = C.servidorAtivo();
         if (!ativo || ativo.id !== novo.id) return;
@@ -1046,12 +1231,14 @@ const Cargos = (() => {
         pintarCabecalho(novo);
         const canal = (novo.channels || []).find(c => String(c.id) === String(C.canalAtualId()));
         if (canal) aoAbrirCanal(canal);
-        C.pedirMembros();
+        // Quem tem qual cargo só muda por `cargos_dos_membros_mudou` (que já pede a lista) ou quando um cargo some: não pede à toa a cada ajuste de cor/permissão.
+        if (idsAntes == null || idsAntes !== (novo.cargos || []).map(c => c.id).sort().join()) C.pedirMembros();
         if (C.configAberta()) { aoAtualizarConfig(novo); }
         atualizarPermissoes();
     }
     function aoAtualizarConfig(srv) {
-        desenharCargos(srv);
+        if (salvandoCargo) { salvandoCargo = false; clearTimeout(carregandoBotao.t); editorSujo = false; C.toast('Cargo salvo!', 'success'); desenharCargos(srv); }
+        else desenharCargos(srv, editorSujo);       // com alteração solta no editor, só a lista se atualiza
         desenharConfigCanais(srv, document.getElementById('sf-lista-canais'));
         // perdi a permissão da aba onde estou? pula pra uma que eu ainda possa usar
         const ativa = document.querySelector('#server-full-settings .sf-item.ativo');
@@ -1064,10 +1251,11 @@ const Cargos = (() => {
         const s = C.socket;
         s.on('servidor_estrutura', aoReceberEstrutura);
         s.on('mensagem_recusada', mensagemRecusada);
+        s.on('erro_bazinga', aoErrar);
         s.on('canal_permissao_ok', () => C.toast('Permissões do canal salvas!', 'success'));
         s.on('palco_papel', receberPapel);
         s.on('cargos_dos_membros_mudou', (d) => { const a = C.servidorAtivo(); if (a && d && a.id === d.server_id) C.pedirMembros(); });
-        s.on('cargo_criado', (d) => { const a = C.servidorAtivo(); if (a && d && a.id === d.server_id) cargoSel = d.cargo_id; });
+        s.on('cargo_criado', (d) => { const a = C.servidorAtivo(); if (a && d && a.id === d.server_id) { cargoSel = d.cargo_id; editorSujo = false; if (C.configAberta()) desenharCargos(a); } });
         s.on('entrada_call_recusada', () => { /* o texto já veio no erro_bazinga */ });
         document.addEventListener('click', (e) => {
             const b = e.target.closest && e.target.closest('[data-palco]');
@@ -1083,8 +1271,8 @@ const Cargos = (() => {
         iniciar, pode, podeGerir, ehDono, familia, tipoValido, TIPOS, PERMISSOES, PERMS_CANAL, permNoCanal, abrirPermissoes,
         htmlLista, depoisDeDesenhar, redesenhar, pintarCabecalho,
         preencherModal, aoMudarTipo, camposDoModal, aoAbrirCanal, podeEnviar,
-        ajustarMenuServidor, ajustarMenuCanal, ajustarMenuMensagem, podeApagarMensagem,
-        aoAbrirConfig, camposDoPerfil, desenharConfigCanais, desenharMembrosConfig, desenharCargos,
+        ajustarMenuServidor, ajustarMenuCanal, ajustarMenuMensagem, podeApagarMensagem, aoAbrirPopup, camposBanner,
+        aoAbrirConfig, camposDoPerfil, desenharConfigCanais, desenharMembrosConfig, desenharCargos: (srv) => desenharCargos(srv, editorSujo),
         corDoMembro, agruparMembros, aoEntrarNoServidor, canalInicial,
         micTravado, marcaParticipante, ehOuvinte: () => papel.ouvinte,
     };

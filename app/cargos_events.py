@@ -70,7 +70,7 @@ def cargo_criar(dados):
         return
     d = _dict(dados)
     _aplicar(usuario, d, 'CARGO CRIAR', lambda srv, ctx: cargos.criar_cargo(
-        srv, ctx, d.get('nome'), d.get('cor'), d.get('permissoes'), d.get('destacar')),
+        srv, ctx, d.get('nome'), d.get('cor'), d.get('permissoes'), d.get('destacar'), d.get('icone'), d.get('automatico')),
         depois=lambda srv, r: emit('cargo_criado', {'server_id': srv.id, 'cargo_id': r.id}))
 
 

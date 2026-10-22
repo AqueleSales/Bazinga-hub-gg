@@ -22,6 +22,7 @@ from ..novidades import novidade_atual, novidades_para_cliente
 from ..events import sala_servidor, sala_pessoal, servidor_para_json, servidores_para_json, _estado_inventario
 from ..passe import titulo_publico
 from .. import ordem
+from .. import cargos
 from .. import termos as termos_mod
 from .. import guardiao
 from ..bazar import ids_dos_admins as _ids_dos_admins
@@ -1109,8 +1110,10 @@ def entrar_por_link(code):
             def preparar():
                 servidor.members.append(usuario)
                 convite.uses = (convite.uses or 0) + 1
+                cargos.dar_automaticos(servidor, usuario)
 
             comitar_com_retry(preparar)
+            cargos.invalidar(servidor.id)
             # Rota HTTP pura (sem contexto de socket): o navegador de quem
             # entrou ainda nem conectou no socket nesse momento (só conecta
             # depois do redirect pra /chat), então não tem "self" pra excluir.

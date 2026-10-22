@@ -1018,6 +1018,7 @@ def servidor_mapa_para_json(s):
         'icon_url': srv.icon_url if srv else None,
         'efeito': efeito_servidor_valido(srv.efeito) if srv else None,
         'banner_color': srv.banner_color if srv else None,
+        'banner_url': srv.banner_url if srv else None,         # a imagem do banner (já validada ao salvar) também enfeita o cartão no mapa
         'description': srv.description if srv else None,
         'owner': s.owner.name if s.owner else '???', 'owner_id': s.owner_id,
         'vagas': s.max_tickets if s.max_tickets else 'ilimitado',

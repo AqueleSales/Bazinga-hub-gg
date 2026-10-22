@@ -385,7 +385,8 @@ def carregar_estruturas(servidores, canais=None):
         novos = {i: {'cargos': [], 'categorias': [], 'membros': {}, 'sobrescritas': {}} for i in faltam}
         for r in ServerRole.query.filter(ServerRole.server_id.in_(faltam)).order_by(ServerRole.posicao.desc(), ServerRole.id.asc()).all():
             novos[r.server_id]['cargos'].append({'id': r.id, 'nome': r.nome, 'cor': r.cor, 'permissoes': r.permissoes or 0,
-                                                 'posicao': r.posicao or 0, 'destacar': bool(r.destacar)})
+                                                 'posicao': r.posicao or 0, 'destacar': bool(r.destacar),
+                                                 'icone': r.icone, 'automatico': bool(r.automatico)})
         for c in ChannelCategory.query.filter(ChannelCategory.server_id.in_(faltam)).order_by(ChannelCategory.posicao.asc(), ChannelCategory.id.asc()).all():
             novos[c.server_id]['categorias'].append({'id': c.id, 'nome': c.nome, 'pos': c.posicao or 0})
         for sid, pid, rid in db.session.query(MemberRole.server_id, MemberRole.person_id, MemberRole.role_id).filter(MemberRole.server_id.in_(faltam)).all():
@@ -464,9 +465,10 @@ def extras_do_servidor(srv, est, usuario, visiveis):
         cats = [dict(c) for c in est['categorias'] if gerencia_canais or c['id'] in com_canal]
     cargos = []
     for c in (est or {}).get('cargos', []):
-        item = {'id': c['id'], 'nome': c['nome'], 'cor': c['cor'], 'pos': c['posicao'], 'destacar': c['destacar']}
+        item = {'id': c['id'], 'nome': c['nome'], 'cor': c['cor'], 'pos': c['posicao'], 'destacar': c['destacar'], 'icone': c.get('icone')}
         if gerencia_cargos:
             item['perms'] = ids_da_mascara(c['permissoes'])
+            item['auto'] = bool(c.get('automatico'))
         cargos.append(item)
     out = {
         'categorias': cats, 'cargos': cargos, 'meusCargos': meus, 'minhasPerms': ids_da_mascara(perms),
@@ -522,7 +524,14 @@ def _sem_escalar(ctx, mascara, antiga=0):
         raise ErroCargo('Você não pode dar ou tirar uma permissão que você mesmo não tem.')
 
 
-def criar_cargo(srv, ctx, nome, cor=None, permissoes=None, destacar=False):
+def _automatico_valido(mascara, quer):
+    """Cargo dado sozinho a todo mundo que entra: nunca com Administrador (seria o mesmo que dar o poder total a qualquer desconhecido que entre)."""
+    if quer and mascara & BIT['administrador']:
+        raise ErroCargo('Um cargo com Administrador não pode ser dado automaticamente a quem entra.')
+    return bool(quer)
+
+
+def criar_cargo(srv, ctx, nome, cor=None, permissoes=None, destacar=False, icone=None, automatico=False):
     _exigir(ctx, 'gerenciar_cargos', 'Você não pode gerenciar cargos.')
     nome = limpar_nome(nome, LIM_NOME_CARGO)
     if not nome:
@@ -533,7 +542,8 @@ def criar_cargo(srv, ctx, nome, cor=None, permissoes=None, destacar=False):
     _sem_escalar(ctx, mascara)
     # O cargo novo nasce no fundo da lista: sobe todo mundo uma casa (ninguém muda de posição relativa).
     ServerRole.query.filter_by(server_id=srv.id).update({ServerRole.posicao: ServerRole.posicao + 1}, synchronize_session=False)
-    r = ServerRole(server_id=srv.id, nome=nome, cor=cor_valida(cor), permissoes=mascara, posicao=1, destacar=bool(destacar))
+    r = ServerRole(server_id=srv.id, nome=nome, cor=cor_valida(cor), permissoes=mascara, posicao=1, destacar=bool(destacar),
+                   icone=emoji_valido(icone), automatico=_automatico_valido(mascara, automatico))
     db.session.add(r)
     _marcar_estrutura(srv)
     return r
@@ -552,11 +562,31 @@ def editar_cargo(srv, ctx, cargo_id, campos):
         r.cor = cor_valida(campos.get('cor'))
     if 'destacar' in campos:
         r.destacar = bool(campos.get('destacar'))
+    if 'icone' in campos:
+        r.icone = emoji_valido(campos.get('icone'))
     if 'permissoes' in campos:
         nova = mascara_de(campos.get('permissoes'))
         _sem_escalar(ctx, nova, r.permissoes or 0)
         r.permissoes = nova
+    if 'automatico' in campos or 'permissoes' in campos:
+        # mexer nas permissões também reconfere: um cargo automático que ganha Administrador deixa de ser automático (erro, não silêncio)
+        r.automatico = _automatico_valido(r.permissoes or 0, campos.get('automatico', r.automatico))
     return r
+
+
+def dar_automaticos(srv, pessoa):
+    """Quem acabou de entrar recebe os cargos marcados como automáticos. Dentro da transação de quem adiciona o membro; servidor que nunca
+    teve cargo nem consulta a tabela (zero query no caso comum). Quem chama faz `invalidar(srv.id)` DEPOIS do commit."""
+    if not srv.estrutura or pessoa.id == srv.owner_id:
+        return 0
+    n = 0
+    for r in ServerRole.query.filter_by(server_id=srv.id, automatico=True).all():
+        if (r.permissoes or 0) & BIT['administrador']:
+            continue
+        if not MemberRole.query.filter_by(person_id=pessoa.id, role_id=r.id).first():
+            db.session.add(MemberRole(server_id=srv.id, person_id=pessoa.id, role_id=r.id))
+            n += 1
+    return n
 
 
 def apagar_cargo(srv, ctx, cargo_id):
