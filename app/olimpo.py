@@ -32,9 +32,9 @@ def gratis():
 
 def preco_cent():
     try:
-        return max(100, min(50_000, int(os.getenv('OLIMPO_PRECO_CENT') or 1990)))
+        return max(100, min(50_000, int(os.getenv('OLIMPO_PRECO_CENT') or 1290)))
     except ValueError:
-        return 1990
+        return 1290
 
 
 def ativo(pessoa):
