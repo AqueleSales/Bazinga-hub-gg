@@ -43,6 +43,7 @@ const Cargos = (() => {
         midia: ['ver_canal', 'enviar_mensagens', 'apagar_mensagens', 'fixar_mensagens'],
         anuncios: ['ver_canal', 'enviar_mensagens', 'enviar_anuncios', 'apagar_mensagens', 'fixar_mensagens'],
         regras: ['ver_canal', 'enviar_mensagens', 'enviar_anuncios', 'apagar_mensagens', 'fixar_mensagens'],
+        lojas: ['ver_canal'],
         voice: ['ver_canal', 'falar_voz'],
         palco: ['ver_canal', 'falar_palco'],
     };
@@ -51,6 +52,7 @@ const Cargos = (() => {
         anuncios: { fam: 'texto', nome: 'Anúncios', fa: 'fa-bullhorn', desc: 'Todo mundo lê; só quem tem permissão escreve.' },
         regras: { fam: 'texto', nome: 'Regras', fa: 'fa-scroll', desc: 'Somente leitura, pras regras e avisos fixos.' },
         midia: { fam: 'texto', nome: 'Mídia', fa: 'fa-photo-film', desc: 'Só vale mensagem com foto, vídeo ou GIF.' },
+        lojas: { fam: 'texto', nome: 'Lojas', fa: 'fa-store', desc: 'Vitrine com as lojas do Bazar das pessoas do servidor e as parceiras. Sem conversa.' },
         voice: { fam: 'voz', nome: 'Voz', fa: 'fa-volume-high', desc: 'Voz, vídeo e tela, com limite de pessoas opcional.' },
         palco: { fam: 'voz', nome: 'Palco', fa: 'fa-microphone-lines', desc: 'Poucos falam e o resto escuta; quem fala chama os outros.' },
         separador: { fam: 'estrutura', nome: 'Separador', fa: 'fa-grip-lines', desc: 'Uma linha na lista, com título ou sem.' },
@@ -467,6 +469,7 @@ const Cargos = (() => {
         const campo = document.getElementById('message-input');
         if (!srv || !canal || !campo) return;
         const t = canal.type || 'text';
+        if (typeof LojasCanal !== 'undefined') { if (t === 'lojas') LojasCanal.abrir(canal); else LojasCanal.fechar(); }   // canal de lojas: vitrine no lugar da conversa
         const semEnviar = !permNoCanal(srv, canal, 'enviar_mensagens');
         const leitura = semEnviar || ((t === 'anuncios' || t === 'regras') && !permNoCanal(srv, canal, 'enviar_anuncios'));
         campo.disabled = leitura;
@@ -487,6 +490,7 @@ const Cargos = (() => {
         const srv = C.servidorAtivo();
         const canal = srv && (srv.channels || []).find(c => String(c.id) === String(C.canalAtualId()));
         if (!canal) return true;
+        if (canal.type === 'lojas') { C.toast('Esse canal é a vitrine de lojas do servidor: não tem conversa por aqui.', 'warning'); return false; }
         if (!permNoCanal(srv, canal, 'enviar_mensagens')) { C.toast('Você não tem permissão para enviar mensagens neste canal.', 'warning'); return false; }
         if ((canal.type === 'anuncios' || canal.type === 'regras') && !permNoCanal(srv, canal, 'enviar_anuncios')) { C.toast('Só quem tem permissão publica nesse canal.', 'warning'); return false; }
         if (canal.type === 'midia' && !qtdAnexos) { C.toast('Esse canal é só de mídia: anexe uma foto, vídeo ou GIF.', 'warning'); return false; }
@@ -512,6 +516,7 @@ const Cargos = (() => {
         mostrar('srv-menu-new-cat', pode(srv, 'gerenciar_canais'));
         menu.querySelectorAll('.context-menu-separator.owner-only').forEach(s => { s.style.display = podeGerir(srv) ? '' : 'none'; });
         const convidar = document.getElementById('srv-menu-invite'); if (convidar) convidar.style.display = pode(srv, 'criar_convite') ? '' : 'none';
+        if (typeof Prestigio !== 'undefined') Prestigio.menu(menu, srv);       // "Prestígio e impulso": todo membro vê
     }
     function garantirItemMenu(menu) {
         if (document.getElementById('srv-menu-config-completa')) return;

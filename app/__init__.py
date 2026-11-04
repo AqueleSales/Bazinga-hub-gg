@@ -195,6 +195,8 @@ def create_app():
                 'ui_extra_css_v': _versao_estatico('css/ui_extra.css'), 'ui_extra_js_v': _versao_estatico('js/ui_extra.js'),
                 'atividades_jogos_js_v': _versao_estatico('js/atividades_jogos.js'), 'atividades_css_v': _versao_estatico('css/atividades.css'), 'atividades_js_v': _versao_estatico('js/atividades.js'),
                 'config_usuario_css_v': _versao_estatico('css/config_usuario.css'), 'config_usuario_js_v': _versao_estatico('js/config_usuario.js'),
+                'prestigio_css_v': _versao_estatico('css/prestigio.css'), 'prestigio_js_v': _versao_estatico('js/prestigio.js'),
+                'lojas_canal_css_v': _versao_estatico('css/lojas_canal.css'), 'lojas_canal_js_v': _versao_estatico('js/lojas_canal.js'),
                 'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'peer_servidor': _peer_servidor(), 'novidade_atual': novidade_atual()}
 
     with app.app_context():

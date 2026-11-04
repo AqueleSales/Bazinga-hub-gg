@@ -66,7 +66,7 @@ for _p in PERMS_CANAL:
 IDS_PERMS_CANAL = tuple(p[0] for p in PERMS_CANAL)
 PADRAO_CANAL = BIT_CANAL['ver_canal'] | BIT_CANAL['enviar_mensagens']     # o que todo membro tem em qualquer canal, antes de qualquer sobrescrita
 TODAS_CANAL = TODAS | PADRAO_CANAL
-MAX_SOBRESCRITAS = 26     # um por cargo (25) + o Membro padrão
+MAX_SOBRESCRITAS = 51     # um por cargo (até 50, com o prestígio máximo do servidor: prestigio.CARGOS_EXTRA) + o Membro padrão
 # O que qualquer membro já podia antes dos cargos existirem (convidar com teto, fixar, falar em voz). O dono pode mudar em Cargos > Membro.
 PERMS_MEMBRO_PADRAO = BIT['criar_convite'] | BIT['fixar_mensagens'] | BIT['falar_voz']
 NIVEL_DONO = 10 ** 9
@@ -117,6 +117,7 @@ TIPOS_CANAL = {
     'anuncios': {'familia': 'texto', 'nome': 'Anúncios', 'desc': 'Todo mundo lê; só quem tem "Publicar em anúncios e regras" escreve.'},
     'regras': {'familia': 'texto', 'nome': 'Regras', 'desc': 'Somente leitura, pra regras e avisos fixos. Mesma permissão dos anúncios.'},
     'midia': {'familia': 'texto', 'nome': 'Mídia', 'desc': 'Só vale mensagem com foto, vídeo ou GIF (o texto vira legenda).'},
+    'lojas': {'familia': 'texto', 'nome': 'Lojas', 'desc': 'Vitrine com as lojas do Bazar das pessoas do servidor (e as parceiras). Não tem conversa: é pra procurar e pedir.'},
     'voice': {'familia': 'voz', 'nome': 'Voz', 'desc': 'Conversa por voz e vídeo, com limite de pessoas opcional.'},
     'palco': {'familia': 'voz', 'nome': 'Palco', 'desc': 'Poucos falam e o resto escuta. Quem fala é quem tem "Falar no palco" ou foi chamado ao palco.'},
     'separador': {'familia': 'estrutura', 'nome': 'Separador', 'desc': 'Uma linha na lista de canais, com título ou sem. Não guarda mensagens.'},
@@ -124,6 +125,7 @@ TIPOS_CANAL = {
 TIPOS_TEXTO = tuple(t for t, i in TIPOS_CANAL.items() if i['familia'] == 'texto')
 TIPOS_VOZ = tuple(t for t, i in TIPOS_CANAL.items() if i['familia'] == 'voz')
 TIPOS_SO_LEITURA = ('anuncios', 'regras')
+TIPOS_SEM_MENSAGEM = ('lojas',)      # canal-vitrine: ninguém escreve (nem o dono); o cliente troca a conversa pela lista de lojas
 LIMITE_VOZ_MAX = 99
 
 
@@ -536,8 +538,10 @@ def criar_cargo(srv, ctx, nome, cor=None, permissoes=None, destacar=False, icone
     nome = limpar_nome(nome, LIM_NOME_CARGO)
     if not nome:
         raise ErroCargo('Dê um nome ao cargo.')
-    if ServerRole.query.filter_by(server_id=srv.id).count() >= MAX_CARGOS:
-        raise ErroCargo(f'Cada servidor tem no máximo {MAX_CARGOS} cargos.')
+    from . import prestigio
+    limite_cargos = MAX_CARGOS + prestigio.cargos_extra(prestigio.info(srv.id)['nivel'])      # servidor com prestígio ganha cargos a mais
+    if ServerRole.query.filter_by(server_id=srv.id).count() >= limite_cargos:
+        raise ErroCargo(f'Este servidor tem no máximo {limite_cargos} cargos' + (' (o prestígio do servidor libera mais).' if limite_cargos == MAX_CARGOS else '.'))
     mascara = mascara_de(permissoes)
     _sem_escalar(ctx, mascara)
     # O cargo novo nasce no fundo da lista: sobe todo mundo uma casa (ninguém muda de posição relativa).
@@ -662,6 +666,11 @@ def definir_perms_membro(srv, ctx, permissoes):
 def limpar_membro(srv_id, pessoa_id):
     """A pessoa saiu ou foi removida: perde os cargos que tinha neste servidor."""
     MemberRole.query.filter_by(server_id=srv_id, person_id=pessoa_id).delete(synchronize_session=False)
+    # quem sai (ou é removido) leva o impulso que tinha dado ao servidor (Rodada 35, prestigio.py)
+    from .models import ServerBoost
+    from . import prestigio
+    ServerBoost.query.filter_by(server_id=srv_id, person_id=pessoa_id).delete(synchronize_session=False)
+    prestigio.invalidar(srv_id)
 
 
 # ==========================================
@@ -888,6 +897,8 @@ def checar_envio(usuario, srv, canal, tem_anexo):
     """(ok, mensagem). Canal de texto normal e sem sobrescrita passa direto SEM consulta nenhuma; anúncios/regras exigem a permissão; mídia exige anexo;
     canal com sobrescrita confere "Enviar mensagens" (e "Publicar em anúncios", se for o caso) já com o que o cargo da pessoa tem NESTE canal."""
     tipo = canal.channel_type or 'text'
+    if tipo in TIPOS_SEM_MENSAGEM:
+        return False, 'Esse canal é a vitrine de lojas do servidor: não tem conversa por aqui.'
     mascara = None
     if canal.sobrescrita and srv is not None:
         mascara = perms_no_canal(usuario, srv, canal)

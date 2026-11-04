@@ -990,6 +990,23 @@ def dados_do_mapa_perto(lat, lng, amigos_ids=None, viewer_id=None):
     ).options(joinedload(MapServer.server), joinedload(MapServer.owner)).all()
     servers = [servidor_mapa_para_json(s) for s in servers_db
                if distancia_m(lat, lng, s.lat, s.lng) <= RAIO_SERVIDORES_M]
+    # Servidores com PRESTÍGIO (impulso/tamanho, prestigio.py) aparecem de mais longe. Só o PINO do servidor: notas, lojas e o radar de pessoas
+    # seguem nos raios de sempre. Vistos de fora do raio normal, o pino sai com a posição arredondada (~1 km).
+    from . import prestigio
+    ja = {s['id'] for s in servers}
+    mais = [p['pino_id'] for p in prestigio.pinos_de_longe()
+            if p['pino_id'] not in ja and distancia_m(lat, lng, p['lat'], p['lng']) <= p['alcance_m']]
+    if mais:
+        extras = MapServer.query.filter(MapServer.id.in_(mais), or_(MapServer.expires_at == None, MapServer.expires_at > agora),  # noqa: E711
+                                        or_(MapServer.oculta == None, MapServer.oculta == False)  # noqa: E711,E712
+                                        ).options(joinedload(MapServer.server), joinedload(MapServer.owner)).all()
+        servers += [servidor_mapa_para_json(s) for s in extras]
+    ni = prestigio.niveis([s['server_id'] for s in servers if s.get('server_id')])
+    for s in servers:
+        s['nivel'] = ni.get(s.get('server_id'), {}).get('nivel', 0)
+        if distancia_m(lat, lng, s['lat'], s['lng']) > RAIO_SERVIDORES_M and s.get('owner_id') != viewer_id:
+            s['lat'], s['lng'] = prestigio.aproximar(s['lat'], s['lng'])
+            s['longe'] = True
 
     from . import bazar
     lojas = [l for l in bazar.lojas_no_mapa(a, b, c, d) if distancia_m(lat, lng, l['lat'], l['lng']) <= RAIO_SERVIDORES_M]

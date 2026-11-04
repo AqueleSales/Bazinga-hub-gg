@@ -9,6 +9,17 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 41, 'data': '04/11/2026', 'titulo': 'Prestígio de servidor e o canal de lojas',
+        'itens': [
+            {'icone': 'fa-rocket', 'titulo': 'Prestígio (impulso) de servidor',
+             'texto': 'Quem tem a Brasa pode impulsionar um servidor onde está (2 impulsos por pessoa, em "Prestígio e impulso" no menu do servidor). Com impulsos e gente, o servidor sobe de nível: o pino dele aparece no mapa de mais longe, ele ganha mais cargos e um barquinho maior no Explorar.'},
+            {'icone': 'fa-shield-halved', 'titulo': 'Sem expor ninguém',
+             'texto': 'O nível só estica o alcance do pino do servidor. De longe a posição dele aparece aproximada, entrar pelo mapa continua exigindo estar perto, e nada mostra onde as pessoas estão.'},
+            {'icone': 'fa-store', 'titulo': 'Canal de lojas',
+             'texto': 'Quem gerencia canais pode criar um canal do tipo Lojas: ele vira uma vitrine com as lojas do Bazar das pessoas do servidor e as parceiras, com busca e filtros. É só tocar em "Pedir" pra abrir o produto no Bazar.'},
+        ],
+    },
+    {
         'id': 40, 'data': '03/11/2026', 'titulo': 'Lojas por perto no mapa, jogos na call, mais temas e a call mais redonda',
         'itens': [
             {'icone': 'fa-store', 'titulo': 'Lojas por perto, sem sair do mapa',

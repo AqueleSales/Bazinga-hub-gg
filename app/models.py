@@ -246,6 +246,18 @@ class MemberRole(db.Model):
     __table_args__ = (db.UniqueConstraint('person_id', 'role_id', name='uq_cargo_do_membro'),)
 
 
+class ServerBoost(db.Model):
+    """Impulso de servidor (Rodada 35): uma pessoa com a Brasa ativa "gasta" um dos impulsos dela num servidor onde é membro.
+    Uma linha por pessoa+servidor (UNIQUE). O impulso SÓ CONTA enquanto a Brasa da pessoa vale (isso é conferido na leitura, em
+    prestigio.py: a linha fica, e volta a contar se ela renovar). Tabela nova: nasce pelo create_all, sem ALTER."""
+    __tablename__ = 'server_boost'
+    __table_args__ = (db.UniqueConstraint('server_id', 'person_id', name='uq_server_boost'),)
+    id = db.Column(db.Integer, primary_key=True)
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id', ondelete='CASCADE'), nullable=False, index=True)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id', ondelete='CASCADE'), nullable=False, index=True)
+    criado_em = db.Column(db.DateTime, default=br_now)
+
+
 class ChannelCategory(db.Model):
     """O "dropdown" que agrupa canais na barra lateral. Recolher/expandir é por pessoa (fica no navegador)."""
     __tablename__ = 'channel_category'

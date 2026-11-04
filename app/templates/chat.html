@@ -3005,6 +3005,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ui_extra.css') }}?v={{ ui_extra_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/clipes.css') }}?v={{ clipes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/prestigio.css') }}?v={{ prestigio_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lojas_canal.css') }}?v={{ lojas_canal_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ordem.css') }}?v={{ ordem_css_v }}">
@@ -4998,6 +5000,8 @@
     <script src="{{ url_for('static', filename='js/call_ui.js') }}?v={{ call_ui_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/atividades_jogos.js') }}?v={{ atividades_jogos_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/atividades.js') }}?v={{ atividades_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/prestigio.js') }}?v={{ prestigio_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/lojas_canal.js') }}?v={{ lojas_canal_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/ui_extra.js') }}?v={{ ui_extra_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/clipes.js') }}?v={{ clipes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
@@ -5844,6 +5848,7 @@
             const srv = meUserServers.find(s => s.id === dados.server_id);
             if (!srv) return;
             socket.emit('listar_membros_servidor', { server_id: dados.server_id });
+            if (LojasCanal.aberto()) LojasCanal.mudou();      // a vitrine de lojas do servidor ganha as lojas de quem entrou
             if (dados.membro && dados.membro.nome) {
                 showToast(`${dados.membro.nome} entrou em ${srv.name}`, 'info');
             }
@@ -8697,7 +8702,11 @@
             const bannerMapa = escUrl((extras && extras.banner_url) || '');
             const corCapa = /^#[0-9a-fA-F]{6}$/.test((extras && extras.banner_color) || '') ? extras.banner_color : null;
             const capaEstilo = corCapa ? `background:linear-gradient(135deg, ${corCapa}, color-mix(in srgb, ${corCapa} 55%, #000));` : '';
-            const botao = isFull
+            const nivelPino = Math.max(0, Math.min(4, Number(extras && extras.nivel) || 0));
+            const longePino = !!(extras && extras.longe);
+            const botao = longePino
+                ? `<button class="bsv-entrar" onclick='pedirPreviaDoPino(${serverId ?? 'null'})'><i class="fa-solid fa-eye"></i> Ver a prévia</button>`
+                : isFull
                 ? `<button class="bsv-entrar" disabled><i class="fa-solid fa-lock"></i> Sem mais ingressos</button>`
                 : `<button class="bsv-entrar" onclick='entrarNoServidorPin(${serverId ?? 'null'})'><i class="fa-solid fa-door-open"></i> Entrar no servidor</button>`;
             const descr = extras && extras.description ? `<div class="bsv-desc">${esc(extras.description)}</div>` : '';
@@ -8713,13 +8722,14 @@
                     <div class="bsv-capa" style="${capaEstilo}">${bannerMapa ? `<div class="bsv-banner" style="background-image:url('${bannerMapa}')"></div>` : ''}<div class="bsv-foto">${miolo}</div></div>
                     <div class="bsv-corpo">
                         <h3>${esc(nome)}</h3>
-                        <div class="bsv-dono">👑 ${esc(owner)}</div>
+                        <div class="bsv-dono">👑 ${esc(owner)}${nivelPino ? ` <span class="bsv-nivel n${nivelPino}" title="Prestígio do servidor"><i class="fa-solid fa-rocket"></i> Nível ${nivelPino}</span>` : ''}</div>
                         ${descr}
                         <div class="bsv-nums">
                             <div class="bsv-num"><b>${Number(online) || 0}</b><span>membros</span></div>
                             <div class="bsv-num"><b>${esc(vagasTexto)}</b><span>vagas</span></div>
                         </div>
                         ${botao}
+                        ${longePino ? '<div class="bsv-longe">Você está vendo este servidor de longe (o prestígio dele estica o alcance no mapa). A posição é aproximada e, pra entrar, é preciso chegar perto.</div>' : ''}
                         ${rodape}
                     </div>
                 </div>
@@ -8732,6 +8742,10 @@
 
         // Compatibilidade: quem chamava isso (initMap) agora pede só o que está no raio.
         function carregarDadosDoMapa() { pedirArredoresDoMapa(true); }
+
+        function pedirPreviaDoPino(serverId) {
+            if (serverId && typeof socket !== 'undefined' && socket.connected) socket.emit('mapa_servidor_previa', { server_id: serverId });
+        }
 
         function entrarNoServidorPin(serverId) {
             if (!serverId) { showToast("Este pino ainda não está vinculado a um servidor de chat.", "warning"); return; }
@@ -11169,6 +11183,22 @@
             trocarSecao: (n) => trocarSecaoConfig(n), abrirConfigCompleta: () => abrirConfigCompleta(), fecharConfigCompleta: () => fecharConfigCompleta(),
         });
 
+        // PRESTÍGIO (impulso) DE SERVIDOR e CANAL DE LOJAS (Rodada 35): static/js/prestigio.js e lojas_canal.js só desenham e pedem;
+        // o nível, a Brasa de quem impulsiona e o que aparece na vitrine são decididos no servidor (app/prestigio.py, app/lojas_canal.py).
+        Prestigio.iniciar({
+            emitir: (n, d) => socket.emit(n, d), esc, toast: (m, t) => showToast(m, t), servidorAtivo: () => servidorAtivo(),
+            abrirBrasa: () => { if (typeof Passe !== 'undefined' && Passe.abrirBrasa) Passe.abrirBrasa(); },
+        });
+        LojasCanal.iniciar({
+            emitir: (n, d) => socket.emit(n, d), esc, escUrl, toast: (m, t) => showToast(m, t),
+            abrirLoja: (lojaId, produtoId) => { document.getElementById('btn-mercado').click(); document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click(); Bazar.abrirLojaDe(lojaId, produtoId); },
+        });
+        socket.on('prestigio_estado', (d) => Prestigio.estado(d));
+        socket.on('prestigio_mudou', (d) => Prestigio.mudou(d));
+        socket.on('prestigio_erro', (d) => Prestigio.erro(d));
+        socket.on('lojas_canal', (d) => LojasCanal.receber(d));
+        socket.on('lojas_canal_erro', (d) => LojasCanal.erro(d));
+
         // MÚSICA (janelinha com pesquisa, player e fila): static/js/musica.js só desenha; quem pesquisa é o servidor (a chave da API nunca chega aqui).
         Musica.iniciar({
             emitir: (n, d) => socket.emit(n, d), esc, toast: (m, t) => showToast(m, t), confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
@@ -11320,7 +11350,7 @@
         socket.on('bazar_pedido_aberto', (d) => Bazar.pedidoAberto(d));
         socket.on('bazar_pedidos', (d) => Bazar.listaPedidos(d));
         socket.on('bazar_pendencias', (d) => Bazar.pendencias(d.n));
-        socket.on('bazar_mudou', () => Bazar.mudou());
+        socket.on('bazar_mudou', () => { Bazar.mudou(); LojasCanal.mudou(); });
         socket.on('bazar_erro', (d) => Bazar.erro(d));
         socket.on('bazar_moderacao', (d) => Bazar.moderacaoFila(d));
         socket.on('bazar_favoritos', (d) => Bazar.favoritos(d.ids));
