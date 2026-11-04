@@ -1,0 +1,221 @@
+/* Clipes da call (static/js/clipes.js): o sinal (!) no canto da tela da call e o pop-up com os clipes (lista, ver, cortar, mandar).
+   Animação só em transform/opacity; `body.rolando` e `prefers-reduced-motion` (regra global do chat.html) já seguram o custo. */
+
+/* ---------- o sinal (!) ---------- */
+.clip-alerta {
+    position: absolute; top: 12px; right: 12px; z-index: 12;
+    width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%;
+    background: var(--clip-color, #ff8c1a); color: #fff; font-size: 17px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(255, 140, 26, .5);
+    transform: scale(0); opacity: 0; pointer-events: none;
+    transition: transform .28s cubic-bezier(.34, 1.56, .64, 1), opacity .2s;
+}
+.clip-alerta.visivel { transform: scale(1); opacity: 1; pointer-events: auto; }
+.clip-alerta:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.clip-alerta::before {                                  /* anel que pulsa enquanto houver clipe novo */
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid var(--clip-color, #ff8c1a); opacity: 0; pointer-events: none;
+}
+.clip-alerta.tem-novos::before { animation: clAnel 2.4s ease-out infinite; }
+.clip-alerta.chegou { animation: clChega .95s cubic-bezier(.3, 1.2, .5, 1); }
+.clip-alerta .cl-n {
+    position: absolute; top: -5px; left: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
+    background: #ed4245; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center;
+    box-shadow: 0 0 0 2px #000;
+}
+.clip-alerta .cl-dica {                                 /* "Novo clipe · Risada" que desliza pro lado do sinal */
+    position: absolute; right: calc(100% + 10px); top: 50%; white-space: nowrap;
+    background: rgba(17, 18, 20, .95); color: #fff; font-size: 12.5px; font-weight: 700;
+    padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .12);
+    transform: translate(14px, -50%); opacity: 0; pointer-events: none;
+    transition: transform .3s cubic-bezier(.2, .9, .3, 1), opacity .25s;
+}
+.clip-alerta.dica .cl-dica { transform: translate(0, -50%); opacity: 1; }
+.call-janela.mini .clip-alerta { width: 30px; height: 30px; font-size: 14px; top: 8px; right: 8px; }
+.call-janela.mini .clip-alerta .cl-dica { display: none; }
+@keyframes clAnel { 0% { transform: scale(1); opacity: .75; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes clChega {
+    0% { transform: scale(.35) rotate(-24deg); } 35% { transform: scale(1.4) rotate(14deg); }
+    55% { transform: scale(.92) rotate(-9deg); } 75% { transform: scale(1.12) rotate(5deg); } 100% { transform: scale(1) rotate(0); }
+}
+body.rolando .clip-alerta::before { animation-play-state: paused; }
+
+/* ---------- o pop-up ---------- */
+.cl-overlay { padding: 16px; }
+.cl-overlay.aberto .cl-caixa { animation: clAbre .26s cubic-bezier(.16, .84, .44, 1) backwards; }
+@keyframes clAbre { from { transform: translateY(14px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+.cl-caixa {
+    width: min(980px, 100%); height: min(720px, 100%); display: flex; flex-direction: column; overflow: hidden; position: relative;
+    background: var(--bg-primary); color: var(--text-normal); border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+.cl-topo { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid rgba(255, 255, 255, .07); flex: 0 0 auto; }
+.cl-titulos { flex: 1; min-width: 0; }
+.cl-titulos h2 { font-size: 19px; font-weight: 800; color: var(--text-header); margin: 0 0 2px; }
+.cl-titulos p { font-size: 13px; color: var(--text-muted); margin: 0; }
+.cl-ic { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); font-size: 16px; cursor: pointer; transition: background .15s, color .15s; }
+.cl-ic:hover { background: rgba(255, 255, 255, .08); color: var(--text-header); }
+.cl-ic[hidden], .cl-btn[hidden] { display: none; }
+.cl-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border-radius: 9px; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .05); color: var(--text-normal); font-size: 13.5px; font-weight: 700;
+    transition: background .15s, transform .15s, border-color .15s;
+}
+.cl-btn:hover:not(:disabled) { background: rgba(255, 255, 255, .11); transform: translateY(-1px); }
+.cl-btn:active:not(:disabled) { transform: scale(.97); }
+.cl-btn:disabled { opacity: .45; cursor: not-allowed; }
+.cl-btn.forte { background: var(--clip-color, #ff8c1a); border-color: transparent; color: #1b1206; }
+.cl-btn.forte:hover:not(:disabled) { background: #ffa04a; }
+.cl-btn.perigo { color: #ff8b8d; }
+.cl-btn.perigo:hover:not(:disabled) { background: rgba(237, 66, 69, .18); border-color: rgba(237, 66, 69, .5); }
+.cl-lista, .cl-ver { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 16px 18px; position: relative; }
+.cl-lista[hidden], .cl-ver[hidden] { display: none; }
+
+/* opções (clipe automático) */
+.cl-opcoes { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 10px 12px; margin-bottom: 14px; border-radius: 12px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .06); }
+.cl-opcoes .cl-btn { margin-left: auto; }
+.cl-chave { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13.5px; font-weight: 700; }
+.cl-chave input { position: absolute; opacity: 0; pointer-events: none; }
+.cl-trilho { width: 38px; height: 22px; border-radius: 22px; background: rgba(255, 255, 255, .18); position: relative; flex: 0 0 auto; transition: background .18s; }
+.cl-trilho::before { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .18s; }
+.cl-chave input:checked + .cl-trilho { background: var(--clip-color, #ff8c1a); }
+.cl-chave input:checked + .cl-trilho::before { transform: translateX(16px); }
+.cl-chave input:focus-visible + .cl-trilho { outline: 2px solid #fff; outline-offset: 2px; }
+.cl-seg { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--text-muted); }
+.cl-seg span { margin-right: 6px; }
+.cl-seg button { border: 1px solid rgba(255, 255, 255, .12); background: transparent; color: var(--text-muted); padding: 5px 11px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.cl-seg button.ativo { background: rgba(255, 140, 26, .18); border-color: var(--clip-color, #ff8c1a); color: var(--text-header); }
+.cl-seg.desligado { opacity: .45; }
+
+/* grade de cartões */
+.cl-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.cl-grade.cl-volta .cl-card { animation: clEntra .38s cubic-bezier(.2, .9, .3, 1) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+.cl-card {
+    position: relative; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; cursor: pointer;
+    background: var(--bg-secondary); border: 1px solid rgba(255, 255, 255, .08);
+    transition: transform .18s, border-color .18s;
+}
+.cl-card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, .22); }
+.cl-card:focus-visible { outline: 3px solid var(--clip-color, #ff8c1a); outline-offset: 2px; }
+.cl-card.novo { border-color: rgba(255, 140, 26, .55); }
+.cl-card.visto { opacity: .86; }
+.cl-thumb { position: relative; aspect-ratio: 16 / 9; background: #0b0c0e; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.cl-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cl-sem-foto { font-size: 30px; color: var(--text-muted); }
+.cl-dur { position: absolute; right: 8px; bottom: 8px; background: rgba(0, 0, 0, .75); color: #fff; font-size: 11.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px; }
+.cl-play {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px;
+    background: rgba(0, 0, 0, .35); opacity: 0; transition: opacity .18s;
+}
+.cl-card:hover .cl-play, .cl-card:focus-visible .cl-play { opacity: 1; }
+.cl-chip { position: absolute; left: 8px; top: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 800; background: rgba(0, 0, 0, .78); color: #fff; }
+.cl-chip.novo { background: var(--clip-color, #ff8c1a); color: #1b1206; }
+.cl-chip.novo i { width: 7px; height: 7px; border-radius: 50%; background: #1b1206; animation: clPisca 1.4s ease-in-out infinite; }
+.cl-chip.visto { color: #c4c9ce; }
+.cl-chip.feito { background: #23a559; color: #fff; }
+.cl-info { padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cl-info b { font-size: 14px; color: var(--text-header); display: flex; align-items: center; gap: 7px; }
+.cl-info b i { color: var(--clip-color, #ff8c1a); width: 16px; text-align: center; }
+.cl-info small { font-size: 12px; color: var(--text-muted); }
+.cl-vida { height: 3px; background: rgba(255, 255, 255, .08); margin-top: auto; }
+.cl-vida i { display: block; height: 100%; background: var(--clip-color, #ff8c1a); transform-origin: left center; transition: transform 1s linear; }
+.cl-apaga {
+    position: absolute; right: 8px; top: 8px; width: 28px; height: 28px; border: 0; border-radius: 8px; background: rgba(0, 0, 0, .7); color: #fff; font-size: 12px;
+    cursor: pointer; opacity: 0; transition: opacity .15s, background .15s;
+}
+.cl-card:hover .cl-apaga, .cl-card:focus-within .cl-apaga { opacity: 1; }
+.cl-apaga:hover { background: #ed4245; }
+.cl-card.cl-chegou { animation: clEntra .5s cubic-bezier(.2, .9, .3, 1); }
+.cl-grade .cl-card.cl-destaca {                         /* o cartão em que a pessoa acabou de agir: entra com os outros e depois dá um pulinho */
+    animation: clEntra .38s cubic-bezier(.2, .9, .3, 1) backwards, clDestaca .7s cubic-bezier(.3, 1.3, .5, 1) .4s;
+    animation-delay: calc(var(--i, 0) * 45ms), calc(var(--i, 0) * 45ms + .4s);
+}
+.cl-card.cl-destaca::after {                            /* anel que se abre em volta dele */
+    content: ''; position: absolute; inset: 0; border-radius: 12px; border: 2px solid #23a559; pointer-events: none; opacity: 0;
+    animation: clOnda 1s ease-out .4s forwards;
+}
+.cl-card.cl-destaca .cl-chip.feito { animation: clPop .6s cubic-bezier(.3, 1.6, .5, 1) .45s backwards; }
+.cl-vazio { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 46px 20px; text-align: center; color: var(--text-muted); }
+.cl-vazio i { font-size: 34px; opacity: .6; }
+.cl-vazio b { color: var(--text-header); font-size: 16px; }
+.cl-vazio span { max-width: 380px; font-size: 13.5px; line-height: 1.45; }
+.cl-vazio.pequeno { padding: 22px 12px; }
+@keyframes clEntra { from { transform: translateY(16px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes clPisca { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+@keyframes clDestaca { 0% { transform: scale(.94); } 55% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes clOnda { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.12); opacity: 0; } }
+@keyframes clPop { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---------- ver / cortar ---------- */
+.cl-palco { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 9; max-height: 48vh; margin: 0 auto; max-width: 100%; display: flex; justify-content: center; }
+.cl-palco video { height: 100%; max-width: 100%; background: #000; cursor: pointer; }
+.cl-grande {
+    position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border: 0; border-radius: 50%;
+    background: rgba(0, 0, 0, .6); color: #fff; font-size: 24px; cursor: pointer; opacity: 1; transition: opacity .2s, transform .2s;
+}
+.cl-palco.tocando .cl-grande { opacity: 0; pointer-events: none; transform: scale(1.3); }
+.cl-cortando {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 18px; text-align: center;
+    background: rgba(10, 11, 14, .88); color: #fff;
+}
+.cl-cortando[hidden] { display: none; }
+.cl-giro { font-size: 30px; color: var(--clip-color, #ff8c1a); animation: clGira 1.2s linear infinite; }
+.cl-cortando small { color: #b5bac1; font-size: 12.5px; max-width: 320px; }
+.cl-prog { width: min(320px, 80%); height: 8px; border-radius: 8px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+.cl-prog i { display: block; width: 100%; height: 100%; background: var(--clip-color, #ff8c1a); transform-origin: left center; transform: scaleX(0); transition: transform .1s linear; }
+@keyframes clGira { to { transform: rotate(360deg); } }
+.cl-ctrl { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; }
+.cl-tempo { flex: 1; font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* linha do tempo com as alças do corte */
+.cl-trilha { position: relative; height: 46px; margin: 4px 14px 0; touch-action: none; cursor: pointer; }
+.cl-barra { position: absolute; left: 0; right: 0; top: 19px; height: 8px; border-radius: 8px; background: rgba(255, 255, 255, .12); }
+.cl-sel { position: absolute; top: 19px; height: 8px; background: var(--clip-color, #ff8c1a); border-radius: 8px; }
+.cl-agulha { position: absolute; top: 12px; width: 2px; height: 22px; margin-left: -1px; background: #fff; border-radius: 2px; pointer-events: none; }
+.cl-alca {
+    position: absolute; top: 6px; width: 18px; height: 34px; margin-left: -9px; padding: 0; border: 2px solid #1b1206; border-radius: 7px;
+    background: #fff; cursor: ew-resize; touch-action: none; transition: transform .12s;
+}
+.cl-alca::after { content: ''; position: absolute; left: 50%; top: 9px; width: 2px; height: 12px; margin-left: -1px; background: #1b1206; border-radius: 2px; }
+.cl-alca:hover, .cl-alca.segurando { transform: scale(1.12); }
+.cl-alca:focus-visible { outline: 3px solid var(--clip-color, #ff8c1a); outline-offset: 2px; }
+.cl-tempos { display: flex; justify-content: space-between; gap: 10px; margin: 0 8px; font-size: 12.5px; color: var(--text-muted); }
+.cl-tempos b { color: var(--text-header); font-variant-numeric: tabular-nums; }
+.cl-corte-acoes, .cl-acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.cl-acoes { padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.cl-acoes .cl-btn.perigo { margin-left: auto; }
+
+/* escolher pra quem / em qual chat */
+.cl-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; max-height: 78%; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 16px;
+    background: var(--bg-secondary); border-top: 1px solid rgba(255, 255, 255, .12); border-radius: 16px 16px 0 0; box-shadow: 0 -12px 30px rgba(0, 0, 0, .45);
+    animation: clSobe .26s cubic-bezier(.2, .9, .3, 1) backwards; z-index: 5;
+}
+.cl-sheet[hidden] { display: none; }
+@keyframes clSobe { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.cl-sheet-topo { display: flex; align-items: center; justify-content: space-between; color: var(--text-header); font-size: 15px; }
+.cl-busca { width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .12); background: var(--bg-primary); color: var(--text-normal); font-size: 14px; }
+.cl-sheet-lista { overflow-y: auto; min-height: 90px; display: flex; flex-direction: column; gap: 4px; }
+.cl-sheet-nota { color: var(--text-muted); font-size: 12px; }
+.cl-linha { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; }
+.cl-linha:hover { background: rgba(255, 255, 255, .05); }
+.cl-av { position: relative; width: 34px; height: 34px; border-radius: 50%; background: var(--brand-color); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.cl-av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.cl-av.canal { background: rgba(255, 255, 255, .1); color: var(--text-muted); font-size: 14px; }
+.cl-av .on { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #23a559; border: 2px solid var(--bg-secondary); }
+.cl-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--text-header); }
+.cl-nome small { color: var(--text-muted); font-weight: 500; }
+.cl-grupo { margin: 8px 8px 2px; font-size: 11.5px; letter-spacing: .5px; text-transform: uppercase; font-weight: 800; color: var(--text-muted); }
+
+/* celular: o pop-up ocupa a tela toda */
+@media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
+    .cl-overlay { padding: 0; height: 100vh; height: 100dvh; }
+    .cl-caixa { width: 100%; height: 100%; border-radius: 0; border: 0; }
+    .cl-grade { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .cl-opcoes .cl-btn { margin-left: 0; }
+    .cl-palco { max-height: 34vh; }
+    .cl-acoes .cl-btn.perigo { margin-left: 0; }
+    .cl-apaga { opacity: 1; }
+    .cl-sheet { max-height: 86%; }
+}
