@@ -2737,6 +2737,16 @@ def denunciar(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível registrar a denúncia: {e}'})
 
 
+def _entrega_repassar(usuario, pos, fonte):
+    """Gancho da entrega acompanhada: nunca derruba o fluxo da posição."""
+    try:
+        from .entregas_events import ao_mover
+        ao_mover(usuario, pos, fonte)
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO ENTREGA POSICAO] {e}")
+
+
 @socketio.on('atualizar_localizacao')
 def atualizar_localizacao(dados):
     """Posição ao vivo: não é persistida no banco.
@@ -2768,6 +2778,7 @@ def atualizar_localizacao(dados):
     if (dados or {}).get('fonte') == 'ip':
         fontes_mapa[request.sid] = 'ip'
         ultimas_posicoes.pop(usuario.id, None)
+        _entrega_repassar(usuario, pos, 'ip')
         return
 
     # Plausibilidade: dois fixes seguidos longe demais pro tempo que passou = teletransporte (ou Wi-Fi/IP errando feio).
@@ -2784,8 +2795,12 @@ def atualizar_localizacao(dados):
     if suspeitos_ate.get(usuario.id, 0) > agora:
         fontes_mapa[request.sid] = 'suspeita'
         ultimas_posicoes.pop(usuario.id, None)
+        _entrega_repassar(usuario, pos, 'suspeita')
         return
     fontes_mapa[request.sid] = 'aparelho'
+    # Entrega acompanhada (Rodada 36): se esta pessoa está levando um pedido, a posição vai SÓ pra comprador e vendedor daquele pedido
+    # (nunca pro radar nem pros pinos), mesmo com o Fantasma ligado: o consentimento é por entrega. Quem não entrega paga um dicionário vazio.
+    _entrega_repassar(usuario, pos, 'aparelho')
 
     # Fantasma valendo de verdade: a posição nem sai do servidor. Antes só o
     # navegador se continha, então um cliente adulterado (ou o teletransporte
@@ -4618,6 +4633,7 @@ def apagar_evento(dados):
 # Bazar da comunidade: handlers em outro arquivo. Fica no FIM de propósito (ele importa daqui usuario_logado, sala_pessoal e
 # criar_notificacao, que precisam já existir).
 from . import bazar_events  # noqa: E402,F401
+from . import entregas_events  # noqa: E402,F401
 from . import olimpo_events  # noqa: E402,F401
 
 

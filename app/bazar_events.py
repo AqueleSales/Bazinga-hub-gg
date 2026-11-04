@@ -73,6 +73,14 @@ def _avisar_pedido(p, agente, titulo, texto, agrupar=False):
         emit('bazar_pendencias', {'n': bazar.contar_pendencias(pessoa_id)}, to=sala_pessoal(pessoa_id))
     outro = p.vendedor_id if agente.id == p.comprador_id else p.comprador_id
     criar_notificacao(outro, 'bazar', titulo, texto, de_id=agente.id, ref=str(p.id), agrupar=agrupar)
+    _avisar_entregador(p)
+
+
+def _avisar_entregador(p):
+    """Se o pedido tem um entregador que NÃO é nenhuma das duas pontas, ele também precisa saber quando o pedido muda (cancelado, concluído...)."""
+    if p.entregador_id and p.entregador_id not in (p.comprador_id, p.vendedor_id):
+        from .entregas_events import avisar_entregador
+        avisar_entregador(p.entregador_id)
 
 
 def _avisar_as_duas_pontas(p, titulo, texto):
@@ -81,6 +89,7 @@ def _avisar_as_duas_pontas(p, titulo, texto):
         emit('bazar_pedido', bazar.pedido_json(p, pessoa_id, com_mensagens=True), to=sala_pessoal(pessoa_id))
         emit('bazar_pendencias', {'n': bazar.contar_pendencias(pessoa_id)}, to=sala_pessoal(pessoa_id))
         criar_notificacao(pessoa_id, 'bazar', titulo, texto, ref=str(p.id))
+    _avisar_entregador(p)
 
 
 # ---------------------------------------------------------------------------
@@ -210,10 +219,15 @@ def bazar_pedir(dados):
     dados = dados if isinstance(dados, dict) else {}
 
     def tarefa():
+        destino = None
+        if dados.get('usar_posicao') and dados.get('entrega') == 'envio':
+            # o ponto de entrega é a posição do APARELHO dele, lida pelo servidor (coordenada que o cliente afirma não vale)
+            destino = _pos_aparelho()            # sem posição do aparelho o pedido sai do mesmo jeito, só sem o ponto (dá pra marcar depois, no pedido)
         p = bazar.abrir_pedido(usuario, dados.get('produto_id'), dados.get('quantidade', 1), dados.get('nota'),
-                               entrega=dados.get('entrega'), endereco=dados.get('endereco'))
+                               entrega=dados.get('entrega'), endereco=dados.get('endereco'), destino=destino)
         _avisar_pedido(p, usuario, 'Novo pedido no Bazar', f'{usuario.name} quer {p.quantidade}x {p.produto_nome}')
-        emit('bazar_pedido_aberto', {'pedido_id': p.id}, to=sala_pessoal(usuario.id))
+        emit('bazar_pedido_aberto', {'pedido_id': p.id, 'sem_ponto': bool(dados.get('usar_posicao') and dados.get('entrega') == 'envio' and p.destino_lat is None)},
+             to=sala_pessoal(usuario.id))
 
     _executar('pedir', tarefa, ref='pedir')
 

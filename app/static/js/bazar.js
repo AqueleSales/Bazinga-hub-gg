@@ -112,6 +112,7 @@ const Bazar = (() => {
         pilha[i].remove();
         pilha.splice(i, 1);
         if (tipo === 'produto') prodAtual = null;
+        if (tipo === 'pedido' && typeof Entrega !== 'undefined') Entrega.fechou('pedido');       // o mini mapa da entrega não fica vivo sem tela
     }
 
     /** Abre (ou redesenha, preservando a rolagem) um modal. `html` = conteúdo do cartão. */
@@ -404,7 +405,8 @@ const Bazar = (() => {
             : `<div class="bz-como"><i class="fa-solid fa-truck-fast"></i> <b>${esc(nomeEntrega(modos[0]))}</b>${modos[0] === 'envio' ? ` · ${p.frete_cent ? 'frete ' + brl(p.frete_cent) : 'frete grátis'}` : modos[0] === 'combinar' ? ': combinem os detalhes na conversa do pedido' : ''}</div>`;
         const enderecoHtml = s.entrega === 'envio'
             ? `<label class="bz-campo">Endereço de entrega<textarea id="bz-end-ped" maxlength="${(cat.limites || {}).endereco || 300}" style="min-height:64px" data-campo="endereco" placeholder="Rua, número, complemento, bairro, cidade e CEP">${esc(s.endereco)}</textarea>
-                <small>Só você e o vendedor veem. O Pantheon apaga o endereço quando o pedido termina (concluído, cancelado ou recusado).</small></label>` : '';
+                <small>Só você e o vendedor veem. O Pantheon apaga o endereço quando o pedido termina (concluído, cancelado ou recusado).</small></label>
+               <label class="bz-campo bz-check-linha"><input type="checkbox" data-campo="usar-pos" ${s.usarPos === false ? '' : 'checked'}><span><b>Acompanhar a entrega no mapa</b><small>Marca no mapa o lugar onde você está agora como ponto de entrega. Quem entregar vê esse ponto só durante a entrega, e ele é apagado quando o pedido termina.</small></span></label>` : '';
         const compra = dono ? '<div class="bz-como">Este produto é da sua loja.</div>'
             : esgotado ? '<button type="button" class="bz-btn" disabled>Esgotado</button>'
             : banido ? `<div class="bz-como bz-banido-aviso"><i class="fa-solid fa-ban"></i> Sua conta está suspensa do Bazar${banido.ate ? ' até ' + esc(banido.ate) : ''}. ${banido.motivo ? 'Motivo: ' + esc(String(banido.motivo).replace(/[.!\s]+$/, '')) + '.' : ''}</div>`
@@ -442,9 +444,10 @@ const Bazar = (() => {
     // ---------------------------------------------------------------------
     const PASSOS = [['aguardando', 'Pedido'], ['aceito', 'Aceito'], ['pago', 'Pago'], ['confirmado', 'Confirmado'], ['concluido', 'Concluído']];
 
-    function htmlPasso(status, app) {
+    function htmlPasso(status, app, envio) {
         if (status === 'recusado' || status === 'cancelado') return `<span class="bz-status ${status}">${status === 'recusado' ? 'Recusado' : 'Cancelado'}</span>`;
-        const passos = app ? PASSOS.filter((x) => x[0] !== 'pago').map((x) => (x[0] === 'confirmado' ? ['confirmado', 'Pago'] : x)) : PASSOS;
+        let passos = app ? PASSOS.filter((x) => x[0] !== 'pago').map((x) => (x[0] === 'confirmado' ? ['confirmado', 'Pago'] : x)) : PASSOS;
+        if (envio) passos = passos.flatMap((x) => (x[0] === 'concluido' ? [['a_caminho', 'A caminho'], ['entregue', 'Entregue'], x] : [x]));         // entrega acompanhada no mapa
         const i = passos.findIndex((x) => x[0] === status);
         return `<div class="bz-passos">${passos.map(([id, nome], k) => `<span class="bz-passo ${k < i ? 'feito' : k === i ? 'atual' : ''}">${k < i ? '✓ ' : ''}${nome}</span>`).join('')}</div>`;
     }
@@ -458,7 +461,7 @@ const Bazar = (() => {
             case 'aceito': if (p.pagamento === 'app') return v ? b('cancelar', 'Cancelar pedido', 'sec', 'Cancelar o pedido? O estoque reservado volta.') : (p.cobranca ? '' : `<button type="button" class="bz-btn verde" data-a="pagar-app" data-id="${Number(p.id)}"><i class="fa-solid fa-qrcode"></i> Pagar pelo app</button>`) + b('cancelar', 'Cancelar', 'sec', 'Cancelar o pedido?');
                 return v ? b('cancelar', 'Cancelar pedido', 'sec', 'Cancelar o pedido? O estoque reservado volta.') : b('paguei', '<i class="fa-solid fa-circle-check"></i> Já paguei', 'verde', 'Confirma que você já fez o Pix? O vendedor vai conferir.') + b('cancelar', 'Cancelar', 'sec', 'Cancelar o pedido?');
             case 'pago': return v ? b('confirmar', '<i class="fa-solid fa-circle-check"></i> Recebi o Pix', 'verde', 'Confirma que o Pix caiu na sua conta? Isso libera a entrega.') + b('nao_recebi', 'Não recebi', 'perigo', 'O Pix não apareceu? O pedido volta pra "aceito".') : '';
-            case 'confirmado': return v ? '' : b('recebi', '<i class="fa-solid fa-box-open"></i> Recebi o produto', 'verde', 'Confirma que recebeu? Isso conclui o pedido.');
+            case 'confirmado': case 'a_caminho': case 'entregue': return v ? '' : b('recebi', '<i class="fa-solid fa-box-open"></i> Recebi o produto', 'verde', 'Confirma que recebeu? Isso conclui o pedido.');
             default: return '';
         }
     }
@@ -506,12 +509,12 @@ const Bazar = (() => {
         const abrirDisputa = p.pode_disputar ? `<button type="button" class="bz-link" data-a="disputa-abrir" data-id="${Number(p.id)}"><i class="fa-solid fa-scale-balanced"></i> Algo deu errado? Abrir uma disputa</button>` : '';
         return `${topoModal(p.produto_nome, `${v ? 'Comprador' : 'Vendedor'}: ${outro.nome || '?'} · ${p.quantidade}x · ${brl(p.total_cent)} · ${p.loja_nome}`)}
             <div class="bz-card-corpo">
-                ${htmlPasso(p.status, p.pagamento === 'app')}
+                ${htmlPasso(p.status, p.pagamento === 'app', p.entrega_modo === 'envio')}
                 ${testeAviso}
                 ${disputa}
                 ${dica && !p.em_disputa ? `<div class="bz-como">${esc(dica)}</div>` : ''}
                 ${p.nota ? `<div class="bz-como"><b>Recado do comprador:</b> ${esc(p.nota)}</div>` : ''}
-                ${como}${pix}${appPix}${entrega}
+                ${como}${typeof Entrega !== 'undefined' ? Entrega.htmlPedido(p) : ''}${pix}${appPix}${entrega}
                 <div style="display:flex;gap:10px;flex-wrap:wrap">${acoesDoPedido(p)}</div>
                 ${aval}${conversa}
                 ${abrirDisputa ? `<div>${abrirDisputa}</div>` : ''}
@@ -525,6 +528,7 @@ const Bazar = (() => {
         if (!p) return;
         const el = modal('pedido', htmlPedido(p), { classe: 'larga', estilo: `--bz-cor:${brand()}` });
         el.dataset.pedido = p.id;
+        if (typeof Entrega !== 'undefined') Entrega.aposPedido(p, el);
         const m = el.querySelector('#bz-msgs'); if (m) m.scrollTop = m.scrollHeight;
         if (p.pix && p.status === 'aceito' && ctx.qr) { const q = el.querySelector('#bz-qr'); if (q) ctx.qr(q, p.pix.copia_cola); }
         else if (p.cobranca && p.status === 'aceito' && ctx.qr) { const q = el.querySelector('#bz-qr'); if (q) ctx.qr(q, p.cobranca.copia_cola); }
@@ -538,7 +542,7 @@ const Bazar = (() => {
         if (!p) { const m = modal('pedido', `<button type="button" class="bz-fechar" data-a="fechar"><i class="fa-solid fa-xmark"></i></button><div class="bz-vazio"><i class="fa-solid fa-spinner fa-spin"></i>Abrindo o pedido...</div>`, { classe: 'estreita' }); m.dataset.pedido = id; }
     }
 
-    const pedePraMim = (p) => (p.papel === 'vendedor' && ['aguardando', 'pago'].includes(p.status)) || (p.papel === 'comprador' && ['aceito', 'confirmado'].includes(p.status));
+    const pedePraMim = (p) => (p.papel === 'vendedor' && ['aguardando', 'pago'].includes(p.status)) || (p.papel === 'comprador' && ['aceito', 'confirmado', 'entregue'].includes(p.status));
 
     function linhaPedido(p) {
         const outro = p.contraparte || {};
@@ -809,6 +813,7 @@ const Bazar = (() => {
             case 'disputas': titulo = 'Disputas'; corpo = eAdmin ? secaoDisputas() : '<div class="bz-vazio">Só administradores.</div>'; break;
             case 'anuncios': titulo = edAnuncio ? (edAnuncio.id ? 'Editar anúncio' : 'Novo anúncio') : 'Anúncios do carrossel'; corpo = eAdmin ? secaoAnuncios() : '<div class="bz-vazio">Só administradores.</div>'; break;
             case 'banidos': titulo = 'Banidos do Bazar'; corpo = eAdmin ? secaoBanidos() : '<div class="bz-vazio">Só administradores.</div>'; break;
+            case 'entregas': titulo = 'Entregas'; corpo = Entrega.htmlPainel(); break;
             default: titulo = 'Minha lojinha'; corpo = secaoInicio();
         }
         const avisoBan = banido ? `<div class="bz-como bz-banido-aviso"><i class="fa-solid fa-ban"></i> <b>Sua conta está suspensa do Bazar${banido.ate ? ' até ' + esc(banido.ate) : ''}.</b> ${banido.motivo ? 'Motivo: ' + esc(String(banido.motivo).replace(/[.!\s]+$/, '')) + '.' : ''} Você não vende nem compra enquanto durar, mas ainda vê seus pedidos antigos.</div>` : '';
@@ -817,9 +822,10 @@ const Bazar = (() => {
             <div class="bz-painel" style="${estiloLoja(ed.loja)}">
                 <nav class="bz-p-nav"><div class="bz-p-id">${tem ? logoHtml(minha) : '<span class="bz-logo ini"><i class="fa-solid fa-store"></i></span>'}<div><b>${tem ? esc(minha.nome) : 'Minha lojinha'}</b><small>${tem ? 'seu painel' : 'ainda sem loja'}</small></div></div>
                     ${aba('inicio', 'fa-house', 'Visão geral')}${aba('produtos', 'fa-box-open', 'Produtos', tem ? `<small class="bz-p-n">${minha.produtos.length}</small>` : '', true)}${aba('pedidos', 'fa-inbox', 'Pedidos recebidos', badge, true)}
-                    ${aba('compras', 'fa-bag-shopping', 'Minhas compras')}${aba('visual', 'fa-palette', 'Personalizar')}${aba('dados', 'fa-id-card', 'Dados e Pix')}${eAdmin ? aba('moderacao', 'fa-gavel', 'Moderação') + aba('disputas', 'fa-scale-balanced', 'Disputas', disputasN ? `<span class="bz-contagem">${disputasN}</span>` : '') + aba('anuncios', 'fa-bullhorn', 'Anúncios') + aba('banidos', 'fa-ban', 'Banidos') : ''}</nav>
+                    ${aba('compras', 'fa-bag-shopping', 'Minhas compras')}${aba('entregas', 'fa-motorcycle', 'Entregas', Entrega.pendentes() ? `<span class="bz-contagem">${Entrega.pendentes()}</span>` : '')}${aba('visual', 'fa-palette', 'Personalizar')}${aba('dados', 'fa-id-card', 'Dados e Pix')}${eAdmin ? aba('moderacao', 'fa-gavel', 'Moderação') + aba('disputas', 'fa-scale-balanced', 'Disputas', disputasN ? `<span class="bz-contagem">${disputasN}</span>` : '') + aba('anuncios', 'fa-bullhorn', 'Anúncios') + aba('banidos', 'fa-ban', 'Banidos') : ''}</nav>
                 <section class="bz-p-corpo"><h2 class="bz-p-titulo">${esc(titulo)}</h2>${avisoBan}${corpo}</section></div>`;
         const r = rolador(); if (r) r.scrollTop = rolagem;
+        if (secao === 'entregas') Entrega.aposPainel(alvo);
     }
 
     function abrirPainel(sec = 'inicio') {
@@ -831,6 +837,7 @@ const Bazar = (() => {
         pedidos.carregado = false;
         ctx.emitir('bazar_meus_pedidos');
         carregarAdmin(sec);
+        if (sec === 'entregas') Entrega.carregar();
         desenharPainel();
     }
 
@@ -849,6 +856,7 @@ const Bazar = (() => {
         if (sec !== 'produtos') ed.prod = null;
         if (['moderacao', 'disputas', 'anuncios', 'banidos'].includes(sec)) carregarAdmin(sec);
         if (sec === 'pedidos' || sec === 'compras') ctx.emitir('bazar_meus_pedidos');
+        if (sec === 'entregas') Entrega.carregar();
         desenharPainel();
         const r = rolador(); if (r) r.scrollTop = 0;
     }
@@ -894,6 +902,7 @@ const Bazar = (() => {
         const b = e.target && e.target.closest ? e.target.closest('[data-a]') : null;
         if (!b || b.disabled) return;
         const id = b.dataset.id, a = b.dataset.a;
+        if (a.startsWith('en-')) { Entrega.clique(b); return; }                // entrega acompanhada no mapa (entrega_mapa.js)
         switch (a) {
             case 'fechar': fecharModal(tipo); break;
             case 'voltar': irPara('feed'); mostrarNovidade(); break;
@@ -912,7 +921,7 @@ const Bazar = (() => {
                 if (!ctx.exigirLocalizacao()) break;
                 if (prodAtual.entrega === 'envio' && (prodAtual.endereco || '').trim().length < ((cat.limites || {}).endereco_min || 10)) { ctx.toast('Preencha o endereço completo de entrega (rua, número, bairro, cidade e CEP).', 'warning'); break; }
                 prodAtual.enviando = true; desenharProduto();
-                ctx.emitir('bazar_pedir', { produto_id: prodAtual.p.id, quantidade: prodAtual.qtd, nota: prodAtual.nota, entrega: prodAtual.entrega, endereco: prodAtual.entrega === 'envio' ? prodAtual.endereco : null });
+                ctx.emitir('bazar_pedir', { produto_id: prodAtual.p.id, quantidade: prodAtual.qtd, nota: prodAtual.nota, entrega: prodAtual.entrega, endereco: prodAtual.entrega === 'envio' ? prodAtual.endereco : null, usar_posicao: prodAtual.entrega === 'envio' && prodAtual.usarPos !== false });
                 break;
             // favoritos, ordem, selo e ban (Rodada 18)
             case 'fav': {
@@ -1032,6 +1041,7 @@ const Bazar = (() => {
         const t = e.target;
         if (tipo === 'produto' && t.dataset.campo === 'nota') { prodAtual.nota = t.value; return; }
         if (tipo === 'produto' && t.dataset.campo === 'endereco') { prodAtual.endereco = t.value; return; }
+        if (tipo === 'produto' && t.dataset.campo === 'usar-pos') { prodAtual.usarPos = t.checked; return; }
         if (tipo === 'produto' && t.dataset.campo === 'entrega') { prodAtual.entrega = t.value; desenharProduto(); return; }
         if (tipo === 'pedido' && t.dataset.campo === 'aval-texto') { ed_aval.texto = t.value; return; }
         if (tipo === 'disputa' && t.dataset.m && edDisputa) { edDisputa[t.dataset.m] = t.value; return; }
@@ -1169,6 +1179,7 @@ const Bazar = (() => {
     }
 
     function pedido(p) {
+        if (typeof Entrega !== 'undefined') Entrega.aoPedido(p);
         pedCache.set(p.id, p);
         const lista = p.papel === 'vendedor' ? pedidos.vendendo : pedidos.comprando;
         const i = lista.findIndex((x) => x.id === p.id);
@@ -1187,7 +1198,7 @@ const Bazar = (() => {
 
     function pedidoAberto(d) {
         fecharModal('produto');
-        ctx.toast('Pedido enviado! Acompanhe em "Minha lojinha > Minhas compras".', 'success');
+        ctx.toast(d.sem_ponto ? 'Pedido enviado! Não consegui ler a localização do seu aparelho: marque o ponto de entrega depois, dentro do pedido.' : 'Pedido enviado! Acompanhe em "Minha lojinha > Minhas compras".', d.sem_ponto ? 'warning' : 'success');
         abrirPedido(d.pedido_id);
     }
 
@@ -1258,12 +1269,19 @@ const Bazar = (() => {
     function avisoAdmin(d) { disputasN = d.disputas || 0; if (vista === 'painel') desenharPainel(); }
 
     function abrirLojaDe(id, produtoId) { if (id) { produtoPendente = produtoId ? Number(produtoId) : null; abrirLoja(Number(id)); } }
+    function entregasMudou() {
+        desenharChip();
+        if (vista === 'painel') desenharPainel();
+        const m = modalDe('pedido');
+        if (m && m.dataset.pedido && pedCache.has(Number(m.dataset.pedido))) desenharPedido(Number(m.dataset.pedido));
+    }
     function abrirPedidos(ref) {
+        if (String(ref || '').startsWith('entrega:')) { abrirPainel('entregas'); return; }            // convite de entrega
         if (ref === 'disputa') { abrirPainel('disputas'); return; }              // aviso de disputa nova pro admin
         abrirPainel('compras');
         if (ref) abrirPedido(ref);
     }
 
     return { iniciar, abrir, vitrine, feedMais, loja, minhaLoja, pedido, pedidoAberto, listaPedidos, pendencias, mudou, erro, moderacaoFila, abrirLojaDe, abrirPedidos, abrirPainel,
-             favoritos, anuncios, disputas, banidos, banido: banido_, avisoAdmin };
+             favoritos, anuncios, disputas, banidos, banido: banido_, avisoAdmin, entregasMudou };
 })();

@@ -776,11 +776,32 @@ class BazarPedido(db.Model):
     # Rodada 32: como esse pedido é pago. 'pix' = Pix direto entre as pessoas (o comprador avisa que pagou, o vendedor confere);
     # 'app' = cobrança pelo gateway (o app confirma sozinho; ver app/pagamentos.py). Decidido na hora de ACEITAR. NULL = pedido antigo = 'pix'.
     pagamento = db.Column(db.String(4), nullable=True)
+    # Rodada 36: entrega acompanhada no mapa (só pedidos de 'envio'). O destino é o ponto que o COMPRADOR marcou (a posição do aparelho dele na hora)
+    # e some quando o pedido termina, igual ao endereço. A posição ao vivo do entregador NÃO mora aqui nem em lugar nenhum do banco: fica na
+    # memória do servidor enquanto dura a entrega (app/entregas.py). entregador_id sem FK de propósito (coluna criada pelo boot); entrega_estado:
+    # convidado | aceita | a_caminho | entregue | recusada (NULL = ninguém designado ainda).
+    destino_lat = db.Column(db.Float, nullable=True)
+    destino_lng = db.Column(db.Float, nullable=True)
+    entregador_id = db.Column(db.Integer, nullable=True, index=True)
+    entrega_estado = db.Column(db.String(10), nullable=True)
+    transporte = db.Column(db.String(10), nullable=True)
+    saida_em = db.Column(db.DateTime, nullable=True)
+    entregue_em = db.Column(db.DateTime, nullable=True)
 
     produto = db.relationship('BazarProduto')
     loja = db.relationship('BazarLoja')
     comprador = db.relationship('Person', foreign_keys=[comprador_id])
     vendedor = db.relationship('Person', foreign_keys=[vendedor_id])
+
+
+class BazarEntregador(db.Model):
+    """Quem se cadastrou pra fazer entregas dos pedidos de outras lojas (Rodada 36). Só diz que a pessoa ACEITOU o papel; a posição dela só é
+    compartilhada durante uma entrega que ela mesma iniciou (app/entregas.py)."""
+    __tablename__ = 'bazar_entregador'
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), primary_key=True)
+    ativo = db.Column(db.Boolean, default=True)
+    entregas = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=br_now)
 
 
 class BazarMensagem(db.Model):
