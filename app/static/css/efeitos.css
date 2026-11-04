@@ -1,3 +1,5 @@
 /* Efeitos do Estúdio: só a base. As camadas são desenhadas pelo js/efeitos.js (inline + Web Animations). */
 .ef-av-custom { pointer-events: none; }
 .ef-pf-custom { border-radius: inherit; }
+/* a parte do efeito de avatar que fica POR CIMA da foto (camada "arquivo" com lugar = sobre): presa ao círculo da foto, recortada nele */
+.ef-av-sobre.ef-av-custom { position: absolute; inset: 0; z-index: 2; border-radius: 50%; overflow: hidden; }

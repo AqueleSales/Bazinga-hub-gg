@@ -1,0 +1,40 @@
+/* Pantheon Estúdio (/estudio): só o que é novo em relação ao admin.css (a base das páginas do Estúdio). Chapado e fosco. Prefixo `es-` (nunca `ad-`: bloqueador de anúncio). */
+
+/* zona de soltar arquivo (biblioteca e camada "Arquivo") */
+.es-solta { position: relative; display: flex; align-items: center; gap: 14px; padding: 22px 20px; border: 2px dashed var(--borda); border-radius: 12px; background: var(--painel); color: var(--muda); cursor: pointer; transition: border-color .15s, background .15s; }
+.es-solta > i { font-size: 28px; color: var(--dourado); }
+.es-solta b { color: var(--texto); }
+.es-solta small { color: var(--muda); font-size: 12px; }
+.es-solta:hover, .es-solta.arrastando { border-color: var(--dourado); background: var(--painel2); }
+.es-solta.arrastando { border-style: solid; }
+.es-solta.pequeno { padding: 12px 14px; margin: 12px 12px 0; gap: 10px; }
+.es-solta.pequeno > i { font-size: 20px; }
+.es-solta-estado { margin-left: auto; color: var(--dourado); font-weight: 800; font-size: 12px; }
+
+/* camada "Arquivo": o arquivo escolhido */
+.es-arq-zona.escolhido { display: flex; align-items: center; gap: 12px; margin: 12px 12px 0; padding: 10px 12px; border: 1px solid var(--borda); border-radius: 10px; background: var(--painel); cursor: default; }
+.es-arq-zona.escolhido:hover { border-color: var(--borda); background: var(--painel); }
+.es-arq-zona.escolhido.arrastando { border-color: var(--dourado); }
+.es-arq-mini { width: 56px; height: 56px; flex: none; border-radius: 8px; overflow: hidden; background: repeating-conic-gradient(#2a2e39 0% 25%, #20232c 0% 50%) 50% / 14px 14px; display: grid; place-items: center; }
+.es-arq-mini { position: relative; }
+.es-arq-mini img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.es-arq-tx { display: flex; flex-direction: column; min-width: 0; }
+.es-arq-tx b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-arq-tx small { color: var(--muda); }
+.es-mini-icone { display: grid; place-items: center; width: 100%; height: 100%; color: var(--dourado); font-size: 22px; }
+
+/* biblioteca: cartões dos arquivos */
+.es-arqs { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px; }
+.es-arq { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; text-align: left; }
+.es-arq-img { position: relative; height: 120px; overflow: hidden; display: grid; place-items: center; background: repeating-conic-gradient(#2a2e39 0% 25%, #20232c 0% 50%) 50% / 16px 16px; }
+.es-arq-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.es-arq-img .es-mini-icone { font-size: 34px; }
+.es-arq-tipo { position: absolute; left: 6px; top: 6px; font-size: 10.5px; font-weight: 800; background: rgba(14, 16, 20, .85); color: var(--texto); border-radius: 99px; padding: 2px 8px; }
+.es-arq-info { padding: 8px 10px; display: flex; flex-direction: column; min-width: 0; }
+.es-arq-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-arq-info small { color: var(--muda); }
+.es-arq-acoes { padding: 0 10px 10px; }
+.es-arq-pick { all: unset; display: block; cursor: pointer; border-radius: 12px; }
+.es-arq-pick:hover .es-arq, .es-arq-pick:focus-visible .es-arq { border-color: var(--dourado); }
+.es-arqs-escolher { max-height: 60vh; overflow-y: auto; padding: 2px; }
+.es-modal.es-modal-largo { width: min(760px, 94vw); max-width: none; }

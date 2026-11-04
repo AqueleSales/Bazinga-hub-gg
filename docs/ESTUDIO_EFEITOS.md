@@ -1,6 +1,6 @@
 # Estúdio de efeitos: como criar um efeito sem código
 
-Entre em `/admin` (só admin) e abra **Efeitos**. Você monta o efeito por camadas, vê a prévia ao vivo e salva. Não precisa pedir pra ninguém escrever CSS/JS.
+Entre em **`/estudio`** (o Pantheon Estúdio, só admin; também tem atalho no `/admin`) e abra **Efeitos**. Você monta o efeito por camadas, ou **arrasta um arquivo feito fora do site** (Lottie, GIF, WebP, APNG, MP4, WebM), vê a prévia ao vivo e salva. Não precisa pedir pra ninguém escrever CSS/JS.
 
 ## Passo a passo
 1. **Novo efeito**, ou **"Começar de um modelo"** (Poeira dourada, Neve, Brasas, Tempestade, Código verde, Estrelas; no avatar: Onda dourada, Satélites, Aura azul, Brasa viva).
@@ -20,6 +20,15 @@ Entre em `/admin` (só admin) e abra **Efeitos**. Você monta o efeito por camad
 | Raios | cartão | relâmpagos que caem | cor, quantidade, intervalo |
 | Anel | avatar | onda que se expande da foto | cor, espessura, duração |
 | Órbita | avatar | pontinhos girando em volta da foto | cor, quantidade, tamanho, volta |
+| **Arquivo** | cartão e avatar | uma animação/imagem/vídeo feita fora do site (da biblioteca) | encaixe, tamanho, posição x/y, giro, espelho, opacidade, velocidade, aparar começo/fim, atrás ou por cima da foto (avatar) |
+
+## Camada Arquivo (arte feita fora do site)
+1. Produza a arte onde quiser (After Effects/LottieFiles, um editor de vídeo, uma IA). **Fundo transparente: exporte WebP animado, APNG ou Lottie.** GIF e vídeo MP4 não têm transparência boa: no MP4 use fundo preto e a **mistura "tela"** (o preto some, só a luz fica).
+2. No Estúdio, **arraste o arquivo** na camada Arquivo (ou em *Biblioteca de arquivos*). Limites: Lottie 400 KB, imagem 3 MB (lado até 2048 px, até 240 quadros), vídeo 6 MB, até 20 s por passada, biblioteca de 120 MB.
+3. Ajuste tamanho, posição, giro, espelho, opacidade; em Lottie e vídeo também velocidade e o trecho (aparar). **Pausa** e **mistura** valem pro efeito inteiro.
+4. Em avatar, escolha se fica **atrás** ou **por cima da foto**.
+5. Onde o efeito é pequeno (foto de mensagem/lista) ou a página está rolando, o app mostra a imagem parada; com "reduzir movimento" ligado, não desenha. No máximo 6 animações pesadas tocam juntas na tela.
+6. Segurança: o Lottie não pode ter expressões (código), imagem, texto nem áudio; SVG e executáveis são recusados; o tipo vem do conteúdo, não da extensão. A receita guarda só o id do arquivo.
 
 ## Por que é seguro
 A receita é **só números, cores e opções de uma lista**. O servidor (`app/efeitos.py`, `normalizar_receita`) descarta qualquer camada ou campo que não esteja no esquema e limita todos os números; o navegador limita de novo ao desenhar. Nada vira CSS ou JavaScript livre, então nem um admin com a conta invadida consegue injetar script por aqui.
@@ -31,5 +40,5 @@ A receita é **só números, cores e opções de uma lista**. O servidor (`app/e
 
 ## Limites honestos
 - Não cobre efeitos de canvas complexos (a Amaterasu, a Punição de Alma): esses continuam feitos à mão. Peça "peças" novas (um vórtice, um fogo orgânico) e viram camada.
-- Hoje só **efeito de cartão** e **efeito de avatar**. Molduras, nomes, placas, faixas, efeitos de fala/radar/pin/servidor e sons seguem à mão; entram no Estúdio nas próximas etapas (a mesma ideia: receita + motor).
-- Tabela `efeito_custom` (nasce sozinha). Efeitos ficam no catálogo em memória, recarregados do banco a cada boot.
+- Hoje só **efeito de cartão** e **efeito de avatar**. Molduras, nomes, placas, faixas, efeitos de fala/radar/pin/servidor e sons seguem à mão; entram no Estúdio nas próximas etapas (receita + motor, e arquivo onde fizer sentido). Roadmap: ver "Rodada 36b" no `CLAUDE.md`.
+- Tabelas `efeito_custom` e `estudio_arquivo` (nascem sozinhas). Efeitos ficam no catálogo em memória, recarregados do banco a cada boot.

@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/titulos.css') }}?v={{ titulos_css_v }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/efeitos.css') }}?v={{ efeitos_css_v }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ admin_css_v }}">
 </head>
 <body>
@@ -21,7 +20,7 @@
         <small>Passe e conquistas</small>
         <button class="es-item" data-v="passe"><i class="fa-solid fa-ranking-star"></i> Passe de Batalha</button>
         <button class="es-item" data-v="titulos"><i class="fa-solid fa-signature"></i> Títulos</button>
-        <button class="es-item" data-v="efeitos"><i class="fa-solid fa-wand-magic-sparkles"></i> Efeitos</button>
+        <a class="es-item" href="/estudio" style="text-decoration:none"><i class="fa-solid fa-wand-magic-sparkles"></i> Estúdio de criação <i class="fa-solid fa-arrow-up-right-from-square" style="margin-left:auto;font-size:11px;width:auto"></i></a>
         <button class="es-item" data-v="lojas"><i class="fa-solid fa-shop"></i> Lojas e pagamento</button>
         <button class="es-item" data-v="guardiao"><i class="fa-solid fa-shield-halved"></i> Guardião (segurança)</button>
         <button class="es-item" data-v="servidores"><i class="fa-solid fa-server"></i> Servidores públicos</button>
@@ -29,7 +28,6 @@
         <small>Pessoas</small>
         <button class="es-item" data-v="admins"><i class="fa-solid fa-user-shield"></i> Administradores</button>
         <small>Em breve</small>
-        <div class="es-item breve"><i class="fa-solid fa-gem"></i> Cosméticos (molduras, nomes...) <span class="tag">breve</span></div>
         <div class="es-item breve"><i class="fa-solid fa-store"></i> Armazém <span class="tag">breve</span></div>
         <div class="es-item breve"><i class="fa-solid fa-shop"></i> Bazar <span class="tag">breve</span></div>
         <div class="es-item breve"><i class="fa-solid fa-flag"></i> Denúncias <span class="tag">breve</span></div>
@@ -41,7 +39,6 @@
     <main class="es-main" id="es-main"><div class="es-vazio">Carregando...</div></main>
 </div>
 <script>window.EU = {{ eu|tojson }};</script>
-<script src="{{ url_for('static', filename='js/efeitos.js') }}?v={{ efeitos_js_v }}"></script>
 <script src="{{ url_for('static', filename='js/admin_graficos.js') }}?v={{ admin_graficos_js_v }}"></script>
 <script src="{{ url_for('static', filename='js/admin.js') }}?v={{ admin_js_v }}"></script>
 </body>

@@ -15,6 +15,7 @@ Camada nova = entrada aqui + o desenho em `efeitos.js` (função em `CAMADAS`).
 import json
 import re
 
+from . import estudio_arquivos
 from .cosmeticos import CATALOGO, TEMAS, _item
 from .models import db, br_now, EfeitoCustom, Posse, Person
 from .utils import com_retry, comitar_com_retry
@@ -22,10 +23,12 @@ from .utils import com_retry, comitar_com_retry
 SLOTS = ('efeito_perfil', 'efeito_avatar')
 RARIDADES = ('raro', 'epico', 'lendario')
 MAX_CAMADAS = 6
+MISTURAS = ('normal', 'tela', 'somar')      # como o efeito inteiro se mistura com o que está atrás (vídeo sobre fundo preto + "tela" = só a luz)
 _RE_ID = re.compile(r'^[a-z_]{2,24}$')
 _RE_COR = re.compile(r'^#[0-9a-fA-F]{6}$')
 
 # Parâmetro: ('num', minimo, maximo, padrao, rotulo) | ('cor', padrao, rotulo) | ('opcao', [opções], padrao, rotulo)
+#            | ('arquivo', None, rotulo): id de um arquivo da biblioteca do Estúdio (estudio_arquivos), validado contra o banco
 ESQUEMA = {
     'particulas': {
         'nome': 'Partículas', 'slots': ('efeito_perfil',),
@@ -66,6 +69,25 @@ ESQUEMA = {
             'cor': ('cor', '#ffffff', 'Cor'), 'qtd': ('num', 1, 6, 3, 'Quantidade'), 'tam': ('num', 2, 10, 4, 'Tamanho'),
             'dur': ('num', 1, 12, 4, 'Uma volta (s)'),
         }},
+    # Arte feita fora do site (Lottie, GIF, WebP, APNG, PNG, JPEG, MP4, WebM), enviada na biblioteca do Estúdio. O motor desenha o arquivo e
+    # aplica só estes ajustes (tamanho, posição, giro, espelho, opacidade, velocidade, aparar). "Mistura" é do efeito inteiro, não da camada.
+    'arquivo': {
+        'nome': 'Arquivo (Lottie, imagem ou vídeo)', 'slots': ('efeito_perfil', 'efeito_avatar'),
+        'dica': 'Uma animação feita fora do site. Arraste o arquivo, depois ajuste tamanho, posição e velocidade.',
+        'params': {
+            'arq': ('arquivo', None, 'Arquivo'),
+            'ajuste': ('opcao', ['conter', 'cobrir', 'esticar'], 'conter', 'Encaixe'),
+            'escala': ('num', 10, 400, 100, 'Tamanho (%)'),
+            'x': ('num', -100, 100, 0, 'Posição horizontal (%)'),
+            'y': ('num', -100, 100, 0, 'Posição vertical (%)'),
+            'giro': ('num', -180, 180, 0, 'Giro (graus)'),
+            'espelho': ('opcao', ['nao', 'horizontal', 'vertical'], 'nao', 'Espelhar'),
+            'opac': ('num', 0, 100, 100, 'Opacidade (%)'),
+            'vel': ('num', 0.25, 3, 1, 'Velocidade (Lottie e vídeo)'),
+            'ini': ('num', 0, 95, 0, 'Aparar o começo (%)'),
+            'fim': ('num', 5, 100, 100, 'Aparar o fim (%)'),
+            'lugar': ('opcao', ['atras', 'sobre'], 'atras', 'Em relação à foto (só avatar)'),
+        }},
 }
 
 
@@ -79,6 +101,8 @@ def esquema_para_cliente():
                 params[nome] = {'t': 'num', 'min': p[1], 'max': p[2], 'padrao': p[3], 'rotulo': p[4]}
             elif p[0] == 'cor':
                 params[nome] = {'t': 'cor', 'padrao': p[1], 'rotulo': p[2]}
+            elif p[0] == 'arquivo':
+                params[nome] = {'t': 'arquivo', 'padrao': '', 'rotulo': p[2]}
             else:
                 params[nome] = {'t': 'opcao', 'opcoes': p[1], 'padrao': p[2], 'rotulo': p[3]}
         saida[tipo] = {'nome': c['nome'], 'slots': list(c['slots']), 'dica': c['dica'], 'params': params}
@@ -123,12 +147,20 @@ def normalizar_receita(slot, receita):
                 limpa[nome] = _num(v, p[1], p[2], p[3])
             elif p[0] == 'cor':
                 limpa[nome] = v.lower() if isinstance(v, str) and _RE_COR.match(v) else p[1]
+            elif p[0] == 'arquivo':
+                if not estudio_arquivos.existe(v):
+                    raise ErroEfeito('Escolha um arquivo pra camada "Arquivo" (arraste um novo ou use a biblioteca).')
+                limpa[nome] = v
             else:
                 limpa[nome] = v if v in p[1] else p[2]
+        if c['tipo'] == 'arquivo' and limpa['fim'] < limpa['ini'] + 5:      # o trecho aparado precisa ter pelo menos 5%
+            limpa['fim'] = min(100, limpa['ini'] + 5)
+            limpa['ini'] = limpa['fim'] - 5
         camadas.append(limpa)
     if not camadas:
         raise ErroEfeito('Nenhuma camada válida.')
-    return {'pausa': _num(receita.get('pausa'), 0, 15, 0), 'camadas': camadas}
+    mistura = receita.get('mistura')
+    return {'pausa': _num(receita.get('pausa'), 0, 15, 0), 'mistura': mistura if mistura in MISTURAS else 'normal', 'camadas': camadas}
 
 
 def _validar_meta(dados, novo):
@@ -184,11 +216,35 @@ def garantir_carregados():
             print(f"[EFEITOS] não consegui carregar ainda: {ex}")
 
 
-def para_json(e):
+def _receita_de(e):
     try:
         receita = json.loads(e.receita)
     except (TypeError, ValueError):
         receita = {'pausa': 0, 'camadas': []}
+    if not isinstance(receita, dict):
+        receita = {'pausa': 0, 'camadas': []}
+    receita.setdefault('mistura', 'normal')
+    return receita
+
+
+def _arquivos_das(receitas):
+    """Resolve de uma vez (1 consulta) os arquivos usados por várias receitas."""
+    ids = {c.get('arq') for r in receitas for c in (r.get('camadas') or []) if isinstance(c, dict) and c.get('tipo') == 'arquivo'}
+    return estudio_arquivos.resolver(ids)
+
+
+def _expandir(receita, info):
+    """Põe em cada camada "arquivo" o `a` (endereços e medidas do arquivo) que o motor do navegador precisa. A receita GUARDADA só tem o id
+    (`arq`): os endereços são montados aqui, a partir do id, e arquivo que sumiu da biblioteca vira `a: None` (o motor pula a camada)."""
+    for c in receita.get('camadas') or []:
+        if isinstance(c, dict) and c.get('tipo') == 'arquivo':
+            c['a'] = info.get(c.get('arq'))
+    return receita
+
+
+def para_json(e, info=None):
+    receita = _receita_de(e)
+    _expandir(receita, _arquivos_das([receita]) if info is None else info)
     return {'id': e.id, 'tipo': e.tipo, 'nome': e.nome, 'descricao': e.descricao or '', 'raridade': e.raridade or 'epico', 'receita': receita}
 
 
@@ -201,7 +257,9 @@ def mapa_para_cliente():
     global _cache_mapa
     garantir_carregados()
     if _cache_mapa is None:
-        _cache_mapa = {e.id: {'tipo': e.tipo, 'receita': para_json(e)['receita']} for e in com_retry(lambda: EfeitoCustom.query.all())}
+        todos = com_retry(lambda: EfeitoCustom.query.all())
+        info = _arquivos_das([_receita_de(e) for e in todos])
+        _cache_mapa = {e.id: {'tipo': e.tipo, 'receita': para_json(e, info)['receita']} for e in todos}
     return _cache_mapa
 
 
@@ -217,7 +275,9 @@ def difundir():
 
 
 def listar():
-    return [para_json(e) for e in com_retry(lambda: EfeitoCustom.query.order_by(EfeitoCustom.criado_em.desc()).all())]
+    todos = com_retry(lambda: EfeitoCustom.query.order_by(EfeitoCustom.criado_em.desc()).all())
+    info = _arquivos_das([_receita_de(e) for e in todos])
+    return [para_json(e, info) for e in todos]
 
 
 def salvar(dados):

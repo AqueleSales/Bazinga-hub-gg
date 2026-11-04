@@ -977,6 +977,28 @@ class EfeitoCustom(db.Model):
     criado_em = db.Column(db.DateTime, default=br_now)
 
 
+class EstudioArquivo(db.Model):
+    """Arquivo de arte enviado no Estúdio (/estudio): animação Lottie, imagem (GIF, WebP, APNG, PNG, JPEG) ou vídeo (MP4/WebM).
+    Os BYTES moram aqui (colunas `deferred`: a lista da biblioteca não os carrega) e saem por /estudio/arquivo/<id>.
+    O arquivo é imutável: o id é aleatório e, pra mudar a arte, sobe-se outro. A receita de um efeito guarda só o id."""
+    __tablename__ = 'estudio_arquivo'
+    id = db.Column(db.String(12), primary_key=True)          # [a-z0-9]{12}, aleatório
+    tipo = db.Column(db.String(8), nullable=False)           # 'lottie' | 'imagem' | 'video'
+    mime = db.Column(db.String(40), nullable=False)          # decidido pelo CONTEÚDO, nunca pelo que o cliente disse
+    nome = db.Column(db.String(80), nullable=True)           # nome original, só pra biblioteca
+    bytes = db.Column(db.Integer, nullable=False, default=0)
+    w = db.Column(db.Integer, nullable=True)
+    h = db.Column(db.Integer, nullable=True)
+    dur_ms = db.Column(db.Integer, nullable=True)            # duração de uma passada (animação/vídeo); NULL = imagem parada
+    quadros = db.Column(db.Integer, nullable=True)
+    tem_capa = db.Column(db.Boolean, nullable=False, default=False)   # existe `capa` (sem carregar os bytes só pra saber)
+    sha = db.Column(db.String(64), nullable=False, unique=True)   # o mesmo arquivo enviado duas vezes vira um só
+    dados = db.deferred(db.Column(db.LargeBinary, nullable=False))
+    capa = db.deferred(db.Column(db.LargeBinary, nullable=True))  # imagem parada (WebP) do 1º quadro; vídeo e imagem têm, Lottie não
+    criado_por = db.Column(db.Integer, nullable=True)
+    criado_em = db.Column(db.DateTime, default=br_now)
+
+
 # ==========================================
 # CONEXÕES DO PERFIL (Rodada 24): links pra outras plataformas (GitHub, LinkedIn/currículo, YouTube, Twitch, Spotify, sites, loja do Bazar...).
 # O que foi buscado fica em `dados` (JSON limitado); o cartão de perfil mostra isso na "outra face". Regra e segurança em app/conexoes.py.
