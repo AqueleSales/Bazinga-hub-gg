@@ -94,6 +94,8 @@ def arquivo_grande_demais(e):
     página HTML de erro - o fetch() do upload esperava JSON e quebrava."""
     if request.path == '/api/upload':
         return jsonify({'error': 'Arquivo grande demais (vídeo até 25 MB, imagem até 8 MB)'}), 413
+    if request.path == '/estudio/api/arquivos':
+        return jsonify({'erro': 'Arquivo pesado demais pro Estúdio (vídeo até 6 MB, imagem até 3 MB, Lottie até 400 KB).'}), 413
     return jsonify({'error': 'Imagem grande demais (máximo 5 MB)'}), 413
 
 

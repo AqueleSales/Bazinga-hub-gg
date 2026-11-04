@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Estúdio de criação · {{ app_nome }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/efeitos.css') }}?v={{ efeitos_css_v }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ admin_css_v }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estudio.css') }}?v={{ estudio_css_v }}">
+</head>
+<body>
+<div class="es-app">
+    <nav class="es-nav" id="es-nav">
+        <div class="es-marca"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ app_nome }} Estúdio</div>
+        <small>Criar</small>
+        <button class="es-item ativo" data-v="efeitos"><i class="fa-solid fa-wand-magic-sparkles"></i> Efeitos</button>
+        <button class="es-item" data-v="arquivos"><i class="fa-solid fa-photo-film"></i> Biblioteca de arquivos</button>
+        <small>Em breve</small>
+        <div class="es-item breve"><i class="fa-solid fa-box-open"></i> Pacotes (bundles) <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-regular fa-circle"></i> Molduras <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-image"></i> Faixas e efeito de faixa <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-font"></i> Nomes (texto) <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-map-pin"></i> Pins do mapa <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-store"></i> Efeitos de loja <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-layer-group"></i> Shaders da página <span class="tag">breve</span></div>
+        <div class="es-item breve"><i class="fa-solid fa-volume-high"></i> Sons <span class="tag">breve</span></div>
+        <div class="es-eu">Logado como <b>{{ eu.nome }}</b>{% if eu.username %} (@{{ eu.username }}){% endif %}<br><a href="/chat">Voltar ao app</a> · <a href="/admin">Painel do admin</a></div>
+    </nav>
+    <main class="es-main" id="es-main"><div class="es-vazio">Carregando...</div></main>
+</div>
+<script>window.EU = {{ eu|tojson }};</script>
+<script src="{{ url_for('static', filename='js/efeitos.js') }}?v={{ efeitos_js_v }}"></script>
+<script src="{{ url_for('static', filename='js/estudio.js') }}?v={{ estudio_js_v }}"></script>
+</body>
+</html>

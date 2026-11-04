@@ -65,6 +65,9 @@ def create_app():
     from .admin import admin_bp
     app.register_blueprint(admin_bp)
 
+    from .estudio import estudio_bp
+    app.register_blueprint(estudio_bp)
+
     class _SessaoCookie(SecureCookieSessionInterface):
         def should_set_cookie(self, app, session):
             # Sessão permanente renova o cookie em TODA resposta (é o que faz o prazo andar a cada visita). Em arquivo
@@ -187,7 +190,7 @@ def create_app():
                 'loja_css_v': _versao_estatico('css/loja.css'), 'loja_js_v': _versao_estatico('js/loja.js'),
                 'bazar_css_v': _versao_estatico('css/bazar.css'), 'bazar_js_v': _versao_estatico('js/bazar.js'),
                 'entrega_mapa_css_v': _versao_estatico('css/entrega_mapa.css'), 'entrega_mapa_js_v': _versao_estatico('js/entrega_mapa.js'),
-                'titulos_css_v': _versao_estatico('css/titulos.css'), 'efeitos_js_v': _versao_estatico('js/efeitos.js'), 'efeitos_css_v': _versao_estatico('css/efeitos.css'), 'explorar_css_v': _versao_estatico('css/explorar.css'), 'mapa_social_css_v': _versao_estatico('css/mapa_social.css'), 'mapa_social_js_v': _versao_estatico('js/mapa_social.js'), 'notas_mapa_css_v': _versao_estatico('css/notas_mapa.css'), 'loja_mapa_css_v': _versao_estatico('css/loja_mapa.css'), 'loja_mapa_js_v': _versao_estatico('js/loja_mapa.js'), 'notas_mapa_js_v': _versao_estatico('js/notas_mapa.js'), 'conexoes_css_v': _versao_estatico('css/conexoes.css'), 'conexoes_js_v': _versao_estatico('js/conexoes.js'), 'explorar_js_v': _versao_estatico('js/explorar.js'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'), 'admin_graficos_js_v': _versao_estatico('js/admin_graficos.js'),
+                'titulos_css_v': _versao_estatico('css/titulos.css'), 'efeitos_js_v': _versao_estatico('js/efeitos.js'), 'efeitos_css_v': _versao_estatico('css/efeitos.css'), 'explorar_css_v': _versao_estatico('css/explorar.css'), 'mapa_social_css_v': _versao_estatico('css/mapa_social.css'), 'mapa_social_js_v': _versao_estatico('js/mapa_social.js'), 'notas_mapa_css_v': _versao_estatico('css/notas_mapa.css'), 'loja_mapa_css_v': _versao_estatico('css/loja_mapa.css'), 'loja_mapa_js_v': _versao_estatico('js/loja_mapa.js'), 'notas_mapa_js_v': _versao_estatico('js/notas_mapa.js'), 'conexoes_css_v': _versao_estatico('css/conexoes.css'), 'conexoes_js_v': _versao_estatico('js/conexoes.js'), 'explorar_js_v': _versao_estatico('js/explorar.js'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'), 'admin_graficos_js_v': _versao_estatico('js/admin_graficos.js'), 'estudio_css_v': _versao_estatico('css/estudio.css'), 'estudio_js_v': _versao_estatico('js/estudio.js'),
                 'musica_css_v': _versao_estatico('css/musica.css'), 'musica_js_v': _versao_estatico('js/musica.js'),
                 'clipes_css_v': _versao_estatico('css/clipes.css'), 'clipes_js_v': _versao_estatico('js/clipes.js'),
                 'cargos_css_v': _versao_estatico('css/cargos.css'), 'cargos_js_v': _versao_estatico('js/cargos.js'),
