@@ -3007,6 +3007,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/entrega_mapa.css') }}?v={{ entrega_mapa_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ordem.css') }}?v={{ ordem_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/config_usuario.css') }}?v={{ config_usuario_css_v }}">
 </head>
@@ -5002,6 +5003,7 @@
     <script src="{{ url_for('static', filename='js/clipes.js') }}?v={{ clipes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
+    <script src="{{ url_for('static', filename='js/entrega_mapa.js') }}?v={{ entrega_mapa_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/ordem.js') }}?v={{ ordem_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/config_usuario.js') }}?v={{ config_usuario_js_v }}"></script>
@@ -11317,6 +11319,16 @@
         socket.on('bazar_loja', (d) => Bazar.loja(d));
         socket.on('bazar_minha', (d) => Bazar.minhaLoja(d));
         socket.on('bazar_pedido', (d) => Bazar.pedido(d));
+        // ENTREGA ACOMPANHADA NO MAPA (Rodada 36): mini mapa do pedido, painel do entregador e a posição ao vivo (só durante a entrega)
+        Entrega.iniciar({
+            emitir: (nome, dados) => socket.emit(nome, dados), esc, toast: (m, t) => showToast(m, t),
+            confirmar: (titulo, texto, ok) => openConfirmModal(titulo, texto, ok),
+            reanunciar: () => anunciarMinhaPosicao(),
+            aoMudar: () => Bazar.entregasMudou(),
+        });
+        socket.on('entrega_ao_vivo', (d) => Entrega.aoVivo(d));
+        socket.on('entrega_sinal', (d) => Entrega.sinal(d));
+        socket.on('entregador_estado', (d) => Entrega.estado(d));
         socket.on('bazar_pedido_aberto', (d) => Bazar.pedidoAberto(d));
         socket.on('bazar_pedidos', (d) => Bazar.listaPedidos(d));
         socket.on('bazar_pendencias', (d) => Bazar.pendencias(d.n));

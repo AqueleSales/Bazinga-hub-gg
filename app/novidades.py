@@ -9,6 +9,15 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 41, 'data': '03/11/2026', 'titulo': 'Acompanhe a entrega do pedido no mapa',
+        'itens': [
+            {'icone': 'fa-route', 'titulo': 'Veja o entregador vindo, o trajeto e o tempo',
+             'texto': 'Nos pedidos com envio, o pedido ganhou "a caminho" e "entregue", com um mini mapa mostrando a loja, o seu ponto de entrega, o entregador e quanto falta. O vendedor acompanha o produto indo.'},
+            {'icone': 'fa-motorcycle', 'titulo': 'Entregador: a própria loja ou alguém que se cadastra',
+             'texto': 'Em Bazar > Entregas qualquer pessoa pode se cadastrar. A posição só é compartilhada durante uma entrega que a pessoa mesma iniciou, só com o comprador e o vendedor daquele pedido, e acaba quando entrega, para ou o pedido termina.'},
+        ],
+    },
+    {
         'id': 40, 'data': '03/11/2026', 'titulo': 'Lojas por perto no mapa, jogos na call, mais temas e a call mais redonda',
         'itens': [
             {'icone': 'fa-store', 'titulo': 'Lojas por perto, sem sair do mapa',

@@ -1,0 +1,71 @@
+/* Entrega acompanhada no mapa (Rodada 36). Mesma linguagem do Bazar: chapado, borda grossa, sombra dura, sem vidro nem blur.
+   Só transform/opacity se mexem; reduzir movimento e a rolagem pesada (body.rolando) desligam as animações. */
+
+/* ---- estados novos do pedido na lista e na linha do tempo ---- */
+.bz-status.a_caminho { background: #1f7aa8; }
+.bz-status.entregue { background: #1f6f4a; }
+
+/* ---- o bloco no pedido ---- */
+.en-bloco { border: 2px solid var(--bg-tertiary); border-radius: 16px; padding: 14px 16px; background: var(--bg-secondary); display: flex; flex-direction: column; gap: 10px; }
+.en-bloco.fim { opacity: .9; }
+.en-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--text-header); }
+.en-cab i { margin-right: 6px; color: var(--bz-cor, var(--brand-color)); }
+.en-txt { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--text-normal); }
+.en-nota { color: var(--text-muted); font-size: 11.5px; line-height: 1.4; }
+.en-aviso { padding: 14px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.en-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: #5a606b; }
+.en-chip.convidado { background: #b8860b; } .en-chip.aceita { background: #2f6f9f; } .en-chip.a_caminho { background: #1f7aa8; }
+.en-chip.entregue { background: #1f6f4a; } .en-chip.recusada { background: #a8323e; }
+
+/* ---- tempo estimado ---- */
+.en-eta { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 12px; background: var(--bg-primary); border: 2px solid var(--bg-tertiary); }
+.en-eta b { font-size: 20px; color: var(--text-header); }
+.en-eta span { font-size: 13px; color: var(--text-normal); font-weight: 700; }
+.en-eta small { flex-basis: 100%; color: var(--text-muted); font-size: 11.5px; }
+.en-eta.velho { border-color: #c9752b; }
+.en-eta.velho small { color: #e0a82e; }
+
+/* ---- mini mapa ---- */
+.en-slot { position: relative; border-radius: 14px; overflow: hidden; border: 2px solid var(--bg-tertiary); background: var(--bg-quaternary); isolation: isolate; }
+.en-mapa { width: 100%; height: 260px; z-index: 0; }
+.en-slot .leaflet-container { background: var(--bg-quaternary); font: inherit; }
+.en-centro { position: absolute; z-index: 500; top: 8px; right: 8px; width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--bg-tertiary); background: var(--bg-secondary); color: var(--text-header); cursor: pointer; box-shadow: 0 3px 0 var(--bg-tertiary); }
+.en-centro:hover { background: var(--bg-tertiary); }
+.en-legenda { position: absolute; z-index: 500; left: 8px; bottom: 8px; display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 8px; border-radius: 10px; background: var(--bg-secondary); border: 2px solid var(--bg-tertiary); font-size: 11px; font-weight: 700; color: var(--text-normal); }
+.en-legenda i { margin-right: 3px; color: var(--text-muted); }
+.en-pino-wrap { background: none; border: 0; }
+.en-pino { position: relative; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; color: #fff; border: 3px solid #fff; box-shadow: 0 3px 0 rgba(0, 0, 0, .35); }
+.en-pino.loja { background: #d9822b; } .en-pino.destino { background: #a8323e; }
+.en-pino.ent { background: #1f7aa8; z-index: 2; }
+.en-onda { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; border: 3px solid #1f7aa8; opacity: 0; animation: enOnda 2.2s ease-out infinite; pointer-events: none; }
+@keyframes enOnda { 0% { transform: scale(.9); opacity: .7; } 100% { transform: scale(2.4); opacity: 0; } }
+
+/* ---- controles ---- */
+.en-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--text-normal); }
+.en-linha > span { flex: 1 1 220px; }
+.en-linha.aviso { color: #e0a82e; }
+.en-quem { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; border-top: 2px dashed var(--bg-tertiary); }
+.en-quem > b { font-size: 13px; color: var(--text-header); }
+.en-campo { display: inline-flex; flex-direction: column; gap: 3px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); }
+.en-sel, .en-in { padding: 8px 10px; border-radius: 10px; border: 2px solid var(--bg-tertiary); background: var(--bg-primary); color: var(--text-normal); font: inherit; font-size: 13px; }
+.en-in { flex: 1 1 180px; min-width: 0; }
+.en-consent { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--bg-primary); border: 2px solid var(--bg-tertiary); font-size: 12.5px; line-height: 1.45; color: var(--text-normal); cursor: pointer; }
+.en-consent input { margin-top: 3px; flex: none; width: 18px; height: 18px; }
+
+/* ---- painel "Entregas" ---- */
+.en-painel { display: flex; flex-direction: column; gap: 14px; }
+.en-h { margin: 6px 0 0; font-size: 15px; color: var(--text-header); }
+.en-card { border: 2px solid var(--bg-tertiary); border-radius: 16px; padding: 14px 16px; background: var(--bg-secondary); display: flex; flex-direction: column; gap: 10px; }
+.en-end { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: 12px; background: var(--bg-primary); font-size: 13px; color: var(--text-normal); }
+.en-end i { color: #a8323e; margin-top: 2px; }
+.bz-check-linha { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.bz-check-linha input { margin-top: 3px; flex: none; width: 18px; height: 18px; }
+.bz-check-linha span { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.bz-check-linha small { color: var(--text-muted); font-size: 11.5px; line-height: 1.4; }
+
+@media (max-width: 720px) {
+    .en-mapa { height: 220px; }
+    .en-eta b { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .en-onda { animation: none; opacity: .35; } }
+body.rolando .en-onda { animation-play-state: paused; }

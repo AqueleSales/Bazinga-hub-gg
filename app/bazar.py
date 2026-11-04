@@ -56,7 +56,7 @@ LIM_IMAGENS, LIM_COMBO, MAX_PRODUTOS_ATIVOS = 5, 8, 40
 PRECO_MIN_CENT, PRECO_MAX_CENT, ESTOQUE_MAX, QTD_MAX_PEDIDO = 100, 5_000_000, 9999, 20
 LIM_MSG, MAX_MSGS_PEDIDO, LIM_NOTA_PEDIDO, LIM_AVALIACAO = 300, 80, 200, 200
 MAX_PEDIDOS_ABERTOS_COMPRADOR = 10
-ABERTOS = ('aguardando', 'aceito', 'pago', 'confirmado')
+ABERTOS = ('aguardando', 'aceito', 'pago', 'confirmado', 'a_caminho', 'entregue')
 PIX_VISIVEL = ('aceito', 'pago', 'confirmado', 'concluido')
 DENUNCIAS_PARA_OCULTAR = 3          # mesmo número do mapa (utils.DENUNCIAS_PARA_OCULTAR)
 
@@ -72,7 +72,7 @@ ROTULO_ENTREGA = {'envio': 'Envio', 'retirada': 'Retirada em mãos', 'digital': 
 # Disputa: quem pode abrir com qual motivo, e até quando depois de concluído
 MOTIVOS_DISPUTA = {'nao_recebi': ('Paguei e não recebi', 'comprador'), 'diferente': ('Veio diferente do anunciado', 'comprador'),
                    'nao_paguei': ('Disse que pagou e o Pix não caiu', 'vendedor'), 'sumiu': ('A outra pessoa sumiu', None), 'outro': ('Outro motivo', None)}
-DISPUTA_STATUS_ABRE = ('aceito', 'pago', 'confirmado', 'concluido')
+DISPUTA_STATUS_ABRE = ('aceito', 'pago', 'confirmado', 'a_caminho', 'entregue', 'concluido')
 DISPUTA_DIAS_APOS_CONCLUIR = 14
 LIM_DISPUTA_DETALHE, MIN_DISPUTA_DETALHE, LIM_NOTA_ADMIN, LIM_BAN_MOTIVO = 300, 10, 300, 200
 # Feed
@@ -95,9 +95,14 @@ TRANSICOES = {
     ('pago', 'vendedor', 'confirmar'): 'confirmado',
     ('pago', 'vendedor', 'nao_recebi'): 'aceito',
     ('confirmado', 'comprador', 'recebi'): 'concluido',
+    # Rodada 36: a entrega acompanhada no mapa tem os dois estados dela. SAIR/PARAR/ENTREGUE não são ações das duas pontas (quem faz é o
+    # entregador, que pode ser uma terceira pessoa): moram em app/entregas.py, com o mesmo UPDATE condicional. O comprador confirma o
+    # recebimento a qualquer hora depois que o pedido está confirmado, inclusive com o entregador ainda a caminho.
+    ('a_caminho', 'comprador', 'recebi'): 'concluido',
+    ('entregue', 'comprador', 'recebi'): 'concluido',
 }
 ROTULO_STATUS = {'aguardando': 'Aguardando o vendedor', 'aceito': 'Aceito: pague por Pix', 'pago': 'Pagamento informado',
-                 'confirmado': 'Pagamento confirmado', 'concluido': 'Concluído', 'recusado': 'Recusado', 'cancelado': 'Cancelado'}
+                 'confirmado': 'Pagamento confirmado', 'a_caminho': 'A caminho', 'entregue': 'Entregue: confirme o recebimento', 'concluido': 'Concluído', 'recusado': 'Recusado', 'cancelado': 'Cancelado'}
 
 
 # ==========================================
@@ -502,6 +507,9 @@ def pedido_json(p, eu_id, com_mensagens=False, disputas=_SEM_MAPA):
     j['em_disputa'] = em_aberto
     j['pode_disputar'] = _pode_disputar(p, papel) and not em_aberto
     j['pagamento'] = p.pagamento or 'pix'
+    if p.entrega_modo == 'envio':
+        from . import entregas          # import tardio: entregas.py usa o ErroBazar daqui
+        j['entrega_mapa'] = entregas.mapa_json(p, papel, eu_id)
     if p.pagamento == 'app':
         j['modo_teste'] = pagamentos.modo_teste()
         vigente = pagamentos.cobranca_vigente('pedido', p.id) if (papel == 'comprador' and p.status == 'aceito') else None
@@ -1054,8 +1062,9 @@ def _bloqueados(a_id, b_id):
         and_(Friendship.requester_id == b_id, Friendship.addressee_id == a_id))).first() is not None
 
 
-def abrir_pedido(usuario, produto_id, quantidade=1, nota=None, entrega=None, endereco=None):
-    """`entrega` = um dos modos que o PRODUTO oferece (`modos_de_entrega`); 'envio' exige endereço e soma o frete do produto ao total."""
+def abrir_pedido(usuario, produto_id, quantidade=1, nota=None, entrega=None, endereco=None, destino=None):
+    """`entrega` = um dos modos que o PRODUTO oferece (`modos_de_entrega`); 'envio' exige endereço e soma o frete do produto ao total.
+    `destino` = (lat, lng) que o SERVIDOR leu do aparelho do comprador (nunca coordenada vinda do cliente) pra acompanhar a entrega no mapa; só vale em 'envio'."""
     _exigir_localizacao(usuario)
     _exigir_nao_banido(usuario)
     qtd = _inteiro(quantidade, 1, QTD_MAX_PEDIDO, 'a quantidade')
@@ -1093,7 +1102,9 @@ def abrir_pedido(usuario, produto_id, quantidade=1, nota=None, entrega=None, end
             raise ErroBazar(f'Você já tem {MAX_PEDIDOS_ABERTOS_COMPRADOR} pedidos abertos. Conclua ou cancele algum antes.')
         ped = BazarPedido(produto_id=p.id, loja_id=l.id, comprador_id=usuario.id, vendedor_id=l.owner_id, produto_nome=p.nome,
                           quantidade=qtd, preco_unit_cent=p.preco_cent, total_cent=p.preco_cent * qtd + frete, status='aguardando', nota=nota,
-                          entrega_modo=modo, frete_cent=frete, endereco=end)
+                          entrega_modo=modo, frete_cent=frete, endereco=end,
+                          destino_lat=round(destino[0], 5) if destino and modo == 'envio' else None,
+                          destino_lng=round(destino[1], 5) if destino and modo == 'envio' else None)
         db.session.add(ped)
         db.session.flush()
         resultado['id'] = ped.id
@@ -1268,6 +1279,12 @@ def _efeitos_do_fim(p, novo):
         db.session.execute(update(BazarLoja).where(BazarLoja.id == p.loja_id).values(vendas=func.coalesce(BazarLoja.vendas, 0) + 1))
     if novo in ('cancelado', 'recusado', 'concluido'):
         p.endereco = None
+        from . import entregas
+        entregas.encerrar(p.id)          # a entrega acompanhada acaba junto: ninguém mais recebe posição desse pedido
+        # a entrega acompanhada acaba junto: o ponto do comprador some e ninguém compartilha mais posição (a memória do servidor é limpa por quem chamou)
+        p.destino_lat = p.destino_lng = None
+        if p.entrega_estado in ('a_caminho', 'aceita', 'convidado'):
+            p.entrega_estado = 'entregue' if novo == 'concluido' else 'recusada'
 
 
 def enviar_mensagem(usuario, pedido_id, texto, imagem_url=None):
@@ -1318,7 +1335,7 @@ def contar_pendencias(pessoa_id):
     return BazarPedido.query.filter(
         or_(and_(BazarPedido.vendedor_id == pessoa_id, BazarPedido.status.in_(('aguardando', 'pago'))),
             and_(BazarPedido.vendedor_id == pessoa_id, BazarPedido.status == 'confirmado', BazarPedido.pagamento == 'app'),
-            and_(BazarPedido.comprador_id == pessoa_id, BazarPedido.status.in_(('aceito', 'confirmado'))))).count()
+            and_(BazarPedido.comprador_id == pessoa_id, BazarPedido.status.in_(('aceito', 'confirmado', 'entregue'))))).count()
 
 
 def meus_pedidos(usuario, limite=40):
@@ -1424,7 +1441,7 @@ def resolver_disputa(admin, disputa_id, acao, nota):
                 raise ErroBazar('Esse pedido já terminou: só dá pra arquivar a disputa.')
             novo = 'cancelado'
         elif acao == 'concluir':
-            if p.status not in ('pago', 'confirmado'):
+            if p.status not in ('pago', 'confirmado', 'a_caminho', 'entregue'):
                 raise ErroBazar('Só dá pra concluir um pedido com o Pix informado ou confirmado.')
             novo = 'concluido'
         if novo:

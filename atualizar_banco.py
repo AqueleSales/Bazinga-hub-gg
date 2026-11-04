@@ -323,6 +323,15 @@ def atualizar_banco():
             # 43. Preferências da conta (Rodada 34): notificações por tipo, acessibilidade e formato da hora, em JSON (app/preferencias.py).
             add_column_se_nao_existir("person", "preferencias TEXT")
 
+            # 44. Entrega acompanhada no mapa (Rodada 36): a tabela bazar_entregador nasce pelo create_all; aqui só as colunas do pedido.
+            add_column_se_nao_existir("bazar_pedido", "destino_lat DOUBLE PRECISION")
+            add_column_se_nao_existir("bazar_pedido", "destino_lng DOUBLE PRECISION")
+            add_column_se_nao_existir("bazar_pedido", "entregador_id INTEGER")
+            add_column_se_nao_existir("bazar_pedido", "entrega_estado VARCHAR(10)")
+            add_column_se_nao_existir("bazar_pedido", "transporte VARCHAR(10)")
+            add_column_se_nao_existir("bazar_pedido", "saida_em TIMESTAMP")
+            add_column_se_nao_existir("bazar_pedido", "entregue_em TIMESTAMP")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)

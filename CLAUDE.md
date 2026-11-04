@@ -2829,6 +2829,14 @@ Pedido do dono depois de testar com amigos (e a ideia do professor: o mapa é o 
 4. `fumaca_loja_mapa.py` fixa o conjunto de chaves do pino: ao acrescentar campo ao `loja_pino_json`, atualize o teste.
 5. O Flask cacheia `chat.html`: reinicie o servidor de teste ao editar (reafirmando). Scripts de patch com aspas triplas ou barras vão por arquivo (`Write`), não heredoc.
 
+## Rodada 36 de 03/11/2026 — entrega acompanhada no mapa (comprador, vendedor e entregador)
+
+Arquivos: `app/entregas.py` (regra, sem socket; leia o cabeçalho), `entregas_events.py`, `static/js/entrega_mapa.js` + `css/entrega_mapa.css` (global `Entrega`), teste `testes/fumaca_entrega.py` (122 verificações, verde). **Depois do deploy: `python atualizar_banco.py` (passo 44: colunas de `bazar_pedido`; a tabela `bazar_entregador` nasce pelo create_all).** Novidade 41.
+- Pedido de `envio` ganha estados `a_caminho` e `entregue` (comprador confirma `recebi` em qualquer um dos dois); colunas `destino_lat/lng`, `entregador_id`, `entrega_estado` (convidado|aceita|a_caminho|entregue|recusada), `transporte`. Destino = posição do APARELHO do comprador lida pelo servidor; some quando o pedido termina (`_efeitos_do_fim`, que também chama `entregas.encerrar`).
+- Posição ao vivo: só em memória (`entregas._ativas`), repassada pelo gancho em `atualizar_localizacao` (só fonte `aparelho`, 1 a cada 2 s, zero consulta) para comprador, vendedor e entregador via `entrega_ao_vivo`. Vale mesmo com Fantasma (consentimento por entrega, explícito), nunca vai ao radar/pinos. Acaba em entregue/parar/pedido encerrado/4 h. Reinício do servidor: o cliente do entregador manda `entrega_retomar`.
+- Tempo = linha reta x 1,35 / velocidade do transporte (sem OSRM de propósito: vazaria o endereço). Entregador de fora: cadastro com aceite, convite pelo @, não é pago pelo app.
+- **NÃO feito/testado**: teste no navegador com duas abas (a UI `entrega_mapa.js` só passou em `node --check` e no teste de arquivos), `contar_queries.py` comparado com o anterior, suíte inteira, celular, GPS real. Conferir: `anunciarMinhaPosicao` acessível no escopo do `Entrega.iniciar` do chat.html; sem pino da loja o mapa só mostra destino.
+
 # Convenções
 
 - Nomes de eventos de socket, funções e variáveis em **português**
