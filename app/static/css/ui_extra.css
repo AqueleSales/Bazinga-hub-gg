@@ -1,0 +1,58 @@
+/* Dicas (tooltip), menu de botão direito e controles das transmissões. JS: static/js/ui_extra.js (global UiExtra).
+   Só transform/opacity se mexem. Nada aqui usa backdrop-filter (ver "Rolagem pesada" no CLAUDE.md). */
+
+/* ---------- dica própria (no lugar do balãozinho feio do navegador) ---------- */
+#ux-tip { position: fixed; left: 0; top: 0; z-index: 2147483000; max-width: 260px; padding: 6px 10px; border-radius: 8px; background: #111214; color: #f2f3f5; font-size: 12.5px; font-weight: 700; line-height: 1.35; letter-spacing: .1px; box-shadow: 0 6px 18px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 255, 255, .07); pointer-events: none; opacity: 0; transform: translateY(3px) scale(.97); transition: opacity .12s ease, transform .12s ease; word-wrap: break-word; }
+#ux-tip.on { opacity: 1; transform: none; }
+#ux-tip::after { content: ""; position: absolute; left: var(--seta, 50%); width: 8px; height: 8px; background: #111214; transform: translateX(-50%) rotate(45deg); }
+#ux-tip.acima::after { bottom: -4px; }
+#ux-tip.abaixo::after { top: -4px; }
+:root[data-claro] #ux-tip, :root[data-tema="light"] #ux-tip { background: #1f2024; color: #fff; }
+
+/* ---------- menu de botão direito ---------- */
+#ux-menu { position: fixed; left: 0; top: 0; z-index: 2147482900; min-width: 210px; max-width: min(320px, 92vw); padding: 6px; border-radius: 12px; background: var(--bg-secondary, #2b2d31); color: var(--text-normal, #dbdee1); border: 1px solid rgba(255, 255, 255, .09); box-shadow: 0 14px 40px rgba(0, 0, 0, .55); font-size: 13.5px; opacity: 0; transform: scale(.97); transform-origin: top left; transition: opacity .1s ease, transform .1s ease; max-height: 92vh; overflow-y: auto; }
+#ux-menu.on { opacity: 1; transform: none; }
+#ux-menu .ux-ti { padding: 6px 10px 4px; font-size: 11.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--text-muted, #949ba4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ux-menu .ux-sep { height: 1px; margin: 5px 6px; background: rgba(255, 255, 255, .08); }
+#ux-menu .ux-it { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; color: inherit; text-align: left; padding: 8px 10px; border-radius: 8px; cursor: pointer; font: inherit; }
+#ux-menu .ux-it i { width: 16px; text-align: center; font-size: 13px; opacity: .85; flex: none; }
+#ux-menu .ux-it:hover, #ux-menu .ux-it:focus-visible, #ux-menu .ux-it.foco { background: var(--brand-color, #5865f2); color: #fff; outline: none; }
+#ux-menu .ux-it:hover i, #ux-menu .ux-it.foco i { opacity: 1; }
+#ux-menu .ux-it.perigo { color: #f3686f; }
+#ux-menu .ux-it.perigo:hover, #ux-menu .ux-it.perigo.foco { background: #da373c; color: #fff; }
+#ux-menu .ux-it[disabled] { opacity: .4; cursor: default; pointer-events: none; }
+#ux-menu .ux-sl { padding: 6px 10px 8px; }
+#ux-menu .ux-sl-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; font-weight: 700; }
+#ux-menu .ux-sl-topo .ux-pct { font-variant-numeric: tabular-nums; color: var(--text-muted, #949ba4); font-weight: 800; }
+#ux-menu .ux-sl input[type=range] { width: 100%; accent-color: var(--brand-color, #5865f2); cursor: pointer; margin: 0; }
+
+/* ---------- botões que aparecem nos quadros da call ---------- */
+.video-card .ux-barra { position: absolute; top: 8px; right: 8px; z-index: 6; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.video-card:hover .ux-barra, .video-card:focus-within .ux-barra { opacity: 1; }
+.video-card .ux-barra button { width: 30px; height: 30px; border: 0; border-radius: 9px; background: rgba(0, 0, 0, .72); color: #fff; cursor: pointer; font-size: 13px; padding: 0; display: grid; place-items: center; }
+.video-card .ux-barra button:hover, .video-card .ux-barra button:focus-visible { background: var(--brand-color, #5865f2); outline: none; }
+.video-card .ux-barra button.vermelho:hover { background: #da373c; }
+.call-janela.mini .video-card .ux-barra button { width: 24px; height: 24px; font-size: 11px; border-radius: 7px; }
+.video-card.cu-sem-video .ux-barra { top: 6px; right: 6px; }
+
+/* ---------- transmissão em que parei de assistir ---------- */
+.video-card .ux-parado-box { display: none; position: absolute; inset: 0; z-index: 4; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px; text-align: center; background: repeating-linear-gradient(135deg, #15161a, #15161a 14px, #191b20 14px, #191b20 28px); color: var(--text-header, #f2f3f5); }
+.video-card.ux-parado .ux-parado-box { display: flex; }
+.video-card.ux-parado video { display: none !important; }
+.ux-parado-box i { font-size: 22px; color: var(--text-muted, #949ba4); }
+.ux-parado-box b { font-size: 14px; }
+.ux-parado-box span { font-size: 12px; color: var(--text-muted, #949ba4); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ux-parado-box button { margin-top: 4px; border: 0; border-radius: 9px; padding: 7px 14px; background: var(--brand-color, #5865f2); color: #fff; font-weight: 800; cursor: pointer; }
+.ux-parado-box button:hover { filter: brightness(1.1); }
+.video-card.ux-parado .cu-zoom, .video-card.ux-parado .ux-barra button.vermelho { display: none; }
+.call-janela.mini .ux-parado-box i, .call-janela.mini .ux-parado-box span { display: none; }
+.call-janela.mini .ux-parado-box b { font-size: 11px; }
+.call-janela.mini .ux-parado-box button { padding: 4px 9px; font-size: 11px; }
+
+@media (hover: none) {
+    .video-card .ux-barra { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #ux-tip, #ux-menu, .video-card .ux-barra { transition: none; }
+}
+:root[data-reduz-mov="1"] #ux-tip, :root[data-reduz-mov="1"] #ux-menu, :root[data-reduz-mov="1"] .video-card .ux-barra { transition: none; }

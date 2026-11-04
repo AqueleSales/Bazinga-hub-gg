@@ -10,10 +10,13 @@ import random
 import re
 import time
 
+from . import jogos
+
 FILES = 'abcdefgh'
 _RE_CASA = re.compile(r'^[a-h][1-8]$')
 
-TIPOS_ATIVIDADE = ('xadrez',)   # lista fechada: tipo inventado pelo cliente é ignorado
+# lista fechada: tipo inventado pelo cliente é ignorado. O xadrez é daqui; velha, ppt, forca e dados moram em `jogos.py`.
+TIPOS_ATIVIDADE = ('xadrez',) + tuple(jogos.JOGOS)
 
 COR_BRANCA, COR_PRETA = 'w', 'b'
 INICIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
@@ -361,13 +364,12 @@ class Partida:
             self.resultado = {'vencedor': None, 'motivo': 'acordo'}
 
 
-class Atividade:
+class Atividade(jogos.Reserva):
     """O que está rolando numa call: tipo, quem sentou em cada lado e a partida."""
-    _contador = 0
 
     def __init__(self, tipo, iniciador_id):
-        Atividade._contador += 1
-        self.id = Atividade._contador
+        self.id = jogos.proximo_id()
+        self.reserva = None
         self.tipo = tipo
         self.iniciador_id = iniciador_id
         self.lados = {COR_BRANCA: None, COR_PRETA: None}      # cor -> usuario_id
@@ -391,12 +393,16 @@ class Atividade:
         livres = [c for c, uid in self.lados.items() if uid is None]
         if not livres:
             return False, 'Os dois lados já estão ocupados.'
+        ok, motivo = self._vaga_para(usuario_id, livres)
+        if not ok:
+            return False, motivo
         if cor is None:
             cor = random.choice(livres)
         if cor not in livres:
             return False, 'Esse lado já está ocupado.'
         self.lados[cor] = usuario_id
         self.nomes[usuario_id] = {'nome': nome, 'avatar': avatar}
+        self._ao_sentar(usuario_id)
         self.seq += 1
         if all(self.lados.values()):
             self.partida = Partida()
@@ -429,8 +435,10 @@ class Atividade:
             situacao = 'aguardando'
         else:
             situacao = 'fim' if p.resultado else 'jogando'
+        reservado, resta = self.reserva_para_estado()
         return {
             'id': self.id, 'tipo': self.tipo, 'seq': self.seq, 'situacao': situacao, 'iniciador_id': self.iniciador_id,
+            'lados': [COR_BRANCA, COR_PRETA], 'reservado_para': reservado, 'reserva_restante': resta,
             'jogadores': {cor: ({'id': uid, **self.nomes.get(uid, {})} if uid else None) for cor, uid in self.lados.items()},
             'fen': p.pos.fen() if p else INICIAL_FEN,
             'lances': list(p.lances) if p else [],
@@ -453,7 +461,7 @@ def da_call(chave):
 def iniciar(chave, tipo, iniciador_id):
     if tipo not in TIPOS_ATIVIDADE or chave in ATIVIDADES:
         return None
-    ATIVIDADES[chave] = Atividade(tipo, iniciador_id)
+    ATIVIDADES[chave] = jogos.JOGOS[tipo](iniciador_id) if tipo in jogos.JOGOS else Atividade(tipo, iniciador_id)
     return ATIVIDADES[chave]
 
 

@@ -10,7 +10,7 @@ const CallUI = (function () {
     'use strict';
     let ctx = null;
     const CH_OPC = 'pnt_call_opc';
-    const PADRAO = { grade: true, minha: true, semVideo: true, previa: true, sons: true, otimizar: 'nitidez', qualidade: 'auto' };
+    const PADRAO = { grade: true, minha: true, semVideo: true, previa: true, sons: true, otimizar: 'fluidez', qualidade: 'auto' };
     const opc = Object.assign({}, PADRAO);
     try { Object.assign(opc, JSON.parse(localStorage.getItem(CH_OPC) || '{}')); } catch (e) {}
     if (!['nitidez', 'fluidez'].includes(opc.otimizar)) opc.otimizar = PADRAO.otimizar;
@@ -303,7 +303,7 @@ const CallUI = (function () {
         const v = card.querySelector('video');
         return !!v && v.style.display !== 'none';
     }
-    function ehTela(card) { const id = card.id || ''; return id.includes('-screen-') && !id.startsWith('screen-card-'); }
+    function ehTela(card) { const id = card.id || ''; return id.includes('-screen-') && !id.startsWith('screen-card-') && !card.classList.contains('ux-parado'); }   // parei de assistir: vira um quadro comum
 
     // Melhor nº de colunas pra encher a área com quadros do mesmo tamanho (testa 16:9, 4:3 e quadrado; prefere 16:9)
     function melhorGrade(n, W, H, gap) {
@@ -322,7 +322,7 @@ const CallUI = (function () {
     }
 
     function escolherPrincipal(cards) {
-        const focada = cards.find((c) => c.classList.contains('focused'));
+        const focada = cards.find((c) => c.classList.contains('focused') && !c.classList.contains('ux-parado'));
         if (focada) return focada;
         if (opc.grade || cards.length < 2) return null;
         const tela = cards.find(ehTela);

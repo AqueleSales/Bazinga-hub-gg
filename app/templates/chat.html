@@ -2983,6 +2983,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/call_ui.css') }}?v={{ call_ui_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/atividades.css') }}?v={{ atividades_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ui_extra.css') }}?v={{ ui_extra_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/clipes.css') }}?v={{ clipes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/passe.css') }}?v={{ passe_css_v }}">
@@ -4975,7 +4976,9 @@
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/call_ui.js') }}?v={{ call_ui_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/atividades_jogos.js') }}?v={{ atividades_jogos_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/atividades.js') }}?v={{ atividades_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/ui_extra.js') }}?v={{ ui_extra_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/clipes.js') }}?v={{ clipes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
@@ -12738,8 +12741,22 @@
         });
         socket.on('atividade_estado', (d) => Atividades.aoEstado(d));
         socket.on('atividade_erro', (d) => Atividades.aoErro(d));
+        socket.on('atividade_convite', (d) => Atividades.aoConvite(d));
+        socket.on('atividade_chamada', (d) => Atividades.aoChamada(d));
+        socket.on('atividade_convite_enviado', (d) => Atividades.aoConviteEnviado(d));
+        socket.on('atividade_convite_recusado', (d) => Atividades.aoConviteRecusado(d));
         socket.on('voz_convite', (d) => CallUI.convidado(d));
         socket.on('voz_convite_enviado', (d) => CallUI.aoConvidadoEnviado(d));
+
+        // Dicas próprias (no lugar do balãozinho do navegador), botão direito do app e controles das transmissões (volume por pessoa, parar de
+        // assistir, tela cheia): static/js/ui_extra.js. Volume e silêncio por pessoa ficam só neste aparelho.
+        UiExtra.iniciar({
+            esc, escUrl, toast: (m, t) => showToast(m, t), grade: videoGrid,
+            volumeSaida: () => ConfigUsuario.volumeSaida(),
+            surdo: () => !!deafened,
+            uidDoPeer: (peer) => (visualPorPeer[peer] || {}).uid || null,
+            abrirPerfil: (id, ancora) => abrirCartao(id, ancora),
+        });
 
         // Supressão de ruído rápida (botão perto do "Voz conectada" e item do menu dos 3 pontinhos). É o filtro NATIVO do navegador
         // (constraint noiseSuppression do getUserMedia), a mesma chave da aba Voz e Vídeo: mexer aqui muda lá e vice-versa.
@@ -12869,28 +12886,43 @@
         // A pessoa escolhe nos 3 pontinhos da call: Economia / Automática / Alta (degraus de bitrate e teto de resolução) e, pra tela,
         // Nitidez (texto e código nítidos) ou Fluidez (jogos e vídeo). Dentro do degrau escolhido o ajuste continua automático.
         const NIVEIS_POR_QUALIDADE = {
-            economia: { tela: [800000, 450000, 220000], video: [450000, 260000, 150000] },
-            auto:     { tela: [1800000, 900000, 400000], video: [900000, 500000, 250000] },
-            alta:     { tela: [3500000, 1800000, 800000], video: [1800000, 1000000, 500000] },
+            economia: { tela: [1000000, 600000, 300000], video: [450000, 260000, 150000] },
+            auto:     { tela: [2500000, 1400000, 700000], video: [900000, 500000, 250000] },
+            alta:     { tela: [5000000, 2800000, 1400000], video: [1800000, 1000000, 500000] },
         };
-        // teto de resolução (altura) e fps da TELA compartilhada, por qualidade e por "otimizar"
+        // teto de resolução (altura) e fps da TELA compartilhada, por qualidade e por "otimizar".
+        // O padrão é Fluidez (720p a 30 fps): o 1080p a 15 fps com "nitidez" deixava o jogo/vídeo com cara de slideshow e pesava pro PC de quem
+        // assiste. Nitidez continua à escolha (texto e código). Veja também alvoPorEspectadores(): mais gente assistindo = menos pixels por cópia.
         const TELA_POR_QUALIDADE = {
-            economia: { nitidez: { h: 720, fps: 10 },  fluidez: { h: 480, fps: 30 } },
+            economia: { nitidez: { h: 720, fps: 12 },  fluidez: { h: 480, fps: 30 } },
             auto:     { nitidez: { h: 1080, fps: 15 }, fluidez: { h: 720, fps: 30 } },
-            alta:     { nitidez: { h: 1080, fps: 30 }, fluidez: { h: 1080, fps: 30 } },
+            alta:     { nitidez: { h: 1080, fps: 24 }, fluidez: { h: 1080, fps: 30 } },
         };
         // câmera (largura x altura ideais, fps)
         const CAMERA_POR_QUALIDADE = { economia: { w: 640, h: 360, fps: 20 }, auto: { w: 960, h: 540, fps: 24 }, alta: { w: 1280, h: 720, fps: 30 } };
         function opcaoCall(k, padrao) { try { return CallUI.opcao(k) || padrao; } catch (e) { return padrao; } }
         function niveisDe(tipo) { return (NIVEIS_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || NIVEIS_POR_QUALIDADE.auto)[tipo] || NIVEIS_POR_QUALIDADE.auto.video; }
-        function telaAlvo() { return (TELA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || TELA_POR_QUALIDADE.auto)[opcaoCall('otimizar', 'nitidez')]; }
+        // A malha P2P CODIFICA a tela uma vez POR PESSOA que assiste (cada ligação tem o seu codificador): com 4 espectadores o PC de quem
+        // transmite faz 4 vezes o trabalho. Então quanto mais gente, menor a altura (o fps escolhido fica).
+        const ALTURAS = [1080, 900, 720, 540, 480, 360];
+        function alvoPorEspectadores(base) {
+            let n = 0; try { n = Object.keys(peers).length; } catch (e) {}
+            const passos = n >= 7 ? 3 : n >= 5 ? 2 : n >= 3 ? 1 : 0;
+            if (!passos) return base;
+            let i = ALTURAS.findIndex(a => a <= base.h); if (i < 0) i = ALTURAS.length - 1;
+            return { h: ALTURAS[Math.min(ALTURAS.length - 1, i + passos)], fps: base.fps };
+        }
+        function telaAlvo() {
+            const base = (TELA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || TELA_POR_QUALIDADE.auto)[opcaoCall('otimizar', 'fluidez')];
+            return alvoPorEspectadores(base);
+        }
         function cameraAlvo() { return CAMERA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || CAMERA_POR_QUALIDADE.auto; }
         const monitoresBitrate = new Map();
 
         // Aplica o que foi escolhido nas transmissões que já estão no ar (bitrate, dica de conteúdo, resolução e fps).
         function aplicarQualidadeAoVivo() {
             monitoresBitrate.forEach(m => { try { m.reaplicar(); } catch (e) {} });
-            const dica = opcaoCall('otimizar', 'nitidez') === 'nitidez' ? 'detail' : 'motion';
+            const dica = opcaoCall('otimizar', 'fluidez') === 'nitidez' ? 'detail' : 'motion';
             const t = telaAlvo();
             activeScreenStreams.forEach(sc => sc.stream.getVideoTracks().forEach(tr => {
                 try { tr.contentHint = dica; tr.applyConstraints({ height: { ideal: t.h, max: t.h }, frameRate: { ideal: t.fps, max: t.fps } }).catch(() => {}); } catch (e) {}
@@ -12913,6 +12945,7 @@
                     const params = sender.getParameters();
                     if (!params.encodings || !params.encodings.length) params.encodings = [{}];
                     params.encodings[0].maxBitrate = niveis[Math.min(i, niveis.length - 1)];
+                    if (tipo === 'tela') params.encodings[0].maxFramerate = telaAlvo().fps;   // teto de fps também no codificador, não só na captura
                     await sender.setParameters(params);
                 } catch(e) {}
             };
@@ -12978,38 +13011,59 @@
                 const audioCtx = garantirAudio();
                 if (!audioCtx) return;
                 const analyser = audioCtx.createAnalyser();
-                const source = audioCtx.createMediaStreamSource(stream);
-                source.connect(analyser); analyser.fftSize = 256;
+                analyser.fftSize = 256;
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                // BUG (a bordinha verde que parava "do nada"): o nó de áudio do navegador fica preso na PRIMEIRA faixa do stream. Quando o
+                // microfone é reaberto (trocar de mic, ligar/desligar supressão de ruído, mudar o perfil de voz...) a faixa velha morre e o
+                // stream ganha uma nova, mas o analisador seguia ouvindo a velha (silêncio) pra sempre. Agora ele religa sozinho na faixa viva.
+                let source = null, faixaLigada = null;
+                const ligar = () => {
+                    const viva = stream.getAudioTracks().find(t => t.readyState === 'live');
+                    if (!viva) return false;
+                    if (viva === faixaLigada && source) return true;
+                    try { if (source) source.disconnect(); } catch(e) {}
+                    source = audioCtx.createMediaStreamSource(new MediaStream([viva]));
+                    source.connect(analyser);
+                    faixaLigada = viva;
+                    return true;
+                };
 
                 // Acende na hora, mas só apaga depois de ~400ms sem volume -
                 // sem essa segurança, uma fala normal (que tem microrespiros)
                 // fazia a borda verde ligar/desligar várias vezes por segundo,
                 // que é boa parte do "fica mudando toda hora" reclamado.
-                let silencioDesde = 0;
+                let silencioDesde = 0, semFaixaDesde = 0;
                 const SEGURA_MS = 400;
                 const check = () => {
-                    // sai quando o cartão some OU quando a faixa acabou (o cartão "my-video-card" é fixo no HTML: sem isto o
-                    // laço de cada call antiga continuava rodando pra sempre)
-                    if(!document.getElementById(cardId) || stream.getAudioTracks().every(t => t.readyState === 'ended')) {
-                        try { source.disconnect(); } catch(e) {}
+                    const card = document.getElementById(cardId);
+                    // Para quando o cartão some, quando este stream não é mais o do meu microfone (call nova) ou quando ficou 8 s sem
+                    // nenhuma faixa viva (o cartão "my-video-card" é fixo no HTML: sem isto o laço de cada call antiga rodava pra sempre).
+                    const ehMeu = cardId === 'my-video-card';
+                    if (!card || (ehMeu && stream !== myMicStream)) { try { if (source) source.disconnect(); } catch(e) {} clearInterval(timer); return; }
+                    if (!ligar()) {
+                        if (!semFaixaDesde) semFaixaDesde = performance.now();
+                        if (performance.now() - semFaixaDesde > 8000) { clearInterval(timer); }
+                        card.classList.remove('is-speaking');
                         return;
                     }
+                    semFaixaDesde = 0;
+                    // o navegador pode "suspender" o áudio do app (aba em segundo plano, troca de dispositivo): sem retomar, o volume lido é sempre 0
+                    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
                     analyser.getByteFrequencyData(dataArray);
                     let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
-                    let avg = sum / dataArray.length;
-                    const card = document.getElementById(cardId);
-                    if(card) {
-                        if(avg > 15) {
-                            silencioDesde = 0;
-                            card.classList.add('is-speaking');
-                        } else {
-                            if(!silencioDesde) silencioDesde = performance.now();
-                            if(performance.now() - silencioDesde > SEGURA_MS) card.classList.remove('is-speaking');
-                        }
+                    const avg = sum / dataArray.length;
+                    if (avg > 15) {
+                        silencioDesde = 0;
+                        card.classList.add('is-speaking');
+                    } else {
+                        if (!silencioDesde) silencioDesde = performance.now();
+                        if (performance.now() - silencioDesde > SEGURA_MS) card.classList.remove('is-speaking');
                     }
-                    requestAnimationFrame(check);
                 };
+                // setInterval e não requestAnimationFrame: o rAF para quando a janela está escondida/coberta (jogando com a call de lado) e a
+                // borda de quem fala parava de atualizar.
+                const timer = setInterval(check, 66);
                 check();
             } catch(e) {}
         }
@@ -13303,8 +13357,9 @@
         }
         function registrarVisual(peerId, v) {
             if (!peerId || !v) return;
-            visualPorPeer[peerId] = { moldura: v.moldura || '', nome_estilo: v.nome_estilo || '', equipados: v.equipados || {} };
+            visualPorPeer[peerId] = { moldura: v.moldura || '', nome_estilo: v.nome_estilo || '', equipados: v.equipados || {}, uid: v.usuario_id || null };
             aplicarVisualAoCard(peerId);
+            UiExtra.reaplicarPeer(peerId);                 // o volume guardado dessa pessoa passa a valer
         }
         // Meu próprio card (e o efeito de fala dele): vem de perfilMeu
         function aplicarMeuVisualNaCall() {
@@ -13494,12 +13549,13 @@
             a.muted = !!deafened;
             a.volume = ConfigUsuario.volumeSaida();        // Configurações > Voz e vídeo
             card.appendChild(a);
+            UiExtra.audioDoCard(card, a);                  // volume/silêncio desta pessoa (botão direito no quadro)
             tocarAudioRemoto(a);
             return a;
         }
         // Fone desligado = não ouve ninguém (antes o botão só mudava o ícone e o aviso pros outros; o som seguia tocando).
         function aplicarSurdez() {
-            document.querySelectorAll('#video-grid audio.audio-remoto').forEach(a => { a.muted = !!deafened; });
+            document.querySelectorAll('#video-grid audio.audio-remoto').forEach(a => { a.muted = !!deafened || a.dataset.mudo === '1'; });
         }
         // autocura: áudio parado (play barrado, stream que trocou) volta a tocar sozinho
         setInterval(() => {
@@ -13659,7 +13715,7 @@
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
                 // "detail" mantém texto e código nítidos (perde fluidez se a rede apertar); "motion" faz o contrário (jogos, vídeo)
-                newStream.getVideoTracks().forEach(tr => { try { tr.contentHint = opcaoCall('otimizar', 'nitidez') === 'nitidez' ? 'detail' : 'motion'; } catch (e) {} });
+                newStream.getVideoTracks().forEach(tr => { try { tr.contentHint = opcaoCall('otimizar', 'fluidez') === 'nitidez' ? 'detail' : 'motion'; } catch (e) {} });
                 const streamId = Date.now();
                 // `calls` guarda as ligações PeerJS abertas pra essa tela em
                 // cada peer - sem isso, pararCompartilhamento() não tinha
