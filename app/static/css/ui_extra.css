@@ -56,3 +56,20 @@
     #ux-tip, #ux-menu, .video-card .ux-barra { transition: none; }
 }
 :root[data-reduz-mov="1"] #ux-tip, :root[data-reduz-mov="1"] #ux-menu, :root[data-reduz-mov="1"] .video-card .ux-barra { transition: none; }
+
+/* ---------- telas pequenas: o cabeçalho do Radar mede a PRÓPRIA largura e vai ficando só com ícones (nada de botão cortado) ---------- */
+@container radarh (max-width: 1060px) {
+    #radar-header-actions .rot-lg { display: none; }
+    #radar-header-actions .ms-bt .ms-rot { display: none; }
+    #radar-header-actions .ms-bt { padding: 6px 10px; }
+    #radar-header-actions .conv-barra { min-width: 120px; max-width: 220px; }
+}
+@container radarh (max-width: 800px) {
+    #radar-header-actions .rot-md { display: none; }
+    #radar-header-actions { gap: 8px !important; margin-left: 8px !important; }
+    #radar-header-title { padding-right: 8px !important; }
+    #radar-header-actions .conv-barra { min-width: 96px; max-width: 150px; }
+}
+@container radarh (max-width: 620px) {
+    #radar-header-actions .conv-barra { display: none; }
+}

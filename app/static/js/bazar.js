@@ -38,6 +38,7 @@ const Bazar = (() => {
     let props = [], dest = [], adIdx = 0, adTimer = 0, observador = null, casaPadrao = false;
     let carregadoEm = 0, desatualizada = false;
     const produtos = new Map(), pedCache = new Map(), favs = new Set();
+    let produtoPendente = null;      // o pedido rápido do mapa: abre a loja e, quando ela chega, já abre o produto escolhido
     let lojaAtual = null, prodAtual = null, ed = null, moderacao = null, secao = 'inicio';
     let pedidos = { comprando: [], vendendo: [], carregado: false };
     let ed_aval = { nota: 0, texto: '' };
@@ -348,6 +349,7 @@ const Bazar = (() => {
         if (!l) { alvo.innerHTML = `${voltar}<div class="bz-vazio"><i class="fa-solid fa-spinner fa-spin"></i>Abrindo a loja...</div>`; return; }
         const capa = urlOk(l.banner_url);
         (l.produtos || []).forEach((p) => produtos.set(p.id, { ...p, loja_nome: l.nome, loja_cor: l.cor }));
+        if (produtoPendente != null) { const pid = produtoPendente; produtoPendente = null; setTimeout(() => abrirProduto(pid), 80); }
         alvo.innerHTML = `${voltar}
             <div class="bz-loja-pagina" style="${estiloLoja(l)}">
                 <div class="bz-loja-capa" style="${capa ? `background-image:url('${esc(urlCss(capa))}')` : ''}"><div class="bz-toldo"></div></div>
@@ -1255,7 +1257,7 @@ const Bazar = (() => {
     }
     function avisoAdmin(d) { disputasN = d.disputas || 0; if (vista === 'painel') desenharPainel(); }
 
-    function abrirLojaDe(id) { if (id) abrirLoja(Number(id)); }
+    function abrirLojaDe(id, produtoId) { if (id) { produtoPendente = produtoId ? Number(produtoId) : null; abrirLoja(Number(id)); } }
     function abrirPedidos(ref) {
         if (ref === 'disputa') { abrirPainel('disputas'); return; }              // aviso de disputa nova pro admin
         abrirPainel('compras');

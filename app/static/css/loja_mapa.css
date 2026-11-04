@@ -73,3 +73,66 @@
 .lm-pts i.on { opacity: 1; background: var(--lj, #d9822b); transform: scale(1.3); }
 @media (hover: none) { .lm-seta { opacity: .85; } }
 @media (prefers-reduced-motion: reduce) { .lm-balao .leaflet-popup-content-wrapper, .lm-prev .lm-logo.grande, .lm-prev .lm-corpo > * { animation: none; } .lm-vit-trilho { transition: none; } }
+
+/* ---------- gaveta "Lojas por perto" (pedido rápido ao lado do mapa) ---------- */
+.lg-dock { position: absolute; left: 0; top: 96px; z-index: 650; display: flex; align-items: flex-start; pointer-events: none; }
+.lg-dock > * { pointer-events: auto; }
+.lg-aba { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 46px; padding: 10px 4px 9px; border: 0; border-radius: 0 14px 14px 0; background: var(--bg-secondary, #2f3136); color: var(--text-header, #fff); border: 1px solid rgba(255, 255, 255, .12); border-left: 0; box-shadow: 0 6px 20px rgba(0, 0, 0, .4); cursor: pointer; font: inherit; position: relative; }
+.lg-aba i { font-size: 18px; color: #ffb454; }
+.lg-aba b { font-size: 10.5px; letter-spacing: .3px; }
+.lg-aba .lg-conta { position: absolute; top: -7px; right: -6px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; background: #ed4245; color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.lg-dock.vazio .lg-aba .lg-conta { background: #4e5058; }
+.lg-aba:hover, .lg-aba:focus-visible { background: var(--bg-tertiary, #202225); outline: none; }
+.lg-gaveta { width: 340px; max-width: calc(100vw - 70px); max-height: calc(100vh - 190px); display: flex; flex-direction: column; background: var(--bg-secondary, #2f3136); color: var(--text-normal, #dbdee1); border: 1px solid rgba(255, 255, 255, .12); border-radius: 0 16px 16px 0; box-shadow: 0 18px 50px rgba(0, 0, 0, .55); overflow: hidden;
+    transform: translateX(-110%); opacity: 0; visibility: hidden; transition: transform .22s cubic-bezier(.16, .84, .44, 1), opacity .18s, visibility 0s linear .22s; }
+.lg-dock:hover .lg-gaveta, .lg-dock.fixa .lg-gaveta, .lg-dock:focus-within .lg-gaveta { transform: none; opacity: 1; visibility: visible; transition-delay: 0s; }
+.lg-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 6px; }
+.lg-topo b { display: block; font-size: 15px; color: var(--text-header, #fff); }
+.lg-topo small { color: var(--text-muted, #949ba4); font-size: 11.5px; }
+.lg-x { border: 0; background: transparent; color: var(--text-muted); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; }
+.lg-x:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.lg-busca { display: flex; align-items: center; gap: 8px; margin: 4px 12px 8px; padding: 0 10px; border-radius: 10px; background: var(--bg-tertiary, #202225); border: 1px solid transparent; }
+.lg-busca:focus-within { border-color: var(--brand-color, #5865f2); }
+.lg-busca i { color: var(--text-muted); font-size: 13px; }
+.lg-busca input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-normal); padding: 9px 0; font-size: 13px; }
+.lg-chips-cat { display: flex; gap: 6px; padding: 0 12px 8px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.lg-chips-cat::-webkit-scrollbar { display: none; }
+.lg-chip, .lg-ordem button { border: 0; border-radius: 20px; padding: 6px 11px; background: var(--bg-tertiary, #202225); color: var(--text-normal); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex: none; font-family: inherit; }
+.lg-chip i { margin-right: 4px; font-size: 11px; }
+.lg-chip:hover, .lg-ordem button:hover { background: rgba(255, 255, 255, .12); }
+.lg-chip.on, .lg-ordem button.on { background: var(--brand-color, #5865f2); color: #fff; }
+.lg-ordem { display: flex; gap: 6px; padding: 0 12px 8px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.lg-lista { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+.lg-loja { border-radius: 14px; background: var(--bg-tertiary, #202225); border: 1px solid rgba(255, 255, 255, .06); border-left: 4px solid var(--lj, #d9822b); padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: none; }
+.lg-loja header { display: flex; align-items: center; gap: 10px; }
+.lg-loja .lm-logo { width: 38px; height: 38px; flex: none; }
+.lg-id { flex: 1; min-width: 0; }
+.lg-id b { display: block; font-size: 14px; color: var(--text-header, #fff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-id small { color: var(--text-muted); font-size: 11.5px; }
+.lg-id small i { color: #ffb454; }
+.lg-mapa { border: 0; border-radius: 9px; width: 32px; height: 32px; background: rgba(255, 255, 255, .08); color: var(--text-normal); cursor: pointer; flex: none; }
+.lg-mapa:hover { background: var(--brand-color, #5865f2); color: #fff; }
+.lg-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.lg-prods { display: flex; flex-direction: column; gap: 5px; }
+.lg-prod { display: flex; align-items: center; gap: 9px; padding: 5px 7px 5px 5px; border: 0; border-radius: 10px; background: var(--bg-secondary, #2f3136); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.lg-prod:hover, .lg-prod:focus-visible { background: rgba(255, 255, 255, .1); outline: none; }
+.lg-foto { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 8px; background: var(--bg-primary, #36393f); display: grid; place-items: center; overflow: hidden; color: var(--text-muted); }
+.lg-foto img { width: 100%; height: 100%; object-fit: cover; }
+.lg-pt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lg-pt b { font-size: 12.5px; color: var(--text-header, #fff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-pt em { font-style: normal; font-weight: 800; font-size: 13px; color: #3ddc84; }
+.lg-pedir { flex: none; padding: 5px 11px; border-radius: 8px; background: var(--green-color, #23a559); color: #fff; font-size: 11.5px; font-weight: 800; }
+.lg-semprod { font-size: 12px; color: var(--text-muted); }
+.lg-abrir { border: 0; border-radius: 9px; padding: 8px 10px; background: rgba(255, 255, 255, .08); color: var(--text-normal); font-weight: 700; font-size: 12.5px; cursor: pointer; font-family: inherit; }
+.lg-abrir:hover { background: var(--lj, #d9822b); color: #fff; }
+.lg-vazio { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 28px 12px; color: var(--text-muted); font-size: 12.5px; }
+.lg-vazio i { font-size: 26px; opacity: .6; }
+.lg-vazio b { color: var(--text-header, #fff); font-size: 14px; }
+
+@media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
+    .lg-dock { top: auto; bottom: calc(var(--nav-h, 64px) + 150px); }
+    .lg-dock:hover .lg-gaveta { transform: translateX(-110%); opacity: 0; visibility: hidden; }          /* no toque não existe "passar o mouse": só abre tocando */
+    .lg-dock.fixa .lg-gaveta, .lg-dock:focus-within .lg-gaveta { transform: none; opacity: 1; visibility: visible; }
+    .lg-gaveta { width: calc(100vw - 56px); max-height: 56vh; }
+}
+@media (prefers-reduced-motion: reduce) { .lg-gaveta { transition: none; } }

@@ -708,8 +708,9 @@ def url_de_imagem_ok(url):
 # A paleta mora no CSS como qualquer outro; aqui fica só o id e o nome (o do passe usa o nome na recompensa).
 TEMAS_EXCLUSIVOS = {'templo': 'Templo', 'tartaro': 'Tártaro'}
 CORES_TEMAS_EXCLUSIVOS = {'templo': ['#1c1a14', '#15130e', '#0f0d09', '#d4a24c'], 'tartaro': ['#241618', '#1b1012', '#130a0c', '#c1403a']}   # amostra: fundo, lateral, topo, destaque
-TEMAS_ESCUROS = ('dark', 'amoled', 'meia_noite', 'floresta', 'oceano', 'por_do_sol', 'ametista', 'cafe', 'cereja') + tuple(TEMAS_EXCLUSIVOS)
-TEMAS_CLAROS = ('light', 'sakura', 'menta', 'areia')
+TEMAS_ESCUROS = ('dark', 'amoled', 'meia_noite', 'floresta', 'oceano', 'por_do_sol', 'ametista', 'cafe', 'cereja',
+                 'grafite', 'vinho', 'esmeralda', 'abismo', 'ciber', 'neon_noturno', 'carvao', 'crepusculo', 'musgo', 'turquesa') + tuple(TEMAS_EXCLUSIVOS)
+TEMAS_CLAROS = ('light', 'sakura', 'menta', 'areia', 'lavanda', 'ceu', 'pessego', 'limao', 'nuvem')
 TEMAS_VALIDOS = TEMAS_ESCUROS + TEMAS_CLAROS + ('custom',)
 
 

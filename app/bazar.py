@@ -363,7 +363,7 @@ def loja_pino_json(l, aprox=None, produtos=None):
             'logo_url': l.logo_url, 'banner_url': l.banner_url if l.banner_url and url_de_imagem_ok(l.banner_url) else None,
             'regiao': l.regiao or '', 'nota': nota_media(l), 'nota_qtd': l.nota_qtd or 0, 'lat': l.pino_lat, 'lng': l.pino_lng,
             'aprox': bool(l.pino_aprox), 'pague_no_app': checkout_ativo(l), 'reputacao': reputacao(l), 'dono_id': l.owner_id,
-            'produtos': produtos}
+            'vendas': l.vendas or 0, 'produtos': produtos}
 
 
 def lojas_no_mapa(a, b, c, d):
