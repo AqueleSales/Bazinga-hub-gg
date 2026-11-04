@@ -657,7 +657,12 @@ def bazar_moderar(dados):
         if info['tipo'] in ('loja', 'produto'):
             _avisar_mudou()
         elif info['acao'] == 'remover':
-            if info['tipo'] == 'resposta':
+            if info['tipo'] == 'mensagem':
+                emit('mensagem_apagada', {'msg_id': info['alvo_id']}, to=str(info['canal_id']))
+            elif info['tipo'] == 'dm':
+                for pessoa in set(info.get('pontas') or ()):
+                    emit('mensagem_direta_apagada', {'msg_id': info['alvo_id']}, to=sala_pessoal(pessoa))
+            elif info['tipo'] == 'resposta':
                 emit('geonote_resposta_apagada', {'id': info['alvo_id'], 'note_id': info.get('nota_id')}, broadcast=True)
             else:
                 emit('geonote_apagada' if info['tipo'] == 'nota' else 'servidor_mapa_apagado', {'id': info['alvo_id']}, broadcast=True)

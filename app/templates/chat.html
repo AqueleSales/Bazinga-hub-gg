@@ -390,6 +390,9 @@
         .message.grouped .message-header { display: none; }
 
         .message-author { font-size: 15px; font-weight: 600; cursor: pointer; color: var(--text-header); }
+        .msg-ident { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; vertical-align: middle; }
+        .msg-ident .pt { flex: none; }
+        .msg-ident .titulo-chip { font-size: 10.5px; padding: 1px 7px; }
         .message-author:hover { text-decoration: underline; }
         .message-timestamp { font-size: 12px; color: var(--text-muted); font-weight: 500; }
         .message-text { color: var(--text-normal); font-size: 15px; line-height: 1.375rem; word-wrap: break-word; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -980,6 +983,7 @@
         #lightbox .lb-baixar:hover { background: var(--brand-color); }
 
         .context-menu.nao-sou-autor .autor-only { display: none; }
+        .context-menu:not(.nao-sou-autor) .so-de-outros { display: none; }   /* denunciar só a mensagem de outra pessoa */
         .context-menu.nao-posso-apagar .apagar-only { display: none; }
         #msg-context-menu.em-dm .so-canal { display: none !important; }   /* DM: sem reagir nem fixar (só existem em canal) */
 
@@ -4296,6 +4300,7 @@
         <div class="context-menu-item" id="ctx-copy-id">Copiar ID da mensagem <i class="fa-solid fa-hashtag"></i></div>
         <div class="context-menu-separator apagar-only"></div>
         <div class="context-menu-item danger apagar-only" id="ctx-delete">Excluir mensagem <i class="fa-solid fa-trash"></i></div>
+        <div class="context-menu-item danger so-de-outros" id="ctx-report">Denunciar mensagem <i class="fa-solid fa-flag"></i></div>
     </div>
 
     <!-- Paleta rápida de reações -->
@@ -5017,6 +5022,7 @@
         // ICE da call (TURN próprio via variável de ambiente, se configurado).
         const VERSAO_PAGINA = {{ app_versao|tojson }};
         const ICE_SERVERS = {{ ice_servers|tojson }};
+        const PEER_SERVIDOR = {{ peer_servidor|tojson }};   // servidor de sinalização da call (a nuvem pública, ou o PeerServer próprio por variável de ambiente)
 
         const rawUserAvatar = "{{ usuario_atual.avatar or '' }}";
         let currentUserAvatar = rawUserAvatar.includes("{" + "{") ? "" : rawUserAvatar;
@@ -6199,7 +6205,7 @@
                         ${htmlBolinha(statusClasse, m.emoji)}
                     </div>
                     <div style="display:flex;flex-direction:column;min-width:0;">
-                        <span class="${classeNome(m.nome_estilo)}" style="color:${esc(Cargos.corDoMembro(m) || 'var(--text-header)')};font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
+                        <span class="${classeNome(m.nome_estilo)}" style="color:${esc(Cargos.corDoMembro(m) || 'var(--text-header)')};font-weight:500;">${esc(m.nome)}${identidadeHtml(m, false)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
                         ${sub ? `<span class="dm-sub">${esc(sub)}</span>` : ''}
                     </div>
                 </div>`;
@@ -9075,7 +9081,7 @@
                     <div class="chat-avatar ${efAv ? 'com-ef ' : ''}${esc(classeMold)}" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${Cosm.htmlEfeitoAvatar(efAv)}${avatarHtml}</div>
                     <div class="message-content">
                         <div class="message-header">
-                            <span class="message-author ${esc(estiloNome)}" style="${estiloNome ? '' : `color: ${corSegura};`}">${esc(autor)}</span>
+                            <span class="message-author ${esc(estiloNome)}" style="${estiloNome ? '' : `color: ${corSegura};`}">${esc(autor)}</span>${identidadeHtml(extras, true)}
                             <span class="message-timestamp">${esc(ConfigUsuario.horaFmt(hora))}</span>
                         </div>
                         ${citacaoHtml}
@@ -9869,6 +9875,16 @@
             }).join('');
         });
 
+        document.getElementById('ctx-report').addEventListener('click', () => {
+            const id = msgAlvoId;
+            const el = msgAlvo;
+            const dm = !!(el && el.closest('#dm-messages-container'));
+            fecharMenuMensagem();
+            if (!Number(id)) { showToast('Espere a mensagem terminar de enviar.', 'info'); return; }
+            const autor = (el && el.querySelector('.message-author, .msg-autor, .autor')?.textContent || '').trim();
+            abrirDenuncia(dm ? 'dm' : 'mensagem', Number(id), autor ? 'Mensagem de ' + autor : 'Mensagem');
+        });
+
         document.getElementById('ctx-delete').addEventListener('click', () => {
             // Não remove na hora: espera o 'mensagem_apagada' voltar do servidor.
             // O backend recusa apagar mensagem dos outros, e sumir o elemento
@@ -9977,6 +9993,16 @@
         const exclusivosDe = (tipo) => ((typeof inventario !== 'undefined' && inventario.catalogo) || []).filter(d => d.tipo === tipo).map(d => ({ id: d.valor, nome: d.nome }));
         const classeNome = (est) => (est && est !== 'padrao') ? 'ne-' + est : '';
         const classePlaca = (pl) => (pl && pl !== 'nenhuma') ? 'placa-' + pl : '';
+        // Patente (ícone parado, sem a animação: são dezenas na tela) e título AO LADO DO NOME nas mensagens e na lista de membros.
+        // Quem desenha o ícone é o Cosm.htmlPatente; o servidor manda só {id, sub, nome_completo} e o título já pronto.
+        function identidadeHtml(x, comTitulo) {
+            if (!x) return '';
+            let h = '';
+            if (x.patente && x.patente.id) h += Cosm.htmlPatente({ ...x.patente, anim: 0 }, 17);
+            const t = x.titulo;
+            if (comTitulo && t && t.texto) h += `<span class="titulo-chip titulo-rar-${esc(t.raridade || 'raro')} ${/^[a-z]{3,12}$/.test(t.anim || '') ? 'titulo-anim-' + t.anim : ''}">${esc(t.texto)}</span>`;
+            return h ? `<span class="msg-ident">${h}</span>` : '';
+        }
         const classeMoldura = (m) => (m && m !== 'nenhuma') ? 'moldura-' + m : '';
         function trocarClasse(el, prefixo, nova) {
             if (!el) return;
@@ -13223,7 +13249,7 @@
                 myPeerId = null;   // o id da call anterior não vale pra esta
                 participantesDaCall = [];
                 mePeer = new Peer(undefined, {
-                    host: '0.peerjs.com', port: 443, secure: true,
+                    ...PEER_SERVIDOR,
                     config: { iceServers: ICE_SERVERS }   // vem do servidor (TURN próprio por variável de ambiente, se houver)
                 });
                 let jaAbriu = false;
@@ -15290,7 +15316,7 @@
         let _denunciaAlvo = null;
         function abrirDenuncia(tipo, id, nome) {
             _denunciaAlvo = { tipo, id };
-            document.getElementById('denuncia-titulo').textContent = { nota: 'Denunciar nota', resposta: 'Denunciar resposta', usuario: 'Denunciar pessoa', loja: 'Denunciar loja', produto: 'Denunciar produto' }[tipo] || 'Denunciar servidor';
+            document.getElementById('denuncia-titulo').textContent = { nota: 'Denunciar nota', resposta: 'Denunciar resposta', usuario: 'Denunciar pessoa', loja: 'Denunciar loja', produto: 'Denunciar produto', mensagem: 'Denunciar mensagem', dm: 'Denunciar mensagem' }[tipo] || 'Denunciar servidor';
             document.getElementById('denuncia-sub').textContent = nome ? `"${String(nome).slice(0, 60)}" — conta pra gente o que tem de errado.` : 'Conta pra gente o que tem de errado.';
             document.getElementById('denuncia-detalhe').value = '';
             document.querySelector('input[name="dn-motivo"][value="+18"]').checked = true;

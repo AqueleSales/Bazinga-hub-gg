@@ -120,8 +120,8 @@ with app.app_context():
 
 # ---------------- 7. novidade ----------------
 from app import novidades
-topo = novidades.NOVIDADES[0]
-ok(topo['id'] >= 37 and 'lipe' in topo['titulo'], 'entrada nova no topo das novidades (clipes da call)')
+entrada = next((n for n in novidades.NOVIDADES if 'lipe' in n['titulo']), None)
+ok(entrada is not None and entrada['id'] >= 37, 'as novidades têm a entrada dos clipes da call')
 
 print()
 print('FALHARAM:' if falhas else 'Tudo certo.', *falhas, sep='\n' if falhas else ' ')

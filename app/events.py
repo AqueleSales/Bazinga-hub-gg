@@ -11,7 +11,7 @@ from . import socketio, APP_VERSAO
 from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, GeoNoteResposta, GeoNoteReacao, MapServer, Reaction, Invite, Event, Friendship,
                      Denuncia, Notificacao, Silenciado, BazarLoja, BazarProduto, server_members, channel_members)
-from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
+from .utils import (identidade_mini, resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
                     servidor_gerenciavel, pode_gerenciar_servidor, gerar_codigo_convite,
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario, contagem_valida, TEMAS_EXCLUSIVOS,
@@ -866,7 +866,7 @@ def lidar_com_mensagem(dados):
         'usuario': usuario.name,
         'usuario_id': usuario.id,
         'avatar': usuario.avatar,
-        'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura, 'equipados': equipados_da_pessoa(usuario),
+        'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura, 'equipados': equipados_da_pessoa(usuario), **identidade_mini(usuario),
         'texto': nova_msg.text or '',
         'anexo_url': nova_msg.attachment_url,
         'anexo_tipo': nova_msg.attachment_type,
@@ -1600,7 +1600,7 @@ def listar_membros_servidor(dados):
                 'online': True if m.id == usuario.id else status_visivel(m) != 'offline',
                 'emoji': emoji_do_status(m), 'status_texto': texto_do_status(m),
                 'pensando': m.pensando, 'username': m.username,
-                'placa': m.placa, 'nome_estilo': m.nome_estilo
+                'placa': m.placa, 'nome_estilo': m.nome_estilo, **identidade_mini(m)
             } for m in srv.members]
         })
     except Exception as e:
@@ -2631,7 +2631,7 @@ def denunciar(dados):
 
     tipo = (dados or {}).get('tipo')
     motivo = (dados or {}).get('motivo')
-    if tipo not in ('nota', 'servidor', 'usuario', 'loja', 'produto', 'resposta') or motivo not in MOTIVOS_DENUNCIA:
+    if tipo not in ('nota', 'servidor', 'usuario', 'loja', 'produto', 'resposta', 'mensagem', 'dm') or motivo not in MOTIVOS_DENUNCIA:
         emit('erro_bazinga', {'msg': 'Denúncia inválida.'})
         return
     try:
@@ -2641,12 +2641,22 @@ def denunciar(dados):
 
     try:
         modelo = {'nota': GeoNote, 'servidor': MapServer, 'usuario': Person, 'loja': BazarLoja, 'produto': BazarProduto,
-                  'resposta': GeoNoteResposta}[tipo]
+                  'resposta': GeoNoteResposta, 'mensagem': Message, 'dm': DirectMessage}[tipo]
         alvo = com_retry(lambda: modelo.query.get(alvo_id))
         if not alvo:
             emit('erro_bazinga', {'msg': 'Isso já não existe mais.'})
             return
-        if tipo == 'usuario':
+        if tipo == 'mensagem':                    # mensagem de canal: só denuncia quem enxerga o canal (senão revelaria que ela existe)
+            if not canal_permitido(usuario, alvo.channel_id):
+                emit('erro_bazinga', {'msg': 'Isso já não existe mais.'})
+                return
+            dono_id = alvo.person_id
+        elif tipo == 'dm':                        # mensagem direta: só as duas pontas da conversa
+            if usuario.id not in (alvo.sender_id, alvo.receiver_id):
+                emit('erro_bazinga', {'msg': 'Isso já não existe mais.'})
+                return
+            dono_id = alvo.sender_id
+        elif tipo == 'usuario':
             dono_id = alvo.id
         elif tipo in ('nota', 'resposta'):
             dono_id = alvo.author_id
@@ -2662,6 +2672,9 @@ def denunciar(dados):
             return
 
         detalhe = (dados.get('detalhe') or '').strip()[:300] or None
+        if tipo in ('mensagem', 'dm'):             # guarda um trecho: quem revisa precisa ver o que foi dito mesmo se a pessoa apagar depois
+            trecho = ((alvo.text if tipo == 'mensagem' else alvo.content) or '(só anexo)').strip()[:140]
+            detalhe = (f'Trecho: {trecho}' + (f' | {detalhe}' if detalhe else ''))[:300]
         escondeu = {'v': False}
 
         def preparar():
@@ -2670,7 +2683,7 @@ def denunciar(dados):
             # só conta denúncia ainda não revisada: depois que um admin restaura, o alvo recomeça do zero
             total = Denuncia.query.filter(Denuncia.tipo == tipo, Denuncia.alvo_id == alvo_id, Denuncia.resolvida.isnot(True)).count()
             # Pessoa denunciada não "some": a denúncia fica registrada pra revisão humana.
-            if tipo != 'usuario' and total >= DENUNCIAS_PARA_OCULTAR and not alvo.oculta:
+            if tipo not in ('usuario', 'mensagem', 'dm') and total >= DENUNCIAS_PARA_OCULTAR and not alvo.oculta:
                 alvo.oculta = True
                 escondeu['v'] = True
 
@@ -4076,7 +4089,7 @@ def on_enviar_mensagem_direta(data):
             'usuario_id': usuario.id,
             'destinatario_id': target_id,
             'avatar': usuario.avatar,
-            'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura, 'equipados': equipados_da_pessoa(usuario),
+            'nome_estilo': usuario.nome_estilo, 'moldura': usuario.moldura, 'equipados': equipados_da_pessoa(usuario), **identidade_mini(usuario),
             'texto': nova_msg.content or '',
             'anexo_url': nova_msg.attachment_url,
             'anexo_tipo': nova_msg.attachment_type,

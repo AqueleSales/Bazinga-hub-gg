@@ -9,6 +9,29 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 40, 'data': '03/11/2026', 'titulo': 'Lojas por perto no mapa, jogos na call, mais temas e a call mais redonda',
+        'itens': [
+            {'icone': 'fa-store', 'titulo': 'Lojas por perto, sem sair do mapa',
+             'texto': 'Uma aba "Lojas" na borda do mapa abre (passando o mouse) a lista das lojas ao seu alcance: busque por loja ou produto, filtre por categoria (o filtro também some com os pinos), ordene por mais perto, melhor avaliadas ou mais pedidas e toque em "Pedir" pra cair direto no produto.'},
+            {'icone': 'fa-gamepad', 'titulo': 'Mais jogos na call, e dá pra chamar alguém',
+             'texto': 'Jogo da velha, pedra-papel-tesoura, forca (todo mundo chuta junto) e dados/sorteio, além do xadrez. Quem abre a mesa escolhe o adversário na lista da call: a cadeira fica guardada pra pessoa por 1 minuto, e todo mundo é avisado de que tem jogo rolando.'},
+            {'icone': 'fa-eye-slash', 'titulo': 'Parar de assistir uma transmissão',
+             'texto': 'Na tela de quem transmite aparece "Parar de assistir": o quadro encolhe, o som da tela cala e o botão "Assistir" traz tudo de volta na hora.'},
+            {'icone': 'fa-sliders', 'titulo': 'Volume de cada pessoa e botão direito que funciona',
+             'texto': 'Clique com o botão direito (ou no botão ⋮) em alguém da call pra ajustar o volume só pra você, silenciar, ver o perfil, e na transmissão pôr em tela cheia ou janela flutuante. O botão direito do app agora é nosso em todo lugar, e as dicas também.'},
+            {'icone': 'fa-microphone-lines', 'titulo': 'A bordinha de quem fala não para mais',
+             'texto': 'Ela travava depois de mexer no microfone (ruído, troca de dispositivo) ou com a janela de lado. Corrigido.'},
+            {'icone': 'fa-display', 'titulo': 'Tela compartilhada mais fluida',
+             'texto': 'O padrão voltou a 720p a 30 fps (1080p a 15 parecia slideshow e pesava), e a resolução cai sozinha quando muita gente assiste. Em Nitidez ou Alta você escolhe o contrário.'},
+            {'icone': 'fa-palette', 'titulo': '15 temas novos',
+             'texto': 'Dez escuros (Grafite, Vinho, Esmeralda, Abismo, Ciber, Neon noturno, Carvão, Crepúsculo, Musgo, Turquesa) e cinco claros (Lavanda, Céu, Pêssego, Limão, Nuvem) em Configurações > Aparência.'},
+            {'icone': 'fa-flag', 'titulo': 'Denunciar mensagem e patente ao lado do nome',
+             'texto': 'O menu da mensagem de outra pessoa ganhou "Denunciar mensagem" (canal e conversa direta). A patente e o título aparecem ao lado do nome nas mensagens e na lista de membros.'},
+            {'icone': 'fa-shield-halved', 'titulo': 'Mais proteção contra abuso',
+             'texto': 'Upload, GIF, login e outras rotas agora têm limite de pedidos por minuto. E o menu da barra do mapa não corta mais os botões em tela pequena.'}
+        ],
+    },
+    {
         'id': 39, 'data': '22/10/2026', 'titulo': 'Clipes da call de verdade',
         'itens': [
             {'icone': 'fa-exclamation', 'titulo': 'Sinal (!) com os clipes da call',

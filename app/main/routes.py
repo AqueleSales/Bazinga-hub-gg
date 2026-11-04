@@ -30,7 +30,7 @@ from ..bazar import ids_dos_admins as _ids_dos_admins
 from ..explorar import TEMAS_EXPLORAR
 from ..efeitos import mapa_para_cliente as efeitos_custom_mapa
 from ..cosmeticos import posses_da_pessoa, posses_com_regras, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
-from ..utils import nivel_da_pessoa, resumos_de_resposta_canal, resumos_de_resposta_dm
+from ..utils import nivel_da_pessoa, identidade_mini, resumos_de_resposta_canal, resumos_de_resposta_dm
 
 main_bp = Blueprint("main", __name__)
 
@@ -744,7 +744,7 @@ def pegar_mensagens(canal_id):
             'autor': msg.author.name,
             'autor_id': msg.person_id,
             'avatar': msg.author.avatar,
-            'nome_estilo': msg.author.nome_estilo, 'moldura': msg.author.moldura, 'equipados': equipados_da_pessoa(msg.author),
+            'nome_estilo': msg.author.nome_estilo, 'moldura': msg.author.moldura, 'equipados': equipados_da_pessoa(msg.author), **identidade_mini(msg.author),
             'texto': msg.text or '',
             'anexo_url': msg.attachment_url,
             'anexo_tipo': msg.attachment_type,
@@ -798,7 +798,7 @@ def get_dms(target_id):
             'autor': msg.sender.name,
             'autor_id': msg.sender_id,
             'avatar': msg.sender.avatar,
-            'nome_estilo': msg.sender.nome_estilo, 'moldura': msg.sender.moldura, 'equipados': equipados_da_pessoa(msg.sender),
+            'nome_estilo': msg.sender.nome_estilo, 'moldura': msg.sender.moldura, 'equipados': equipados_da_pessoa(msg.sender), **identidade_mini(msg.sender),
             'texto': msg.content or '',
             'anexo_url': msg.attachment_url,
             'anexo_tipo': msg.attachment_type,

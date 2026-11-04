@@ -235,6 +235,15 @@ def nivel_da_pessoa(xp):
     return bisect_right(_LIMIARES, xp)
 
 
+def identidade_mini(pessoa):
+    """Patente (o ícone) e título pra aparecerem AO LADO DO NOME nas mensagens e na lista de membros. Conta pura sobre o que a `Person` já
+    traz (xp e titulo_id): nenhuma consulta nova. O título vem do cache de ~20 s de `passe`."""
+    from . import cosmeticos, passe
+    p = cosmeticos.patente_do_nivel(nivel_da_pessoa(getattr(pessoa, 'xp', 0)))
+    return {'patente': {'id': p['id'], 'sub': p['sub'], 'anim': p['anim'], 'nome_completo': p['nome_completo']},
+            'titulo': passe.titulo_publico(getattr(pessoa, 'titulo_id', None))}
+
+
 def progresso_de_nivel(xp):
     """(xp dentro do nível atual, xp necessário pro próximo) - pra desenhar a barrinha."""
     xp = max(xp or 0, 0)
