@@ -38,7 +38,7 @@ const Bazar = (() => {
     let props = [], dest = [], adIdx = 0, adTimer = 0, observador = null, casaPadrao = false;
     let carregadoEm = 0, desatualizada = false;
     const produtos = new Map(), pedCache = new Map(), favs = new Set();
-    let produtoPendente = null;
+    let produtoPendente = null;      // o pedido rápido do mapa: abre a loja e, quando ela chega, já abre o produto escolhido
     let lojaAtual = null, prodAtual = null, ed = null, moderacao = null, secao = 'inicio';
     let pedidos = { comprando: [], vendendo: [], carregado: false };
     let ed_aval = { nota: 0, texto: '' };
@@ -349,6 +349,7 @@ const Bazar = (() => {
         if (!l) { alvo.innerHTML = `${voltar}<div class="bz-vazio"><i class="fa-solid fa-spinner fa-spin"></i>Abrindo a loja...</div>`; return; }
         const capa = urlOk(l.banner_url);
         (l.produtos || []).forEach((p) => produtos.set(p.id, { ...p, loja_nome: l.nome, loja_cor: l.cor }));
+        if (produtoPendente != null) { const pid = produtoPendente; produtoPendente = null; setTimeout(() => abrirProduto(pid), 80); }
         alvo.innerHTML = `${voltar}
             <div class="bz-loja-pagina" style="${estiloLoja(l)}">
                 <div class="bz-loja-capa" style="${capa ? `background-image:url('${esc(urlCss(capa))}')` : ''}"><div class="bz-toldo"></div></div>
@@ -1139,12 +1140,6 @@ const Bazar = (() => {
 
     function loja(l) {
         lojaAtual = l;
-        (l.produtos || []).forEach((p) => produtos.set(p.id, { ...p, loja_nome: l.nome, loja_cor: l.cor }));
-        if (produtoPendente && produtoPendente.loja === l.id) {
-            const quer = produtoPendente.produto; produtoPendente = null;
-            if (produtos.has(quer)) setTimeout(() => abrirProduto(quer), 0);
-            else ctx.toast('Esse produto não está mais à venda.', 'info');
-        }
         if (!l.eh_dono) { if (l.favorita) favs.add(l.id); else favs.delete(l.id); }       // a página da loja é a fonte da verdade sobre "eu sigo"
         if (vista === 'loja') desenharLoja();
         if (prodAtual && prodAtual.p.loja_id === l.id) {
@@ -1262,12 +1257,7 @@ const Bazar = (() => {
     }
     function avisoAdmin(d) { disputasN = d.disputas || 0; if (vista === 'painel') desenharPainel(); }
 
-    /** Abre a página da loja `id` e, se vier `produtoId` (canal de lojas, "Pedir"), já abre o produto por cima quando a loja chega. */
-    function abrirLojaDe(id, produtoId) {
-        if (!id) return;
-        produtoPendente = produtoId ? { loja: Number(id), produto: Number(produtoId) } : null;
-        abrirLoja(Number(id));
-    }
+    function abrirLojaDe(id, produtoId) { if (id) { produtoPendente = produtoId ? Number(produtoId) : null; abrirLoja(Number(id)); } }
     function abrirPedidos(ref) {
         if (ref === 'disputa') { abrirPainel('disputas'); return; }              // aviso de disputa nova pro admin
         abrirPainel('compras');

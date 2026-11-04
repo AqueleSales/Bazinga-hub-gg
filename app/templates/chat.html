@@ -390,6 +390,9 @@
         .message.grouped .message-header { display: none; }
 
         .message-author { font-size: 15px; font-weight: 600; cursor: pointer; color: var(--text-header); }
+        .msg-ident { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; vertical-align: middle; }
+        .msg-ident .pt { flex: none; }
+        .msg-ident .titulo-chip { font-size: 10.5px; padding: 1px 7px; }
         .message-author:hover { text-decoration: underline; }
         .message-timestamp { font-size: 12px; color: var(--text-muted); font-weight: 500; }
         .message-text { color: var(--text-normal); font-size: 15px; line-height: 1.375rem; word-wrap: break-word; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -711,32 +714,6 @@
         .media-popup-switch input:checked + .chave { background: var(--clip-color); }
         .media-popup-switch input:checked + .chave::before { transform: translateX(14px); }
 
-        /* Aviso de clipe automático */
-        .clip-alerta {
-            position: absolute; top: 18px; left: 50%; transform: translateX(-50%) scale(0); z-index: 12;
-            width: 40px; height: 40px; border-radius: 50%; background: var(--clip-color); color: #fff;
-            display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer;
-            box-shadow: 0 6px 18px rgba(255,140,26,.5); transition: transform .22s cubic-bezier(.34,1.56,.64,1);
-        }
-        .clip-alerta.visivel { transform: translateX(-50%) scale(1); animation: chacoalhar 2.2s ease-in-out infinite; }
-        @keyframes chacoalhar { 0%, 100% { transform: translateX(-50%) scale(1) rotate(0); } 10% { transform: translateX(-50%) scale(1) rotate(-8deg); } 20% { transform: translateX(-50%) scale(1) rotate(8deg); } 30% { transform: translateX(-50%) scale(1) rotate(0); } }
-
-        .clip-gaveta {
-            position: absolute; top: 64px; left: 50%; transform: translateX(-50%) translateY(-10px); z-index: 12;
-            width: 320px; max-height: 0; overflow: hidden; background: var(--bg-quaternary); border-radius: 12px;
-            box-shadow: 0 12px 28px rgba(0,0,0,.5); opacity: 0; transition: max-height .22s, opacity .18s, transform .18s;
-        }
-        .clip-gaveta.aberta { max-height: 340px; opacity: 1; transform: translateX(-50%) translateY(0); overflow-y: auto; }
-        .clip-gaveta-item { display: flex; gap: 10px; align-items: center; padding: 9px 12px; cursor: pointer; transition: background .12s; }
-        .clip-gaveta-item:hover { background: rgba(255,255,255,.06); }
-        .clip-gaveta-item video { width: 72px; height: 40px; border-radius: 6px; background: #000; object-fit: cover; pointer-events: none; }
-        .clip-gaveta-item .txt { font-size: 12.5px; color: var(--text-normal); }
-        .clip-gaveta-vazia { padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
-
-        .clip-trim-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
-        .clip-trim-row input[type="range"] { flex: 1; }
-        .clip-trim-row span { font-size: 11px; color: var(--text-muted); width: 38px; flex-shrink: 0; }
-
         /* ==========================================================================
            6. MENUS DE CONTEXTO E MODAIS GERAIS
            ========================================================================== */
@@ -1006,6 +983,7 @@
         #lightbox .lb-baixar:hover { background: var(--brand-color); }
 
         .context-menu.nao-sou-autor .autor-only { display: none; }
+        .context-menu:not(.nao-sou-autor) .so-de-outros { display: none; }   /* denunciar só a mensagem de outra pessoa */
         .context-menu.nao-posso-apagar .apagar-only { display: none; }
         #msg-context-menu.em-dm .so-canal { display: none !important; }   /* DM: sem reagir nem fixar (só existem em canal) */
 
@@ -1321,6 +1299,21 @@
         :root[data-tema="sakura"] { --bg-primary: #fff7f9; --bg-secondary: #fbeaf0; --bg-tertiary: #f3d7e1; --bg-quaternary: #f7e1e9; --text-normal: #4a3340; --text-muted: #8e6f7e; --text-header: #2a1620; --brand-color: #d9487d; --brand-hover: #c23d6e; }
         :root[data-tema="menta"] { --bg-primary: #f6fffb; --bg-secondary: #e6f7f0; --bg-tertiary: #cdebdf; --bg-quaternary: #d9f1e8; --text-normal: #2e4a3f; --text-muted: #6d8f81; --text-header: #12281f; --brand-color: #17986b; --brand-hover: #12835c; }
         :root[data-tema="areia"] { --bg-primary: #fffaf2; --bg-secondary: #f5ecdc; --bg-tertiary: #e8dcc4; --bg-quaternary: #efe4cd; --text-normal: #4a3e2c; --text-muted: #8c7d62; --text-header: #261d10; --brand-color: #b9702a; --brand-hover: #a3621f; }
+        :root[data-tema="grafite"] { --bg-primary: #2b2d31; --bg-secondary: #232428; --bg-tertiary: #1a1b1e; --bg-quaternary: #131416; --text-normal: #d6d8dc; --text-muted: #8d9097; --brand-color: #8b95a8; --brand-hover: #7a8496; }
+        :root[data-tema="vinho"] { --bg-primary: #36222a; --bg-secondary: #2c1a21; --bg-tertiary: #1f1217; --bg-quaternary: #150c10; --text-normal: #ecd5db; --text-muted: #a98890; --brand-color: #b3304f; --brand-hover: #9c2a45; }
+        :root[data-tema="esmeralda"] { --bg-primary: #1f332b; --bg-secondary: #192a23; --bg-tertiary: #112019; --bg-quaternary: #0b1611; --text-normal: #cfe6da; --text-muted: #7fa593; --brand-color: #19b37a; --brand-hover: #14996a; }
+        :root[data-tema="abismo"] { --bg-primary: #121a2e; --bg-secondary: #0e1524; --bg-tertiary: #090e19; --bg-quaternary: #05080f; --text-normal: #cdd8f0; --text-muted: #7a89ad; --brand-color: #3d7bff; --brand-hover: #2f68e0; }
+        :root[data-tema="ciber"] { --bg-primary: #1d2630; --bg-secondary: #171f28; --bg-tertiary: #0f151c; --bg-quaternary: #0a0f14; --text-normal: #cfe9f0; --text-muted: #7aa0ad; --brand-color: #00d4e6; --brand-hover: #00b9c9; }
+        :root[data-tema="neon_noturno"] { --bg-primary: #241a38; --bg-secondary: #1c142e; --bg-tertiary: #130d22; --bg-quaternary: #0c0716; --text-normal: #eadcff; --text-muted: #a28cc9; --brand-color: #ff3dac; --brand-hover: #e32f96; }
+        :root[data-tema="carvao"] { --bg-primary: #2d2b2a; --bg-secondary: #252322; --bg-tertiary: #1b1918; --bg-quaternary: #121110; --text-normal: #e6e0da; --text-muted: #9a928a; --brand-color: #ff8a2b; --brand-hover: #e67a22; }
+        :root[data-tema="crepusculo"] { --bg-primary: #2a2250; --bg-secondary: #221b44; --bg-tertiary: #171232; --bg-quaternary: #0f0b22; --text-normal: #e2dcff; --text-muted: #9d94d4; --brand-color: #ff7a59; --brand-hover: #e66a4b; }
+        :root[data-tema="musgo"] { --bg-primary: #2e3223; --bg-secondary: #262a1c; --bg-tertiary: #1b1e13; --bg-quaternary: #12150c; --text-normal: #dfe4cf; --text-muted: #9aa383; --brand-color: #9bb83a; --brand-hover: #869f30; }
+        :root[data-tema="turquesa"] { --bg-primary: #1c3231; --bg-secondary: #162a29; --bg-tertiary: #0e1f1e; --bg-quaternary: #081615; --text-normal: #cdeeea; --text-muted: #7fa8a4; --brand-color: #20c9b8; --brand-hover: #1aaf9f; }
+        :root[data-tema="lavanda"] { --bg-primary: #faf7ff; --bg-secondary: #efe8fb; --bg-tertiary: #e0d4f5; --bg-quaternary: #e9dff8; --text-normal: #3d3556; --text-muted: #7d739c; --text-header: #1f1838; --brand-color: #7a56e0; --brand-hover: #6845c9; }
+        :root[data-tema="ceu"] { --bg-primary: #f5faff; --bg-secondary: #e5f0fb; --bg-tertiary: #cfe2f5; --bg-quaternary: #dbe9f7; --text-normal: #2c4158; --text-muted: #6a86a3; --text-header: #102233; --brand-color: #2d7ff0; --brand-hover: #2370d9; }
+        :root[data-tema="pessego"] { --bg-primary: #fff8f3; --bg-secondary: #fbeadf; --bg-tertiary: #f3d6c5; --bg-quaternary: #f7e0d1; --text-normal: #4d3a2e; --text-muted: #92775f; --text-header: #2a1b10; --brand-color: #f07b4b; --brand-hover: #d96c3f; }
+        :root[data-tema="limao"] { --bg-primary: #fbfff2; --bg-secondary: #f0f7de; --bg-tertiary: #e0eec0; --bg-quaternary: #e8f2cf; --text-normal: #3d4a26; --text-muted: #7e9159; --text-header: #1b2410; --brand-color: #7aa514; --brand-hover: #6a9010; }
+        :root[data-tema="nuvem"] { --bg-primary: #f7f8fa; --bg-secondary: #eceef2; --bg-tertiary: #dde0e7; --bg-quaternary: #e4e7ec; --text-normal: #3a4150; --text-muted: #7b8496; --text-header: #1a1f2b; --brand-color: #5b6ee1; --brand-hover: #4d5fcc; }
         /* PERSONALIZADO: a base (escuro/claro/AMOLED) vem das regras acima; a cor de destaque, a imagem e as transparências vêm de variáveis
            no <html> (--brand-color, --fundo-img, --fundo-escuro, --painel-opac), ligadas pelo servidor no primeiro desenho e pelo JS ao vivo. */
         :root[data-tema="custom"] { --brand-hover: color-mix(in srgb, var(--brand-color) 86%, #000); }
@@ -1565,7 +1558,7 @@
         #dms-sidebar .channels-list > *:nth-child(12), #dm-list-container > *:nth-child(12) { animation-delay: 420ms; }
 
         /* --- Radar: cabeçalho e botões de vidro --- */
-        #radar-header { background-color: color-mix(in srgb, var(--bg-primary) 60%, transparent) !important; border-bottom: 1px solid var(--glass-borda) !important; backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); }
+        #radar-header { container-type: inline-size; container-name: radarh; background-color: color-mix(in srgb, var(--bg-primary) 60%, transparent) !important; border-bottom: 1px solid var(--glass-borda) !important; backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); }
         #radar-header-actions .btn, #btn-toggle-ghost { white-space: nowrap; background: rgba(255,255,255,.07) !important; color: var(--text-normal) !important; border: 1px solid var(--glass-borda); border-radius: 10px; padding: 6px 12px; transition: background-color .2s, transform .15s, box-shadow .2s, border-color .2s; }
         #radar-header-actions .btn:hover, #btn-toggle-ghost:hover { background: rgba(255,255,255,.14) !important; transform: translateY(-1px); }
         #radar-header-actions .btn-primary { background: linear-gradient(180deg, #5fcf9b, #43b581 60%, #389c70) !important; color: #fff !important; border-color: rgba(255,255,255,.2); box-shadow: 0 4px 16px rgba(67,181,129,.35), inset 0 1px 0 rgba(255,255,255,.25); }
@@ -3009,6 +3002,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/musica.css') }}?v={{ musica_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/call_ui.css') }}?v={{ call_ui_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/atividades.css') }}?v={{ atividades_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ui_extra.css') }}?v={{ ui_extra_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/clipes.css') }}?v={{ clipes_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cargos.css') }}?v={{ cargos_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/prestigio.css') }}?v={{ prestigio_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/lojas_canal.css') }}?v={{ lojas_canal_css_v }}">
@@ -3235,15 +3230,15 @@
                         <i class="fa-solid fa-location-crosshairs ic-radar"></i> Radar
                     </div>
                     <div style="display: flex; gap: 12px; align-items: center; flex-grow: 1; margin-left: 16px;" id="radar-header-actions">
-                        <div class="bz-pill-btn active" id="btn-toggle-ghost" style="background: rgba(255,255,255,0.1); color: var(--text-header); cursor: pointer;"><i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF</div>
+                        <div class="bz-pill-btn active" id="btn-toggle-ghost" style="background: rgba(255,255,255,0.1); color: var(--text-header); cursor: pointer;"><i class="fa-solid fa-ghost" style="margin-right: 6px;"></i><span class="rot-lg">Modo Fantasma: </span>OFF</div>
                         <div style="width: 1px; height: 20px; background-color: rgba(255,255,255,0.1); margin: 0 4px;"></div>
 
                         <!-- BOTOES MAPA -->
-                        <button class="btn" style="background-color: var(--bg-tertiary); color: var(--text-normal); font-weight: 600; padding: 6px 12px;" onclick="abrirModalNota('create')">
-                            <i class="fa-solid fa-comment-dots" style="color: var(--yellow-color);"></i> Deixar Nota
+                        <button class="btn" style="background-color: var(--bg-tertiary); color: var(--text-normal); font-weight: 600; padding: 6px 12px;" title="Deixar uma nota no mapa" onclick="abrirModalNota('create')">
+                            <i class="fa-solid fa-comment-dots" style="color: var(--yellow-color);"></i><span class="rot-md"> Deixar Nota</span>
                         </button>
                         <button class="btn btn-primary" style="background-color: var(--green-color); padding: 6px 12px; font-weight: 600;" onclick="LojaMapa.abrirPlantar()" title="Plantar um servidor ou a sua loja no mapa">
-                            <i class="fa-solid fa-location-dot"></i> Plantar
+                            <i class="fa-solid fa-location-dot"></i><span class="rot-md"> Plantar</span>
                         </button>
                         <button class="btn ms-bt" id="btn-mapa-amigos" type="button" title="Ver onde seus amigos estão no mapa"><i class="fa-solid fa-user-group"></i><span class="ms-rot"> Amigos no mapa</span></button>
                         <button class="btn ms-bt" id="btn-mapa-servidores" type="button" title="Servidores plantados no seu alcance"><i class="fa-solid fa-tower-broadcast"></i><span class="ms-rot"> Servidores perto</span></button>
@@ -3349,7 +3344,6 @@
                         <div class="clip-alerta" id="clip-alerta" title="Achei um momento pra clipar">
                             <i class="fa-solid fa-exclamation"></i>
                         </div>
-                        <div class="clip-gaveta" id="clip-gaveta"></div>
 
                         <div class="call-controls-bar">
                             <button class="call-btn" id="btn-main-mic" title="Silenciar"><i class="fa-solid fa-microphone"></i></button>
@@ -4308,6 +4302,7 @@
         <div class="context-menu-item" id="ctx-copy-id">Copiar ID da mensagem <i class="fa-solid fa-hashtag"></i></div>
         <div class="context-menu-separator apagar-only"></div>
         <div class="context-menu-item danger apagar-only" id="ctx-delete">Excluir mensagem <i class="fa-solid fa-trash"></i></div>
+        <div class="context-menu-item danger so-de-outros" id="ctx-report">Denunciar mensagem <i class="fa-solid fa-flag"></i></div>
     </div>
 
     <!-- Paleta rápida de reações -->
@@ -4345,31 +4340,6 @@
                 <p id="record-aviso-peso" style="color: var(--text-muted); font-size: 12.5px; margin-top: 4px;">Quanto maior a qualidade, mais pesado o arquivo por minuto de call.</p>
             </div>
             <div class="modal-footer"><button class="btn-cancel" id="btn-cancel-record">Cancelar</button><button class="btn btn-primary" id="btn-confirm-record">Escolher pasta e gravar</button></div>
-        </div>
-    </div>
-
-    <!-- Edição do clipe -->
-    <div id="clip-edit-modal" class="modal-overlay">
-        <div class="bazinga-modal" style="width: 560px;">
-            <div class="modal-header" style="position: relative;">
-                <h2>Editar clipe</h2>
-                <p>Ajuste o começo e o fim, depois manda no chat ou salva no PC.</p>
-                <i class="fa-solid fa-xmark modal-close-x" id="btn-fechar-edicao-clipe"></i>
-            </div>
-            <div class="modal-content">
-                <video id="clip-edit-video" controls style="width:100%; border-radius: 8px; background:#000; max-height: 320px;"></video>
-                <div class="clip-trim-row">
-                    <span id="clip-trim-inicio-label">0.0s</span>
-                    <input type="range" id="clip-trim-inicio" min="0" max="100" value="0" class="discord-slider">
-                    <input type="range" id="clip-trim-fim" min="0" max="100" value="100" class="discord-slider">
-                    <span id="clip-trim-fim-label">30.0s</span>
-                </div>
-                <p style="color: var(--text-muted); font-size: 12px;">O corte aqui é só de prévia (não recodifica o arquivo) - o vídeo enviado/baixado é o clipe inteiro.</p>
-            </div>
-            <div class="modal-footer" style="justify-content: space-between;">
-                <button class="btn-cancel" id="btn-salvar-clipe-pc"><i class="fa-solid fa-download"></i> Salvar no PC</button>
-                <button class="btn btn-primary" id="btn-enviar-clipe-chat"><i class="fa-solid fa-paper-plane"></i> Mandar no chat</button>
-            </div>
         </div>
     </div>
 
@@ -5028,9 +4998,12 @@
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/call_ui.js') }}?v={{ call_ui_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/atividades_jogos.js') }}?v={{ atividades_jogos_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/atividades.js') }}?v={{ atividades_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/prestigio.js') }}?v={{ prestigio_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/lojas_canal.js') }}?v={{ lojas_canal_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/ui_extra.js') }}?v={{ ui_extra_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/clipes.js') }}?v={{ clipes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
@@ -5053,6 +5026,7 @@
         // ICE da call (TURN próprio via variável de ambiente, se configurado).
         const VERSAO_PAGINA = {{ app_versao|tojson }};
         const ICE_SERVERS = {{ ice_servers|tojson }};
+        const PEER_SERVIDOR = {{ peer_servidor|tojson }};   // servidor de sinalização da call (a nuvem pública, ou o PeerServer próprio por variável de ambiente)
 
         const rawUserAvatar = "{{ usuario_atual.avatar or '' }}";
         let currentUserAvatar = rawUserAvatar.includes("{" + "{") ? "" : rawUserAvatar;
@@ -6236,7 +6210,7 @@
                         ${htmlBolinha(statusClasse, m.emoji)}
                     </div>
                     <div style="display:flex;flex-direction:column;min-width:0;">
-                        <span class="${classeNome(m.nome_estilo)}" style="color:${esc(Cargos.corDoMembro(m) || 'var(--text-header)')};font-weight:500;">${esc(m.nome)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
+                        <span class="${classeNome(m.nome_estilo)}" style="color:${esc(Cargos.corDoMembro(m) || 'var(--text-header)')};font-weight:500;">${esc(m.nome)}${identidadeHtml(m, false)}${m.dono ? ' <i class="fa-solid fa-crown" style="font-size:11px; color:#f0b232; opacity:.85; margin-left:2px;" title="Dono do servidor"></i>' : ''}</span>
                         ${sub ? `<span class="dm-sub">${esc(sub)}</span>` : ''}
                     </div>
                 </div>`;
@@ -7662,11 +7636,11 @@
         function updateGhostVisuals() {
             btnToggleGhost.classList.toggle('ghost-on', ghostMode);
             if(ghostMode) {
-                btnToggleGhost.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: ON';
+                btnToggleGhost.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i><span class="rot-lg">Modo Fantasma: </span>ON';
                 btnToggleGhost.style.color = 'var(--red-color)';
                 if(myMapMarker) L.DomUtil.addClass(myMapMarker._icon, 'ghost');
             } else {
-                btnToggleGhost.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i> Modo Fantasma: OFF';
+                btnToggleGhost.innerHTML = '<i class="fa-solid fa-ghost" style="margin-right: 6px;"></i><span class="rot-lg">Modo Fantasma: </span>OFF';
                 btnToggleGhost.style.color = 'var(--text-header)';
                 if(myMapMarker) L.DomUtil.removeClass(myMapMarker._icon, 'ghost');
             }
@@ -9121,7 +9095,7 @@
                     <div class="chat-avatar ${efAv ? 'com-ef ' : ''}${esc(classeMold)}" style="background-color: ${avatarSeguro ? 'transparent' : corSegura};">${Cosm.htmlEfeitoAvatar(efAv)}${avatarHtml}</div>
                     <div class="message-content">
                         <div class="message-header">
-                            <span class="message-author ${esc(estiloNome)}" style="${estiloNome ? '' : `color: ${corSegura};`}">${esc(autor)}</span>
+                            <span class="message-author ${esc(estiloNome)}" style="${estiloNome ? '' : `color: ${corSegura};`}">${esc(autor)}</span>${identidadeHtml(extras, true)}
                             <span class="message-timestamp">${esc(ConfigUsuario.horaFmt(hora))}</span>
                         </div>
                         ${citacaoHtml}
@@ -9915,6 +9889,16 @@
             }).join('');
         });
 
+        document.getElementById('ctx-report').addEventListener('click', () => {
+            const id = msgAlvoId;
+            const el = msgAlvo;
+            const dm = !!(el && el.closest('#dm-messages-container'));
+            fecharMenuMensagem();
+            if (!Number(id)) { showToast('Espere a mensagem terminar de enviar.', 'info'); return; }
+            const autor = (el && el.querySelector('.message-author, .msg-autor, .autor')?.textContent || '').trim();
+            abrirDenuncia(dm ? 'dm' : 'mensagem', Number(id), autor ? 'Mensagem de ' + autor : 'Mensagem');
+        });
+
         document.getElementById('ctx-delete').addEventListener('click', () => {
             // Não remove na hora: espera o 'mensagem_apagada' voltar do servidor.
             // O backend recusa apagar mensagem dos outros, e sumir o elemento
@@ -10023,6 +10007,16 @@
         const exclusivosDe = (tipo) => ((typeof inventario !== 'undefined' && inventario.catalogo) || []).filter(d => d.tipo === tipo).map(d => ({ id: d.valor, nome: d.nome }));
         const classeNome = (est) => (est && est !== 'padrao') ? 'ne-' + est : '';
         const classePlaca = (pl) => (pl && pl !== 'nenhuma') ? 'placa-' + pl : '';
+        // Patente (ícone parado, sem a animação: são dezenas na tela) e título AO LADO DO NOME nas mensagens e na lista de membros.
+        // Quem desenha o ícone é o Cosm.htmlPatente; o servidor manda só {id, sub, nome_completo} e o título já pronto.
+        function identidadeHtml(x, comTitulo) {
+            if (!x) return '';
+            let h = '';
+            if (x.patente && x.patente.id) h += Cosm.htmlPatente({ ...x.patente, anim: 0 }, 17);
+            const t = x.titulo;
+            if (comTitulo && t && t.texto) h += `<span class="titulo-chip titulo-rar-${esc(t.raridade || 'raro')} ${/^[a-z]{3,12}$/.test(t.anim || '') ? 'titulo-anim-' + t.anim : ''}">${esc(t.texto)}</span>`;
+            return h ? `<span class="msg-ident">${h}</span>` : '';
+        }
         const classeMoldura = (m) => (m && m !== 'nenhuma') ? 'moldura-' + m : '';
         function trocarClasse(el, prefixo, nova) {
             if (!el) return;
@@ -11283,7 +11277,8 @@
             exigirLocalizacao: () => exigirLocalizacao(true),
             abrirServidor: () => abrirModalServidor('create'),
             preparar: () => prepararPlantio('loja'),
-            abrirLoja: (id) => { document.getElementById('btn-mercado').click(); document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click(); Bazar.abrirLojaDe(id); },
+            abrirLoja: (id, produtoId) => { document.getElementById('btn-mercado').click(); document.querySelector('.market-tab[data-tab="tab-bazar"]')?.click(); Bazar.abrirLojaDe(id, produtoId); },
+            minhaPos: () => (myMapMarker ? myMapMarker.getLatLng() : null),
         });
         socket.on('mapa_radar', (d) => MapaSocial.receberRadar(d));
         socket.on('mapa_servidor_previa', (p) => Explorar.previaMapa(p, (id) => socket.emit('entrar_servidor_pin', { server_id: id })));
@@ -12068,14 +12063,29 @@
                 { id: 'por_do_sol', nome: 'Pôr do sol', cores: ['#3b2d40', '#32253a', '#231a29', '#f06a45'] },
                 { id: 'ametista', nome: 'Ametista', cores: ['#2f2a45', '#272339', '#1a1729', '#8b6cf5'] },
                 { id: 'cafe', nome: 'Café', cores: ['#3a2f28', '#30261f', '#211a15', '#b9772f'] },
-                { id: 'cereja', nome: 'Cereja', cores: ['#3a2a2e', '#301f24', '#21151a', '#e0425f'] } ] },
+                { id: 'cereja', nome: 'Cereja', cores: ['#3a2a2e', '#301f24', '#21151a', '#e0425f'] },
+                { id: 'grafite', nome: 'Grafite', cores: ['#2b2d31', '#232428', '#1a1b1e', '#8b95a8'] },
+                { id: 'vinho', nome: 'Vinho', cores: ['#36222a', '#2c1a21', '#1f1217', '#b3304f'] },
+                { id: 'esmeralda', nome: 'Esmeralda', cores: ['#1f332b', '#192a23', '#112019', '#19b37a'] },
+                { id: 'abismo', nome: 'Abismo', cores: ['#121a2e', '#0e1524', '#090e19', '#3d7bff'] },
+                { id: 'ciber', nome: 'Ciber', cores: ['#1d2630', '#171f28', '#0f151c', '#00d4e6'] },
+                { id: 'neon_noturno', nome: 'Neon noturno', cores: ['#241a38', '#1c142e', '#130d22', '#ff3dac'] },
+                { id: 'carvao', nome: 'Carvão', cores: ['#2d2b2a', '#252322', '#1b1918', '#ff8a2b'] },
+                { id: 'crepusculo', nome: 'Crepúsculo', cores: ['#2a2250', '#221b44', '#171232', '#ff7a59'] },
+                { id: 'musgo', nome: 'Musgo', cores: ['#2e3223', '#262a1c', '#1b1e13', '#9bb83a'] },
+                { id: 'turquesa', nome: 'Turquesa', cores: ['#1c3231', '#162a29', '#0e1f1e', '#20c9b8'] } ] },
             { grupo: 'Da temporada', exclusivo: true, itens: [
                 { id: 'templo', nome: 'Templo', cores: ['#1c1a14', '#15130e', '#0f0d09', '#d4a24c'] },
                 { id: 'tartaro', nome: 'Tártaro', cores: ['#241618', '#1b1012', '#130a0c', '#c1403a'] } ] },
             { grupo: 'Claros', itens: [
                 { id: 'sakura', nome: 'Sakura', claro: true, cores: ['#fff7f9', '#fbeaf0', '#f3d7e1', '#d9487d'] },
                 { id: 'menta', nome: 'Menta', claro: true, cores: ['#f6fffb', '#e6f7f0', '#cdebdf', '#17986b'] },
-                { id: 'areia', nome: 'Areia', claro: true, cores: ['#fffaf2', '#f5ecdc', '#e8dcc4', '#b9702a'] } ] },
+                { id: 'areia', nome: 'Areia', claro: true, cores: ['#fffaf2', '#f5ecdc', '#e8dcc4', '#b9702a'] },
+                { id: 'lavanda', nome: 'Lavanda', claro: true, cores: ['#faf7ff', '#efe8fb', '#e0d4f5', '#7a56e0'] },
+                { id: 'ceu', nome: 'Céu', claro: true, cores: ['#f5faff', '#e5f0fb', '#cfe2f5', '#2d7ff0'] },
+                { id: 'pessego', nome: 'Pêssego', claro: true, cores: ['#fff8f3', '#fbeadf', '#f3d6c5', '#f07b4b'] },
+                { id: 'limao', nome: 'Limão', claro: true, cores: ['#fbfff2', '#f0f7de', '#e0eec0', '#7aa514'] },
+                { id: 'nuvem', nome: 'Nuvem', claro: true, cores: ['#f7f8fa', '#eceef2', '#dde0e7', '#5b6ee1'] } ] },
         ];
         const TEMAS_CLAROS_JS = CATALOGO_TEMAS.flatMap(g => g.itens).filter(t => t.claro).map(t => t.id);
         const TEMAS_IDS = CATALOGO_TEMAS.flatMap(g => g.itens).map(t => t.id).concat('custom');
@@ -12818,8 +12828,22 @@
         });
         socket.on('atividade_estado', (d) => Atividades.aoEstado(d));
         socket.on('atividade_erro', (d) => Atividades.aoErro(d));
+        socket.on('atividade_convite', (d) => Atividades.aoConvite(d));
+        socket.on('atividade_chamada', (d) => Atividades.aoChamada(d));
+        socket.on('atividade_convite_enviado', (d) => Atividades.aoConviteEnviado(d));
+        socket.on('atividade_convite_recusado', (d) => Atividades.aoConviteRecusado(d));
         socket.on('voz_convite', (d) => CallUI.convidado(d));
         socket.on('voz_convite_enviado', (d) => CallUI.aoConvidadoEnviado(d));
+
+        // Dicas próprias (no lugar do balãozinho do navegador), botão direito do app e controles das transmissões (volume por pessoa, parar de
+        // assistir, tela cheia): static/js/ui_extra.js. Volume e silêncio por pessoa ficam só neste aparelho.
+        UiExtra.iniciar({
+            esc, escUrl, toast: (m, t) => showToast(m, t), grade: videoGrid,
+            volumeSaida: () => ConfigUsuario.volumeSaida(),
+            surdo: () => !!deafened,
+            uidDoPeer: (peer) => (visualPorPeer[peer] || {}).uid || null,
+            abrirPerfil: (id, ancora) => abrirCartao(id, ancora),
+        });
 
         // Supressão de ruído rápida (botão perto do "Voz conectada" e item do menu dos 3 pontinhos). É o filtro NATIVO do navegador
         // (constraint noiseSuppression do getUserMedia), a mesma chave da aba Voz e Vídeo: mexer aqui muda lá e vice-versa.
@@ -12949,28 +12973,43 @@
         // A pessoa escolhe nos 3 pontinhos da call: Economia / Automática / Alta (degraus de bitrate e teto de resolução) e, pra tela,
         // Nitidez (texto e código nítidos) ou Fluidez (jogos e vídeo). Dentro do degrau escolhido o ajuste continua automático.
         const NIVEIS_POR_QUALIDADE = {
-            economia: { tela: [800000, 450000, 220000], video: [450000, 260000, 150000] },
-            auto:     { tela: [1800000, 900000, 400000], video: [900000, 500000, 250000] },
-            alta:     { tela: [3500000, 1800000, 800000], video: [1800000, 1000000, 500000] },
+            economia: { tela: [1000000, 600000, 300000], video: [450000, 260000, 150000] },
+            auto:     { tela: [2500000, 1400000, 700000], video: [900000, 500000, 250000] },
+            alta:     { tela: [5000000, 2800000, 1400000], video: [1800000, 1000000, 500000] },
         };
-        // teto de resolução (altura) e fps da TELA compartilhada, por qualidade e por "otimizar"
+        // teto de resolução (altura) e fps da TELA compartilhada, por qualidade e por "otimizar".
+        // O padrão é Fluidez (720p a 30 fps): o 1080p a 15 fps com "nitidez" deixava o jogo/vídeo com cara de slideshow e pesava pro PC de quem
+        // assiste. Nitidez continua à escolha (texto e código). Veja também alvoPorEspectadores(): mais gente assistindo = menos pixels por cópia.
         const TELA_POR_QUALIDADE = {
-            economia: { nitidez: { h: 720, fps: 10 },  fluidez: { h: 480, fps: 30 } },
+            economia: { nitidez: { h: 720, fps: 12 },  fluidez: { h: 480, fps: 30 } },
             auto:     { nitidez: { h: 1080, fps: 15 }, fluidez: { h: 720, fps: 30 } },
-            alta:     { nitidez: { h: 1080, fps: 30 }, fluidez: { h: 1080, fps: 30 } },
+            alta:     { nitidez: { h: 1080, fps: 24 }, fluidez: { h: 1080, fps: 30 } },
         };
         // câmera (largura x altura ideais, fps)
         const CAMERA_POR_QUALIDADE = { economia: { w: 640, h: 360, fps: 20 }, auto: { w: 960, h: 540, fps: 24 }, alta: { w: 1280, h: 720, fps: 30 } };
         function opcaoCall(k, padrao) { try { return CallUI.opcao(k) || padrao; } catch (e) { return padrao; } }
         function niveisDe(tipo) { return (NIVEIS_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || NIVEIS_POR_QUALIDADE.auto)[tipo] || NIVEIS_POR_QUALIDADE.auto.video; }
-        function telaAlvo() { return (TELA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || TELA_POR_QUALIDADE.auto)[opcaoCall('otimizar', 'nitidez')]; }
+        // A malha P2P CODIFICA a tela uma vez POR PESSOA que assiste (cada ligação tem o seu codificador): com 4 espectadores o PC de quem
+        // transmite faz 4 vezes o trabalho. Então quanto mais gente, menor a altura (o fps escolhido fica).
+        const ALTURAS = [1080, 900, 720, 540, 480, 360];
+        function alvoPorEspectadores(base) {
+            let n = 0; try { n = Object.keys(peers).length; } catch (e) {}
+            const passos = n >= 7 ? 3 : n >= 5 ? 2 : n >= 3 ? 1 : 0;
+            if (!passos) return base;
+            let i = ALTURAS.findIndex(a => a <= base.h); if (i < 0) i = ALTURAS.length - 1;
+            return { h: ALTURAS[Math.min(ALTURAS.length - 1, i + passos)], fps: base.fps };
+        }
+        function telaAlvo() {
+            const base = (TELA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || TELA_POR_QUALIDADE.auto)[opcaoCall('otimizar', 'fluidez')];
+            return alvoPorEspectadores(base);
+        }
         function cameraAlvo() { return CAMERA_POR_QUALIDADE[opcaoCall('qualidade', 'auto')] || CAMERA_POR_QUALIDADE.auto; }
         const monitoresBitrate = new Map();
 
         // Aplica o que foi escolhido nas transmissões que já estão no ar (bitrate, dica de conteúdo, resolução e fps).
         function aplicarQualidadeAoVivo() {
             monitoresBitrate.forEach(m => { try { m.reaplicar(); } catch (e) {} });
-            const dica = opcaoCall('otimizar', 'nitidez') === 'nitidez' ? 'detail' : 'motion';
+            const dica = opcaoCall('otimizar', 'fluidez') === 'nitidez' ? 'detail' : 'motion';
             const t = telaAlvo();
             activeScreenStreams.forEach(sc => sc.stream.getVideoTracks().forEach(tr => {
                 try { tr.contentHint = dica; tr.applyConstraints({ height: { ideal: t.h, max: t.h }, frameRate: { ideal: t.fps, max: t.fps } }).catch(() => {}); } catch (e) {}
@@ -12993,6 +13032,7 @@
                     const params = sender.getParameters();
                     if (!params.encodings || !params.encodings.length) params.encodings = [{}];
                     params.encodings[0].maxBitrate = niveis[Math.min(i, niveis.length - 1)];
+                    if (tipo === 'tela') params.encodings[0].maxFramerate = telaAlvo().fps;   // teto de fps também no codificador, não só na captura
                     await sender.setParameters(params);
                 } catch(e) {}
             };
@@ -13058,38 +13098,59 @@
                 const audioCtx = garantirAudio();
                 if (!audioCtx) return;
                 const analyser = audioCtx.createAnalyser();
-                const source = audioCtx.createMediaStreamSource(stream);
-                source.connect(analyser); analyser.fftSize = 256;
+                analyser.fftSize = 256;
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                // BUG (a bordinha verde que parava "do nada"): o nó de áudio do navegador fica preso na PRIMEIRA faixa do stream. Quando o
+                // microfone é reaberto (trocar de mic, ligar/desligar supressão de ruído, mudar o perfil de voz...) a faixa velha morre e o
+                // stream ganha uma nova, mas o analisador seguia ouvindo a velha (silêncio) pra sempre. Agora ele religa sozinho na faixa viva.
+                let source = null, faixaLigada = null;
+                const ligar = () => {
+                    const viva = stream.getAudioTracks().find(t => t.readyState === 'live');
+                    if (!viva) return false;
+                    if (viva === faixaLigada && source) return true;
+                    try { if (source) source.disconnect(); } catch(e) {}
+                    source = audioCtx.createMediaStreamSource(new MediaStream([viva]));
+                    source.connect(analyser);
+                    faixaLigada = viva;
+                    return true;
+                };
 
                 // Acende na hora, mas só apaga depois de ~400ms sem volume -
                 // sem essa segurança, uma fala normal (que tem microrespiros)
                 // fazia a borda verde ligar/desligar várias vezes por segundo,
                 // que é boa parte do "fica mudando toda hora" reclamado.
-                let silencioDesde = 0;
+                let silencioDesde = 0, semFaixaDesde = 0;
                 const SEGURA_MS = 400;
                 const check = () => {
-                    // sai quando o cartão some OU quando a faixa acabou (o cartão "my-video-card" é fixo no HTML: sem isto o
-                    // laço de cada call antiga continuava rodando pra sempre)
-                    if(!document.getElementById(cardId) || stream.getAudioTracks().every(t => t.readyState === 'ended')) {
-                        try { source.disconnect(); } catch(e) {}
+                    const card = document.getElementById(cardId);
+                    // Para quando o cartão some, quando este stream não é mais o do meu microfone (call nova) ou quando ficou 8 s sem
+                    // nenhuma faixa viva (o cartão "my-video-card" é fixo no HTML: sem isto o laço de cada call antiga rodava pra sempre).
+                    const ehMeu = cardId === 'my-video-card';
+                    if (!card || (ehMeu && stream !== myMicStream)) { try { if (source) source.disconnect(); } catch(e) {} clearInterval(timer); return; }
+                    if (!ligar()) {
+                        if (!semFaixaDesde) semFaixaDesde = performance.now();
+                        if (performance.now() - semFaixaDesde > 8000) { clearInterval(timer); }
+                        card.classList.remove('is-speaking');
                         return;
                     }
+                    semFaixaDesde = 0;
+                    // o navegador pode "suspender" o áudio do app (aba em segundo plano, troca de dispositivo): sem retomar, o volume lido é sempre 0
+                    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
                     analyser.getByteFrequencyData(dataArray);
                     let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
-                    let avg = sum / dataArray.length;
-                    const card = document.getElementById(cardId);
-                    if(card) {
-                        if(avg > 15) {
-                            silencioDesde = 0;
-                            card.classList.add('is-speaking');
-                        } else {
-                            if(!silencioDesde) silencioDesde = performance.now();
-                            if(performance.now() - silencioDesde > SEGURA_MS) card.classList.remove('is-speaking');
-                        }
+                    const avg = sum / dataArray.length;
+                    if (avg > 15) {
+                        silencioDesde = 0;
+                        card.classList.add('is-speaking');
+                    } else {
+                        if (!silencioDesde) silencioDesde = performance.now();
+                        if (performance.now() - silencioDesde > SEGURA_MS) card.classList.remove('is-speaking');
                     }
-                    requestAnimationFrame(check);
                 };
+                // setInterval e não requestAnimationFrame: o rAF para quando a janela está escondida/coberta (jogando com a call de lado) e a
+                // borda de quem fala parava de atualizar.
+                const timer = setInterval(check, 66);
                 check();
             } catch(e) {}
         }
@@ -13218,7 +13279,7 @@
                 myPeerId = null;   // o id da call anterior não vale pra esta
                 participantesDaCall = [];
                 mePeer = new Peer(undefined, {
-                    host: '0.peerjs.com', port: 443, secure: true,
+                    ...PEER_SERVIDOR,
                     config: { iceServers: ICE_SERVERS }   // vem do servidor (TURN próprio por variável de ambiente, se houver)
                 });
                 let jaAbriu = false;
@@ -13383,8 +13444,9 @@
         }
         function registrarVisual(peerId, v) {
             if (!peerId || !v) return;
-            visualPorPeer[peerId] = { moldura: v.moldura || '', nome_estilo: v.nome_estilo || '', equipados: v.equipados || {} };
+            visualPorPeer[peerId] = { moldura: v.moldura || '', nome_estilo: v.nome_estilo || '', equipados: v.equipados || {}, uid: v.usuario_id || null };
             aplicarVisualAoCard(peerId);
+            UiExtra.reaplicarPeer(peerId);                 // o volume guardado dessa pessoa passa a valer
         }
         // Meu próprio card (e o efeito de fala dele): vem de perfilMeu
         function aplicarMeuVisualNaCall() {
@@ -13574,12 +13636,13 @@
             a.muted = !!deafened;
             a.volume = ConfigUsuario.volumeSaida();        // Configurações > Voz e vídeo
             card.appendChild(a);
+            UiExtra.audioDoCard(card, a);                  // volume/silêncio desta pessoa (botão direito no quadro)
             tocarAudioRemoto(a);
             return a;
         }
         // Fone desligado = não ouve ninguém (antes o botão só mudava o ícone e o aviso pros outros; o som seguia tocando).
         function aplicarSurdez() {
-            document.querySelectorAll('#video-grid audio.audio-remoto').forEach(a => { a.muted = !!deafened; });
+            document.querySelectorAll('#video-grid audio.audio-remoto').forEach(a => { a.muted = !!deafened || a.dataset.mudo === '1'; });
         }
         // autocura: áudio parado (play barrado, stream que trocou) volta a tocar sozinho
         setInterval(() => {
@@ -13739,7 +13802,7 @@
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
                 // "detail" mantém texto e código nítidos (perde fluidez se a rede apertar); "motion" faz o contrário (jogos, vídeo)
-                newStream.getVideoTracks().forEach(tr => { try { tr.contentHint = opcaoCall('otimizar', 'nitidez') === 'nitidez' ? 'detail' : 'motion'; } catch (e) {} });
+                newStream.getVideoTracks().forEach(tr => { try { tr.contentHint = opcaoCall('otimizar', 'fluidez') === 'nitidez' ? 'detail' : 'motion'; } catch (e) {} });
                 const streamId = Date.now();
                 // `calls` guarda as ligações PeerJS abertas pra essa tela em
                 // cada peer - sem isso, pararCompartilhamento() não tinha
@@ -13794,24 +13857,16 @@
         // ==========================================
         // GRAVAR A CALL + CLIPAR (manual e automático)
         // ------------------------------------------------------------
-        // "Gravar" salva a call inteira pro PC de quem clicou. "Clipar"
-        // pega os últimos ~30s de um buffer circular que fica rodando desde
-        // que a call começa (ver iniciarBufferClipe, chamado no fim de
-        // initVoiceChannel). Nenhum dos dois manda nada pro servidor -
-        // tudo acontece no navegador de quem gravou/clipou.
+        // "Gravar" salva a call inteira pro PC de quem clicou. Os CLIPES (manual e
+        // automático, o sinal (!), o pop-up, cortar e mandar) moram em static/js/clipes.js;
+        // aqui ficam só os ganchos finos (iniciarBufferClipe/pararBufferClipe, o botão
+        // Clipar e o interruptor). Nada disso manda nada pro servidor - tudo acontece
+        // no navegador de quem gravou/clipou (a mídia da call é P2P).
         // ==========================================
         let gravandoCall = false;
         let clipandoAuto = false;
         let mediaGravador = null;
         let compositorGravacao = null;
-        let compositorBuffer = null;
-        let bufferGravador = null;
-        const DURACAO_SEGMENTO_MS = 30000;
-        let candidatosAutoClip = [];
-        let pollerAutoClipId = null;
-        let contadorFalandoJunto = 0;
-        let ultimoAutoClipEm = 0;
-        let clipeAtualBlob = null;
 
         function mimeTypeSuportado(opcoes) {
             return opcoes.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
@@ -13897,63 +13952,9 @@
             return { stream: streamFinal, parar() { ativo = false; audioCtx.close().catch(() => {}); } };
         }
 
-        // ---- Buffer dos últimos ~30s, sempre rodando durante a call ----
-        // Nada de concatenar Blobs de sessões diferentes do MediaRecorder pra
-        // simular um "circular buffer" - testei e só o primeiro pedaço toca
-        // (cada start()/stop() gera um cabeçalho Matroska próprio, e colar
-        // vários um atrás do outro não vira um arquivo válido). Em vez disso:
-        // um segmento de ~30s sempre gravando, com timeslice (os chunks de UMA
-        // MESMA sessão SÃO concatenáveis); quando fecha, vira "o último clipe
-        // pronto" e um novo começa. "Clipar" pega esse último pronto - às
-        // vezes vai ter alguns segundos a mais de atraso do que os 30s exatos
-        // de agora, mas sempre é um arquivo inteiro e tocável.
-        let segmentoCompleto = null;
-        let chunksSegmentoAtual = [];
-
-        function iniciarBufferClipe() {
-            if (compositorBuffer) return;
-            try { compositorBuffer = criarCompositor(480, 15); }
-            catch(e) { compositorBuffer = null; return; }
-            segmentoCompleto = null; chunksSegmentoAtual = [];
-            abrirNovoSegmentoBuffer();
-        }
-
-        function abrirNovoSegmentoBuffer() {
-            if (!compositorBuffer) return;
-            chunksSegmentoAtual = [];
-            const mime = mimeTypeSuportado(['video/webm;codecs=vp8,opus', 'video/webm']);
-            let rec;
-            try { rec = new MediaRecorder(compositorBuffer.stream, mime ? { mimeType: mime } : undefined); }
-            catch(e) { return; }
-            rec.ondataavailable = e => { if (e.data && e.data.size) chunksSegmentoAtual.push(e.data); };
-            rec.onstop = () => {
-                if (chunksSegmentoAtual.length) segmentoCompleto = new Blob(chunksSegmentoAtual, { type: 'video/webm' });
-                if (compositorBuffer) abrirNovoSegmentoBuffer();
-            };
-            // Sem timeslice de propósito: só um chunk cheio, entregue no
-            // stop(). Testei com timeslice e o navegador só soltava os
-            // pedaços intermediários de forma inconsistente.
-            rec.start();
-            bufferGravador = rec;
-            setTimeout(() => { if (rec.state !== 'inactive') rec.stop(); }, DURACAO_SEGMENTO_MS);
-        }
-
-        function pararBufferClipe() {
-            if (bufferGravador && bufferGravador.state !== 'inactive') { bufferGravador.onstop = null; bufferGravador.stop(); }
-            bufferGravador = null;
-            if (compositorBuffer) { compositorBuffer.parar(); compositorBuffer = null; }
-            segmentoCompleto = null; chunksSegmentoAtual = [];
-            pararDeteccaoAutomatica();
-        }
-
-        function montarClipeDoBuffer() {
-            // Prefere o último segmento fechado (~30s inteiros). Só usa o que
-            // já foi gravado do segmento atual se a call ainda não completou
-            // os primeiros 30s (senão o primeiro clipe da call nunca sairia).
-            if (segmentoCompleto) return segmentoCompleto;
-            if (chunksSegmentoAtual.length) return new Blob(chunksSegmentoAtual, { type: 'video/webm' });
-            return null;
-        }
+        // ---- Clipes da call: janela deslizante de ~30s, detecção automática, sinal (!), pop-up (static/js/clipes.js) ----
+        function iniciarBufferClipe() { try { Clipes.aoEntrarNaCall(); } catch (e) { console.error('[clipes]', e); } }   // clipe nunca derruba a call
+        function pararBufferClipe() { try { Clipes.aoSairDaCall(); } catch (e) { console.error('[clipes]', e); } }
 
         // ---- Gravar a call inteira pro PC ----
         document.querySelectorAll('#rec-res-group .q-btn').forEach(btn => {
@@ -14049,121 +14050,37 @@
 
         document.getElementById('pop-btn-clipar').addEventListener('click', () => {
             fecharPopupMedia();
-            const blob = montarClipeDoBuffer();
-            if (!blob) { showToast('Ainda não juntei 30s pra clipar - espera mais um pouco.', 'warning'); return; }
-            abrirEdicaoClipe(blob);
+            Clipes.clipar();
         });
 
-        document.getElementById('switch-clip-auto').addEventListener('change', (e) => {
-            clipandoAuto = e.target.checked;
-            atualizarIconeMedia();
-            if (clipandoAuto) iniciarDeteccaoAutomatica(); else pararDeteccaoAutomatica();
-        });
+        document.getElementById('switch-clip-auto').addEventListener('change', (e) => Clipes.definirAuto(e.target.checked));
 
-        // ---- Detecção automática: heurística, não é IA de verdade.
-        // Dispara quando 2+ pessoas ficam "falando"/altas ao mesmo tempo por
-        // alguns segundos seguidos (ex.: todo mundo rindo/gritando junto),
-        // reaproveitando o .is-speaking que monitorarVolume já mantém. ----
-        function iniciarDeteccaoAutomatica() {
-            if (pollerAutoClipId) return;
-            if (!compositorBuffer) iniciarBufferClipe();
-            pollerAutoClipId = setInterval(() => {
-                const falando = document.querySelectorAll('#video-grid .video-card.is-speaking').length;
-                contadorFalandoJunto = falando >= 2 ? contadorFalandoJunto + 1 : 0;
-
-                if (contadorFalandoJunto >= 3 && Date.now() - ultimoAutoClipEm > 60000) {
-                    ultimoAutoClipEm = Date.now();
-                    contadorFalandoJunto = 0;
-                    const blob = montarClipeDoBuffer();
-                    if (blob) {
-                        candidatosAutoClip.unshift({ blob, hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
-                        candidatosAutoClip = candidatosAutoClip.slice(0, 5);
-                        document.getElementById('clip-alerta').classList.add('visivel');
-                    }
-                }
-            }, 1000);
-        }
-        function pararDeteccaoAutomatica() {
-            if (pollerAutoClipId) { clearInterval(pollerAutoClipId); pollerAutoClipId = null; }
-            candidatosAutoClip = [];
-            document.getElementById('clip-alerta').classList.remove('visivel');
-            document.getElementById('clip-gaveta').classList.remove('aberta');
-        }
-
-        document.getElementById('clip-alerta').addEventListener('click', () => {
-            const gaveta = document.getElementById('clip-gaveta');
-            if (!candidatosAutoClip.length) {
-                gaveta.innerHTML = '<div class="clip-gaveta-vazia">Nenhum clipe ainda</div>';
-            } else {
-                gaveta.innerHTML = candidatosAutoClip.map((c, i) =>
-                    `<div class="clip-gaveta-item" data-i="${i}"><video muted></video><div class="txt">Momento às ${esc(c.hora)}</div></div>`
-                ).join('');
-                gaveta.querySelectorAll('.clip-gaveta-item').forEach(item => {
-                    const i = parseInt(item.getAttribute('data-i'));
-                    const video = item.querySelector('video');
-                    video.src = URL.createObjectURL(candidatosAutoClip[i].blob);
-                    item.addEventListener('mouseenter', () => video.play().catch(() => {}));
-                    item.addEventListener('mouseleave', () => { video.pause(); video.currentTime = 0; });
-                    item.addEventListener('click', () => {
-                        gaveta.classList.remove('aberta');
-                        document.getElementById('clip-alerta').classList.remove('visivel');
-                        abrirEdicaoClipe(candidatosAutoClip[i].blob);
-                    });
-                });
-            }
-            gaveta.classList.toggle('aberta');
-        });
-
-        // ---- Tela de edição do clipe ----
-        function abrirEdicaoClipe(blob) {
-            clipeAtualBlob = blob;
-            const video = document.getElementById('clip-edit-video');
-            video.src = URL.createObjectURL(blob);
-            video.onloadedmetadata = () => {
-                const dur = video.duration && isFinite(video.duration) ? video.duration : 30;
-                document.getElementById('clip-trim-inicio').max = dur;
-                document.getElementById('clip-trim-fim').max = dur;
-                document.getElementById('clip-trim-inicio').value = 0;
-                document.getElementById('clip-trim-fim').value = dur;
-                document.getElementById('clip-trim-inicio-label').textContent = '0.0s';
-                document.getElementById('clip-trim-fim-label').textContent = dur.toFixed(1) + 's';
-            };
-            document.getElementById('clip-edit-modal').style.display = 'flex';
-        }
-
-        document.getElementById('clip-trim-inicio').addEventListener('input', (e) => {
-            document.getElementById('clip-edit-video').currentTime = parseFloat(e.target.value);
-            document.getElementById('clip-trim-inicio-label').textContent = parseFloat(e.target.value).toFixed(1) + 's';
-        });
-        document.getElementById('clip-trim-fim').addEventListener('input', (e) => {
-            document.getElementById('clip-trim-fim-label').textContent = parseFloat(e.target.value).toFixed(1) + 's';
-        });
-        document.getElementById('btn-fechar-edicao-clipe').addEventListener('click', () => {
-            document.getElementById('clip-edit-modal').style.display = 'none';
-        });
-
-        document.getElementById('btn-salvar-clipe-pc').addEventListener('click', () => {
-            if (!clipeAtualBlob) return;
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(clipeAtualBlob); a.download = `bazinga-clipe-${Date.now()}.webm`; a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-        });
-
-        document.getElementById('btn-enviar-clipe-chat').addEventListener('click', async () => {
-            if (!clipeAtualBlob || !currentChannelId) return;
-            const botao = document.getElementById('btn-enviar-clipe-chat');
-            botao.disabled = true; botao.textContent = 'Enviando...';
-            try {
-                const arquivo = new File([clipeAtualBlob], `clipe-${Date.now()}.webm`, { type: 'video/webm' });
-                const { url, tipo, nome } = await uploadMidiaCompleto(arquivo);
-                socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: '', anexo_url: url, anexo_tipo: tipo, anexo_nome: nome });
-                showToast('Clipe mandado no chat!', 'success');
-                document.getElementById('clip-edit-modal').style.display = 'none';
-            } catch(e) {
-                showToast('Não consegui mandar o clipe: ' + e.message, 'error');
-            } finally {
-                botao.disabled = false; botao.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Mandar no chat';
-            }
+        // CLIPES DA CALL: static/js/clipes.js. A mídia da call é P2P, então tudo (buffer, detecção, corte) acontece AQUI, no navegador de quem clipa;
+        // o servidor só entra quando a pessoa manda o clipe pra alguém (/api/upload e os eventos de mensagem de sempre).
+        Clipes.iniciar({
+            esc, escUrl, toast: (m, t) => showToast(m, t),
+            micStream: () => myMicStream,
+            amigos: () => (amizades && amizades.amigos) || [],
+            destinoDaCall: () => {                                   // numa call de DM, o amigo da outra ponta aparece primeiro na lista
+                const m = /^dm_(\d+)_(\d+)$/.exec(String(currentVoiceChannelId || ''));
+                if (!m) return {};
+                return { amigo: Number(m[1]) === Number(currentUserId) ? Number(m[2]) : Number(m[1]) };
+            },
+            canais: () => {                                          // canais de texto de cada servidor; o servidor da call vem primeiro
+                const cid = String(currentVoiceChannelId || '');
+                return (meUserServers || []).map(sv => ({
+                    servidor: sv.name, daCall: (sv.channels || []).some(c => String(c.id) === cid),
+                    canais: (sv.channels || []).filter(c => c.type === 'text' || c.type === 'midia').map(c => ({ id: c.id, name: c.name })),
+                })).filter(g => g.canais.length).sort((a, b) => Number(b.daCall) - Number(a.daCall));
+            },
+            upload: (arquivo) => uploadMidiaCompleto(arquivo),
+            enviarDM: (id, dados) => socket.emit('enviar_mensagem_direta', { target_id: id, ...dados }),
+            enviarCanal: (id, dados) => socket.emit('enviar_mensagem', { canal_id: id, ...dados }),
+            aoMudarAuto: (on) => {
+                clipandoAuto = on;
+                const sw = document.getElementById('switch-clip-auto'); if (sw) sw.checked = on;
+                atualizarIconeMedia();
+            },
         });
 
         let micMuted = false; let deafened = false; let micMutedBeforeDeafen = false;
@@ -15429,7 +15346,7 @@
         let _denunciaAlvo = null;
         function abrirDenuncia(tipo, id, nome) {
             _denunciaAlvo = { tipo, id };
-            document.getElementById('denuncia-titulo').textContent = { nota: 'Denunciar nota', resposta: 'Denunciar resposta', usuario: 'Denunciar pessoa', loja: 'Denunciar loja', produto: 'Denunciar produto' }[tipo] || 'Denunciar servidor';
+            document.getElementById('denuncia-titulo').textContent = { nota: 'Denunciar nota', resposta: 'Denunciar resposta', usuario: 'Denunciar pessoa', loja: 'Denunciar loja', produto: 'Denunciar produto', mensagem: 'Denunciar mensagem', dm: 'Denunciar mensagem' }[tipo] || 'Denunciar servidor';
             document.getElementById('denuncia-sub').textContent = nome ? `"${String(nome).slice(0, 60)}" — conta pra gente o que tem de errado.` : 'Conta pra gente o que tem de errado.';
             document.getElementById('denuncia-detalhe').value = '';
             document.querySelector('input[name="dn-motivo"][value="+18"]').checked = true;

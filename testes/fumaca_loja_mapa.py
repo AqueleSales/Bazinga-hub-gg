@@ -90,7 +90,7 @@ with app.app_context():
     ok(nova_perto and nova_perto[-1]['args'][0]['nome'] == 'Doces da Ana' and nova_perto[-1]['args'][0]['aprox'], 'regra 6: quem está perto vê a loja aparecer na hora')
     ok(not ev(cris, 'loja_mapa_nova'), 'quem está longe não recebe o pino')
     j = nova_perto[-1]['args'][0]
-    ok(set(j) == {'id', 'nome', 'categoria', 'cor', 'toldo', 'logo_url', 'banner_url', 'regiao', 'nota', 'nota_qtd', 'lat', 'lng', 'aprox', 'pague_no_app', 'reputacao', 'dono_id', 'produtos'},
+    ok(set(j) == {'id', 'nome', 'categoria', 'cor', 'toldo', 'logo_url', 'banner_url', 'regiao', 'nota', 'nota_qtd', 'lat', 'lng', 'aprox', 'pague_no_app', 'reputacao', 'dono_id', 'vendas', 'produtos'},
        'a prévia traz só o necessário')
     ok([p['nome'] for p in j['produtos']] == ['Brigadeiro'] and j['produtos'][0]['preco_cent'] == 4500 and set(j['produtos'][0]) == {'id', 'nome', 'preco_cent', 'tipo', 'capa'},
        'a prévia leva os produtos (nome e preço) e só isso: nada de estoque, descrição nem o texto privado de entrega')

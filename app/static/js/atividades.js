@@ -1,5 +1,6 @@
 /* Atividades da call (Rodada 34): jogos leves que duas pessoas jogam DENTRO da call enquanto o resto assiste.
-   Hoje: xadrez. O servidor (app/atividades.py) é quem decide se um lance vale; aqui só desenhamos e pedimos.
+   Hoje: xadrez (este arquivo), mais jogo da velha, pedra-papel-tesoura, forca e dados/sorteio (static/js/atividades_jogos.js).
+   O servidor (app/atividades.py e app/jogos.py) é quem decide se uma jogada vale; aqui só desenhamos e pedimos.
    O chess.js (CDN, versão fixa e SRI) só ajuda a mostrar os lances possíveis e a escrever a notação: se não carregar, o
    tabuleiro continua funcionando e o servidor continua recusando lance ilegal.
    Para criar outra atividade: um tipo novo em atividades.TIPOS_ATIVIDADE (python), um cartão em CATALOGO e uma função que
@@ -21,10 +22,14 @@ const Atividades = (function () {
 
     const CATALOGO = [
         { tipo: 'xadrez', nome: 'Xadrez', icone: 'chess', desc: 'Duas pessoas da call jogam; todo mundo assiste.', pronto: true },
+        { tipo: 'velha', nome: 'Jogo da velha', icone: 'hash', desc: 'Dois jogadores, rápido de jogar. Dá pra chamar alguém da call pra mesa.', pronto: true },
+        { tipo: 'ppt', nome: 'Pedra, papel e tesoura', icone: 'hand', desc: 'Melhor de 3, com as escolhas reveladas juntas.', pronto: true },
+        { tipo: 'forca', nome: 'Forca', icone: 'forca', desc: 'Todo mundo da call chuta letras juntos. A palavra é sorteada.', pronto: true },
+        { tipo: 'dados', nome: 'Dados e sorteio', icone: 'dice', desc: 'D6, D20, D100, cara ou coroa e sorteio de alguém da call.', pronto: true },
         { tipo: 'musica', nome: 'Música na call', icone: 'music', desc: 'Todo mundo ouvindo a mesma playlist, sincronizado.', pronto: false },
-        { tipo: 'bots', nome: 'Bots', icone: 'robot', desc: 'Dados, trívia e outros ajudantes pra animar a call.', pronto: false },
     ];
-    const ICONES = { chess: 'fa-chess-knight', music: 'fa-music', robot: 'fa-robot' };
+    const ICONES = { chess: 'fa-chess-knight', music: 'fa-music', robot: 'fa-robot', hash: 'fa-hashtag', hand: 'fa-hand-back-fist', forca: 'fa-spell-check', dice: 'fa-dice' };
+    const nomeDoTipo = (t) => { const c = CATALOGO.find((x) => x.tipo === t); return c ? c.nome : t; };
 
     // Peças: usamos as formas cheias (♚♛♜♝♞♟) nas duas cores; a cor vem do CSS. O ︎ impede o emoji colorido.
     const GLIFO = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟︎' };
@@ -74,7 +79,7 @@ const Atividades = (function () {
     function fecharSeletor() { if (seletor) seletor.classList.remove('aberto'); }
     function pintarSeletor() {
         if (!seletor) return;
-        const emAndamento = estado ? CATALOGO.find((c) => c.tipo === estado.tipo) : null;
+        const emAndamento = estado ? CATALOGO.find((c) => c.tipo === estado.tipo) : null;   // (o ícone vem de ICONES pela chave do catálogo)
         seletor.innerHTML = `<div class="at-card" role="dialog" aria-modal="true" aria-label="Atividades">
             <div class="at-topo"><h3>Atividades</h3><button type="button" data-at="fechar" title="Fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
             <p class="at-sub">Coisas pra fazer juntos enquanto vocês conversam na call.</p>
@@ -89,8 +94,11 @@ const Atividades = (function () {
     function resumoEstado() {
         if (!estado) return '';
         const j = estado.jogadores;
+        if (estado.tipo === 'forca') return estado.resultado ? 'Palavra terminada.' : 'Todo mundo chutando letras.';
+        if (estado.tipo === 'dados') return 'Rolando dados e sorteios.';
         if (estado.situacao === 'aguardando') return 'Esperando o segundo jogador sentar.';
         if (estado.situacao === 'fim') return 'Partida terminada.';
+        if (estado.tipo !== 'xadrez') { const l = estado.lados || []; return `${esc(j[l[0]] ? j[l[0]].nome : '?')} × ${esc(j[l[1]] ? j[l[1]].nome : '?')}`; }
         return `${esc(j.w ? j.w.nome : '?')} (brancas) × ${esc(j.b ? j.b.nome : '?')} (pretas)`;
     }
     function confirmarEncerrar() {
@@ -105,7 +113,7 @@ const Atividades = (function () {
         painel = document.createElement('div');
         painel.className = 'at-painel'; painel.id = 'at-painel'; painel.hidden = true;
         painel.setAttribute('role', 'dialog'); painel.setAttribute('aria-label', 'Atividade da call');
-        painel.innerHTML = `<div class="at-p-topo" id="at-p-topo"><i class="fa-solid fa-chess-knight"></i><b>Xadrez</b><span class="at-esp"></span>
+        painel.innerHTML = `<div class="at-p-topo" id="at-p-topo"><i class="fa-solid fa-chess-knight" id="at-p-ic"></i><b id="at-p-tit">Xadrez</b><span class="at-esp"></span>
                 <button type="button" data-p="virar" title="Virar o tabuleiro" aria-label="Virar o tabuleiro"><i class="fa-solid fa-rotate"></i></button>
                 <button type="button" data-p="esconder" title="Esconder só pra mim (continua rolando)" aria-label="Esconder só pra mim"><i class="fa-solid fa-window-minimize"></i></button>
                 <button type="button" data-p="encerrar" title="Encerrar a atividade pra todos" aria-label="Encerrar a atividade"><i class="fa-solid fa-xmark"></i></button></div>
@@ -173,9 +181,11 @@ const Atividades = (function () {
             topo.insertBefore(chip, alvo || null);
         }
         const visivel = painel && !painel.hidden;
-        chip.innerHTML = '<i class="fa-solid fa-chess-knight"></i><span>Xadrez</span>';
-        chip.title = visivel ? 'Esconder o xadrez' : 'Mostrar o xadrez';
-        chip.classList.toggle('vez', !!(estado && estado.situacao === 'jogando' && meuLado() && estado.vez === meuLado()));
+        const nomeJ = nomeDoTipo(estado.tipo);
+        chip.innerHTML = `<i class="fa-solid ${iconeDoTipo(estado.tipo)}"></i><span>${esc(nomeJ)}</span>`;
+        chip.title = visivel ? `Esconder: ${nomeJ}` : `Mostrar: ${nomeJ}`;
+        const euLado = estado.tipo === 'xadrez' ? meuLado() : AtividadesJogos.meuLado(estado, { meuId });
+        chip.classList.toggle('vez', !!(estado.situacao === 'jogando' && euLado && estado.vez === euLado));
     }
 
     // =============================================================================================================
@@ -197,11 +207,12 @@ const Atividades = (function () {
         estado = d;
         pendente = false; selecionada = destinos = promocao = null;
         sincronizarChess();
-        if (nova) { virado = false; escondidoPorMim = null; }
+        if (nova) { virado = false; escondidoPorMim = null; AtividadesJogos._esquecer(); }
         // o painel abre sozinho pra todo mundo da call quando a atividade começa (quem fechou só pra si, não é incomodado de novo)
         if (escondidoPorMim !== d.id) mostrarPainel(true); else pintarChip();
         // o adversário jogou e agora é a minha vez: um bipe discreto
-        if (antes && antes.id === d.id && d.lances.length > antes.lances.length && d.vez === meuLado() && d.situacao === 'jogando') { try { ctx.som('msg'); } catch (e) {} }
+        if (antes && antes.id === d.id && d.tipo === 'xadrez' && d.lances.length > antes.lances.length && d.vez === meuLado() && d.situacao === 'jogando') { try { ctx.som('msg'); } catch (e) {} }
+        else if (antes && antes.id === d.id && d.tipo !== 'xadrez' && d.situacao === 'jogando' && meuLadoJogo() && d.vez && d.vez !== antes.vez && d.vez === meuLadoJogo()) { try { ctx.som('msg'); } catch (e) {} }
         pintarSeletor();
     }
 
@@ -212,7 +223,7 @@ const Atividades = (function () {
             .catch(() => { carregandoChess = false; ctx.toast('Não consegui carregar o tabuleiro inteligente. Dá pra jogar, mas sem a ajuda dos lances possíveis.', 'warning'); });
     }
     function sincronizarChess() {
-        if (!estado) return;
+        if (!estado || estado.tipo !== 'xadrez') return;
         if (!window.Chess) { chess = null; carregarChess(); return; }
         try { chess = new window.Chess(estado.fen); } catch (e) { chess = null; }
         const chave = estado.id + ':' + estado.lances.join(',');
@@ -311,8 +322,33 @@ const Atividades = (function () {
         return h;
     }
 
+    function iconeDoTipo(t) { const c = CATALOGO.find((x) => x.tipo === t); return (c && ICONES[c.icone]) || 'fa-chess-knight'; }
+    function meuLadoJogo() { return estado ? AtividadesJogos.meuLado(estado, { meuId }) : null; }
+    function ajudantes() {
+        const base = () => ({ canal_id: ctx.canalId() });
+        return {
+            esc, escUrl: (u) => ctx.escUrl(u), meuId, confirmar: (t, x, ok) => ctx.confirmar(t, x, ok),
+            emitir: (nome, dados) => ctx.emitir(nome, Object.assign(base(), dados)),
+            acao: (dados) => ctx.emitir('atividade_acao', Object.assign(base(), dados)),
+        };
+    }
+    function pintarCabecalho() {
+        const ic = $('at-p-ic'), tit = $('at-p-tit');
+        if (!ic || !tit || !estado) return;
+        ic.className = 'fa-solid ' + iconeDoTipo(estado.tipo); tit.textContent = nomeDoTipo(estado.tipo);
+        const virar = painel.querySelector('[data-p="virar"]'); if (virar) virar.style.display = estado.tipo === 'xadrez' ? '' : 'none';
+    }
+    function desenharJogo() {
+        const corpo = $('at-p-corpo');
+        const rolagem = corpo.scrollTop;
+        corpo.innerHTML = AtividadesJogos.corpo(estado, ajudantes());
+        corpo.scrollTop = rolagem;
+        pintarChip();
+    }
     function desenhar() {
         if (!painel || painel.hidden || !estado) return;
+        pintarCabecalho();
+        if (estado.tipo !== 'xadrez') { desenharJogo(); return; }
         const corpo = $('at-p-corpo');
         const eu = meuLado();
         const orient = eu === 'b' ? 'b' : 'w';
@@ -347,6 +383,8 @@ const Atividades = (function () {
     // Jogar
     // =============================================================================================================
     function aoClicarTabuleiro(e) {
+        const jb = e.target.closest('[data-j]');
+        if (jb && estado && AtividadesJogos.ehJogo(estado.tipo)) { if (AtividadesJogos.clique(jb, estado, ajudantes())) desenhar(); return; }
         const t = e.target.closest('[data-t]');
         if (t) {
             const a = t.dataset.t;
@@ -420,6 +458,37 @@ const Atividades = (function () {
     }
 
     // =============================================================================================================
+    // Convite e chamado (com 3+ pessoas na call, quem abre escolhe o adversário; os outros ficam sabendo que tem jogo rolando)
+    // =============================================================================================================
+    let conviteEl = null, conviteTimer = 0;
+    function fecharConvite() { clearTimeout(conviteTimer); if (conviteEl) { conviteEl.remove(); conviteEl = null; } }
+    function aoConvite(d) {
+        if (!d || !d.de || String(d.canal_id) !== String(ctx.canalId())) return;
+        fecharConvite();
+        const nome = nomeDoTipo(d.tipo);
+        const av = ctx.escUrl(d.de.avatar);
+        conviteEl = document.createElement('div');
+        conviteEl.className = 'at-convite'; conviteEl.setAttribute('role', 'alertdialog'); conviteEl.setAttribute('aria-label', 'Convite pra jogar');
+        conviteEl.innerHTML = `<div class="at-av">${av ? `<img src="${av}" alt="">` : esc(String(d.de.nome || '?')[0].toUpperCase())}</div>
+            <div class="at-convite-txt"><b>${esc(d.de.nome)}</b> te chamou pra jogar <b>${esc(nome)}</b>.<small>A cadeira está guardada pra você por 1 minuto.</small></div>
+            <div class="at-convite-bt"><button type="button" data-c="sim">Aceitar</button><button type="button" class="sec" data-c="nao">Agora não</button></div>`;
+        conviteEl.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-c]'); if (!b) return;
+            const aceitar = b.dataset.c === 'sim';
+            ctx.emitir('atividade_convite_resposta', { canal_id: ctx.canalId(), aceitar });
+            if (aceitar) { escondidoPorMim = null; if (estado) mostrarPainel(true); }
+            fecharConvite();
+        });
+        document.body.appendChild(conviteEl);
+        try { ctx.som('mencao'); } catch (e) { /* sem som */ }
+        conviteTimer = setTimeout(fecharConvite, 60000);
+    }
+    function aoChamada(d) {
+        if (!d || !d.de || String(d.canal_id) !== String(ctx.canalId())) return;
+        ctx.toast(`${d.de.nome} abriu ${nomeDoTipo(d.tipo)} na call.`, 'info');
+    }
+
+    // =============================================================================================================
     function iniciar(c) {
         ctx = c;
         document.addEventListener('keydown', (e) => {
@@ -428,13 +497,15 @@ const Atividades = (function () {
         addEventListener('resize', () => { if (painel && !painel.hidden) posicionarPainel(); });
     }
     return {
-        iniciar, abrirSeletor, aoEstado, aoErro,
+        iniciar, abrirSeletor, aoEstado, aoErro, aoConvite, aoChamada,
+        aoConviteEnviado(d) { if (d && String(d.canal_id) === String(ctx.canalId())) ctx.toast(`Convite enviado a ${d.nome}. A cadeira fica guardada por 1 minuto.`, 'success'); },
+        aoConviteRecusado(d) { if (d && String(d.canal_id) === String(ctx.canalId())) ctx.toast(`${d.nome} não pode jogar agora.`, 'warning'); },
         // chamado ao entrar numa call: pede a atividade que já está rolando (reconexão também)
         aoEntrarNaCall() { if (ctx) ctx.emitir('atividade_pedir', { canal_id: ctx.canalId() }); },
         // sair da call fecha tudo (a atividade é da call)
         aoSairDaCall() {
             estado = null; chess = null; sans = []; sansDe = ''; selecionada = destinos = promocao = null; pendente = false; escondidoPorMim = null;
-            if (painel) painel.hidden = true; fecharSeletor(); pintarChip();
+            if (painel) painel.hidden = true; fecharSeletor(); fecharConvite(); AtividadesJogos._esquecer(); pintarChip();
         },
         estado: () => estado,
     };

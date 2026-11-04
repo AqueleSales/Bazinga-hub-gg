@@ -30,7 +30,7 @@ from ..bazar import ids_dos_admins as _ids_dos_admins
 from ..explorar import TEMAS_EXPLORAR
 from ..efeitos import mapa_para_cliente as efeitos_custom_mapa
 from ..cosmeticos import posses_da_pessoa, posses_com_regras, equipados_da_pessoa, badges_do_conjunto, patente_do_nivel
-from ..utils import nivel_da_pessoa, resumos_de_resposta_canal, resumos_de_resposta_dm
+from ..utils import nivel_da_pessoa, identidade_mini, resumos_de_resposta_canal, resumos_de_resposta_dm
 
 main_bp = Blueprint("main", __name__)
 
@@ -76,7 +76,9 @@ def usuario_da_sessao():
 
 # O teto global (5 MB, config.py) barrava um GIF de 6-10 MB ANTES de a rota rodar - o aviso falava
 # em "5 MB" mesmo a rota aceitando 10. Essas duas rotas têm teto próprio, só na requisição delas.
-_TETO_POR_ROTA = {'/api/gif/recortar': 12 * 1024 * 1024, '/api/video/animar': 16 * 1024 * 1024, '/api/conexoes/importar-cv': 6 * 1024 * 1024}
+# /api/upload: a rota aceita vídeo de até 25 MB (LIMITE_VIDEO) e imagem de até 8 MB (LIMITE_IMAGEM) e confere o tamanho de cada um; o teto da requisição só precisa
+# deixar o vídeo chegar (antes o teto global de 5 MB cortava qualquer vídeo maior, inclusive os clipes da call, com a mensagem de "imagem").
+_TETO_POR_ROTA = {'/api/gif/recortar': 12 * 1024 * 1024, '/api/video/animar': 16 * 1024 * 1024, '/api/conexoes/importar-cv': 6 * 1024 * 1024, '/api/upload': 26 * 1024 * 1024}
 
 
 @main_bp.before_request
@@ -90,6 +92,8 @@ def teto_de_upload_por_rota():
 def arquivo_grande_demais(e):
     """Com MAX_CONTENT_LENGTH o Flask corta o request sozinho e devolve uma
     página HTML de erro - o fetch() do upload esperava JSON e quebrava."""
+    if request.path == '/api/upload':
+        return jsonify({'error': 'Arquivo grande demais (vídeo até 25 MB, imagem até 8 MB)'}), 413
     return jsonify({'error': 'Imagem grande demais (máximo 5 MB)'}), 413
 
 
@@ -740,7 +744,7 @@ def pegar_mensagens(canal_id):
             'autor': msg.author.name,
             'autor_id': msg.person_id,
             'avatar': msg.author.avatar,
-            'nome_estilo': msg.author.nome_estilo, 'moldura': msg.author.moldura, 'equipados': equipados_da_pessoa(msg.author),
+            'nome_estilo': msg.author.nome_estilo, 'moldura': msg.author.moldura, 'equipados': equipados_da_pessoa(msg.author), **identidade_mini(msg.author),
             'texto': msg.text or '',
             'anexo_url': msg.attachment_url,
             'anexo_tipo': msg.attachment_type,
@@ -794,7 +798,7 @@ def get_dms(target_id):
             'autor': msg.sender.name,
             'autor_id': msg.sender_id,
             'avatar': msg.sender.avatar,
-            'nome_estilo': msg.sender.nome_estilo, 'moldura': msg.sender.moldura, 'equipados': equipados_da_pessoa(msg.sender),
+            'nome_estilo': msg.sender.nome_estilo, 'moldura': msg.sender.moldura, 'equipados': equipados_da_pessoa(msg.sender), **identidade_mini(msg.sender),
             'texto': msg.content or '',
             'anexo_url': msg.attachment_url,
             'anexo_tipo': msg.attachment_type,

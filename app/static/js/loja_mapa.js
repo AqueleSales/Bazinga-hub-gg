@@ -28,6 +28,9 @@ const LojaMapa = (function () {
             if (d && d.removida) ctx.toast('Sua loja saiu do mapa.', 'info');
             else ctx.toast(d && d.aprox ? 'Loja plantada! No mapa aparece só a área aproximada (~300 m).' : 'Loja plantada no ponto escolhido!', 'success');
         });
+        // a aba "Lojas" fica na borda do mapa; o mapa só nasce uns instantes depois do resto da página
+        let tentativas = 0;
+        const espera = setInterval(() => { if (ctx.mapa() || ++tentativas > 40) { clearInterval(espera); montarGaveta(); } }, 250);
         document.addEventListener('click', (e) => {
             const a = e.target.closest('[data-lm]');
             if (!a) return;
@@ -160,11 +163,13 @@ const LojaMapa = (function () {
             html: `<div class="pino-loja" style="--lj:${esc(l.cor)}"><span class="pl-toldo"></span><span class="pl-corpo">${urlOk(l.logo_url) ? `<img src="${esc(urlOk(l.logo_url))}" alt="">` : inicial(l.nome)}</span><span class="pl-nome">${esc(l.nome)}</span></div>`,
             iconSize: [64, 46], iconAnchor: [32, 46],
         });
-        const marker = L.marker([l.lat, l.lng], { icon: icone }).addTo(mapa);
+        const marker = L.marker([l.lat, l.lng], { icon: icone });
+        if (passa(l)) marker.addTo(mapa);               // o filtro da gaveta vale também pro pino
         marker.bindPopup(() => cartao(pinos.get(Number(l.id))?.dados || l), { minWidth: 240, maxWidth: 240, closeButton: true, className: 'balao-wrap lm-balao', autoPanPadding: [30, 30], offset: [0, -4] });
         marker.on('popupopen', (e) => ligarVitrine(e.popup.getElement()));
         marker.on('popupclose', () => clearInterval(relogio));
         pinos.set(Number(l.id), { marker, dados: l });
+        pedirRedesenho();
     }
 
     function tirar(id) {
@@ -173,6 +178,7 @@ const LojaMapa = (function () {
         const mapa = ctx.mapa();
         if (mapa) mapa.removeLayer(p.marker);
         pinos.delete(Number(id));
+        pedirRedesenho();
     }
 
     // o servidor é a verdade do que está no alcance (andou, reconectou): tira o que sumiu e põe o que chegou
@@ -185,7 +191,140 @@ const LojaMapa = (function () {
             if (!ja || ja.dados.lat !== l.lat || ja.dados.lng !== l.lng || ja.dados.nome !== l.nome || ja.dados.pague_no_app !== l.pague_no_app || ja.dados.logo_url !== l.logo_url || ja.dados.banner_url !== l.banner_url) pintar(l);
             else ja.dados = l;   // mesmo pino, produtos sorteados de novo: o próximo cartão aberto já usa a lista nova
         });
+        pedirRedesenho();
     }
+    // ---------------------------------------------------------------------
+    // "Lojas por perto": o pedido rápido ao lado do mapa (aba na borda, abre ao passar o mouse ou ao tocar)
+    // Tudo sai dos pinos que o servidor já mandou (o que está no alcance): filtrar, buscar e ordenar não vai ao servidor.
+    // ---------------------------------------------------------------------
+    const CATEGORIAS = { comida: ['Comida', 'fa-utensils'], arte: ['Arte', 'fa-palette'], digital: ['Digital', 'fa-gamepad'], moda: ['Moda', 'fa-shirt'],
+                         casa: ['Casa', 'fa-couch'], servicos: ['Serviços', 'fa-screwdriver-wrench'], outros: ['Outros', 'fa-bag-shopping'] };
+    const ORDENS = [['perto', 'Mais perto'], ['nota', 'Melhor avaliadas'], ['vendas', 'Mais pedidas']];
+    const filtro = { cat: '', q: '', ordem: 'perto' };
+    let dock = null, fixa = false, redesenho = 0, relogioDock = null;
+
+    function minhaPos() { try { const p = ctx.minhaPos && ctx.minhaPos(); return p && isFinite(p.lat) && isFinite(p.lng) ? p : null; } catch (e) { return null; } }
+    function distM(a, b) {
+        const R = 6371000, rad = Math.PI / 180, dLa = (b.lat - a.lat) * rad, dLo = (b.lng - a.lng) * rad;
+        const x = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLo / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(x));
+    }
+    function fmtDist(m) { return m < 1000 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`; }
+
+    function passa(l) {
+        if (filtro.cat && l.categoria !== filtro.cat) return false;
+        const q = filtro.q.trim().toLowerCase();
+        if (!q) return true;
+        const texto = `${l.nome || ''} ${(l.produtos || []).map((p) => p.nome).join(' ')}`.toLowerCase();
+        return texto.includes(q);
+    }
+    // o filtro vale também pros pinos: o que não passa sai do mapa (e volta quando a pessoa limpa o filtro)
+    function aplicarFiltroNosPinos() {
+        const mapa = ctx.mapa();
+        if (!mapa) return;
+        pinos.forEach((p) => {
+            const mostrar = passa(p.dados);
+            if (mostrar && !mapa.hasLayer(p.marker)) p.marker.addTo(mapa);
+            else if (!mostrar && mapa.hasLayer(p.marker)) { p.marker.closePopup(); mapa.removeLayer(p.marker); }
+        });
+    }
+    function listaFiltrada() {
+        const pos = minhaPos();
+        const itens = [...pinos.values()].map((p) => p.dados).filter(passa).map((l) => ({ l, d: pos ? distM(pos, l) : null }));
+        const porDist = (a, b) => (a.d == null ? 1 : b.d == null ? -1 : a.d - b.d);
+        if (filtro.ordem === 'nota') itens.sort((a, b) => (Number(b.l.nota) || 0) - (Number(a.l.nota) || 0) || porDist(a, b));
+        else if (filtro.ordem === 'vendas') itens.sort((a, b) => (Number(b.l.vendas) || 0) - (Number(a.l.vendas) || 0) || porDist(a, b));
+        else itens.sort(porDist);
+        return itens;
+    }
+
+    function cardLoja(it) {
+        const l = it.l, cat = CATEGORIAS[l.categoria];
+        const nota = l.nota ? `<i class="fa-solid fa-star"></i> ${String(l.nota).replace('.', ',')}` : 'Loja nova';
+        const dist = it.d == null ? '' : ` · ${l.aprox ? '~' : ''}${fmtDist(it.d)}`;
+        const prods = (l.produtos || []).slice(0, 3).map((p) => `<button type="button" class="lg-prod" data-lmp="prod" data-id="${Number(p.id)}" data-loja="${Number(l.id)}">
+            <span class="lg-foto">${urlOk(p.capa) ? `<img src="${esc(urlOk(p.capa))}" alt="" loading="lazy">` : '<i class="fa-solid fa-bag-shopping"></i>'}</span>
+            <span class="lg-pt"><b>${esc(p.nome)}</b><em>${brl(p.preco_cent)}</em></span><span class="lg-pedir">Pedir</span></button>`).join('');
+        return `<article class="lg-loja" style="--lj:${esc(l.cor)}">
+            <header><span class="lm-logo">${urlOk(l.logo_url) ? `<img src="${esc(urlOk(l.logo_url))}" alt="">` : inicial(l.nome)}</span>
+                <div class="lg-id"><b>${esc(l.nome)}</b><small>${nota}${dist}${cat ? ` · ${esc(cat[0])}` : ''}</small></div>
+                <button type="button" class="lg-mapa" data-lmp="ver" data-id="${Number(l.id)}" data-tip="Ver no mapa" aria-label="Ver ${esc(l.nome)} no mapa"><i class="fa-solid fa-location-crosshairs"></i></button></header>
+            ${l.pague_no_app ? '<div class="lg-chips"><span class="lm-chip"><i class="fa-solid fa-qrcode"></i> Pague pelo app</span></div>' : ''}
+            ${prods ? `<div class="lg-prods">${prods}</div>` : '<div class="lg-semprod">Sem produtos em destaque agora.</div>'}
+            <button type="button" class="lg-abrir" data-lmp="loja" data-id="${Number(l.id)}"><i class="fa-solid fa-store"></i> Abrir a loja e conversar</button>
+        </article>`;
+    }
+
+    function chipsDeCategoria() {
+        const cats = [...new Set([...pinos.values()].map((p) => p.dados.categoria).filter(Boolean))];
+        return `<button type="button" class="lg-chip${filtro.cat ? '' : ' on'}" data-lmp="cat" data-v="">Todas</button>` + cats.map((c) => {
+            const info = CATEGORIAS[c] || [c, 'fa-tag'];
+            return `<button type="button" class="lg-chip${filtro.cat === c ? ' on' : ''}" data-lmp="cat" data-v="${esc(c)}"><i class="fa-solid ${info[1]}"></i> ${esc(info[0])}</button>`;
+        }).join('');
+    }
+
+    function desenharGaveta(manterBusca) {
+        if (!dock) return;
+        const itens = listaFiltrada();
+        const total = pinos.size;
+        dock.querySelector('.lg-conta').textContent = String(total);
+        dock.classList.toggle('vazio', !total);
+        dock.querySelector('.lg-chips-cat').innerHTML = chipsDeCategoria();
+        dock.querySelectorAll('[data-lmp="ordem"]').forEach((b) => b.classList.toggle('on', b.dataset.v === filtro.ordem));
+        const lista = dock.querySelector('.lg-lista');
+        const rolagem = lista.scrollTop;
+        lista.innerHTML = itens.length ? itens.map(cardLoja).join('')
+            : `<div class="lg-vazio"><i class="fa-solid fa-store-slash"></i><b>${total ? 'Nenhuma loja com esse filtro' : 'Nenhuma loja por perto'}</b><span>${total ? 'Limpe a busca ou escolha outra categoria.' : 'Quando alguém plantar uma loja no seu alcance, ela aparece aqui.'}</span></div>`;
+        lista.scrollTop = rolagem;
+        if (!manterBusca) { const q = dock.querySelector('#lg-q'); if (q && q.value !== filtro.q) q.value = filtro.q; }
+    }
+    function pedirRedesenho() {
+        if (!dock) return;
+        clearTimeout(redesenho);
+        redesenho = setTimeout(() => { aplicarFiltroNosPinos(); desenharGaveta(true); }, 120);
+    }
+
+    function montarGaveta() {
+        const mapaEl = document.getElementById('bazinga-map');
+        if (!mapaEl || !mapaEl.parentElement || dock) return;
+        dock = document.createElement('aside');
+        dock.className = 'lg-dock'; dock.id = 'lg-dock';
+        dock.innerHTML = `<button type="button" class="lg-aba" data-lmp="alternar" aria-label="Lojas por perto" aria-expanded="false"><i class="fa-solid fa-store"></i><span class="lg-conta">0</span><b>Lojas</b></button>
+            <div class="lg-gaveta" role="region" aria-label="Lojas por perto">
+                <div class="lg-topo"><div><b>Lojas por perto</b><small>Pedido rápido, sem sair do mapa</small></div><button type="button" class="lg-x" data-lmp="fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
+                <label class="lg-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="lg-q" placeholder="Buscar loja ou produto" maxlength="40" autocomplete="off" spellcheck="false"></label>
+                <div class="lg-chips-cat"></div>
+                <div class="lg-ordem" role="group" aria-label="Ordenar">${ORDENS.map(([v, n]) => `<button type="button" data-lmp="ordem" data-v="${v}">${n}</button>`).join('')}</div>
+                <div class="lg-lista"></div>
+            </div>`;
+        mapaEl.parentElement.appendChild(dock);
+        // tocar nos controles do mapa por baixo não pode mexer o mapa
+        if (window.L && L.DomEvent) { L.DomEvent.disableClickPropagation(dock); L.DomEvent.disableScrollPropagation(dock); }
+        dock.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-lmp]'); if (!b) return;
+            const a = b.dataset.lmp;
+            if (a === 'alternar') { fixa = !fixa; dock.classList.toggle('fixa', fixa); b.setAttribute('aria-expanded', fixa ? 'true' : 'false'); if (fixa) desenharGaveta(); }
+            else if (a === 'fechar') { fixa = false; dock.classList.remove('fixa', 'tocado'); dock.querySelector('.lg-aba').setAttribute('aria-expanded', 'false'); }
+            else if (a === 'cat') { filtro.cat = b.dataset.v || ''; aplicarFiltroNosPinos(); desenharGaveta(); }
+            else if (a === 'ordem') { filtro.ordem = b.dataset.v; desenharGaveta(); }
+            else if (a === 'ver') verNoMapa(Number(b.dataset.id));
+            else if (a === 'loja') { ctx.abrirLoja(Number(b.dataset.id)); }
+            else if (a === 'prod') { ctx.abrirLoja(Number(b.dataset.loja), Number(b.dataset.id)); }
+        });
+        dock.querySelector('#lg-q').addEventListener('input', (e) => { filtro.q = e.target.value; aplicarFiltroNosPinos(); desenharGaveta(true); });
+        dock.addEventListener('mouseenter', () => { desenharGaveta(true); });
+        // a distância muda quando a pessoa anda
+        relogioDock = setInterval(() => { if (dock && (fixa || dock.matches(':hover')) && !document.hidden) desenharGaveta(true); }, 20000);
+        desenharGaveta();
+    }
+    function verNoMapa(id) {
+        const p = pinos.get(Number(id)), mapa = ctx.mapa();
+        if (!p || !mapa) return;
+        if (!mapa.hasLayer(p.marker)) p.marker.addTo(mapa);
+        mapa.flyTo([p.dados.lat, p.dados.lng], Math.max(mapa.getZoom(), 16), { duration: .8 });
+        setTimeout(() => p.marker.openPopup(), 850);
+    }
+
 
     return { iniciar, abrirPlantar, plantarEm, sincronizar, pinos: () => pinos };
 })();

@@ -40,7 +40,7 @@ ok('OLBgp1GsljhM2TJ' not in chat, 'o hash antigo do PeerJS (que bloqueava toda c
 ok("carregarLib(URL_CHESS)" in chat, 'o xadrez baixa o chess.js sob demanda (carregarLib), não no <head>')
 
 # ---- barra da call: ids que outros códigos usam continuam ----
-for i in ('cf-main', 'btn-main-screen', 'btn-main-clip', 'media-popup', 'pop-btn-gravar', 'pop-btn-clipar', 'switch-clip-auto', 'clip-alerta', 'clip-gaveta',
+for i in ('cf-main', 'btn-main-screen', 'btn-main-clip', 'media-popup', 'pop-btn-gravar', 'pop-btn-clipar', 'switch-clip-auto', 'clip-alerta',
           'btn-main-mic', 'btn-main-deafen', 'btn-main-camera', 'btn-main-disconnect', 'btn-side-ruido'):
     ok(f'id="{i}"' in chat, f'id {i} existe no chat.html')
 ok('.media-btn-wrap, .cf-fan, #cf-camada' in chat, 'o clique fora que fecha o popup do clipe conhece o "+" e a camada do leque')

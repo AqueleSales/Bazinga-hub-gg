@@ -235,6 +235,15 @@ def nivel_da_pessoa(xp):
     return bisect_right(_LIMIARES, xp)
 
 
+def identidade_mini(pessoa):
+    """Patente (o ícone) e título pra aparecerem AO LADO DO NOME nas mensagens e na lista de membros. Conta pura sobre o que a `Person` já
+    traz (xp e titulo_id): nenhuma consulta nova. O título vem do cache de ~20 s de `passe`."""
+    from . import cosmeticos, passe
+    p = cosmeticos.patente_do_nivel(nivel_da_pessoa(getattr(pessoa, 'xp', 0)))
+    return {'patente': {'id': p['id'], 'sub': p['sub'], 'anim': p['anim'], 'nome_completo': p['nome_completo']},
+            'titulo': passe.titulo_publico(getattr(pessoa, 'titulo_id', None))}
+
+
 def progresso_de_nivel(xp):
     """(xp dentro do nível atual, xp necessário pro próximo) - pra desenhar a barrinha."""
     xp = max(xp or 0, 0)
@@ -708,8 +717,9 @@ def url_de_imagem_ok(url):
 # A paleta mora no CSS como qualquer outro; aqui fica só o id e o nome (o do passe usa o nome na recompensa).
 TEMAS_EXCLUSIVOS = {'templo': 'Templo', 'tartaro': 'Tártaro'}
 CORES_TEMAS_EXCLUSIVOS = {'templo': ['#1c1a14', '#15130e', '#0f0d09', '#d4a24c'], 'tartaro': ['#241618', '#1b1012', '#130a0c', '#c1403a']}   # amostra: fundo, lateral, topo, destaque
-TEMAS_ESCUROS = ('dark', 'amoled', 'meia_noite', 'floresta', 'oceano', 'por_do_sol', 'ametista', 'cafe', 'cereja') + tuple(TEMAS_EXCLUSIVOS)
-TEMAS_CLAROS = ('light', 'sakura', 'menta', 'areia')
+TEMAS_ESCUROS = ('dark', 'amoled', 'meia_noite', 'floresta', 'oceano', 'por_do_sol', 'ametista', 'cafe', 'cereja',
+                 'grafite', 'vinho', 'esmeralda', 'abismo', 'ciber', 'neon_noturno', 'carvao', 'crepusculo', 'musgo', 'turquesa') + tuple(TEMAS_EXCLUSIVOS)
+TEMAS_CLAROS = ('light', 'sakura', 'menta', 'areia', 'lavanda', 'ceu', 'pessego', 'limao', 'nuvem')
 TEMAS_VALIDOS = TEMAS_ESCUROS + TEMAS_CLAROS + ('custom',)
 
 

@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 
 from .models import (db, br_now, Person, BazarLoja, BazarProduto, BazarPedido, BazarMensagem, BazarAvaliacao,
                      BazarFavorito, BazarAnuncio, BazarDisputa, BazarBanimento,
-                     Denuncia, ConfigApp, Friendship, GeoNote, GeoNoteResposta, MapServer)
+                     Denuncia, ConfigApp, Friendship, GeoNote, GeoNoteResposta, MapServer, Message, DirectMessage)
 from . import pagamentos
 from .utils import (comitar_com_retry, url_de_imagem_ok, texto_tem_link, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, distancia_m)
 
@@ -363,7 +363,7 @@ def loja_pino_json(l, aprox=None, produtos=None):
             'logo_url': l.logo_url, 'banner_url': l.banner_url if l.banner_url and url_de_imagem_ok(l.banner_url) else None,
             'regiao': l.regiao or '', 'nota': nota_media(l), 'nota_qtd': l.nota_qtd or 0, 'lat': l.pino_lat, 'lng': l.pino_lng,
             'aprox': bool(l.pino_aprox), 'pague_no_app': checkout_ativo(l), 'reputacao': reputacao(l), 'dono_id': l.owner_id,
-            'produtos': produtos}
+            'vendas': l.vendas or 0, 'produtos': produtos}
 
 
 def lojas_no_mapa(a, b, c, d):
@@ -1487,12 +1487,19 @@ def _resumo_alvo(tipo, a):
         return {'titulo': (a.text or '')[:140], 'sub': 'Nota do mapa', 'oculta': bool(a.oculta), 'imagem': None, 'pessoa_id': None}
     if tipo == 'resposta':
         return {'titulo': (a.text or '')[:140], 'sub': 'Resposta a uma nota do mapa', 'oculta': bool(a.oculta), 'imagem': None, 'pessoa_id': None}
+    if tipo == 'mensagem':
+        autor = Person.query.get(a.person_id)
+        return {'titulo': (a.text or '(só anexo)')[:140], 'sub': f'Mensagem em canal · {autor.name if autor else "?"}', 'oculta': False, 'imagem': a.attachment_url if a.attachment_type == 'image' else None, 'pessoa_id': None}
+    if tipo == 'dm':
+        autor = Person.query.get(a.sender_id)
+        return {'titulo': (a.content or '(só anexo)')[:140], 'sub': f'Mensagem direta · {autor.name if autor else "?"}', 'oculta': False, 'imagem': a.attachment_url if a.attachment_type == 'image' else None, 'pessoa_id': None}
     if tipo == 'servidor':
         return {'titulo': a.name, 'sub': 'Servidor plantado no mapa', 'oculta': bool(a.oculta), 'imagem': None, 'pessoa_id': None}
     return {'titulo': a.name, 'sub': f'@{a.username}' if a.username else 'Pessoa', 'oculta': False, 'imagem': a.avatar, 'pessoa_id': a.id}
 
 
-_MODELO_DENUNCIA = {'loja': BazarLoja, 'produto': BazarProduto, 'nota': GeoNote, 'resposta': GeoNoteResposta, 'servidor': MapServer, 'usuario': Person}
+_MODELO_DENUNCIA = {'loja': BazarLoja, 'produto': BazarProduto, 'nota': GeoNote, 'resposta': GeoNoteResposta, 'servidor': MapServer, 'usuario': Person,
+                    'mensagem': Message, 'dm': DirectMessage}
 
 
 def fila_de_moderacao(limite=60):
@@ -1543,9 +1550,13 @@ def moderar(admin, tipo, alvo_id, acao):
                     a.ativo, a.oculta = False, True
                 else:
                     db.session.delete(a)
-            elif tipo in ('nota', 'servidor', 'resposta'):
+            elif tipo in ('nota', 'servidor', 'resposta', 'mensagem', 'dm'):
                 if tipo == 'resposta':
                     info['nota_id'] = a.note_id   # quem tinha a nota na tela tira a resposta
+                elif tipo == 'mensagem':
+                    info['canal_id'] = a.channel_id
+                elif tipo == 'dm':
+                    info['pontas'] = (a.sender_id, a.receiver_id)
                 db.session.delete(a)
             else:
                 raise ErroBazar('Pessoa não se "remove": use "Banir do Bazar" (com motivo e prazo).')

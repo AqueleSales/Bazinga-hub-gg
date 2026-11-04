@@ -102,7 +102,7 @@ const ConfigUsuario = (() => {
 
     function aplicarVolumeSaida() {
         const v = volumeSaida();
-        document.querySelectorAll('#video-grid audio.audio-remoto').forEach((a) => { a.volume = v; });
+        document.querySelectorAll('#video-grid audio.audio-remoto').forEach((a) => { a.volume = Math.max(0, Math.min(1, v * (a.dataset.fator == null ? 1 : Number(a.dataset.fator)))); });   // x o volume desta pessoa (UiExtra)
     }
 
     // ---------------------------------------------------------------------

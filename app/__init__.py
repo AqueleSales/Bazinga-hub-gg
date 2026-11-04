@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import time
 
 # Adiciona a raiz do projeto ao sys.path para garantir que o Python ache o config.py
@@ -73,6 +74,10 @@ def create_app():
             return super().should_set_cookie(app, session)
 
     app.session_interface = _SessaoCookie()
+
+    # Teto de requisições por pessoa (ou por IP, nas rotas de entrada) nas rotas que gastam serviço de fora ou são de login: app/limites.py
+    from . import limites
+    app.before_request(limites.verificar)
 
     @app.before_request
     def _login_que_dura():
@@ -151,6 +156,26 @@ def create_app():
             lista.append({'urls': u, 'username': 'openrelayproject', 'credential': 'openrelayproject'})
         return lista
 
+    def _peer_servidor():
+        """Servidor de SINALIZAÇÃO da call (PeerJS). Por padrão a nuvem pública grátis (0.peerjs.com: instável e sem garantia). Com um PeerServer
+        PRÓPRIO (`npx peerjs --port 9000 --path /peer`, num serviço à parte: o Render free dorme) defina PEERJS_HOST (e, se precisar,
+        PEERJS_PORT, PEERJS_PATH, PEERJS_KEY e PEERJS_SECURE=0 pra http). Só a sinalização passa por ele: a mídia segue P2P/TURN."""
+        host = (os.environ.get('PEERJS_HOST') or '').strip()
+        if not re.fullmatch(r'[A-Za-z0-9.-]{3,253}', host):
+            return {'host': '0.peerjs.com', 'port': 443, 'secure': True}
+        try:
+            porta = int(os.environ.get('PEERJS_PORT') or 443)
+        except ValueError:
+            porta = 443
+        caminho = (os.environ.get('PEERJS_PATH') or '/').strip()
+        if not re.fullmatch(r'/[A-Za-z0-9/_-]{0,60}', caminho):
+            caminho = '/'
+        chave = (os.environ.get('PEERJS_KEY') or 'peerjs').strip()
+        d = {'host': host, 'port': porta if 1 <= porta <= 65535 else 443, 'secure': os.environ.get('PEERJS_SECURE', '1') != '0', 'path': caminho}
+        if re.fullmatch(r'[A-Za-z0-9_-]{1,40}', chave):
+            d['key'] = chave
+        return d
+
     @app.context_processor
     def _injetar_marca():
         from .cosmeticos import GERADO
@@ -163,14 +188,16 @@ def create_app():
                 'bazar_css_v': _versao_estatico('css/bazar.css'), 'bazar_js_v': _versao_estatico('js/bazar.js'),
                 'titulos_css_v': _versao_estatico('css/titulos.css'), 'efeitos_js_v': _versao_estatico('js/efeitos.js'), 'efeitos_css_v': _versao_estatico('css/efeitos.css'), 'explorar_css_v': _versao_estatico('css/explorar.css'), 'mapa_social_css_v': _versao_estatico('css/mapa_social.css'), 'mapa_social_js_v': _versao_estatico('js/mapa_social.js'), 'notas_mapa_css_v': _versao_estatico('css/notas_mapa.css'), 'loja_mapa_css_v': _versao_estatico('css/loja_mapa.css'), 'loja_mapa_js_v': _versao_estatico('js/loja_mapa.js'), 'notas_mapa_js_v': _versao_estatico('js/notas_mapa.js'), 'conexoes_css_v': _versao_estatico('css/conexoes.css'), 'conexoes_js_v': _versao_estatico('js/conexoes.js'), 'explorar_js_v': _versao_estatico('js/explorar.js'), 'passe_css_v': _versao_estatico('css/passe.css'), 'passe_js_v': _versao_estatico('js/passe.js'), 'admin_css_v': _versao_estatico('css/admin.css'), 'admin_js_v': _versao_estatico('js/admin.js'), 'admin_graficos_js_v': _versao_estatico('js/admin_graficos.js'),
                 'musica_css_v': _versao_estatico('css/musica.css'), 'musica_js_v': _versao_estatico('js/musica.js'),
+                'clipes_css_v': _versao_estatico('css/clipes.css'), 'clipes_js_v': _versao_estatico('js/clipes.js'),
                 'cargos_css_v': _versao_estatico('css/cargos.css'), 'cargos_js_v': _versao_estatico('js/cargos.js'),
                 'ordem_css_v': _versao_estatico('css/ordem.css'), 'ordem_js_v': _versao_estatico('js/ordem.js'),
                 'call_ui_css_v': _versao_estatico('css/call_ui.css'), 'call_ui_js_v': _versao_estatico('js/call_ui.js'),
-                'atividades_css_v': _versao_estatico('css/atividades.css'), 'atividades_js_v': _versao_estatico('js/atividades.js'),
+                'ui_extra_css_v': _versao_estatico('css/ui_extra.css'), 'ui_extra_js_v': _versao_estatico('js/ui_extra.js'),
+                'atividades_jogos_js_v': _versao_estatico('js/atividades_jogos.js'), 'atividades_css_v': _versao_estatico('css/atividades.css'), 'atividades_js_v': _versao_estatico('js/atividades.js'),
                 'config_usuario_css_v': _versao_estatico('css/config_usuario.css'), 'config_usuario_js_v': _versao_estatico('js/config_usuario.js'),
                 'prestigio_css_v': _versao_estatico('css/prestigio.css'), 'prestigio_js_v': _versao_estatico('js/prestigio.js'),
                 'lojas_canal_css_v': _versao_estatico('css/lojas_canal.css'), 'lojas_canal_js_v': _versao_estatico('js/lojas_canal.js'),
-                'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'novidade_atual': novidade_atual()}
+                'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'peer_servidor': _peer_servidor(), 'novidade_atual': novidade_atual()}
 
     with app.app_context():
         try:
