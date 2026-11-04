@@ -201,7 +201,11 @@ const LojaMapa = (function () {
                          casa: ['Casa', 'fa-couch'], servicos: ['Serviços', 'fa-screwdriver-wrench'], outros: ['Outros', 'fa-bag-shopping'] };
     const ORDENS = [['perto', 'Mais perto'], ['nota', 'Melhor avaliadas'], ['vendas', 'Mais pedidas']];
     const filtro = { cat: '', q: '', ordem: 'perto' };
-    let dock = null, fixa = false, redesenho = 0, relogioDock = null;
+    // Abrir/fechar da gaveta (tudo por JS, nada de :hover no CSS, senão o X não conseguia fechar com o mouse em cima):
+    //  - passar o mouse na aba ABRE; tirar o mouse FECHA (com um respiro de 200 ms pra dar tempo de ir da aba até a gaveta);
+    //  - clicar na aba FIXA aberta (e de novo solta); o X fecha MESMO com o mouse em cima e a gaveta só volta a abrir quando o mouse sair e entrar de novo;
+    //  - no toque não existe "passar o mouse": a aba só alterna fixa/fechada.
+    let dock = null, fixa = false, pairando = false, bloqueada = false, timerFecha = 0, redesenho = 0, relogioDock = null;
 
     function minhaPos() { try { const p = ctx.minhaPos && ctx.minhaPos(); return p && isFinite(p.lat) && isFinite(p.lng) ? p : null; } catch (e) { return null; } }
     function distM(a, b) {
@@ -300,11 +304,27 @@ const LojaMapa = (function () {
         mapaEl.parentElement.appendChild(dock);
         // tocar nos controles do mapa por baixo não pode mexer o mapa
         if (window.L && L.DomEvent) { L.DomEvent.disableClickPropagation(dock); L.DomEvent.disableScrollPropagation(dock); }
+        const aba = dock.querySelector('.lg-aba'), gaveta = dock.querySelector('.lg-gaveta');
+        const podePairar = !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
+        const atualizarGaveta = () => {
+            const aberta = fixa || (pairando && !bloqueada);
+            dock.classList.toggle('aberta', aberta); dock.classList.toggle('fixa', fixa);
+            aba.setAttribute('aria-expanded', aberta ? 'true' : 'false');
+            if (aberta) desenharGaveta(true);
+        };
+        const abrirPairando = () => { if (!podePairar) return; clearTimeout(timerFecha); pairando = true; atualizarGaveta(); };
+        const sairPairando = () => { clearTimeout(timerFecha); timerFecha = setTimeout(() => { pairando = false; bloqueada = false; atualizarGaveta(); }, 200); };
+        aba.addEventListener('mouseenter', () => { bloqueada = false; abrirPairando(); });
+        aba.addEventListener('mouseleave', sairPairando);
+        gaveta.addEventListener('mouseenter', () => { if (dock.classList.contains('aberta')) { clearTimeout(timerFecha); pairando = true; } });
+        gaveta.addEventListener('mouseleave', sairPairando);
+        const fecharGaveta = () => { clearTimeout(timerFecha); fixa = false; pairando = false; bloqueada = true; atualizarGaveta(); };
+        dock.addEventListener('keydown', (e) => { if (e.key === 'Escape' && dock.classList.contains('aberta')) { e.stopPropagation(); fecharGaveta(); aba.focus(); } });
         dock.addEventListener('click', (e) => {
             const b = e.target.closest('[data-lmp]'); if (!b) return;
             const a = b.dataset.lmp;
-            if (a === 'alternar') { fixa = !fixa; dock.classList.toggle('fixa', fixa); b.setAttribute('aria-expanded', fixa ? 'true' : 'false'); if (fixa) desenharGaveta(); }
-            else if (a === 'fechar') { fixa = false; dock.classList.remove('fixa', 'tocado'); dock.querySelector('.lg-aba').setAttribute('aria-expanded', 'false'); }
+            if (a === 'alternar') { fixa = !fixa; if (fixa) { pairando = true; bloqueada = false; } atualizarGaveta(); }
+            else if (a === 'fechar') fecharGaveta();
             else if (a === 'cat') { filtro.cat = b.dataset.v || ''; aplicarFiltroNosPinos(); desenharGaveta(); }
             else if (a === 'ordem') { filtro.ordem = b.dataset.v; desenharGaveta(); }
             else if (a === 'ver') verNoMapa(Number(b.dataset.id));
@@ -312,9 +332,8 @@ const LojaMapa = (function () {
             else if (a === 'prod') { ctx.abrirLoja(Number(b.dataset.loja), Number(b.dataset.id)); }
         });
         dock.querySelector('#lg-q').addEventListener('input', (e) => { filtro.q = e.target.value; aplicarFiltroNosPinos(); desenharGaveta(true); });
-        dock.addEventListener('mouseenter', () => { desenharGaveta(true); });
         // a distância muda quando a pessoa anda
-        relogioDock = setInterval(() => { if (dock && (fixa || dock.matches(':hover')) && !document.hidden) desenharGaveta(true); }, 20000);
+        relogioDock = setInterval(() => { if (dock && dock.classList.contains('aberta') && !document.hidden) desenharGaveta(true); }, 20000);
         desenharGaveta();
     }
     function verNoMapa(id) {

@@ -649,6 +649,9 @@ def chat():
 
 
 GIPHY_API_KEY = os.getenv('GIPHY_API_KEY')
+_cache_gifs = {}            # (endpoint, busca) -> (hora, lista de GIFs)
+_CACHE_GIFS_S = 900        # 15 min
+_CACHE_GIFS_MAX = 300
 
 
 @main_bp.route("/api/gifs")
@@ -668,12 +671,35 @@ def buscar_gifs():
     if busca:
         params['q'] = busca
 
+    # O plano grátis do Giphy aceita poucas buscas por hora (~100) pra o app INTEIRO: a mesma busca repetida (o "em alta" que abre junto com o
+    # seletor, o mesmo termo de várias pessoas) sai de um cache em memória por 15 min e não gasta cota.
+    chave_cache = (endpoint, busca.lower())
+    agora = time.time()
+    guardado = _cache_gifs.get(chave_cache)
+    if guardado and agora - guardado[0] < _CACHE_GIFS_S:
+        return jsonify(guardado[1])
+
     try:
         resp = requests.get(f'https://api.giphy.com/v1/gifs/{endpoint}', params=params, timeout=6)
         resp.raise_for_status()
         dados = resp.json().get('data', [])
+    except requests.HTTPError as e:
+        # NUNCA imprima `e` aqui: a mensagem do requests leva a URL inteira, com a api_key.
+        status = e.response.status_code if e.response is not None else 0
+        print(f"[ERRO BUSCA GIF] o Giphy respondeu {status}")
+        if guardado:                                   # melhor um resultado velho do que nenhum
+            return jsonify(guardado[1])
+        if status == 429:
+            msg = 'O Giphy limitou as buscas por agora (a chave grátis tem poucos pedidos por hora). Tente de novo daqui a pouco.'
+        elif status in (401, 403):
+            msg = 'O Giphy recusou a chave do app. Avise quem cuida do servidor.'
+        else:
+            msg = 'Não consegui buscar GIFs agora, tenta de novo.'
+        return jsonify({'error': msg}), 502
     except Exception as e:
-        print(f"[ERRO BUSCA GIF] {e}")
+        print(f"[ERRO BUSCA GIF] {type(e).__name__}")
+        if guardado:
+            return jsonify(guardado[1])
         return jsonify({'error': 'Não consegui buscar GIFs agora, tenta de novo.'}), 502
 
     # Só o que a gente usa - a resposta do Giphy vem enorme (dezenas de
@@ -688,6 +714,9 @@ def buscar_gifs():
             gifs.append({'id': g.get('id'), 'preview': preview, 'url': envio,
                          'nome': (g.get('title') or 'GIF')[:255]})
 
+    if len(_cache_gifs) >= _CACHE_GIFS_MAX:             # esvazia o mais velho (a memória não cresce pra sempre)
+        _cache_gifs.pop(min(_cache_gifs, key=lambda k: _cache_gifs[k][0]), None)
+    _cache_gifs[chave_cache] = (agora, gifs)
     return jsonify(gifs)
 
 

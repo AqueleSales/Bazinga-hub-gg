@@ -49,6 +49,15 @@ ok('.lg-dock' in css and '.lg-gaveta' in css and 'prefers-reduced-motion' in css
 ok('backdrop-filter:' not in css.split('gaveta "Lojas por perto"')[1], 'a gaveta não usa backdrop-filter (rolagem pesada)')
 ok('hover: none' not in lm or True, 'ok')
 
+# gaveta: abrir/fechar é todo por JS (o :hover do CSS deixava o X sem fechar com o mouse em cima)
+ok('.lg-dock:hover' not in css and '.lg-dock.aberta .lg-gaveta' in css, 'gaveta: o CSS abre só pela classe .aberta (sem :hover), então o X fecha com o mouse em cima')
+ok('fecharGaveta' in lm and 'bloqueada = true' in lm and "pairando" in lm and "(hover: hover)" in lm, 'gaveta: passar o mouse abre/tirar fecha, clicar fixa, X fecha e no toque só alterna')
+
+# mapa no celular: tiles carregam ENQUANTO se arrasta e o filtro escuro vai uma vez no painel (não em cada tile)
+ok('.leaflet-tile-pane {' in ch and '.leaflet-tile {\n            filter' not in ch.replace('\r\n', '\n'), 'mapa: o filtro do modo escuro está no painel dos tiles, não em cada tile (retalho preto no celular)')
+ok('updateWhenIdle: false' in ch and 'keepBuffer: 4' in ch and 'maxNativeZoom: 18' in ch and "'tileerror'" in ch, 'mapa: carrega tiles ao arrastar, guarda área extra, zoom 19 usa o 18 e tile que falha tenta de novo')
+ok('https://tile.openstreetmap.org/{z}/{x}/{y}.png' in ch and '{s}.tile.openstreetmap' not in ch, 'mapa: host único do OpenStreetMap (HTTP/2), sem os subdomínios antigos')
+
 print()
 print('FALHAS:', len(falhas))
 for f in falhas:

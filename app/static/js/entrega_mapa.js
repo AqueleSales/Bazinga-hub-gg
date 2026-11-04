@@ -71,7 +71,7 @@ const Entrega = (function () {
             slot.prepend(el);
             const centro = (d.destino || d.loja || d.ent) || { lat: -23.5505, lng: -46.6333 };
             const map = L.map(el, { zoomControl: false, attributionControl: false, minZoom: 3, maxBounds: [[-85, -180], [85, 180]], maxBoundsViscosity: 1 }).setView([centro.lat, centro.lng], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, noWrap: true, bounds: [[-85, -180], [85, 180]] }).addTo(map);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, maxNativeZoom: 18, noWrap: true, bounds: [[-85, -180], [85, 180]], updateWhenIdle: false, keepBuffer: 3 }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
             mini = { pid: d.pid, el, map, marcas: {}, linhas: {}, livre: false, prog: false, dono };
             map.on('dragstart zoomstart', () => { if (!mini.prog) mini.livre = true; });

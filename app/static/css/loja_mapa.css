@@ -85,7 +85,8 @@
 .lg-aba:hover, .lg-aba:focus-visible { background: var(--bg-tertiary, #202225); outline: none; }
 .lg-gaveta { width: 340px; max-width: calc(100vw - 70px); max-height: calc(100vh - 190px); display: flex; flex-direction: column; background: var(--bg-secondary, #2f3136); color: var(--text-normal, #dbdee1); border: 1px solid rgba(255, 255, 255, .12); border-radius: 0 16px 16px 0; box-shadow: 0 18px 50px rgba(0, 0, 0, .55); overflow: hidden;
     transform: translateX(-110%); opacity: 0; visibility: hidden; transition: transform .22s cubic-bezier(.16, .84, .44, 1), opacity .18s, visibility 0s linear .22s; }
-.lg-dock:hover .lg-gaveta, .lg-dock.fixa .lg-gaveta, .lg-dock:focus-within .lg-gaveta { transform: none; opacity: 1; visibility: visible; transition-delay: 0s; }
+/* aberta/fixa são classes do JS (loja_mapa.js, montarGaveta): sem :hover aqui, senão o X não fecha com o mouse em cima */
+.lg-dock.aberta .lg-gaveta { transform: none; opacity: 1; visibility: visible; transition-delay: 0s; }
 .lg-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 6px; }
 .lg-topo b { display: block; font-size: 15px; color: var(--text-header, #fff); }
 .lg-topo small { color: var(--text-muted, #949ba4); font-size: 11.5px; }
@@ -131,8 +132,6 @@
 
 @media (max-width: 720px), (pointer: coarse) and (max-device-width: 820px) {
     .lg-dock { top: auto; bottom: calc(var(--nav-h, 64px) + 150px); }
-    .lg-dock:hover .lg-gaveta { transform: translateX(-110%); opacity: 0; visibility: hidden; }          /* no toque não existe "passar o mouse": só abre tocando */
-    .lg-dock.fixa .lg-gaveta, .lg-dock:focus-within .lg-gaveta { transform: none; opacity: 1; visibility: visible; }
     .lg-gaveta { width: calc(100vw - 56px); max-height: 56vh; }
 }
 @media (prefers-reduced-motion: reduce) { .lg-gaveta { transition: none; } }

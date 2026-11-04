@@ -191,7 +191,9 @@
             z-index: 1;
         }
 
-        .leaflet-tile {
+        /* Modo escuro do mapa: o filtro vai UMA vez no painel dos tiles, não em cada tile. Com o filtro em cada tile, o celular
+           (que renderiza dezenas deles ao arrastar/dar zoom) estourava a GPU e a tela ficava com retalhos pretos até redesenhar. */
+        .leaflet-tile-pane {
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
 
@@ -8012,12 +8014,31 @@
             }).setView([-23.550520, -46.633308], 16);
 
             // A CURA DEFINITIVA DO API KEY: OpenStreetMap oficial + CSS Filter (Dark Mode)
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            // Host único (tile.openstreetmap.org, HTTP/2): os subdomínios a/b/c são o jeito antigo e abrem 3 conexões lentas.
+            // updateWhenIdle: false = carrega os tiles ENQUANTO se arrasta (por padrão, no celular o Leaflet só carrega depois que o
+            // dedo solta: a área nova ficava preta). keepBuffer maior guarda tiles além da tela, updateWhenZooming: false evita
+            // trocar de nível a cada passo da animação de zoom, e maxNativeZoom 18 faz o zoom 19 reaproveitar os tiles do 18
+            // (o 19 quase nunca está em cache e era o que demorava mais).
+            const camadaBase = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
+                maxNativeZoom: 18,
                 noWrap: true,   // sem cópias do mundo ao lado (o servidor também recusa longitude fora de -180..180)
                 bounds: [[-85, -180], [85, 180]],
+                updateWhenIdle: false,
+                updateWhenZooming: false,
+                updateInterval: 120,
+                keepBuffer: 4,
                 attribution: '© OpenStreetMap'
             }).addTo(bazingaMap);
+            // Tile que falhou (timeout, limite do servidor de tiles, rede do celular piscando): tenta de novo até 2 vezes em vez de ficar preto.
+            camadaBase.on('tileerror', (e) => {
+                const img = e.tile; if (!img) return;
+                const n = (+img.dataset.tentativas || 0) + 1;
+                if (n > 2) return;
+                img.dataset.tentativas = String(n);
+                const src = img.src.replace(/\?r=\d+$/, '');
+                setTimeout(() => { if (img.isConnected) img.src = src + '?r=' + n; }, 1200 * n);
+            });
 
             L.control.zoom({ position: 'bottomright' }).addTo(bazingaMap);
 

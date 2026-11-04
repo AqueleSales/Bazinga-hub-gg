@@ -137,6 +137,11 @@ ok(estouro[0] is False and 50 <= estouro[1] <= 60, 'limite: a 4ª em 60 s é bar
 ok(limites.permitido(0, 'u2', 3, 60, agora=1003.0)[0], 'limite: cada pessoa tem a sua própria conta')
 ok(limites.permitido(0, 'u1', 3, 60, agora=1062.0)[0], 'limite: passada a janela, volta a valer')
 limites.zerar()
+# IMPORTANTE: o teste não pode chamar o Giphy de verdade (a chave do .env é a mesma de produção e o plano grátis aceita ~100 buscas/hora:
+# 60 chamadas por execução esgotaram a cota e a busca de GIF do app inteiro passou a falhar). Sem chave a rota responde 503 na hora.
+from app.main import routes as _rotas
+_chave_giphy = _rotas.GIPHY_API_KEY
+_rotas.GIPHY_API_KEY = None
 with app.test_client() as web:
     with web.session_transaction() as s:
         s['user_id'] = ids['Ana']
@@ -145,6 +150,7 @@ with app.test_client() as web:
     r429 = web.get('/api/gifs?q=gato')
     ok(r429.status_code == 429 and r429.headers.get('Retry-After') and 'Muitos pedidos' in r429.get_json()['msg'], 'limite: o 429 traz Retry-After e a mensagem em português')
     limites.zerar()
+_rotas.GIPHY_API_KEY = _chave_giphy
 with app.test_client() as web:      # sem login vale o IP (o 1º de X-Forwarded-For)
     cab = {'X-Forwarded-For': '203.0.113.9, 10.0.0.1'}
     cod = [web.get('/auth/login', headers=cab).status_code for _ in range(23)]
@@ -155,6 +161,54 @@ os.environ['LIMITE_REQUISICOES'] = '0'
 ok(not limites.ligado(), 'limite: LIMITE_REQUISICOES=0 desliga')
 os.environ.pop('LIMITE_REQUISICOES')
 ok('limites.verificar' in ler('app/__init__.py'), 'o app liga o limite em todas as requisições')
+
+# ---------------------------------------------- busca de GIF: cache e limite do Giphy (tudo FALSO, nada vai à rede) ----------------------------------------------
+import io
+import contextlib
+import requests as _requests
+
+
+class _RespFalsa:
+    def __init__(self, status, corpo=None):
+        self.status_code, self._corpo = status, corpo or {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise _requests.HTTPError('erro', response=self)
+
+    def json(self):
+        return self._corpo
+
+
+_chamadas = []
+_roteiro = []
+_get_real = _rotas.requests.get
+_rotas.requests.get = lambda url, **kw: (_chamadas.append((url, kw)), _roteiro.pop(0))[1]
+_rotas.GIPHY_API_KEY = 'CHAVE-SECRETA-DE-TESTE'
+_rotas._cache_gifs.clear()
+limites.zerar()
+_imagem = {'images': {'fixed_width_small': {'url': 'https://media.giphy.com/p.gif'}, 'fixed_height': {'url': 'https://media.giphy.com/g.gif'}}, 'id': 'x1', 'title': 'gato'}
+with app.test_client() as web:
+    with web.session_transaction() as s:
+        s['user_id'] = ids['Ana']
+    _roteiro.append(_RespFalsa(200, {'data': [_imagem]}))
+    r1 = web.get('/api/gifs?q=Gato')
+    r2 = web.get('/api/gifs?q=gato')
+    ok(r1.status_code == 200 and r2.get_json() == r1.get_json() and len(_chamadas) == 1, 'gifs: a mesma busca (ignorando maiúscula) sai do cache e NÃO gasta cota do Giphy')
+    _roteiro.append(_RespFalsa(429))
+    saida = io.StringIO()
+    with contextlib.redirect_stdout(saida):
+        r3 = web.get('/api/gifs?q=cachorro')
+    ok(r3.status_code == 502 and 'limitou as buscas' in r3.get_json()['error'], 'gifs: quando o Giphy limita (429) a mensagem diz isso, em vez do "tenta de novo" genérico')
+    ok('CHAVE-SECRETA-DE-TESTE' not in saida.getvalue() and '429' in saida.getvalue(), 'gifs: o log mostra o status e NUNCA a chave do Giphy')
+    _rotas._cache_gifs[('search', 'cachorro')] = (time.time() - 5000, [{'id': 'velho'}])      # cache vencido, mas melhor que nada
+    _roteiro.append(_RespFalsa(429))
+    r4 = web.get('/api/gifs?q=cachorro')
+    ok(r4.status_code == 200 and r4.get_json() == [{'id': 'velho'}], 'gifs: se o Giphy falha e há resultado guardado (mesmo velho), a pessoa recebe ele')
+_rotas.requests.get = _get_real
+_rotas.GIPHY_API_KEY = _chave_giphy
+_rotas._cache_gifs.clear()
+limites.zerar()
 
 ch = ler('app/templates/chat.html')
 ok('id="ctx-report"' in ch and 'so-de-outros' in ch, 'o menu da mensagem tem "Denunciar mensagem" só pra mensagem de outra pessoa')
