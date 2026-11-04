@@ -227,6 +227,7 @@ const Passe = (() => {
             <span class="pz-modal-tipo">${o.gratis ? 'Grátis por enquanto' : 'Assinatura'}${o.ativo ? ` · ativa até ${esc(o.ate || '')}` : ''}</span>
             <ul class="pz-oli-lista"><li><i class="fa-solid fa-crown"></i> <b>Trilha Premium</b> do Passe de Batalha liberada (todas as recompensas dos dois lados).</li>
                 <li><i class="fa-solid fa-gem"></i> A insígnia <b>Ômega de lava</b> no seu perfil: as peças se juntam, a lava esfria e raios correm por dentro.</li>
+                <li><i class="fa-solid fa-rocket"></i> <b>2 impulsos de servidor</b>: sobem o nível de um servidor onde você está (mais alcance no mapa, mais cargos).</li>
                 <li><i class="fa-solid fa-heart"></i> Você ajuda o Pantheon a crescer.</li></ul>
             <div id="pz-oli-corpo">${ativar}</div></div>`;
         document.body.appendChild(m);

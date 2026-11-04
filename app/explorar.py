@@ -6,7 +6,7 @@ Regras (regra 4 do CLAUDE.md, tudo no servidor):
   * A prévia mostra só o que é seguro pra desconhecido: nome, ícone, descrição, tema, nº de membros, dono e os nomes dos canais de texto
     NÃO privados. **Nunca mensagens, nunca membros nominais, nunca canais privados.**
   * Entrar é uma ação explícita (`entrar`); servidor que não é público só entra por convite, como sempre.
-O tamanho do barquinho (`porte`) vem do nº de membros; quando existir "nível de servidor"/impulso, ele entra aqui no cálculo.
+O tamanho do barquinho (`porte`) vem do nº de membros e do NÍVEL de prestígio do servidor (prestigio.py: o nível dá um porte mínimo).
 """
 import hashlib
 import random
@@ -16,6 +16,7 @@ from sqlalchemy import func
 from .models import db, Server, Channel, Person, server_members
 from .utils import com_retry, comitar_com_retry, eh_membro
 from . import cargos
+from . import prestigio
 from .cargos import TIPOS_TEXTO, TIPOS_VOZ
 
 # (id, nome, ícone Font Awesome, cor)
@@ -59,9 +60,10 @@ def _contagem(ids):
                 .filter(server_members.c.server_id.in_(ids)).group_by(server_members.c.server_id).all())
 
 
-def _item(s, membros, meu):
+def _item(s, membros, meu, nivel=0):
     return {'id': s.id, 'nome': s.name, 'icone': s.icon_url, 'descricao': (s.description or '')[:140], 'tema': s.tema_explorar or 'outros',
-            'cor': s.banner_color, 'membros': membros, 'porte': porte_do_barco(membros), 'meu': meu}
+            'cor': s.banner_color, 'membros': membros, 'porte': max(porte_do_barco(membros), prestigio.porte_minimo(nivel)), 'meu': meu,
+            'nivel': nivel}
 
 
 def lista(usuario, busca='', tema='', seed=''):
@@ -76,7 +78,8 @@ def lista(usuario, busca='', tema='', seed=''):
     ids = [s.id for s in servidores]
     cont = com_retry(lambda: _contagem(ids))
     meus = com_retry(lambda: {r[0] for r in db.session.query(server_members.c.server_id).filter(server_members.c.person_id == usuario.id).all()}) if ids else set()
-    itens = [_item(s, cont.get(s.id, 0), s.id in meus) for s in servidores]
+    nv = prestigio.niveis(ids)
+    itens = [_item(s, cont.get(s.id, 0), s.id in meus, nv[s.id]['nivel']) for s in servidores]
     mar = sorted(itens, key=lambda i: _sorteio(seed or '0', i['id']))[:MAR_MAX]
     terra = sorted(itens, key=lambda i: (-i['membros'], i['id']))[:TERRA_MAX]
     por_tema = {}
@@ -106,7 +109,7 @@ def previa(usuario, server_id, liberado=False):
     canais = com_retry(lambda: Channel.query.filter(Channel.server_id == s.id, Channel.is_private.is_(False), Channel.sobrescrita.isnot(True), Channel.channel_type.in_(TIPOS_TEXTO)).order_by(Channel.position, Channel.id).limit(12).all())
     voz = com_retry(lambda: Channel.query.filter(Channel.server_id == s.id, Channel.is_private.is_(False), Channel.sobrescrita.isnot(True), Channel.channel_type.in_(TIPOS_VOZ)).count())
     dono = com_retry(lambda: Person.query.get(s.owner_id))
-    j = _item(s, membros, meu)
+    j = _item(s, membros, meu, prestigio.info(s.id)['nivel'])
     j.update({'descricao': s.description or '', 'canais': [c.name for c in canais], 'canais_voz': voz, 'dono': dono.name if dono else '',
               'desde': s.created_at.strftime('%m/%Y') if s.created_at else '', 'publico': bool(s.publico), 'efeito': s.efeito})
     return j

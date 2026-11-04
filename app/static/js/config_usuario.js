@@ -267,6 +267,7 @@ const ConfigUsuario = (() => {
             <h3 class="cfg-h">O que a ${nome} dá hoje</h3>
             ${linha('Trilha Premium do Passe de Batalha', 'Enquanto a assinatura vale, as recompensas dos dois lados da trilha da temporada ficam liberadas. O que você já resgatou fica com você quando vence.')}
             ${linha('Insígnia Ômega de lava', 'Aparece no seu cartão de perfil: as peças se juntam, a lava esfria e raios correm por dentro. Some quando a assinatura vence.')}
+            ${linha('Impulso de servidor', 'Você tem 2 impulsos pra dar a servidores onde está (menu do servidor > Prestígio e impulso). Eles sobem o nível do servidor: o pino dele aparece no mapa de mais longe e ele ganha mais cargos. Só contam enquanto a assinatura vale.')}
             <p class="cfg-dica">É só isso por enquanto. Quando a ${nome} der mais coisas, elas passam a aparecer aqui.</p>
             <h3 class="cfg-h">Como funciona</h3>
             ${linha('Períodos de ' + (Number(b.dias_por_periodo) || 30) + ' dias', 'Renovar soma os dias ao fim do período atual, sem perder os que sobravam.')}

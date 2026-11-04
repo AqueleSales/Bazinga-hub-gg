@@ -1,0 +1,42 @@
+/* Prestígio (impulso) de servidor: janela + selo no cartão do mapa e no Explorar. Visual chapado do app (sem blur/gradiente de enfeite). */
+.pr-fundo { position: fixed; inset: 0; z-index: 10500; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .66); padding: 16px; }
+.pr-card { position: relative; width: min(560px, 100%); max-height: min(780px, 92vh); overflow: auto; background: var(--bg-secondary, #2b2d31); color: var(--text-normal, #dbdee1);
+    border: 2px solid var(--bg-tertiary, #1e1f22); border-radius: 18px; box-shadow: 6px 6px 0 rgba(0, 0, 0, .35); padding: 22px; }
+.pr-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: var(--text-muted, #949ba4); cursor: pointer; font-size: 18px; }
+.pr-x:hover { background: rgba(255, 255, 255, .08); color: var(--text-header, #fff); }
+.pr-carregando { padding: 40px 0; text-align: center; color: var(--text-muted, #949ba4); }
+.pr-topo { display: flex; gap: 16px; align-items: center; padding-right: 30px; }
+.pr-topo small { color: var(--text-muted, #949ba4); font-size: 12px; }
+.pr-topo h3 { margin: 2px 0 8px; font-size: 22px; color: var(--text-header, #fff); }
+.pr-selo { flex: none; width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; font-size: 28px; color: #1b1b1b; background: #8ea0ba; border: 2px solid #1b1b1b; box-shadow: 3px 3px 0 #1b1b1b; }
+.pr-topo.n1 .pr-selo { background: #7bd88f; } .pr-topo.n2 .pr-selo { background: #5fb3ff; } .pr-topo.n3 .pr-selo { background: #c58bff; } .pr-topo.n4 .pr-selo { background: #ffc43d; }
+.pr-barra { height: 10px; border-radius: 6px; background: rgba(255, 255, 255, .1); overflow: hidden; width: min(320px, 100%); }
+.pr-barra i { display: block; height: 100%; background: var(--brand-color, #5865f2); border-radius: 6px; transition: width .4s; }
+.pr-pontos { display: block; margin-top: 6px; }
+.pr-conta { font-size: 13px; color: var(--text-muted, #949ba4); margin: 14px 0 0; line-height: 1.5; }
+.pr-acao { margin: 16px 0 6px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.pr-acao small { color: var(--text-muted, #949ba4); font-size: 12px; }
+.pr-btn { border: 2px solid #1b1b1b; border-radius: 12px; padding: 10px 16px; font-weight: 800; cursor: pointer; background: var(--bg-tertiary, #1e1f22); color: var(--text-header, #fff); box-shadow: 3px 3px 0 #1b1b1b; }
+.pr-btn.primario { background: var(--brand-color, #5865f2); }
+.pr-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pr-btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1b1b1b; }
+.pr-quem { margin: 12px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pr-quem small { width: 100%; color: var(--text-muted, #949ba4); font-size: 12px; }
+.pr-quem span { background: rgba(255, 255, 255, .08); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+.pr-quem span.inativo { opacity: .5; text-decoration: line-through; }
+.pr-niveis { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pr-nivel { display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; border: 2px solid transparent; background: rgba(255, 255, 255, .04); opacity: .72; }
+.pr-nivel.feito { opacity: .9; } .pr-nivel.atual { opacity: 1; border-color: var(--brand-color, #5865f2); background: rgba(88, 101, 242, .12); }
+.pr-nivel .pr-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, .08); }
+.pr-nivel b { display: block; color: var(--text-header, #fff); font-size: 14px; } .pr-nivel small { color: var(--text-muted, #949ba4); font-size: 12px; }
+.pr-nivel ul { margin: 4px 0 0; padding-left: 16px; font-size: 12.5px; color: var(--text-muted, #949ba4); }
+.pr-aviso { margin: 14px 0 0; font-size: 12px; color: var(--text-muted, #949ba4); line-height: 1.5; }
+.pr-aviso i { color: #3ba55d; margin-right: 4px; }
+@media (max-width: 720px) { .pr-fundo { align-items: flex-end; padding: 0; } .pr-card { border-radius: 18px 18px 0 0; max-height: 92vh; } }
+
+/* selo de nível no cartão do servidor no mapa e na prévia do Explorar */
+.bsv-nivel, .ex-nivel { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 800; background: #8ea0ba; color: #1b1b1b; }
+.bsv-nivel.n1, .ex-nivel.n1 { background: #7bd88f; } .bsv-nivel.n2, .ex-nivel.n2 { background: #5fb3ff; }
+.bsv-nivel.n3, .ex-nivel.n3 { background: #c58bff; } .bsv-nivel.n4, .ex-nivel.n4 { background: #ffc43d; }
+.bsv-longe { font-size: 11.5px; color: var(--text-muted, #949ba4); margin: 6px 0 0; line-height: 1.4; }
+.pr-nivel li b { display: inline; font-size: inherit; color: var(--text-normal, #dbdee1); }

@@ -38,6 +38,7 @@ const Bazar = (() => {
     let props = [], dest = [], adIdx = 0, adTimer = 0, observador = null, casaPadrao = false;
     let carregadoEm = 0, desatualizada = false;
     const produtos = new Map(), pedCache = new Map(), favs = new Set();
+    let produtoPendente = null;
     let lojaAtual = null, prodAtual = null, ed = null, moderacao = null, secao = 'inicio';
     let pedidos = { comprando: [], vendendo: [], carregado: false };
     let ed_aval = { nota: 0, texto: '' };
@@ -1138,6 +1139,12 @@ const Bazar = (() => {
 
     function loja(l) {
         lojaAtual = l;
+        (l.produtos || []).forEach((p) => produtos.set(p.id, { ...p, loja_nome: l.nome, loja_cor: l.cor }));
+        if (produtoPendente && produtoPendente.loja === l.id) {
+            const quer = produtoPendente.produto; produtoPendente = null;
+            if (produtos.has(quer)) setTimeout(() => abrirProduto(quer), 0);
+            else ctx.toast('Esse produto não está mais à venda.', 'info');
+        }
         if (!l.eh_dono) { if (l.favorita) favs.add(l.id); else favs.delete(l.id); }       // a página da loja é a fonte da verdade sobre "eu sigo"
         if (vista === 'loja') desenharLoja();
         if (prodAtual && prodAtual.p.loja_id === l.id) {
@@ -1255,7 +1262,12 @@ const Bazar = (() => {
     }
     function avisoAdmin(d) { disputasN = d.disputas || 0; if (vista === 'painel') desenharPainel(); }
 
-    function abrirLojaDe(id) { if (id) abrirLoja(Number(id)); }
+    /** Abre a página da loja `id` e, se vier `produtoId` (canal de lojas, "Pedir"), já abre o produto por cima quando a loja chega. */
+    function abrirLojaDe(id, produtoId) {
+        if (!id) return;
+        produtoPendente = produtoId ? { loja: Number(id), produto: Number(produtoId) } : null;
+        abrirLoja(Number(id));
+    }
     function abrirPedidos(ref) {
         if (ref === 'disputa') { abrirPainel('disputas'); return; }              // aviso de disputa nova pro admin
         abrirPainel('compras');

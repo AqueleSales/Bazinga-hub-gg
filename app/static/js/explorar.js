@@ -83,7 +83,9 @@ const Explorar = (() => {
         previa = p;
         previaAvulsa = !!op;
         const t = ((S && S.temas) || []).find((x) => x.id === p.tema);
-        const pino = p.pino || null, lotado = !!(pino && pino.lotado);
+        const pino = p.pino || null, lotado = !!(pino && pino.lotado), longe = !!(pino && pino.longe);
+        const NOMES_NIVEL = ['Comum', 'Em alta', 'Destaque', 'Prestigiado', 'Lendário'];
+        const nivel = Math.max(0, Math.min(4, Number(p.nivel) || 0));
         const vagasTxt = pino ? (pino.vagas ? `${num(p.membros)}/${num(pino.vagas)} vagas` : 'sem limite de vagas') : '';
         const m = document.createElement('div');
         m.id = 'ex-previa'; m.className = 'ex-previa-fundo';
@@ -92,13 +94,13 @@ const Explorar = (() => {
             <button type="button" class="ex-x" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
             <div class="ex-previa-corpo">
                 <div class="ex-previa-topo">${iconeHtml(p, 72)}<div><h3>${ctx.esc(p.nome)}</h3>
-                    <div class="ex-previa-meta"><span><i class="fa-solid fa-user-group"></i> ${num(p.membros)} ${p.membros === 1 ? 'membro' : 'membros'}</span>${t ? `<span style="--c:${ctx.esc(t.cor)}"><i class="fa-solid ${ctx.esc(t.icone)}"></i> ${ctx.esc(t.nome)}</span>` : ''}${pino ? `<span><i class="fa-solid fa-location-dot"></i> ${ctx.esc(vagasTxt)}</span>` : `<span><i class="fa-solid fa-sailboat"></i> ${ROTULO_PORTE[p.porte]}</span>`}</div></div></div>
+                    <div class="ex-previa-meta"><span><i class="fa-solid fa-user-group"></i> ${num(p.membros)} ${p.membros === 1 ? 'membro' : 'membros'}</span>${t ? `<span style="--c:${ctx.esc(t.cor)}"><i class="fa-solid ${ctx.esc(t.icone)}"></i> ${ctx.esc(t.nome)}</span>` : ''}${pino ? `<span><i class="fa-solid fa-location-dot"></i> ${ctx.esc(vagasTxt)}</span>` : `<span><i class="fa-solid fa-sailboat"></i> ${ROTULO_PORTE[p.porte]}</span>`}${nivel ? `<span class="ex-nivel n${nivel}" title="Prestígio do servidor"><i class="fa-solid fa-rocket"></i> Nível ${nivel} · ${NOMES_NIVEL[nivel]}</span>` : ''}</div></div></div>
                 <p class="ex-previa-desc">${ctx.esc(p.descricao || 'Sem descrição.')}</p>
                 <div class="ex-previa-info">${p.dono ? `<span><i class="fa-solid fa-crown"></i> ${ctx.esc(p.dono)}</span>` : ''}${p.desde ? `<span><i class="fa-regular fa-calendar"></i> desde ${ctx.esc(p.desde)}</span>` : ''}</div>
                 ${p.canais && p.canais.length ? `<div class="ex-canais"><small>Canais de texto abertos</small>${p.canais.map((c) => `<span># ${ctx.esc(c)}</span>`).join('')}${p.canais_voz ? `<span><i class="fa-solid fa-volume-high"></i> ${Number(p.canais_voz)} de voz</span>` : ''}</div>` : ''}
-                <p class="ex-aviso">${op ? 'Aqui você só vê o que é público. Pra entrar de verdade você precisa estar perto do pino.' : 'Aqui você só vê o que é público. Não dá pra ler mensagens antes de entrar.'}</p>
+                <p class="ex-aviso">${op ? (longe ? `Você está vendo este pino de longe (o prestígio do servidor estica o alcance dele no mapa). A posição dele é aproximada, e pra entrar você precisa chegar a menos de ${Math.round((Number(pino.raio_entrar_m) || 15000) / 1000)} km.` : 'Aqui você só vê o que é público. Pra entrar de verdade você precisa estar perto do pino.') : 'Aqui você só vê o que é público. Não dá pra ler mensagens antes de entrar.'}</p>
                 <div class="ex-previa-acoes"><button type="button" class="ex-btn" data-fechar>${op ? 'Voltar ao mapa' : 'Voltar ao mar'}</button>
-                    <button type="button" class="ex-btn primario" id="ex-entrar" ${lotado && !p.meu ? 'disabled' : ''}>${p.meu ? '<i class="fa-solid fa-arrow-right"></i> Abrir meu servidor' : lotado ? '<i class="fa-solid fa-lock"></i> Sem mais ingressos' : (op ? '<i class="fa-solid fa-door-open"></i> Entrar no servidor' : '<i class="fa-solid fa-anchor"></i> Entrar')}</button></div>
+                    <button type="button" class="ex-btn primario" id="ex-entrar" ${(lotado || longe) && !p.meu ? 'disabled' : ''}>${p.meu ? '<i class="fa-solid fa-arrow-right"></i> Abrir meu servidor' : longe ? '<i class="fa-solid fa-location-dot"></i> Longe demais pra entrar' : lotado ? '<i class="fa-solid fa-lock"></i> Sem mais ingressos' : (op ? '<i class="fa-solid fa-door-open"></i> Entrar no servidor' : '<i class="fa-solid fa-anchor"></i> Entrar')}</button></div>
             </div></div>`;
         if (op) m.classList.add('avulsa');
         (op ? document.body : raiz()).appendChild(m);

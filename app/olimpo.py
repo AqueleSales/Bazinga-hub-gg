@@ -4,7 +4,8 @@ Sem socket; os eventos moram em olimpo_events.py. Os ids internos (`olimpo`, a i
 O que dá hoje (só o que existe de verdade):
 - a trilha PREMIUM do Passe de Batalha da temporada (liberada enquanto a Brasa está ativa; o que já foi resgatado fica);
 - a insígnia Ômega (`badge:olimpo`), uma letra Ômega de lava com raios correndo por dentro.
-Fica pra depois (não prometer antes de existir): slots extras, upload maior, destaque de servidor, abrir caixinha de loja, desconto no Armazém.
+- 2 IMPULSOS de servidor (Rodada 35, prestigio.py): sobem o nível de um servidor onde a pessoa está; o impulso só conta enquanto a Brasa vale.
+Fica pra depois (não prometer antes de existir): slots extras, upload maior, abrir caixinha de loja, desconto no Armazém.
 
 Preço e gratuidade: POR ORA É GRÁTIS (OLIMPO_GRATIS padrão 1): qualquer pessoa ativa por 30 dias e renova quando quiser, sem cobrança nenhuma.
 Quando for cobrar, OLIMPO_GRATIS=0: a ativação passa a gerar uma cobrança Pix pelo mesmo gateway dos pedidos (app/pagamentos.py, tipo

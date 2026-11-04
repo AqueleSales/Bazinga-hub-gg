@@ -8,7 +8,7 @@ import json
 import re
 import time
 from . import socketio, APP_VERSAO
-from .models import (db, br_now, Message, Person, DirectMessage, Server, Channel,
+from .models import (db, br_now, ServerBoost, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, GeoNoteResposta, GeoNoteReacao, MapServer, Reaction, Invite, Event, Friendship,
                      Denuncia, Notificacao, Silenciado, BazarLoja, BazarProduto, server_members, channel_members)
 from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
@@ -25,6 +25,7 @@ from .utils import (resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem
 from . import loja as armazem
 from .notas_mapa import modo_valido as modo_resposta_valido
 from . import cargos
+from . import prestigio
 from . import guardiao
 from . import termos
 from . import ordem
@@ -1849,9 +1850,11 @@ def apagar_servidor(dados):
             # O pino no mapa aponta pro servidor; some junto pra não ficar
             # um marcador levando a um servidor que não existe mais.
             MapServer.query.filter_by(server_id=server_id).delete()
+            ServerBoost.query.filter_by(server_id=server_id).delete()
             db.session.delete(srv)
 
         comitar_com_retry(preparar)
+        prestigio.invalidar(server_id)
         emit('servidor_apagado', {'server_id': server_id}, to=sala_servidor(server_id))
         emit('servidor_mapa_apagado', {'server_id': server_id}, broadcast=True)
     except Exception as e:
@@ -2331,11 +2334,16 @@ def mapa_servidor_previa(dados=None):
             return
         if not _exigir_posicao():
             return
-        if not _dentro_do_alcance((pino.lat, pino.lng), RAIO_SERVIDORES_M):
+        # O alcance do PINO cresce com o prestígio do servidor (prestigio.py); entrar continua sendo `entrar_servidor_pin`, no raio normal.
+        niv = prestigio.info(server_id)
+        if not _dentro_do_alcance((pino.lat, pino.lng), niv['alcance_m']):
             emit('erro_bazinga', {'msg': 'Esse servidor está fora do seu alcance.'})
             return
         p = _explorar.previa(usuario, server_id, liberado=True)
-        p['pino'] = {'vagas': pino.max_tickets or None, 'lotado': bool(pino.max_tickets and p['membros'] >= pino.max_tickets)}
+        centro = centros_mapa.get(request.sid)
+        perto = bool(centro and distancia_m(centro[0], centro[1], pino.lat, pino.lng) <= RAIO_SERVIDORES_M * 1.15)
+        p['pino'] = {'vagas': pino.max_tickets or None, 'lotado': bool(pino.max_tickets and p['membros'] >= pino.max_tickets),
+                     'longe': not perto, 'raio_entrar_m': RAIO_SERVIDORES_M}
         emit('mapa_servidor_previa', p)
     except Exception as e:
         db.session.rollback()
@@ -2518,6 +2526,33 @@ def copiar_geonote(dados):
         emit('erro_bazinga', {'msg': f'Não foi possível copiar a nota: {e}'})
 
 
+def _emitir_pino(evento, pino, tambem_sid=None):
+    """Avisa o pino a quem está dentro do ALCANCE do servidor (cresce com o prestígio). Quem está além do raio normal recebe a posição
+    arredondada (~1 km); o dono (`tambem_sid`) e quem está no raio normal recebem a exata. Nunca leva posição de PESSOA."""
+    j = _json_do_pino(pino)
+    alcance = j.get('nivel') and prestigio.alcance_m(j['nivel']) or RAIO_SERVIDORES_M
+    alvos = {sid: distancia_m(pino.lat, pino.lng, la, ln) for sid, (la, ln) in list(centros_mapa.items())}
+    alvos = {sid: d for sid, d in alvos.items() if d <= alcance}
+    for sid, d in alvos.items():
+        if d > RAIO_SERVIDORES_M and sid != tambem_sid:
+            longe = dict(j)
+            longe['lat'], longe['lng'] = prestigio.aproximar(j['lat'], j['lng'])
+            longe['longe'] = True
+            emit(evento, longe, to=sid)
+        else:
+            emit(evento, j, to=sid)
+    if tambem_sid and tambem_sid not in alvos:
+        emit(evento, j, to=tambem_sid)
+
+
+def _json_do_pino(pino):
+    """O pino como vai pro mapa, já com o NÍVEL de prestígio do servidor (o aviso ao vivo vai a quem está dentro do alcance dele;
+    quem está além do raio normal recebe a posição arredondada: ver `_emitir_perto_pino`)."""
+    j = servidor_mapa_para_json(pino)
+    j['nivel'] = prestigio.info(pino.server_id)['nivel'] if pino.server_id else 0
+    return j
+
+
 @socketio.on('plantar_servidor')
 def plantar_servidor(dados):
     usuario = usuario_logado()
@@ -2560,8 +2595,8 @@ def plantar_servidor(dados):
 
         pino = comitar_com_retry(preparar)
 
-        _emitir_perto('novo_servidor_mapa', servidor_mapa_para_json(pino), pino.lat, pino.lng,
-                      RAIO_SERVIDORES_M, tambem_sid=request.sid)
+        prestigio.invalidar(srv.id)
+        _emitir_pino('novo_servidor_mapa', pino, tambem_sid=request.sid)
         _emitir_progresso(usuario, {'plantar': 1})
     except Exception as e:
         db.session.rollback()
@@ -2589,8 +2624,7 @@ def editar_servidor_mapa(dados):
             pino.expires_at = br_now() + timedelta(hours=duracao) if duracao else None
 
         comitar_com_retry(preparar)
-        _emitir_perto('servidor_mapa_editado', servidor_mapa_para_json(pino), pino.lat, pino.lng,
-                      RAIO_SERVIDORES_M, tambem_sid=request.sid)
+        _emitir_pino('servidor_mapa_editado', pino, tambem_sid=request.sid)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO EDITAR SERVIDOR MAPA] {e}")
@@ -4598,3 +4632,6 @@ from . import atividades_events  # noqa: E402,F401
 from . import call_events  # noqa: E402,F401
 # Configurações do usuário (preferências da conta, histórico de cobrança, resumo de privacidade): handlers em outro arquivo, também no FIM.
 from . import config_usuario_events  # noqa: E402,F401
+# Prestígio (impulso) de servidor e o canal de lojas (Rodada 35): handlers em outros arquivos, também no FIM (importam daqui).
+from . import prestigio_events  # noqa: E402,F401
+from . import lojas_canal_events  # noqa: E402,F401
