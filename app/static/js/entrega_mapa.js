@@ -31,7 +31,7 @@ const Entrega = (function () {
         return min < 60 ? `~${min} min` : `~${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
     }
     const iconeDe = (t) => ICONE[t] || ICONE.moto;
-    const chip = (estado) => `<span class="en-chip ${esc(estado || 'sem')}">${esc(ROTULO_ESTADO[estado] || 'Sem entregador')}</span>`;
+    const chip = (estado, rotulo) => `<span class="en-chip ${esc(estado || 'sem')}">${esc(rotulo || ROTULO_ESTADO[estado] || 'Sem entregador')}</span>`;
     const pessoa = (q) => (q && q.nome ? esc(q.nome) : 'alguém');
 
     function selectTransporte(atual, nome = 'transporte') {
@@ -330,7 +330,7 @@ const Entrega = (function () {
                     <button type="button" class="bz-btn sec" data-a="en-parar" data-id="${pid}" data-conf="Parar de compartilhar a sua posição? O pedido volta a &quot;pronto pra sair&quot; e você pode sair de novo.">Parar de compartilhar</button></div>`;
             }
         }
-        return `<div class="en-card" data-pid="${pid}"><div class="en-cab"><b>${esc(e.produto_nome)}</b>${chip(a)}</div>${corpo}</div>`;
+        return `<div class="en-card" data-pid="${pid}"><div class="en-cab"><b>${esc(e.produto_nome)}</b>${chip(a, a === 'convidado' ? 'Convite pra você' : null)}</div>${corpo}</div>`;
     }
 
     function htmlPainel() {

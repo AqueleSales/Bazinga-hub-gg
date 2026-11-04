@@ -837,6 +837,7 @@ const Bazar = (() => {
         pedidos.carregado = false;
         ctx.emitir('bazar_meus_pedidos');
         carregarAdmin(sec);
+        if (sec === 'entregas') Entrega.carregar();
         desenharPainel();
     }
 
