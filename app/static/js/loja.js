@@ -32,7 +32,8 @@ const Loja = (() => {
         const p = ((estado.colecao || {}).premios || []).find((x) => x.item.id === id);
         return p ? { ...p.item, premio: true, meta: p.meta, faltam: p.faltam, possui: p.ganho, preco: 0, preco_final: 0 } : null;
     };
-    const itemDe = (id) => (estado.itens || []).find((i) => i.id === id) || premioDe(id);
+    // `extras` = itens que um pacote do Estúdio entrega mas que não são vendidos avulsos (efeito do Estúdio, prêmio de passe): só pra mostrar o conteúdo do pacote
+    const itemDe = (id) => (estado.itens || []).find((i) => i.id === id) || (estado.extras || []).find((i) => i.id === id) || premioDe(id);
     // edição limitada que já acabou (prazo ou estoque) e que a pessoa não tem: dá pra ver, não dá pra comprar
     const indisponivel = (i) => !i.possui && !!i.limitado && (i.limitado.encerrado || i.limitado.esgotado);
     const tempoTexto = (s) => {
@@ -593,6 +594,10 @@ const Loja = (() => {
     function htmlCompra(i) {
         if (i.premio && !i.possui) {
             return `<div class="arm-saldo-linha"><i class="fa-solid fa-lock"></i> Prêmio da coleção: não se compra. Faltam <b>${moeda(i.faltam)} ${i.faltam === 1 ? 'item' : 'itens'}</b> comprados no Armazém (meta: ${moeda(i.meta)}).</div>`;
+        }
+        if (i.fora_da_loja && !i.possui) {
+            const pk = i.pacote_id ? itemDe(i.pacote_id) : null;
+            return `<div class="arm-saldo-linha"><i class="fa-solid fa-box-open"></i> Este item não é vendido sozinho: ele vem no ${pk ? `<b>${esc(pk.nome)}</b>` : 'pacote'}.</div>${pk ? `<button type="button" class="arm-btn" data-acao="abrir" data-item="${esc(pk.id)}">Ver o pacote</button>` : ''}`;
         }
         if (i.possui && i.tipo === 'efeito_servidor') {      // não é um slot da pessoa: o dono aplica a um servidor dele, no Inventário
             return `<div class="arm-sucesso"><i class="fa-solid fa-circle-check"></i> Este item é seu</div><button type="button" class="arm-btn" data-acao="inventario"><i class="fa-solid fa-server"></i> Aplicar a um servidor</button>`;

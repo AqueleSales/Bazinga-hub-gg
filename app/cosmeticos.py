@@ -590,6 +590,27 @@ def recalcular_pacotes():
 recalcular_pacotes()
 
 
+def preco_de_tabela(item_id):
+    """Preço de REFERÊNCIA de um item em DRC: o preço que ele tem na loja, ou (se não é vendido avulso: efeito do Estúdio, prêmio do passe,
+    item do laboratório) o da tabela `PRECOS` pela raridade e pelo tipo. 0 quando a tabela não cobre (insígnia, raridade "única").
+    É com isto que se calcula o preço (e o abatimento) de um pacote do Estúdio, que pode misturar itens vendidos e não vendidos."""
+    d = CATALOGO.get(item_id)
+    if not d:
+        return 0
+    return int(d.get('preco') or PRECOS.get(d.get('raridade'), {}).get(d['tipo'], 0))
+
+
+def itens_para_conceder(item_id):
+    """Todos os item_ids que entregar `item_id` dá de uma vez: o próprio item, ou (num pacote) o pacote e CADA item dele, vendido avulso ou não.
+    O Armazém, o passe e o "dar a alguém" do Estúdio usam isto, então um pacote sempre chega inteiro."""
+    d = CATALOGO.get(item_id)
+    if not d:
+        return []
+    if d['tipo'] != 'pacote':
+        return [item_id]
+    filhos = [f'{t}:{v}' for t, v in PACOTES.get(d['tema'], {}).items() if f'{t}:{v}' in CATALOGO]
+    return filhos + [item_id]
+
 
 def ids_do_tipo(tipo):
     """Ids (sem o prefixo do tipo) dos itens EXCLUSIVOS desse tipo."""

@@ -99,7 +99,8 @@ with app.app_context():
     sana.emit('equipar_item', {'item_id': 'efeito_perfil:poeira_azul'})
     ok(db.session.get(Person, ids['ana']).equipados is None, 'Sem ter ganhado, não equipa (posse conferida no servidor)')
     ok(fadm.post('/estudio/api/itens/conceder', json={'item_id': 'efeito_perfil:poeira_azul', 'person_id': ids['ana']}, headers=H).status_code == 200, 'Admin dá o item')
-    ok(fadm.post('/estudio/api/itens/conceder', json={'item_id': 'pacote:gojo', 'person_id': ids['ana']}, headers=H).status_code == 400, 'Dar pacote: recusado')
+    ok(fadm.post('/estudio/api/itens/conceder', json={'item_id': 'pacote:gojo', 'person_id': ids['adm']}, headers=H).status_code == 200
+       and {'pacote:gojo', 'moldura:gojo'} <= {p.item_id for p in Posse.query.filter_by(person_id=ids['adm']).all()}, 'Dar pacote (Rodada 37): chega o pacote e cada item dele (os detalhes estão em fumaca_pacotes.py)')
     ok(fadm.post('/estudio/api/itens/conceder', json={'item_id': 'efeito_perfil:nao_existe', 'person_id': ids['ana']}, headers=H).status_code == 400, 'Dar item que não existe: recusado')
     sana.emit('equipar_item', {'item_id': 'efeito_perfil:poeira_azul'}); sana.get_received()
     db.session.expire_all()

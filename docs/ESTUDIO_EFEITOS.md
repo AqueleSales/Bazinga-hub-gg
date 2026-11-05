@@ -30,6 +30,11 @@ Entre em **`/estudio`** (o Pantheon Estúdio, só admin; também tem atalho no `
 5. Onde o efeito é pequeno (foto de mensagem/lista) ou a página está rolando, o app mostra a imagem parada; com "reduzir movimento" ligado, não desenha. No máximo 6 animações pesadas tocam juntas na tela.
 6. Segurança: o Lottie não pode ter expressões (código), imagem, texto nem áudio; SVG e executáveis são recusados; o tipo vem do conteúdo, não da extensão. A receita guarda só o id do arquivo.
 
+## Vender o efeito e juntar em pacotes (Rodada 37)
+- **Vender avulso**: na caixa "Vender avulso no Armazém", o efeito ganha o preço da tabela (raridade × tipo; você não digita preço) e aparece na vitrine no tema **Estúdio**. Desmarcado, ele só se dá, entra em pacote ou vira recompensa do passe.
+- **Pacotes**: em `/estudio#pacotes` você escolhe até um item por slot (moldura, nome, placa, faixa, os efeitos, som, pin), de **qualquer tema**, inclusive efeitos do Estúdio. Publique como **à venda** (preço automático -30% ou fixo até a soma, com fim de venda opcional), **só dar** ou deixe em **rascunho**. Quem recebe ou compra leva todos os itens, mesmo os que não são vendidos avulsos.
+- Um efeito que está num pacote não pode ser apagado: tire-o do pacote antes.
+
 ## Por que é seguro
 A receita é **só números, cores e opções de uma lista**. O servidor (`app/efeitos.py`, `normalizar_receita`) descarta qualquer camada ou campo que não esteja no esquema e limita todos os números; o navegador limita de novo ao desenhar. Nada vira CSS ou JavaScript livre, então nem um admin com a conta invadida consegue injetar script por aqui.
 
@@ -41,4 +46,4 @@ A receita é **só números, cores e opções de uma lista**. O servidor (`app/e
 ## Limites honestos
 - Não cobre efeitos de canvas complexos (a Amaterasu, a Punição de Alma): esses continuam feitos à mão. Peça "peças" novas (um vórtice, um fogo orgânico) e viram camada.
 - Hoje só **efeito de cartão** e **efeito de avatar**. Molduras, nomes, placas, faixas, efeitos de fala/radar/pin/servidor e sons seguem à mão; entram no Estúdio nas próximas etapas (receita + motor, e arquivo onde fizer sentido). Roadmap: ver "Rodada 36b" no `CLAUDE.md`.
-- Tabelas `efeito_custom` e `estudio_arquivo` (nascem sozinhas). Efeitos ficam no catálogo em memória, recarregados do banco a cada boot.
+- Tabelas `efeito_custom`, `estudio_arquivo` e `pacote_custom` (nascem sozinhas; a coluna `efeito_custom.vender` entra pelo boot ou pelo `atualizar_banco.py`). Efeitos ficam no catálogo em memória, recarregados do banco a cada boot.

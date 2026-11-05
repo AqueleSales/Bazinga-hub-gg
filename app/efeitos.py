@@ -16,7 +16,7 @@ import json
 import re
 
 from . import estudio_arquivos
-from .cosmeticos import CATALOGO, TEMAS, _item
+from .cosmeticos import CATALOGO, TEMAS, PRECOS, _item
 from .models import db, br_now, EfeitoCustom, Posse, Person
 from .utils import com_retry, comitar_com_retry
 
@@ -180,14 +180,32 @@ def _validar_meta(dados, novo):
     return eid, nome, slot, rar, desc
 
 
+def preco_de_venda(tipo, raridade):
+    """Preço do efeito vendido avulso: o da tabela `PRECOS` pela raridade e pelo tipo (o admin não digita preço, então não tem como fugir da economia calibrada)."""
+    return PRECOS.get(raridade or 'epico', {}).get(tipo) or None
+
+
+def _reconciliar_tema():
+    """O tema "Estúdio" da vitrine só existe pra quem olha quando há ao menos um efeito À VENDA; sem nenhum, é um tema comum (sem preço, fora do Armazém)."""
+    vende = any(d.get('custom') and d.get('preco') for d in CATALOGO.values())
+    TEMAS['estudio'] = {'nome': 'Estúdio', 'cor': '#d4a24c', 'desc': 'Efeitos criados no Pantheon Estúdio.', 'loja': vende, 'cores': ['#d4a24c', '#3a2f1c'],
+                        'icone': 'fa-wand-magic-sparkles', 'lema': 'Criações do Pantheon.', 'categoria': 'fantasia', 'sem_hero': True, 'sem_pacote': True,
+                        'so_avulsos': True}
+
+
 def _registrar(e):
-    """Põe (ou atualiza) o efeito no CATALOGO em memória."""
-    TEMAS.setdefault('estudio', {'nome': 'Estúdio', 'cor': '#d4a24c', 'desc': 'Efeitos criados no Estúdio.'})
-    _item(e.tipo, e.id, e.nome, e.descricao or 'Efeito criado no Estúdio.', 'estudio', e.raridade or 'epico', custom=True)
+    """Põe (ou atualiza) o efeito no CATALOGO em memória. Com `vender`, ganha preço e aparece no Armazém (tema "Estúdio")."""
+    extra = {'custom': True}
+    preco = preco_de_venda(e.tipo, e.raridade) if getattr(e, 'vender', None) else None
+    if preco:
+        extra.update(preco=preco, animado=True)
+    _item(e.tipo, e.id, e.nome, e.descricao or 'Efeito criado no Estúdio.', 'estudio', e.raridade or 'epico', **extra)
+    _reconciliar_tema()
 
 
 def _desregistrar(tipo, eid):
     CATALOGO.pop(f'{tipo}:{eid}', None)
+    _reconciliar_tema()
 
 
 _carregado = False
@@ -203,6 +221,9 @@ def carregar():
     global _carregado
     for e in com_retry(lambda: EfeitoCustom.query.all()):
         _registrar(e)
+    _reconciliar_tema()
+    from . import pacotes
+    pacotes.carregar()        # depois dos efeitos: um pacote pode ter efeito do Estúdio. Erro de banco aqui deixa `_carregado` falso e tenta de novo
     _carregado = True
 
 
@@ -245,7 +266,8 @@ def _expandir(receita, info):
 def para_json(e, info=None):
     receita = _receita_de(e)
     _expandir(receita, _arquivos_das([receita]) if info is None else info)
-    return {'id': e.id, 'tipo': e.tipo, 'nome': e.nome, 'descricao': e.descricao or '', 'raridade': e.raridade or 'epico', 'receita': receita}
+    return {'id': e.id, 'tipo': e.tipo, 'nome': e.nome, 'descricao': e.descricao or '', 'raridade': e.raridade or 'epico', 'receita': receita,
+            'vender': bool(getattr(e, 'vender', None)), 'preco_tabela': preco_de_venda(e.tipo, e.raridade)}
 
 
 _cache_mapa = None
@@ -283,6 +305,9 @@ def listar():
 def salvar(dados):
     eid, nome, slot, rar, desc = _validar_meta(dados, True)
     receita = normalizar_receita(slot, dados.get('receita'))
+    vender = dados.get('vender') is True
+    if vender and not preco_de_venda(slot, rar):
+        raise ErroEfeito('Não há preço de tabela pra essa raridade e tipo, então ele não pode ser vendido.')
     existente = com_retry(lambda: EfeitoCustom.query.get(eid))
     item_id = f'{slot}:{eid}'
     if item_id in CATALOGO and not (existente and existente.tipo == slot):
@@ -296,6 +321,7 @@ def salvar(dados):
             e = EfeitoCustom(id=eid, tipo=slot, criado_em=br_now())
             db.session.add(e)
         e.nome, e.raridade, e.descricao = nome, rar, desc or None
+        e.vender = vender
         e.receita = json.dumps(receita, separators=(',', ':'))
         return e
 
@@ -311,6 +337,10 @@ def apagar(eid):
     if not e:
         raise ErroEfeito('Efeito não encontrado.')
     item_id, tipo = f'{e.tipo}:{e.id}', e.tipo
+    from . import pacotes
+    usado = pacotes.pacotes_que_usam(item_id)
+    if usado:
+        raise ErroEfeito(f'Este efeito faz parte do pacote "{usado[0]}". Tire-o do pacote (ou apague o pacote) antes de apagar o efeito.')
 
     def preparar():
         Posse.query.filter_by(item_id=item_id).delete()

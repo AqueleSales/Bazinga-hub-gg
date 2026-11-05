@@ -15,10 +15,11 @@ from flask import Blueprint, Response, abort, jsonify, render_template, request,
 from sqlalchemy import or_
 from werkzeug.exceptions import HTTPException
 
-from . import efeitos, estudio_arquivos
+from . import efeitos, estudio_arquivos, pacotes
 from .admin import _admin_atual
-from .cosmeticos import CATALOGO
+from .cosmeticos import CATALOGO, CATEGORIAS, DESCONTO_PACOTE, itens_para_conceder
 from .estudio_arquivos import ErroArquivo
+from .pacotes import ErroPacote
 from .models import db, Person, Posse
 from .utils import com_retry, comitar_com_retry
 
@@ -64,7 +65,7 @@ def _tratar(fn):
         return jsonify({'ok': True, **(r if isinstance(r, dict) else {})})
     except HTTPException:
         raise                        # 413 (requisição enorme) etc.: o handler do app responde com JSON e o status certo
-    except (efeitos.ErroEfeito, ErroArquivo, ErroEstudio) as e:
+    except (efeitos.ErroEfeito, ErroArquivo, ErroPacote, ErroEstudio) as e:
         db.session.rollback()
         return jsonify({'erro': str(e)}), 400
     except Exception as e:
@@ -87,7 +88,8 @@ def pagina(pessoa):
 @so_criador
 def efeitos_listar(pessoa):
     return jsonify({'efeitos': efeitos.listar(), 'esquema': efeitos.esquema_para_cliente(), 'raridades': list(efeitos.RARIDADES),
-                    'max_camadas': efeitos.MAX_CAMADAS, 'misturas': list(efeitos.MISTURAS)})
+                    'max_camadas': efeitos.MAX_CAMADAS, 'misturas': list(efeitos.MISTURAS),
+                    'precos': {r: {s: efeitos.preco_de_venda(s, r) for s in efeitos.SLOTS} for r in efeitos.RARIDADES}})
 
 
 @estudio_bp.route('/api/efeitos', methods=['POST'])
@@ -101,6 +103,30 @@ def efeitos_salvar(pessoa):
 @so_criador
 def efeitos_apagar(pessoa, eid):
     return _tratar(lambda: efeitos.apagar(eid))
+
+
+# ------------------------------------------------------------
+# pacotes (bundles): app/pacotes.py valida e põe no catálogo
+# ------------------------------------------------------------
+@estudio_bp.route('/api/pacotes')
+@so_criador
+def pacotes_listar(pessoa):
+    efeitos.garantir_carregados()
+    return jsonify({'pacotes': pacotes.listar(), 'catalogo': pacotes.catalogo_para_ui(), 'estados': list(pacotes.ESTADOS), 'icones': list(pacotes.ICONES),
+                    'categorias': [{'id': c['id'], 'nome': c['nome']} for c in CATEGORIAS], 'desconto': int(DESCONTO_PACOTE * 100), 'min_itens': pacotes.MIN_ITENS})
+
+
+@estudio_bp.route('/api/pacotes', methods=['POST'])
+@so_criador
+def pacotes_salvar(pessoa):
+    d = _json()
+    return _tratar(lambda: {'id': pacotes.salvar(d)})
+
+
+@estudio_bp.route('/api/pacotes/<pid>', methods=['DELETE'])
+@so_criador
+def pacotes_apagar(pessoa, pid):
+    return _tratar(lambda: pacotes.apagar(pid))
 
 
 # ------------------------------------------------------------
@@ -190,13 +216,14 @@ def pessoas(pessoa):
 @estudio_bp.route('/api/itens/conceder', methods=['POST'])
 @so_criador
 def itens_conceder(pessoa):
-    """Dá (ou tira, com ativo=false) um item do catálogo a alguém: brinde, teste, compensação."""
+    """Dá (ou tira, com ativo=false) um item do catálogo a alguém: brinde, teste, compensação. Dar um PACOTE dá o pacote e cada item dele (vendido avulso ou não);
+    tirar um pacote tira o pacote e os itens dele que foram dados pelo admin (o que a pessoa comprou ou ganhou de outro jeito fica)."""
     d = _json()
 
     def fazer():
         item = str(d.get('item_id') or '')
-        if item not in CATALOGO or CATALOGO[item]['tipo'] == 'pacote':
-            raise ErroEstudio('Item não existe no catálogo (ou é um pacote).')
+        if item not in CATALOGO:
+            raise ErroEstudio('Item não existe no catálogo (um pacote em rascunho ainda não existe pro app: publique como "só dar" ou "à venda").')
         try:
             alvo_id = int(d.get('person_id') or 0)
         except (TypeError, ValueError):
@@ -204,12 +231,20 @@ def itens_conceder(pessoa):
         alvo = com_retry(lambda: Person.query.get(alvo_id))
         if not alvo:
             raise ErroEstudio('Pessoa não encontrada.')
+        ids = itens_para_conceder(item)
+        eh_pacote = CATALOGO[item]['tipo'] == 'pacote'
 
         def preparar():
             if d.get('ativo') is False:
-                Posse.query.filter_by(person_id=alvo.id, item_id=item).delete()
-            elif not Posse.query.filter_by(person_id=alvo.id, item_id=item).first():
-                db.session.add(Posse(person_id=alvo.id, item_id=item, origem='admin'))
+                if eh_pacote:
+                    Posse.query.filter(Posse.person_id == alvo.id, Posse.item_id.in_(ids), or_(Posse.item_id == item, Posse.origem == 'admin')).delete(synchronize_session=False)
+                else:
+                    Posse.query.filter_by(person_id=alvo.id, item_id=item).delete()
+                return
+            tem = {p[0] for p in db.session.query(Posse.item_id).filter(Posse.person_id == alvo.id, Posse.item_id.in_(ids)).all()}
+            for i in ids:
+                if i not in tem:
+                    db.session.add(Posse(person_id=alvo.id, item_id=i, origem='admin'))
 
         comitar_com_retry(preparar)
     return _tratar(fazer)

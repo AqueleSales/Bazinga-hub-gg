@@ -974,6 +974,26 @@ class EfeitoCustom(db.Model):
     descricao = db.Column(db.String(120), nullable=True)
     raridade = db.Column(db.String(10), nullable=False, default='epico')
     receita = db.Column(db.Text, nullable=False)
+    vender = db.Column(db.Boolean, nullable=True)            # Rodada 37: à venda avulso no Armazém, pelo preço da tabela (NULL/False = só dar ou usar em pacote)
+    criado_em = db.Column(db.DateTime, default=br_now)
+
+
+class PacoteCustom(db.Model):
+    """Pacote (bundle) criado no Estúdio (/estudio): junta itens de QUALQUER tema, um por slot, e entra no catálogo como `pacote:<id>`.
+    `estado`: rascunho (não existe pro app) | a_venda (Armazém, em DRC) | so_dar (só admin dá, ou recompensa do passe). `preco` NULL = automático
+    (soma da tabela com o desconto de pacote); `ate` = fim da venda (naive, horário de Brasília). Regra em app/pacotes.py. A tabela nasce pelo create_all."""
+    __tablename__ = 'pacote_custom'
+    id = db.Column(db.String(24), primary_key=True)
+    nome = db.Column(db.String(40), nullable=False)
+    descricao = db.Column(db.String(160), nullable=True)
+    icone = db.Column(db.String(32), nullable=False, default='fa-box-open')
+    categoria = db.Column(db.String(12), nullable=False, default='fantasia')
+    cor1 = db.Column(db.String(7), nullable=False, default='#d4a24c')
+    cor2 = db.Column(db.String(7), nullable=False, default='#3a2f1c')
+    itens = db.Column(db.Text, nullable=False)               # JSON: lista de item_id ("moldura:gojo", ...), um por tipo
+    estado = db.Column(db.String(10), nullable=False, default='rascunho')
+    preco = db.Column(db.Integer, nullable=True)
+    ate = db.Column(db.DateTime, nullable=True)
     criado_em = db.Column(db.DateTime, default=br_now)
 
 
