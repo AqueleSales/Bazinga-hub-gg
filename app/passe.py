@@ -18,7 +18,7 @@ from datetime import timedelta
 from sqlalchemy import update, case
 from sqlalchemy.exc import IntegrityError
 
-from .cosmeticos import CATALOGO, ROTULO_TIPO, descritor, posses_da_pessoa
+from .cosmeticos import CATALOGO, ROTULO_TIPO, descritor, posses_da_pessoa, itens_para_conceder
 from .models import (db, br_now, Person, Posse, MovimentoDrc, PasseTemporada, PasseRecompensa, PassePessoa,
                      PasseResgate, Titulo)
 from .utils import comitar_com_retry, com_retry, TEMAS_EXCLUSIVOS, CORES_TEMAS_EXCLUSIVOS, nome_do_tema
@@ -326,6 +326,13 @@ def _entregar(pessoa, rec, nivel, resultado):
         if item_id not in CATALOGO:
             return
         nome = CATALOGO[item_id]['nome']
+        if CATALOGO[item_id]['tipo'] == 'pacote':        # pacote do Estúdio: chega inteiro (o pacote e cada item dele, vendido avulso ou não)
+            novos = [i for i in itens_para_conceder(item_id) if not Posse.query.filter_by(person_id=pessoa.id, item_id=i).first()]
+            for i in novos:
+                db.session.add(Posse(person_id=pessoa.id, item_id=i, origem='passe'))
+            if novos:
+                resultado['itens'].append({'tipo': tipo, 'nome': nome, 'item_id': item_id})
+            return
     elif tipo == 'titulo':
         t = _titulos_por_id().get(rec['valor'])
         if not t:
@@ -566,8 +573,8 @@ def _validar_recompensa(r, niveis):
         valor = str(r.get('valor') or '').strip()
         if tipo == 'item':
             d = CATALOGO.get(valor)
-            if not d or d['tipo'] == 'pacote':
-                raise ErroPasse(f'Item "{valor}" não existe no catálogo (ou é um pacote).')
+            if not d or (d['tipo'] == 'pacote' and not d.get('estudio')):      # pacote do Estúdio pode ser recompensa; os pacotes da loja não
+                raise ErroPasse(f'Item "{valor}" não existe no catálogo (ou é um pacote da loja).')
         elif tipo == 'titulo':
             if valor not in _titulos_por_id():
                 raise ErroPasse(f'Título "{valor}" não existe.')

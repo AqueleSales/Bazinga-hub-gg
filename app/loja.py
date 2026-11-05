@@ -19,7 +19,7 @@ from datetime import timedelta
 from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 
-from .cosmeticos import CATALOGO, TEMAS, PACOTES, COLECOES, ROTULO_TIPO, RARIDADES, CATEGORIAS, posses_da_pessoa
+from .cosmeticos import CATALOGO, TEMAS, PACOTES, COLECOES, ROTULO_TIPO, RARIDADES, CATEGORIAS, posses_da_pessoa, preco_de_tabela
 from .models import db, br_now, Person, Posse, MovimentoDrc, LojaEstoque
 from .utils import comitar_com_retry, MISSOES
 
@@ -87,7 +87,9 @@ def _segunda_de(agora):
 
 
 def _candidatas_reliquia():
-    return sorted(i for i, d in CATALOGO.items() if d.get('preco') and d['tipo'] != 'pacote' and d['raridade'] != 'comum' and TEMAS.get(d['tema'], {}).get('loja'))
+    # (efeito do Estúdio à venda fica de fora: a lista mudaria a cada efeito novo e a relíquia da semana pularia pra outro item)
+    return sorted(i for i, d in CATALOGO.items() if d.get('preco') and d['tipo'] != 'pacote' and d['raridade'] != 'comum' and not d.get('custom')
+                  and TEMAS.get(d['tema'], {}).get('loja'))
 
 
 def reliquia_da_semana(agora=None):
@@ -185,8 +187,17 @@ def _conceder_premios(pessoa_id, posses_apos):
 
 
 def itens_do_pacote(tema):
-    """item_ids avulsos que o pacote do tema entrega (sem o próprio pacote)."""
-    return [f'{t}:{v}' for t, v in PACOTES.get(tema, {}).items() if _a_venda(f'{t}:{v}')]
+    """item_ids que o pacote do tema entrega (sem o próprio pacote). Nos pacotes da loja são só os itens vendidos avulsos; num pacote do Estúdio
+    (`estudio: True`) são TODOS, inclusive efeito do Estúdio e prêmio de passe que não têm preço avulso."""
+    todos = [f'{t}:{v}' for t, v in PACOTES.get(tema, {}).items()]
+    if (CATALOGO.get(f'pacote:{tema}') or {}).get('estudio'):
+        return [i for i in todos if i in CATALOGO]
+    return [i for i in todos if _a_venda(i)]
+
+
+def _valor(item_id):
+    """Quanto o item vale pra conta do pacote: o preço dele na loja ou, se não é vendido avulso, o da tabela."""
+    return preco_de_tabela(item_id)
 
 
 def preco_para(posses, item_id, agora=None):
@@ -205,9 +216,9 @@ def preco_para(posses, item_id, agora=None):
         return _preco_com_reliquia(d, agora or br_now()), [item_id]
 
     filhos = itens_do_pacote(d['tema'])
-    total = sum(CATALOGO[i]['preco'] for i in filhos)
+    total = sum(_valor(i) for i in filhos)
     faltam = [i for i in filhos if i not in posses]
-    falta_total = sum(CATALOGO[i]['preco'] for i in faltam)
+    falta_total = sum(_valor(i) for i in faltam)
     preco = round(d['preco'] * falta_total / total) if total else d['preco']
     return preco, faltam + [item_id]
 
@@ -296,6 +307,25 @@ def _premio_json(c, posses, comprados):
     return {'meta': c['meta'], 'item': item, 'ganho': c['item_id'] in posses, 'faltam': max(c['meta'] - comprados, 0)}
 
 
+def _itens_so_no_pacote(posses):
+    """Itens que um pacote do Estúdio à venda entrega mas que NÃO são vendidos avulsos (efeito do Estúdio, prêmio de passe...). Não entram nas prateleiras:
+    a tela só precisa deles pra mostrar o conteúdo do pacote (e dizer que "vem no pacote X")."""
+    saida, vistos = [], set()
+    for pk in CATALOGO.values():
+        if pk['tipo'] != 'pacote' or not pk.get('estudio') or not pk.get('preco'):
+            continue
+        for i in itens_do_pacote(pk['tema']):
+            d = CATALOGO[i]
+            if d.get('preco') or i in vistos:
+                continue
+            vistos.add(i)
+            j = {k: d[k] for k in ('id', 'tipo', 'valor', 'nome', 'desc', 'tema', 'raridade')}
+            j.update(possui=i in posses, rotulo=ROTULO_TIPO.get(d['tipo'], d['tipo']), grupo=GRUPO_DO_TIPO.get(d['tipo'], d['tipo']),
+                     animado=d.get('animado', True), preco=0, preco_final=0, fora_da_loja=True, pacote_id=pk['id'])
+            saida.append(j)
+    return saida
+
+
 def vitrine_para_json(pessoa, posses=None):
     """A loja inteira, na medida de UMA pessoa (o que ela já tem, o preço do pacote pra ela)."""
     posses = posses_da_pessoa(pessoa.id) if posses is None else posses
@@ -308,8 +338,11 @@ def vitrine_para_json(pessoa, posses=None):
     for tid, t in TEMAS.items():
         if not t.get('loja'):
             continue
-        avulsos = itens_do_pacote(tid)
-        total = sum(CATALOGO[i]['preco'] for i in avulsos)
+        if t.get('so_avulsos'):       # tema sem pacote (Estúdio): é só a lista dos itens que estão à venda
+            avulsos = [i for i, d in CATALOGO.items() if d['tema'] == tid and d.get('preco')]
+        else:
+            avulsos = itens_do_pacote(tid)
+        total = sum(_valor(i) for i in avulsos)
         pacote_id = f'pacote:{tid}'
         temas.append({
             'id': tid, 'nome': t['nome'], 'cor': t['cor'], 'cores': t['cores'], 'icone': t['icone'], 'lema': t['lema'],
@@ -321,7 +354,7 @@ def vitrine_para_json(pessoa, posses=None):
         })
     return {
         'saldo': pessoa.bazinga_coins or 0,
-        'temas': temas, 'itens': itens,
+        'temas': temas, 'itens': itens, 'extras': _itens_so_no_pacote(posses),
         'prateleiras': [{'tipo': t, 'titulo': n} for t, n in PRATELEIRAS],
         'grupos': [{'id': g, 'titulo': n} for g, n, _ in GRUPOS],
         'categorias': [dict(c, n=sum(1 for t in temas if t['categoria'] == c['id'])) for c in CATEGORIAS if any(t['categoria'] == c['id'] for t in temas)],

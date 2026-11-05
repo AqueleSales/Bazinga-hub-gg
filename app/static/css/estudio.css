@@ -38,3 +38,44 @@
 .es-arq-pick:hover .es-arq, .es-arq-pick:focus-visible .es-arq { border-color: var(--dourado); }
 .es-arqs-escolher { max-height: 60vh; overflow-y: auto; padding: 2px; }
 .es-modal.es-modal-largo { width: min(760px, 94vw); max-width: none; }
+
+/* `.es-dica` do admin.css é a dica FLUTUANTE dos gráficos (position: fixed; display: none). Aqui o mesmo nome é só texto de ajuda: desfaz aquilo. */
+.es-main .es-dica { position: static; z-index: auto; display: revert; pointer-events: auto; background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; max-width: none; color: var(--muda); font-size: 12px; }
+
+/* pacotes (bundles) */
+.es-pk-lista small b { color: var(--dourado); font-weight: 800; }
+.es-pk-selo { display: inline-block; font-size: 10.5px; font-weight: 800; border-radius: 99px; padding: 1px 8px; margin-left: 6px; background: var(--painel2); border: 1px solid var(--borda); color: var(--muda); }
+.es-pk-selo.venda { color: #6ee7a0; border-color: #2f7a52; }
+.es-pk-selo.dar { color: var(--dourado); border-color: #7a6226; }
+.es-slots { display: flex; flex-direction: column; gap: 6px; }
+.es-slot { display: flex; align-items: center; gap: 10px; background: var(--painel2); border: 1px solid var(--borda); border-radius: 10px; padding: 8px 12px; }
+.es-slot.cheio { border-color: color-mix(in srgb, var(--dourado) 55%, var(--borda)); }
+.es-pk-colunas { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr); gap: 16px; align-items: start; }
+.es-pk-colunas > div:last-child { position: sticky; top: 0; }
+.es-slot-corpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.es-slot-rot { font-size: 10.5px; font-weight: 800; color: var(--muda); text-transform: uppercase; letter-spacing: .05em; }
+.es-slot-item { min-width: 0; display: flex; flex-direction: column; }
+.es-slot-item b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-slot-item small { color: var(--muda); font-size: 11.5px; }
+.es-slot-item.vazio b { color: var(--muda); font-weight: 600; }
+.es-resumo { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 12px 14px; border-radius: 10px; background: var(--painel2); border: 1px solid var(--borda); margin-top: 12px; }
+.es-resumo div { display: flex; flex-direction: column; }
+.es-resumo small { color: var(--muda); font-size: 11.5px; }
+.es-resumo b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.es-resumo b.ouro { color: var(--dourado); }
+.es-aviso { margin-top: 10px; padding: 9px 12px; border-radius: 8px; background: color-mix(in srgb, #e0a030 16%, transparent); border: 1px solid #7a6226; color: #f2d089; font-size: 12.5px; }
+.es-aviso.erro { background: color-mix(in srgb, #e5484d 16%, transparent); border-color: #8f3135; color: #f5a3a6; }
+.es-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; cursor: pointer; }
+.es-check input { margin-top: 3px; accent-color: var(--dourado); }
+.es-icones { display: flex; flex-wrap: wrap; gap: 4px; }
+.es-icones button { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--borda); background: var(--painel2); color: var(--muda); cursor: pointer; }
+.es-icones button:hover { color: var(--texto); border-color: var(--dourado); }
+.es-icones button.sel { color: var(--dourado); border-color: var(--dourado); background: color-mix(in srgb, var(--dourado) 14%, transparent); }
+.es-pick-busca { margin-bottom: 10px; }
+.es-pick-lista { max-height: 52vh; overflow-y: auto; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel2); }
+.es-pick-lista button { display: flex; width: 100%; align-items: baseline; gap: 10px; background: none; border: 0; border-bottom: 1px solid var(--borda); padding: 8px 12px; cursor: pointer; text-align: left; color: inherit; }
+.es-pick-lista button:hover, .es-pick-lista button.sel { background: color-mix(in srgb, var(--marca) 22%, transparent); }
+.es-pick-lista button span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-pick-lista small { color: var(--muda); flex: none; }
+.es-pick-mais { padding: 8px 12px; color: var(--muda); font-size: 12px; }
+@media (max-width: 1100px) { .es-pk-colunas { grid-template-columns: minmax(0, 1fr); } .es-pk-colunas > div:last-child { position: static; } }

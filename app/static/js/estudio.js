@@ -198,7 +198,7 @@
     // ------------------------------------------------------------
     // EFEITOS (receita JSON -> motor js/efeitos.js). O esquema das camadas vem do servidor (a única definição).
     // ------------------------------------------------------------
-    const XE = { lista: [], esquema: {}, raridades: [], misturas: [], maxCamadas: 6, atual: null, novo: true, timer: null };
+    const XE = { lista: [], esquema: {}, raridades: [], misturas: [], precos: {}, maxCamadas: 6, atual: null, novo: true, timer: null };
     const PRESETS = {
         efeito_perfil: {
             'Poeira dourada': { pausa: 0, camadas: [{ tipo: 'particulas', cor: '#f2c14e', cor2: '#ffffff', qtd: 22, tam: 5, dur: 6, dir: 'cima', forma: 'circulo', brilho: 70 }, { tipo: 'brilho', cor: '#f2c14e', pos: 'base', forca: 30, dur: 6 }] },
@@ -216,7 +216,8 @@
         },
     };
 
-    const novoEfeito = (tipo) => ({ id: '', nome: '', tipo: tipo || 'efeito_perfil', raridade: 'epico', descricao: '', receita: { pausa: 0, mistura: 'normal', camadas: [] } });
+    const novoEfeito = (tipo) => ({ id: '', nome: '', tipo: tipo || 'efeito_perfil', raridade: 'epico', descricao: '', vender: false, receita: { pausa: 0, mistura: 'normal', camadas: [] } });
+    const precoVenda = (e) => ((XE.precos[e.raridade] || {})[e.tipo]) || 0;
     const clone = (o) => JSON.parse(JSON.stringify(o));
     const camadaPadrao = (tipo) => { const c = { tipo }; Object.entries(XE.esquema[tipo].params).forEach(([k, p]) => { c[k] = p.padrao; }); return c; };
     /** O que o motor precisa saber do arquivo (os endereços e as medidas) vem da biblioteca. */
@@ -225,14 +226,14 @@
 
     async function vEfeitos() {
         const [d] = await Promise.all([api('/efeitos'), carregarBiblioteca()]);
-        XE.lista = d.efeitos; XE.esquema = d.esquema; XE.raridades = d.raridades; XE.maxCamadas = d.max_camadas; XE.misturas = d.misturas;
+        XE.lista = d.efeitos; XE.esquema = d.esquema; XE.raridades = d.raridades; XE.maxCamadas = d.max_camadas; XE.misturas = d.misturas; XE.precos = d.precos || {};
         if (!XE.atual) { XE.atual = novoEfeito(); XE.novo = true; }
         desenharEfeitos();
     }
     VISTAS.efeitos = vEfeitos;
 
     function desenharEfeitos() {
-        const lista = XE.lista.map((e) => `<button class="es-ef-item ${!XE.novo && XE.atual && XE.atual.id === e.id ? 'sel' : ''}" data-id="${esc(e.id)}"><b>${esc(e.nome)}</b><small>${e.tipo === 'efeito_perfil' ? 'cartão' : 'avatar'} · ${esc(e.raridade)} · ${esc(e.id)}</small></button>`).join('');
+        const lista = XE.lista.map((e) => `<button class="es-ef-item ${!XE.novo && XE.atual && XE.atual.id === e.id ? 'sel' : ''}" data-id="${esc(e.id)}"><b>${esc(e.nome)}</b><small>${e.tipo === 'efeito_perfil' ? 'cartão' : 'avatar'} · ${esc(e.raridade)} · ${esc(e.id)}${e.vender ? ' · <b>à venda</b>' : ''}</small></button>`).join('');
         main.innerHTML = `<h1>Efeitos</h1><p class="es-sub">Crie efeitos de <b>cartão de perfil</b> e de <b>avatar</b>. Monte por camadas (partículas, brilho, raios...) <b>ou arraste um arquivo</b> feito fora do site (Lottie, GIF, WebP, APNG, MP4, WebM) na camada <b>Arquivo</b> e ajuste tamanho, posição e velocidade. Ao salvar, o efeito entra no catálogo: dá pra <b>dar a alguém</b>, usar como <b>recompensa do passe</b> e, depois, vender. Nada de código livre: só valem os controles daqui, por isso é seguro.</p>
             <div class="es-ef-layout"><div class="es-ef-lado"><button class="es-btn primario" id="ef-novo">Novo efeito</button><div class="es-ef-lista">${lista || '<div class="es-vazio">Nenhum efeito ainda.</div>'}</div></div>
             <div class="es-ef-editor" id="ef-editor"></div></div>`;
@@ -284,7 +285,8 @@
                 <div class="es-campo"><label>Id (letras minúsculas e _)</label><input id="ef-id" maxlength="24" value="${esc(e.id)}" ${XE.novo ? '' : 'disabled'}></div></div>
             <div class="es-linha" style="margin-top:12px"><div class="es-campo"><label>Onde aparece</label><select id="ef-tipo" ${XE.novo ? '' : 'disabled'}><option value="efeito_perfil" ${e.tipo === 'efeito_perfil' ? 'selected' : ''}>Cartão de perfil</option><option value="efeito_avatar" ${e.tipo === 'efeito_avatar' ? 'selected' : ''}>Avatar</option></select></div>
                 <div class="es-campo"><label>Raridade</label><select id="ef-rar">${XE.raridades.map((r) => `<option ${r === e.raridade ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
-                <div class="es-campo largo"><label>Descrição (aparece pra quem ganhar)</label><input id="ef-desc" maxlength="120" value="${esc(e.descricao)}"></div></div></div>
+                <div class="es-campo largo"><label>Descrição (aparece pra quem ganhar)</label><input id="ef-desc" maxlength="120" value="${esc(e.descricao)}"></div></div>
+            <label class="es-check" style="margin-top:12px"><input type="checkbox" id="ef-vender" ${e.vender ? 'checked' : ''}><span>Vender avulso no Armazém por <b data-v="ef-preco">${precoVenda(e)}</b> DRC <span class="es-dica">(o preço vem da tabela pela raridade e pelo tipo; ele aparece na vitrine no tema "Estúdio". Desmarcado, o efeito só se dá, entra em pacote ou vira recompensa do passe.)</span></span></label></div>
             <div class="es-ef-colunas"><div>
                 <div class="es-cartao" id="ef-camadas-cartao"><h2>Camadas</h2><div class="es-linha"><div class="es-campo"><label>Começar de um modelo</label><select id="ef-preset"><option value="">(escolher)</option>${presets}</select></div>
                     <div class="es-campo"><label>Adicionar camada</label><select id="ef-add"><option value="">(escolher)</option>${tipos.map((t) => `<option value="${t}">${esc(XE.esquema[t].nome)}</option>`).join('')}</select></div></div>
@@ -332,9 +334,11 @@
             $('#ef-id').addEventListener('input', (x) => { e.id = x.target.value; });
             $('#ef-nome').addEventListener('input', () => { const idc = $('#ef-id'); if (!idc.dataset.tocado) { e.id = e.nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24); idc.value = e.id; } });
             $('#ef-id').addEventListener('input', (x) => { x.target.dataset.tocado = '1'; });
-            $('#ef-tipo').addEventListener('change', (x) => { e.tipo = x.target.value; e.receita = { pausa: 0, mistura: 'normal', camadas: [] }; desenharEditorEfeito(); });
+            $('#ef-tipo').addEventListener('change', (x) => { e.tipo = x.target.value; e.receita = { pausa: 0, mistura: 'normal', camadas: [] }; desenharEditorEfeito(); mostrarPreco(); });
         }
-        $('#ef-rar').addEventListener('change', (x) => { e.raridade = x.target.value; });
+        const mostrarPreco = () => { const b = $('[data-v="ef-preco"]'); if (b) b.textContent = precoVenda(e); };
+        $('#ef-rar').addEventListener('change', (x) => { e.raridade = x.target.value; mostrarPreco(); });
+        $('#ef-vender').addEventListener('change', (x) => { e.vender = x.target.checked; });
         $('#ef-desc').addEventListener('input', (x) => { e.descricao = x.target.value; });
         $('#ef-pausa').addEventListener('input', (x) => { e.receita.pausa = +x.target.value; $('[data-v="ef-pausa"]').textContent = x.target.value; agendarPrevia(); });
         $('#ef-mistura').addEventListener('change', (x) => { e.receita.mistura = x.target.value; agendarPrevia(); });
@@ -380,7 +384,7 @@
 
         $('#ef-salvar').addEventListener('click', async () => {
             try {
-                const r = await api('/efeitos', 'POST', { id: e.id, nome: e.nome, tipo: e.tipo, raridade: e.raridade, descricao: e.descricao, receita: e.receita });
+                const r = await api('/efeitos', 'POST', { id: e.id, nome: e.nome, tipo: e.tipo, raridade: e.raridade, descricao: e.descricao, vender: !!e.vender, receita: e.receita });
                 toast(XE.novo ? 'Efeito criado!' : 'Efeito salvo. Quem está conectado já vê a mudança.', 'ok');
                 XE.novo = false;
                 const d = await api('/efeitos'); XE.lista = d.efeitos; XE.atual = clone(XE.lista.find((x) => x.id === r.id));
@@ -392,6 +396,146 @@
         $('#ef-dup')?.addEventListener('click', () => { XE.atual = Object.assign(clone(e), { id: '', nome: e.nome + ' (cópia)' }); XE.novo = true; desenharEfeitos(); });
         $('#ef-apagar')?.addEventListener('click', () => confirmar(`Apagar o efeito "${e.nome}"? Ele some de quem o tem (inventário e perfil) e das recompensas que o usam.`, async () => {
             try { await api('/efeitos/' + encodeURIComponent(e.id), 'DELETE'); toast('Efeito apagado.', 'ok'); XE.atual = null; vEfeitos(); } catch (x) { return false; }
+        }, 'Apagar'));
+    }
+
+    // ------------------------------------------------------------
+    // PACOTES (bundles): juntam itens de QUALQUER tema, um por slot. O servidor (app/pacotes.py) valida e confere o preço; aqui só se monta.
+    // ------------------------------------------------------------
+    const XP = { lista: [], catalogo: [], porId: {}, estados: [], icones: [], categorias: [], desconto: 30, minItens: 2, atual: null, novo: true };
+    const SLOTS_PACOTE = ['moldura', 'nome', 'placa', 'faixa', 'efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota'];
+    const ROT_SLOT = { moldura: 'Moldura', nome: 'Estilo de nome', placa: 'Placa', faixa: 'Faixa do perfil', efeito_avatar: 'Efeito de avatar', efeito_perfil: 'Efeito de perfil',
+        efeito_fala: 'Efeito de fala', efeito_radar: 'Efeito do radar', efeito_chat: 'Efeito do chat', som_call: 'Som de entrada', pin_nota: 'Pin de nota' };
+    const ESTADO_ROT = { rascunho: 'Rascunho (só no Estúdio)', a_venda: 'À venda no Armazém (DRC)', so_dar: 'Só dar (admin ou recompensa do passe)' };
+    const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const novoPacote = () => ({ id: '', nome: '', descricao: '', icone: 'fa-box-open', categoria: 'fantasia', cor1: '#d4a24c', cor2: '#3a2f1c', estado: 'rascunho',
+        preco: null, ate: '', itens: [], faltando: [], no_ar: false, _modo: 'auto' });
+    const doServidor = (p) => Object.assign(clone(p), { ate: (p.ate || '').slice(0, 10), _modo: p.preco ? 'fixo' : 'auto' });
+    const tipoDe = (id) => (XP.porId[id] || {}).tipo;
+    const itemDoSlot = (p, tipo) => p.itens.find((id) => tipoDe(id) === tipo);
+    const somaDe = (p) => p.itens.reduce((s, id) => s + ((XP.porId[id] || {}).ref || 0), 0);
+    /** A mesma conta do servidor (soma menos o desconto, em múltiplos de 50, metade pra cima). O servidor é quem vale. */
+    const precoAuto = (soma) => (soma > 0 ? Math.max(50, Math.floor(soma * (1 - XP.desconto / 100) / 50 + 0.5) * 50) : 0);
+
+    async function vPacotes() {
+        const d = await api('/pacotes');
+        XP.lista = d.pacotes; XP.catalogo = d.catalogo; XP.porId = Object.fromEntries(d.catalogo.map((i) => [i.id, i]));
+        XP.estados = d.estados; XP.icones = d.icones; XP.categorias = d.categorias; XP.desconto = d.desconto; XP.minItens = d.min_itens;
+        if (!XP.atual) { XP.atual = novoPacote(); XP.novo = true; }
+        desenharPacotes();
+    }
+    VISTAS.pacotes = vPacotes;
+
+    function resumoPreco(p) {
+        const soma = somaDe(p), auto = precoAuto(soma), fixo = p._modo === 'fixo' ? Math.min(Math.max(+p.preco || 0, 0), soma) : 0;
+        const final = fixo || auto, economia = soma > 0 && final > 0 ? Math.round((1 - final / soma) * 100) : 0;
+        return { soma, auto, final, economia };
+    }
+
+    function desenharPacotes() {
+        const lista = XP.lista.map((p) => `<button class="es-ef-item ${!XP.novo && XP.atual && XP.atual.id === p.id ? 'sel' : ''}" data-id="${esc(p.id)}"><b>${esc(p.nome)}</b>
+            <small>${p.estado === 'a_venda' ? '<span class="es-pk-selo venda">à venda</span>' : p.estado === 'so_dar' ? '<span class="es-pk-selo dar">só dar</span>' : '<span class="es-pk-selo">rascunho</span>'} ${p.itens.length} itens${p.preco_final ? ` · <b>${p.preco_final} DRC</b>` : ''}</small></button>`).join('');
+        main.innerHTML = `<h1>Pacotes (bundles)</h1><p class="es-sub">Junte itens de <b>qualquer tema</b> (moldura, nome, placa, faixa e os efeitos), <b>um por tipo</b>, e publique: <b>à venda</b> no Armazém (em DRC, com desconto de pacote), <b>só dar</b> (você dá a quem quiser ou o passe entrega como recompensa) ou deixe em <b>rascunho</b>. Quem recebe o pacote leva <b>todos</b> os itens dele, mesmo os que não são vendidos avulsos (como um efeito do Estúdio). Dá pra equipar tudo de uma vez no Inventário.</p>
+            <div class="es-ef-layout"><div class="es-ef-lado"><button class="es-btn primario" id="pk-novo">Novo pacote</button><div class="es-ef-lista es-pk-lista">${lista || '<div class="es-vazio">Nenhum pacote ainda.</div>'}</div></div>
+            <div class="es-ef-editor" id="pk-editor"></div></div>`;
+        $('#pk-novo').addEventListener('click', () => { XP.atual = novoPacote(); XP.novo = true; desenharPacotes(); });
+        main.querySelectorAll('.es-ef-item').forEach((b) => b.addEventListener('click', () => { const p = XP.lista.find((x) => x.id === b.dataset.id); XP.atual = doServidor(p); XP.novo = false; desenharPacotes(); }));
+        desenharEditorPacote();
+    }
+
+    function desenharEditorPacote() {
+        const p = XP.atual, alvo = $('#pk-editor');
+        if (!alvo) return;
+        const slots = SLOTS_PACOTE.map((tipo) => {
+            const id = itemDoSlot(p, tipo), it = id && XP.porId[id];
+            return `<div class="es-slot ${it ? 'cheio' : ''}" data-tipo="${tipo}"><div class="es-slot-corpo"><span class="es-slot-rot">${esc(ROT_SLOT[tipo])}</span>
+                <span class="es-slot-item ${it ? '' : 'vazio'}"><b>${it ? esc(it.nome) : 'nenhum'}</b>${it ? `<small>${esc(it.tema_nome)} · ${esc(it.raridade)} · ${it.ref ? it.ref + ' DRC' : 'sem preço'}${it.avulso ? '' : ' · não vendido avulso'}</small>` : ''}</span></div>
+                <button class="es-btn mini" data-escolher="${tipo}">${it ? 'Trocar' : 'Escolher'}</button>${it ? `<button class="es-btn mini perigo" data-tirar="${tipo}">Tirar</button>` : ''}</div>`;
+        }).join('');
+        const r = resumoPreco(p);
+        const semRef = p.itens.filter((id) => XP.porId[id] && !XP.porId[id].ref);
+        const naoAvulso = p.itens.filter((id) => XP.porId[id] && !XP.porId[id].avulso);
+        const avisos = [];
+        if (p.faltando && p.faltando.length) avisos.push(['erro', `${p.faltando.length} item(ns) deste pacote saíram do catálogo (um efeito apagado, por exemplo). Tire do pacote e salve de novo.`]);
+        if (semRef.length) avisos.push(['', `Sem preço de referência (conta 0 na soma): ${semRef.map((id) => esc(XP.porId[id].nome)).join(', ')}.`]);
+        if (p.itens.length && p.itens.length < XP.minItens) avisos.push(['', `Faltam itens: um pacote precisa de pelo menos ${XP.minItens}.`]);
+        if (p.estado === 'a_venda' && p.itens.length >= XP.minItens && r.soma <= 0) avisos.push(['erro', 'Com esses itens a soma é 0, então não dá pra vender. Use "só dar" ou troque algum item.']);
+        if (p._modo === 'fixo' && r.soma > 0 && +p.preco > r.soma) avisos.push(['erro', `O preço fixo não pode passar da soma dos itens (${r.soma} DRC).`]);
+        const dica = naoAvulso.length ? `<p class="es-dica" style="margin-top:10px">${naoAvulso.length} item(ns) não são vendidos avulsos (${naoAvulso.map((id) => esc(XP.porId[id].nome)).join(', ')}): só chegam a quem comprar ou receber o pacote.</p>` : '';
+        alvo.innerHTML = `<div class="es-cartao"><h2>${XP.novo ? 'Novo pacote' : 'Editando: ' + esc(p.nome)}</h2>
+            <div class="es-linha"><div class="es-campo largo"><label>Nome (2 a 40)</label><input id="pk-nome" maxlength="40" value="${esc(p.nome)}"></div>
+                <div class="es-campo"><label>Id (letras minúsculas e _)</label><input id="pk-id" maxlength="24" value="${esc(p.id)}" ${XP.novo ? '' : 'disabled'}></div></div>
+            <div class="es-campo" style="margin-top:12px"><label>Descrição (aparece no Armazém e pra quem ganhar)</label><input id="pk-desc" maxlength="160" value="${esc(p.descricao)}"></div>
+            <div class="es-linha" style="margin-top:12px"><div class="es-campo"><label>Categoria no Armazém</label><select id="pk-cat">${XP.categorias.map((c) => `<option value="${esc(c.id)}" ${c.id === p.categoria ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></div>
+                <div class="es-campo"><label>Cor 1</label><input id="pk-cor1" type="color" value="${esc(p.cor1)}"></div><div class="es-campo"><label>Cor 2</label><input id="pk-cor2" type="color" value="${esc(p.cor2)}"></div>
+                <div class="es-campo"><label>Ícone</label><div class="es-icones" id="pk-icones">${XP.icones.map((ic) => `<button type="button" data-ic="${esc(ic)}" class="${ic === p.icone ? 'sel' : ''}" title="${esc(ic)}"><i class="fa-solid ${esc(ic)}"></i></button>`).join('')}</div></div></div></div>
+            <div class="es-pk-colunas"><div><div class="es-cartao"><h2>Itens do pacote</h2><div class="es-slots">${slots}</div>${dica}</div></div>
+            <div><div class="es-cartao"><h2>Publicação e preço</h2>
+                <div class="es-campo"><label>Estado</label><select id="pk-estado">${XP.estados.map((e) => `<option value="${e}" ${e === p.estado ? 'selected' : ''}>${esc(ESTADO_ROT[e] || e)}</option>`).join('')}</select></div>
+                <div class="es-linha" style="margin-top:12px"><div class="es-campo"><label>Preço</label><select id="pk-modo"><option value="auto" ${p._modo === 'auto' ? 'selected' : ''}>Automático (−${XP.desconto}% da soma)</option><option value="fixo" ${p._modo === 'fixo' ? 'selected' : ''}>Fixo (até a soma)</option></select></div>
+                    <div class="es-campo" ${p._modo === 'fixo' ? '' : 'hidden'} id="pk-fixo-caixa"><label>Preço fixo (DRC)</label><input id="pk-fixo" type="number" min="1" max="${r.soma || 1}" value="${p.preco || ''}"></div></div>
+                <div class="es-campo" style="margin-top:12px"><label>Fim da venda (opcional)</label><input id="pk-ate" type="date" value="${esc(p.ate)}"><small>Depois desse dia o pacote continua visível, mas não se compra. Vazio = sem fim.</small></div>
+                <div class="es-resumo" id="pk-resumo"><div><small>Soma dos itens</small><b>${r.soma} DRC</b></div><div><small>Preço do pacote</small><b class="ouro">${r.final || '—'}${r.final ? ' DRC' : ''}</b></div><div><small>Economia</small><b>${r.economia}%</b></div></div>
+                ${avisos.map(([c, t]) => `<div class="es-aviso ${c}">${t}</div>`).join('')}
+                <div class="es-linha" style="margin-top:14px"><button class="es-btn primario" id="pk-salvar">${XP.novo ? 'Criar pacote' : 'Salvar alterações'}</button>
+                    ${XP.novo ? '' : `<button class="es-btn" id="pk-mim" ${p.no_ar ? '' : 'disabled'}>Dar a mim</button><button class="es-btn" id="pk-dar" ${p.no_ar ? '' : 'disabled'}>Dar a alguém</button><button class="es-btn" id="pk-dup">Duplicar</button><button class="es-btn perigo" id="pk-apagar">Apagar</button>`}</div>
+                ${XP.novo ? '' : `<p class="es-dica" style="margin-top:10px">Item no catálogo: <code>pacote:${esc(p.id)}</code>${p.no_ar ? '' : ' (em rascunho o pacote ainda não existe pro app: publique como "só dar" ou "à venda" pra poder dar)'}. No Passe de Batalha (painel do admin), escolha "Item" e procure por ele pra usar de recompensa. Quem já recebeu o pacote antes de uma mudança nos itens fica com o que recebeu.</p>`}</div></div></div>`;
+        ligarEditorPacote();
+    }
+
+    function abrirSeletor(tipo, aoEscolher) {
+        const todos = XP.catalogo.filter((i) => i.tipo === tipo), atual = itemDoSlot(XP.atual, tipo);
+        const d = dialogo(`Escolher: ${ROT_SLOT[tipo]}`, '<div class="es-campo es-pick-busca"><input id="pk-busca" placeholder="Procurar por nome ou tema" autocomplete="off"></div><div class="es-pick-lista" id="pk-lista"></div>', [{ texto: 'Fechar' }], true);
+        const lista = $('#pk-lista', d.fundo), busca = $('#pk-busca', d.fundo);
+        const desenhar = () => {
+            const q = norm(busca.value), achados = todos.filter((i) => !q || norm(i.nome + ' ' + i.tema_nome).includes(q)), mostrar = achados.slice(0, 120);
+            lista.innerHTML = (mostrar.map((i) => `<button type="button" data-id="${esc(i.id)}" class="${i.id === atual ? 'sel' : ''}"><span>${esc(i.nome)}</span><small>${esc(i.tema_nome)} · ${esc(i.raridade)} · ${i.ref ? i.ref + ' DRC' : 'sem preço'}</small></button>`).join('')
+                + (achados.length > mostrar.length ? `<div class="es-pick-mais">Mostrando ${mostrar.length} de ${achados.length}. Refine a busca.</div>` : '')) || '<div class="es-vazio">Nada encontrado.</div>';
+        };
+        busca.addEventListener('input', desenhar);
+        lista.addEventListener('click', (ev) => { const b = ev.target.closest('button[data-id]'); if (b) { aoEscolher(b.dataset.id); d.fechar(); } });
+        desenhar();
+        busca.focus();
+    }
+
+    function ligarEditorPacote() {
+        const p = XP.atual, alvo = $('#pk-editor');
+        const refazerResumo = () => { const z = $('#pk-resumo'), r = resumoPreco(p); if (z) z.innerHTML = `<div><small>Soma dos itens</small><b>${r.soma} DRC</b></div><div><small>Preço do pacote</small><b class="ouro">${r.final || '—'}${r.final ? ' DRC' : ''}</b></div><div><small>Economia</small><b>${r.economia}%</b></div>`; };
+        $('#pk-nome').addEventListener('input', (x) => { p.nome = x.target.value; });
+        if (XP.novo) {
+            $('#pk-id').addEventListener('input', (x) => { p.id = x.target.value; x.target.dataset.tocado = '1'; });
+            $('#pk-nome').addEventListener('input', () => { const idc = $('#pk-id'); if (!idc.dataset.tocado) { p.id = norm(p.nome).replace(/[^a-z]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24); idc.value = p.id; } });
+        }
+        $('#pk-desc').addEventListener('input', (x) => { p.descricao = x.target.value; });
+        $('#pk-cat').addEventListener('change', (x) => { p.categoria = x.target.value; });
+        $('#pk-cor1').addEventListener('input', (x) => { p.cor1 = x.target.value; });
+        $('#pk-cor2').addEventListener('input', (x) => { p.cor2 = x.target.value; });
+        $('#pk-icones').addEventListener('click', (ev) => { const b = ev.target.closest('button[data-ic]'); if (!b) return; p.icone = b.dataset.ic; alvo.querySelectorAll('#pk-icones button').forEach((x) => x.classList.toggle('sel', x === b)); });
+        $('#pk-estado').addEventListener('change', (x) => { p.estado = x.target.value; desenharEditorPacote(); });
+        $('#pk-modo').addEventListener('change', (x) => { p._modo = x.target.value; if (p._modo === 'fixo' && !p.preco) p.preco = resumoPreco(p).auto || null; desenharEditorPacote(); });
+        $('#pk-fixo').addEventListener('input', (x) => { p.preco = x.target.value ? +x.target.value : null; refazerResumo(); });
+        $('#pk-ate').addEventListener('change', (x) => { p.ate = x.target.value; });
+        alvo.querySelectorAll('[data-escolher]').forEach((b) => b.addEventListener('click', () => abrirSeletor(b.dataset.escolher, (id) => {
+            p.itens = p.itens.filter((x) => tipoDe(x) !== b.dataset.escolher).concat(id);
+            desenharEditorPacote();
+        })));
+        alvo.querySelectorAll('[data-tirar]').forEach((b) => b.addEventListener('click', () => { p.itens = p.itens.filter((x) => tipoDe(x) !== b.dataset.tirar); desenharEditorPacote(); }));
+        $('#pk-salvar').addEventListener('click', async () => {
+            const itens = p.itens.filter((id) => XP.porId[id]);      // item que saiu do catálogo não vai de novo
+            try {
+                const r = await api('/pacotes', 'POST', { id: p.id, nome: p.nome, descricao: p.descricao, icone: p.icone, categoria: p.categoria, cor1: p.cor1, cor2: p.cor2,
+                    estado: p.estado, itens, preco: p._modo === 'fixo' && p.preco ? +p.preco : null, ate: p.ate || '' });
+                toast(XP.novo ? 'Pacote criado!' : 'Pacote salvo.', 'ok');
+                XP.novo = false;
+                const d = await api('/pacotes'); XP.lista = d.pacotes; XP.atual = doServidor(XP.lista.find((x) => x.id === r.id));
+                desenharPacotes();
+            } catch (x) { /* o toast já mostrou o motivo */ }
+        });
+        $('#pk-mim')?.addEventListener('click', async () => { try { await api('/itens/conceder', 'POST', { item_id: 'pacote:' + p.id, person_id: window.EU.id }); toast('Entregue pra você: abra o Inventário no app e equipe tudo.', 'ok'); } catch (x) { /* toast */ } });
+        $('#pk-dar')?.addEventListener('click', () => darItem('pacote:' + p.id, p.nome));
+        $('#pk-dup')?.addEventListener('click', () => { XP.atual = Object.assign(clone(p), { id: '', nome: p.nome + ' (cópia)', estado: 'rascunho', no_ar: false, faltando: [] }); XP.novo = true; desenharPacotes(); });
+        $('#pk-apagar')?.addEventListener('click', () => confirmar(`Apagar o pacote "${p.nome}"? Ele some do Armazém e do catálogo. Quem já recebeu fica com os itens (só o "carimbo" do pacote some).`, async () => {
+            try { await api('/pacotes/' + encodeURIComponent(p.id), 'DELETE'); toast('Pacote apagado.', 'ok'); XP.atual = null; vPacotes(); } catch (x) { return false; }
         }, 'Apagar'));
     }
 

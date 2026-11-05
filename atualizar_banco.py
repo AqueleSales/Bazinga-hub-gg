@@ -332,6 +332,9 @@ def atualizar_banco():
             add_column_se_nao_existir("bazar_pedido", "saida_em TIMESTAMP")
             add_column_se_nao_existir("bazar_pedido", "entregue_em TIMESTAMP")
 
+            # 45. Pacotes do Estúdio e efeito do Estúdio à venda (Rodada 37): a tabela pacote_custom nasce pelo create_all; aqui só a flag "vender avulso" do efeito.
+            add_column_se_nao_existir("efeito_custom", "vender BOOLEAN")
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)
