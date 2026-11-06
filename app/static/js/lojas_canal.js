@@ -7,6 +7,7 @@ const LojasCanal = (() => {
     let ctx = null, canalId = null, nomeCanal = '', pedidoTimer = null, buscaTimer = null, dados = null;
     const f = { busca: '', categoria: '', origem: 'todas', seed: novaSeed() };
     const CORES = { ambar: '#d9822b', vinho: '#a8323e', floresta: '#3f7d4e', oceano: '#2f6f9f', lavanda: '#7d6bb8', tijolo: '#b5532f', petroleo: '#2f6670', mostarda: '#c9a227', rosa: '#c4577f', grafite: '#5a606b' };
+    const urlCss = (u) => String(u == null ? '' : u).replace(/['"()\\\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
     const brl = (c) => (Number(c || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const $ = (id) => document.getElementById(id);
 
@@ -89,7 +90,7 @@ const LojasCanal = (() => {
     function cartao(l) {
         const cor = CORES[l.cor] || CORES.ambar;
         const logo = l.logo_url ? ctx.escUrl(l.logo_url) : '';
-        const banner = l.banner_url ? ctx.escUrl(l.banner_url) : '';
+        const banner = l.banner_url ? ctx.escUrl(urlCss(l.banner_url)) : '';
         const ini = ctx.esc(((l.nome || '?').trim()[0] || '?').toUpperCase());
         const nota = l.nota ? `<span class="lc-nota" title="${Number(l.nota_qtd)} avaliações"><i class="fa-solid fa-star"></i> ${String(l.nota).replace('.', ',')}</span>` : '<span class="lc-nota nova">nova</span>';
         const selo = l.verificada ? '<span class="lc-selo" title="Loja verificada"><i class="fa-solid fa-circle-check"></i></span>' : '';

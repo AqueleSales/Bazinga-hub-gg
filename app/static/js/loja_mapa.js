@@ -10,6 +10,7 @@ const LojaMapa = (function () {
     let overlay = null;
 
     const esc = (v) => (ctx && ctx.esc ? ctx.esc(v) : String(v == null ? '' : v));
+    const urlCss = (u) => String(u == null ? '' : u).replace(/['"()\\\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
     const urlOk = (u) => (ctx && ctx.escUrl ? ctx.escUrl(u) : '');
     const inicial = (nome) => esc(String(nome || '?').trim().charAt(0).toUpperCase() || '?');
 
@@ -140,7 +141,7 @@ const LojaMapa = (function () {
     function cartao(l) {
         const meu = Number(l.dono_id) === Number(ctx.meuId());
         const nota = l.nota ? `<span class="lm-nota"><i class="fa-solid fa-star"></i> ${String(l.nota).replace('.', ',')} <small>(${Number(l.nota_qtd) || 0})</small></span>` : '<span class="lm-nota"><small>Loja nova</small></span>';
-        const capa = urlOk(l.banner_url) ? ` style="background-image:url('${esc(urlOk(l.banner_url))}')"` : '';
+        const capa = urlOk(urlCss(l.banner_url)) ? ` style="background-image:url('${urlOk(urlCss(l.banner_url))}')"` : '';
         return `<div class="lm-prev" style="--lj:${esc(l.cor)}">
             <div class="lm-capa${capa ? ' com-img' : ''}"${capa}><span class="lm-logo grande">${urlOk(l.logo_url) ? `<img src="${esc(urlOk(l.logo_url))}" alt="">` : inicial(l.nome)}</span></div>
             <div class="lm-corpo">

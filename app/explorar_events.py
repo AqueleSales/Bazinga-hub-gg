@@ -6,7 +6,8 @@ Erro de regra volta como `explorar_erro`; erro inesperado como `erro_bazinga` (r
 """
 import time
 
-from flask_socketio import emit, join_room
+from flask_socketio import join_room
+from .seguranca import emit
 
 from . import socketio, explorar
 from .explorar import ErroExplorar

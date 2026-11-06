@@ -5,7 +5,7 @@
 LIMPOU (id alheio, pasta repetida e nome fora do formato foram descartados), então a tela de quem arrastou também se corrige.
 Erro de banco não é silencioso (regra 3): vira `erro_bazinga` com o motivo.
 """
-from flask_socketio import emit
+from .seguranca import emit
 from sqlalchemy import or_
 
 from . import socketio, ordem

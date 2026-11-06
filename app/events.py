@@ -1,5 +1,6 @@
 from flask import session, request
-from flask_socketio import emit, join_room, leave_room
+from flask_socketio import join_room, leave_room
+from .seguranca import emit
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_, and_, func
 from sqlalchemy.orm import joinedload
@@ -16,7 +17,7 @@ from .utils import (identidade_mini, resumos_de_resposta_canal, resumos_de_respo
                     conceder_xp_por_mensagem, conceder_bonus_diario, estado_battlepass,
                     registrar_eventos, registrar_tempo_ativo, missoes_do_usuario, contagem_valida, TEMAS_EXCLUSIVOS,
                     BATIMENTO_MIN_SEGUNDOS, nivel_da_pessoa, titulo_do_nivel, membro_desde_texto,
-                    ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok,
+                    ESTILOS_NOME, PLACAS, MOLDURAS, STATUS_VALIDOS, FAIXAS_ANIMADAS, url_de_imagem_ok, caminho_do_site, url_cloudinary_do_app,
                     tema_perfil_valido, username_valido, ajuste_de_imagem_valido,
                     TEMAS_VALIDOS, tema_custom_valido, APARELHOS, aparelho_pelo_user_agent, tema_do_aparelho, definir_tema_do_aparelho,
                     distancia_m, coordenada_valida, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, dados_do_mapa_perto, nota_para_json,
@@ -801,8 +802,8 @@ def lidar_com_mensagem(dados):
     anexo_nome = (dados.get('anexo_nome') or '').strip()[:255] or None
     anexo_url_str = str(anexo_url) if anexo_url else ''
     if anexo_url and not (
-        anexo_url_str.startswith('/')
-        or anexo_url_str.startswith('https://res.cloudinary.com/')
+        caminho_do_site(anexo_url_str)
+        or url_cloudinary_do_app(anexo_url_str)
         or re.match(r'^https://media\d*\.giphy\.com/', anexo_url_str)
     ):
         anexo_url = None  # só aceita caminho do próprio site, Cloudinary ou Giphy
@@ -4039,7 +4040,7 @@ def on_entrar_dm(data):
 def anexo_dm_valido(url):
     url = str(url or '')
     return bool(url) and len(url) <= 500 and (
-        url.startswith('/') or url.startswith('https://res.cloudinary.com/')
+        caminho_do_site(url) or url_cloudinary_do_app(url)
         or bool(re.match(r'^https://media\d*\.giphy\.com/', url)))
 
 

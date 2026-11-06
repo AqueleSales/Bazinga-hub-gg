@@ -8,7 +8,7 @@ Erro de regra volta como `prestigio_erro`; erro inesperado como `erro_bazinga` (
 """
 import time
 
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, prestigio
 from .prestigio import ErroPrestigio

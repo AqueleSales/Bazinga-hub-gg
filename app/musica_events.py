@@ -8,7 +8,7 @@ Erro de regra volta como `musica_erro`; erro inesperado como `erro_bazinga` (reg
 import re
 import time
 
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, musica
 from .musica import ErroMusica

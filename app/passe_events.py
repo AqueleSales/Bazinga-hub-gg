@@ -5,7 +5,7 @@ Regra 6: o que a pessoa resgata/equipa/escolhe vale em TODAS as abas dela (`sala
 """
 import time
 
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, passe
 from .passe import ErroPasse

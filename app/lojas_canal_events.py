@@ -7,7 +7,7 @@ Erro de regra volta como `lojas_canal_erro`; erro inesperado como `erro_bazinga`
 """
 import time
 
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, lojas_canal
 from .models import db

@@ -2,7 +2,7 @@
 Importado no FIM do events.py (precisa de usuario_logado e sala_pessoal de lá). Regra 6: salvar numa aba atualiza todas as abas da pessoa."""
 import time
 
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, preferencias, config_usuario
 from .models import db

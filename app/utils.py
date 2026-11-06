@@ -3,6 +3,7 @@
 Antes cada um desses arquivos tinha a sua própria cópia de `com_retry()` -
 mesma ideia, tempos de espera diferentes. Agora é só uma.
 """
+import os
 import random
 import re
 import secrets
@@ -700,12 +701,41 @@ _RE_GIPHY = re.compile(r'^https://media\d*\.giphy\.com/')
 _RE_USERNAME = re.compile(r'^[a-z0-9_.]{3,20}$')
 
 
+def caminho_do_site(url):
+    """`/algo` DO PRÓPRIO app. Não basta `startswith('/')`: `//outro.site/x.png` (sem o `https:`) o navegador completa com o esquema da página e vai buscar
+    em OUTRO host (pixel de rastreio no navegador de todo mundo que abrir a mensagem), e `/\\outro.site` idem (o navegador trata `\\` como `/`)."""
+    return (isinstance(url, str) and url.startswith('/') and not url.startswith(('//', '/\\'))
+            and '\\' not in url and not any(ord(c) < 32 or ord(c) == 127 for c in url))
+
+
+def _cloudinary_estrito():
+    """No Render (ou com CLOUDINARY_ESTRITO=1) só vale a conta Cloudinary DO APP. Em dev/teste o `.env` tem uma conta real e os testes usam contas
+    de mentira (`/x/a.png`): lá vale qualquer uma."""
+    forcado = os.getenv('CLOUDINARY_ESTRITO')
+    return forcado == '1' or (forcado != '0' and bool(os.getenv('RENDER')))
+
+
+def url_cloudinary_do_app(url):
+    """Imagem/vídeo hospedado no Cloudinary DESTE app. Antes valia qualquer `https://res.cloudinary.com/...`: quem tem conta própria no Cloudinary
+    hospedava lá o que quisesse (inclusive o que o Guardião barraria no upload) e só colava o link na mensagem."""
+    if not isinstance(url, str) or not url.startswith('https://res.cloudinary.com/') or '\\' in url:
+        return False
+    if not _cloudinary_estrito():
+        return True
+    try:
+        import cloudinary
+        nuvem = cloudinary.config().cloud_name
+    except Exception:
+        nuvem = None
+    return bool(nuvem) and url.startswith(f'https://res.cloudinary.com/{nuvem}/')
+
+
 def url_de_imagem_ok(url):
-    """Só caminho do próprio site, Cloudinary ou Giphy (mesma regra dos anexos).
+    """Só caminho do próprio site, Cloudinary do app ou Giphy (mesma regra dos anexos).
     Qualquer outro host seria um pixel de rastreio no navegador de todo mundo."""
     url = (url or '').strip()
     return bool(url) and len(url) <= 255 and (
-        url.startswith('/') or url.startswith('https://res.cloudinary.com/') or bool(_RE_GIPHY.match(url)))
+        caminho_do_site(url) or url_cloudinary_do_app(url) or bool(_RE_GIPHY.match(url)))
 
 
 # ------------------------------------------------------------

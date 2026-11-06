@@ -1,7 +1,7 @@
 """Eventos da Brasa (id interno olimpo; a assinatura, a regra mora em olimpo.py). Ativar de graça enquanto OLIMPO_GRATIS não for 0; senão gera a cobrança Pix."""
 import time
 
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, olimpo, pagamentos
 from .models import db

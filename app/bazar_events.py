@@ -9,7 +9,7 @@ Tudo que é de admin (anúncios, disputas, banimento, selo, moderação) confere
 import time
 
 from flask import request
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, bazar, pagamentos, guardiao
 from .bazar import ErroBazar
