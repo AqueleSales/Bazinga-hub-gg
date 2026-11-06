@@ -10,9 +10,10 @@ const AtividadesJogos = (function () {
         ppt: { nome: 'Pedra, papel e tesoura', icone: 'fa-hand-back-fist', lados: { a: 'Jogador 1', b: 'Jogador 2' } },
         forca: { nome: 'Forca', icone: 'fa-spell-check', lados: {} },
         dados: { nome: 'Dados e sorteio', icone: 'fa-dice', lados: {} },
+        site: { nome: 'Mesa de RPG e sites', icone: 'fa-dice-d20', lados: {} },
     };
     const MAO = { pedra: ['fa-hand-back-fist', 'Pedra'], papel: ['fa-hand', 'Papel'], tesoura: ['fa-hand-scissors', 'Tesoura'] };
-    const NOME_DADO = { d6: 'D6', d20: 'D20', d100: 'D100' };
+    const NOME_DADO = { d4: 'D4', d6: 'D6', d8: 'D8', d10: 'D10', d12: 'D12', d20: 'D20', d100: 'D100' };
 
     let abrirConvite = false;       // lista de "quem chamar" aberta
     let minhaMao = null;            // o que EU escolhi nesta rodada de pedra-papel-tesoura (só pra mostrar; o servidor guarda o segredo)
@@ -169,32 +170,106 @@ const AtividadesJogos = (function () {
     }
 
     // ---------------------------------------------------------------------------------------------------------------
-    // Dados e sorteio
+    // Dados e sorteio (RPG): bandeja de dados, modificador, vantagem/desvantagem, expressão livre, moeda e dados 3D (static/js/dados3d.js)
     // ---------------------------------------------------------------------------------------------------------------
+    const DADOS = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+    const LADOS = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20, d100: 100 };
+    let bandeja = [];               // [{dado, qtd}]  o que vai ser rolado
+    let modificador = 0, modo = 'normal', moedas = 1, exprTexto = '', d3Visto;     // d3Visto = id da última rolagem já mostrada (a que já estava lá ao abrir não "rola" de novo)
+
+    const sinalMod = (m) => (m > 0 ? '+' : '') + m;
+    function exprDaBandeja() {
+        if (!bandeja.length) return '';
+        let t;
+        if (modo !== 'normal' && bandeja.length === 1) t = '2' + bandeja[0].dado + (modo === 'vantagem' ? 'kh1' : 'kl1');   // vantagem/desvantagem: 2 dados, fica com o maior/menor
+        else t = bandeja.map((g) => (g.qtd > 1 ? g.qtd : '') + g.dado).join('+');
+        return t + (modificador ? sinalMod(modificador) : '');
+    }
+    function detalheRolagem(e, h) {
+        const grupos = (e.grupos || []).map((g, gi) => {
+            const vals = g.valores.map((v, i) => g.mantidos.includes(i) ? `<b>${Number(v)}</b>` : `<s>${Number(v)}</s>`).join(' ');
+            return `${gi ? (g.sinal < 0 ? ' − ' : ' + ') : (g.sinal < 0 ? '−' : '')}[${vals}]`;
+        }).join('');
+        const mod = e.mod ? ` ${e.mod > 0 ? '+' : '−'} ${Math.abs(e.mod)}` : '';
+        return `${grupos}${mod}`;
+    }
     function linhaHistorico(e, h) {
         const nome = h.esc(e.quem.nome);
-        if (e.tipo === 'moeda') return `<i class="fa-solid fa-coins"></i><span><b>${nome}</b> jogou a moeda: <b>${h.esc(e.texto)}</b></span>`;
+        if (e.tipo === 'moeda') return `<i class="fa-solid fa-coins"></i><span><b>${nome}</b> jogou ${e.moedas && e.moedas.length > 1 ? e.moedas.length + ' moedas' : 'a moeda'}: <b>${h.esc(e.texto)}</b></span>`;
         if (e.tipo === 'sorteio') return `<i class="fa-solid fa-hat-wizard"></i><span><b>${nome}</b> sorteou: <b>${h.esc(e.texto)}</b></span>`;
+        if (e.tipo === 'rolagem') return `<i class="fa-solid fa-dice-d20"></i><span><b>${nome}</b> rolou <code>${h.esc(e.expr)}</code>: ${detalheRolagem(e, h)} = <b>${h.esc(e.texto)}</b></span>`;
         return `<i class="fa-solid fa-dice"></i><span><b>${nome}</b> rolou ${h.esc(NOME_DADO[e.tipo] || e.tipo)}: <b>${h.esc(e.texto)}</b></span>`;
     }
     function corpoDados(est, h) {
         const ult = est.historico[0];
-        const grande = ult
-            ? `<div class="aj-resultado"><small>${h.esc(ult.quem.nome)} · ${ult.tipo === 'moeda' ? 'Cara ou coroa' : ult.tipo === 'sorteio' ? 'Sorteio' : h.esc(NOME_DADO[ult.tipo] || ult.tipo)}</small><b>${h.esc(ult.texto)}</b></div>`
-            : '<div class="aj-resultado vazio"><small>Nada rolou ainda</small><b>?</b></div>';
-        return `${grande}
-            <div class="aj-dados">
-                <button type="button" data-j="dado" data-d="d6"><i class="fa-solid fa-dice-d6"></i>D6</button>
-                <button type="button" data-j="dado" data-d="d20"><i class="fa-solid fa-dice-d20"></i>D20</button>
-                <button type="button" data-j="dado" data-d="d100"><i class="fa-solid fa-percent"></i>D100</button>
-                <button type="button" data-j="moeda"><i class="fa-solid fa-coins"></i>Moeda</button>
-                <button type="button" class="largo" data-j="sortear"><i class="fa-solid fa-hat-wizard"></i>Sortear alguém da call</button>
+        let grande;
+        if (!ult) grande = '<div class="aj-resultado vazio"><small>Nada rolou ainda</small><b>?</b></div>';
+        else if (ult.tipo === 'rolagem') grande = `<div class="aj-resultado"><small>${h.esc(ult.quem.nome)} · <code>${h.esc(ult.expr)}</code></small><b>${h.esc(ult.texto)}</b><span class="aj-det">${detalheRolagem(ult, h)}</span></div>`;
+        else grande = `<div class="aj-resultado"><small>${h.esc(ult.quem.nome)} · ${ult.tipo === 'moeda' ? 'Cara ou coroa' : ult.tipo === 'sorteio' ? 'Sorteio' : h.esc(NOME_DADO[ult.tipo] || ult.tipo)}</small><b>${h.esc(ult.texto)}</b></div>`;
+        const expr = exprDaBandeja();
+        const unico = bandeja.length === 1;
+        return `<canvas class="aj-d3" data-d3 aria-label="Dados rolando" role="img"></canvas>${grande}
+            <div class="aj-bandeja-t">Escolha os dados</div>
+            <div class="aj-dados7">${DADOS.map((d) => `<button type="button" data-j="d-add" data-d="${d}" title="Somar um ${d.toUpperCase()}"><span>${d.toUpperCase()}</span></button>`).join('')}</div>
+            <div class="aj-bandeja">${bandeja.length ? bandeja.map((g) => `<span class="aj-chip">${g.qtd}×${g.dado.toUpperCase()}<button type="button" data-j="d-tirar" data-d="${g.dado}" title="Tirar" aria-label="Tirar ${g.dado}"><i class="fa-solid fa-xmark"></i></button></span>`).join('')
+                : '<span class="aj-dica">Toque nos dados pra montar a rolagem (ex.: 2 × D6).</span>'}</div>
+            <div class="aj-linha">
+                <div class="aj-passo" title="Modificador"><button type="button" data-j="d-mod" data-v="-1" aria-label="Menos 1">−</button><span>${modificador ? sinalMod(modificador) : '+0'}</span><button type="button" data-j="d-mod" data-v="1" aria-label="Mais 1">+</button></div>
+                <div class="aj-seg" role="group" aria-label="Modo"><button type="button" data-j="d-modo" data-v="normal" class="${modo === 'normal' || !unico ? 'on' : ''}">Normal</button>
+                    <button type="button" data-j="d-modo" data-v="vantagem" class="${modo === 'vantagem' && unico ? 'on' : ''}" ${unico ? '' : 'disabled'} title="Rola 2 dados e fica com o maior">Vantagem</button>
+                    <button type="button" data-j="d-modo" data-v="desvantagem" class="${modo === 'desvantagem' && unico ? 'on' : ''}" ${unico ? '' : 'disabled'} title="Rola 2 dados e fica com o menor">Desvantagem</button></div>
             </div>
+            <div class="aj-linha"><input class="aj-expr" id="aj-expr" type="text" maxlength="60" placeholder="ou escreva: 2d6+3, 4d6kh3, 1d20+1d4+2" value="${h.esc(exprTexto)}" autocomplete="off" spellcheck="false">
+                <button type="button" class="aj-rolar" data-j="d-rolar" ${expr || exprTexto.trim() ? '' : 'disabled'}><i class="fa-solid fa-dice-d20"></i> Rolar${expr && !exprTexto.trim() ? ' ' + h.esc(expr) : ''}</button></div>
+            <div class="aj-rapidos">
+                <button type="button" data-j="d-rapido" data-e="1d20">D20</button><button type="button" data-j="d-rapido" data-e="2d20kh1">Vantagem</button><button type="button" data-j="d-rapido" data-e="2d20kl1">Desvantagem</button>
+                <button type="button" data-j="d-rapido" data-e="2d6">2D6</button><button type="button" data-j="d-rapido" data-e="4d6kh3">4D6 (3 maiores)</button><button type="button" data-j="d-rapido" data-e="1d100">D100</button></div>
+            <div class="aj-linha aj-outros">
+                <div class="aj-passo" title="Quantas moedas"><button type="button" data-j="d-moedas" data-v="-1" aria-label="Menos uma moeda">−</button><span>${moedas}</span><button type="button" data-j="d-moedas" data-v="1" aria-label="Mais uma moeda">+</button></div>
+                <button type="button" class="aj-b2" data-j="moeda"><i class="fa-solid fa-coins"></i> Jogar ${moedas > 1 ? moedas + ' moedas' : 'a moeda'}</button>
+                <button type="button" class="aj-b2 verde" data-j="sortear"><i class="fa-solid fa-hat-wizard"></i> Sortear alguém</button></div>
             <div class="aj-hist">${est.historico.length ? est.historico.map((e) => `<div class="aj-h">${linhaHistorico(e, h)}</div>`).join('') : '<div class="at-vazio">O histórico aparece aqui pra todo mundo ver.</div>'}</div>
             ${est.historico.length ? '<div class="at-acoes"><button type="button" class="sec" data-j="dados-limpar">Limpar histórico</button></div>' : ''}`;
     }
+    /** Depois que o painel foi desenhado: liga o campo da expressão e põe os dados 3D no palco (a rolagem NOVA anima; a que já estava lá ao abrir não). */
+    function depois(raiz, est, h) {
+        if (!est || est.tipo !== 'dados' || !raiz) return;
+        const inp = raiz.querySelector('#aj-expr');
+        if (inp) {
+            inp.addEventListener('input', () => { exprTexto = inp.value; const b = raiz.querySelector('[data-j="d-rolar"]'); if (b) b.disabled = !(exprTexto.trim() || exprDaBandeja()); });
+            inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && inp.value.trim()) { e.preventDefault(); h.acao({ acao: 'rolar', expr: inp.value.trim() }); } });
+        }
+        const canvas = raiz.querySelector('canvas[data-d3]'), ult = est.historico[0];
+        if (!canvas || typeof Dados3D === 'undefined') return;
+        const nova = d3Visto !== undefined && ult && ult.id !== d3Visto;
+        if (ult) Dados3D.mostrar(canvas, ult, { animar: !!nova });
+        d3Visto = ult ? ult.id : null;
+    }
 
-    const CORPOS = { velha: corpoVelha, ppt: corpoPpt, forca: corpoForca, dados: corpoDados };
+    // ---------------------------------------------------------------------------------------------------------------
+    // Mesa de RPG e sites: uma página que a call abre junto (o servidor só aceita sites da lista, app/jogos.py SITES)
+    // ---------------------------------------------------------------------------------------------------------------
+    function corpoSite(est, h) {
+        const s = est.site || {}, eu = Number(h.meuId()) === Number(est.iniciador_id);
+        const url = h.escUrl(s.url || '');
+        const quem = (est.presentes || []).find(p => Number(p.id) === Number(est.iniciador_id));
+        est = Object.assign({}, est, { iniciador_nome: quem ? quem.nome : '' });
+        const topo = `<div class="aj-site-topo"><div><b>${h.esc(s.nome || 'Site')}</b><small>${h.esc(s.desc || '')}</small></div>
+            <div class="aj-site-btns"><button type="button" data-j="site-abrir" data-url="${url}" title="Abrir numa aba do navegador"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+            ${s.embute ? '<button type="button" data-j="site-recarregar" title="Recarregar a página"><i class="fa-solid fa-rotate-right"></i></button><button type="button" data-j="site-expandir" title="Aumentar ou diminuir o painel"><i class="fa-solid fa-expand"></i></button>' : ''}</div></div>`;
+        const aviso = '<div class="aj-site-aviso"><i class="fa-solid fa-shield-halved"></i><span>Você está abrindo um site de fora: nunca digite a senha da sua conta do Pantheon nele. Quem abriu a atividade foi <b>' + h.esc((est.iniciador_nome || 'alguém')) + '</b>.</span></div>';
+        if (s.embute && url) {
+            return `${topo}<div class="aj-site-moldura"><iframe class="aj-site" src="${url}" title="${h.esc(s.nome)}" loading="lazy" referrerpolicy="no-referrer"
+                allow="clipboard-write; fullscreen" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-pointer-lock allow-downloads"></iframe></div>${aviso}
+                ${eu ? '<small class="aj-site-dica">Só quem abriu a atividade escolhe a página. Pra mandar outra sala, encerre e comece de novo.</small>' : ''}`;
+        }
+        return `${topo}<div class="aj-site-cartao"><i class="fa-solid fa-dice-d20"></i><b>Todo mundo abre o mesmo link</b>
+            <p>${h.esc(s.nome || 'Esse site')} não deixa aparecer dentro de outros sites, então a sala abre numa aba do navegador. Cada pessoa da call clica aqui e entra.</p>
+            <button type="button" class="aj-rolar" data-j="site-abrir" data-url="${url}"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir a mesa</button>
+            <small class="aj-site-end">${h.esc((s.url || '').replace(/^https:\/\//, '').slice(0, 70))}</small></div>${aviso}`;
+    }
+
+    const CORPOS = { velha: corpoVelha, ppt: corpoPpt, forca: corpoForca, dados: corpoDados, site: corpoSite };
 
     function corpo(est, h) {
         if (!ehJogo(est.tipo)) return '';
@@ -213,13 +288,30 @@ const AtividadesJogos = (function () {
         if (a === 'letra') { h.acao({ acao: 'letra', letra: btn.dataset.l }); return false; }
         if (a === 'forca-nova') { h.acao({ acao: 'nova' }); return false; }
         if (a === 'dado') { h.acao({ acao: 'rolar', dado: btn.dataset.d }); return false; }
-        if (a === 'moeda') { h.acao({ acao: 'moeda' }); return false; }
+        if (a === 'd-add') { const g = bandeja.find((x) => x.dado === btn.dataset.d); if (g) g.qtd = Math.min(30, g.qtd + 1); else bandeja.push({ dado: btn.dataset.d, qtd: 1 }); if (bandeja.length !== 1) modo = 'normal'; exprTexto = ''; return true; }
+        if (a === 'd-tirar') { bandeja = bandeja.filter((x) => x.dado !== btn.dataset.d); if (bandeja.length !== 1) modo = 'normal'; return true; }
+        if (a === 'd-mod') { modificador = Math.max(-99, Math.min(99, modificador + Number(btn.dataset.v))); return true; }
+        if (a === 'd-modo') { modo = modo === btn.dataset.v ? 'normal' : btn.dataset.v; return true; }
+        if (a === 'd-moedas') { moedas = Math.max(1, Math.min(10, moedas + Number(btn.dataset.v))); return true; }
+        if (a === 'd-rapido') { h.acao({ acao: 'rolar', expr: btn.dataset.e + (modificador ? sinalMod(modificador) : '') }); return false; }
+        if (a === 'd-rolar') {
+            const e = exprTexto.trim() || exprDaBandeja();
+            if (!e) return false;
+            h.acao({ acao: 'rolar', expr: e });
+            if (!exprTexto.trim()) { bandeja = []; modo = 'normal'; modificador = 0; }
+            exprTexto = ''; return true;
+        }
+        if (a === 'moeda') { h.acao({ acao: 'moeda', qtd: moedas }); return false; }
         if (a === 'sortear') { h.acao({ acao: 'sortear' }); return false; }
         if (a === 'dados-limpar') { h.acao({ acao: 'limpar' }); return false; }
+        if (a === 'site-abrir') { const u = btn.dataset.url; if (/^https:\/\//.test(u || '')) window.open(u, '_blank', 'noopener,noreferrer'); return false; }
+        if (a === 'site-recarregar') { const f = document.querySelector('iframe.aj-site'); if (f) f.src = f.src; return false; }
+        if (a === 'site-expandir') { const p = document.getElementById('at-painel'); if (p) p.classList.toggle('at-grande'); return false; }
         if (a === 'desistir') { h.confirmar('Desistir da partida?', 'A vitória fica com o adversário.', () => h.acao({ acao: 'desistir' })); return false; }
         if (a === 'revanche') { minhaMao = null; h.acao({ acao: 'revanche' }); return false; }
         return false;
     }
 
-    return { ehJogo, info: (tipo) => INFO[tipo], corpo, clique, meuLado, nomeDe, _esquecer() { abrirConvite = false; minhaMao = null; } };
+    return { ehJogo, info: (tipo) => INFO[tipo], corpo, clique, depois, meuLado, nomeDe, _esquecer() { abrirConvite = false; minhaMao = null; d3Visto = undefined; try { Dados3D.parar(); } catch (e) {} },
+             _dados: { exprDaBandeja, detalheRolagem, estado: () => ({ bandeja, modificador, modo, moedas }) } };
 })();

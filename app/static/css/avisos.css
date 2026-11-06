@@ -1,0 +1,25 @@
+/* Avisos de mensagem nova nos servidores e canais (Rodada 39). Lógica em static/js/avisos.js.
+   Só transform/opacity se mexem, e nada anima durante a rolagem (body.rolando) nem com "reduzir movimento". */
+
+/* ---- ícone do servidor ---- */
+.server-wrapper { position: relative; }
+.server-wrapper > .av-pilula { position: absolute; left: -12px; top: 50%; width: 8px; height: 10px; margin-top: -5px; border-radius: 0 6px 6px 0; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .25); pointer-events: none; transition: height .15s, margin-top .15s; }
+.server-wrapper:hover > .av-pilula { height: 20px; margin-top: -10px; }
+.server-wrapper.av-mudo > .av-pilula { opacity: .45; }
+.av-num { position: absolute; right: -4px; bottom: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #ed4245; color: #fff; font-size: 11.5px; font-weight: 800; line-height: 20px; text-align: center; box-shadow: 0 0 0 3px var(--bg-quaternary, #202225); pointer-events: none; z-index: 5; }
+.av-num.pulo { animation: avPulo .35s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes avPulo { from { transform: scale(.4); } to { transform: scale(1); } }
+
+/* ---- pasta ---- */
+.pasta-cabeca { position: relative; }
+.pasta-cabeca > .av-pilula { position: absolute; left: -12px; top: 50%; width: 8px; height: 10px; margin-top: -5px; border-radius: 0 6px 6px 0; background: #fff; pointer-events: none; }
+
+/* ---- lista de canais ---- */
+.channels-list .channel-item.av-nova { color: var(--text-header); font-weight: 700; }
+.channels-list .channel-item.av-nova::before { content: ''; position: absolute; left: -8px; top: 50%; width: 5px; height: 8px; margin-top: -4px; border-radius: 0 4px 4px 0; background: #fff; }
+.channels-list .channel-item { position: relative; }
+.av-canal { margin-left: auto; margin-right: 4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #ed4245; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; flex: none; }
+.channels-list .channel-item:hover .av-canal + .btn-config-channel { margin-left: 4px; }
+
+@media (prefers-reduced-motion: reduce) { .av-num.pulo { animation: none; } }
+body.rolando .av-num.pulo { animation: none; }

@@ -30,6 +30,7 @@ const Cargos = (() => {
         ['falar_voz', 'Falar nos canais de voz', 'Sem isso a pessoa entra em voz só como ouvinte (microfone travado).'],
         ['enviar_anuncios', 'Publicar em anúncios e regras', 'Escrever em canais de anúncios e de regras (todo mundo pode ler).'],
         ['falar_palco', 'Falar no palco', 'Ser orador em canal de palco e chamar ouvintes pro palco.'],
+        ['mencionar_todos', 'Mencionar todos e cargos', 'Usar @todos, @aqui e @cargo, que avisam muita gente de uma vez (@staff, @dono e @amigos qualquer um usa, com intervalo).'],
     ];
     const PERMS_CANAL = [
         ['ver_canal', 'Ver o canal', 'Enxergar o canal na lista e ler as mensagens. Em canal privado, quem entra continua sendo a lista de convidados: aqui só dá pra restringir.'],
@@ -48,6 +49,7 @@ const Cargos = (() => {
         lojas: ['ver_canal'],
         voice: ['ver_canal', 'falar_voz'],
         palco: ['ver_canal', 'falar_palco'],
+        stream: ['ver_canal', 'falar_voz', 'enviar_mensagens', 'apagar_mensagens'],
     };
     const TIPOS = {
         text: { fam: 'texto', nome: 'Texto', fa: 'fa-hashtag', desc: 'Conversa livre, com mensagens, fotos e GIFs.' },
@@ -57,6 +59,7 @@ const Cargos = (() => {
         lojas: { fam: 'texto', nome: 'Lojas', fa: 'fa-store', desc: 'Vitrine com as lojas do Bazar das pessoas do servidor e as parceiras. Sem conversa.' },
         voice: { fam: 'voz', nome: 'Voz', fa: 'fa-volume-high', desc: 'Voz, vídeo e tela, com limite de pessoas opcional.' },
         palco: { fam: 'voz', nome: 'Palco', fa: 'fa-microphone-lines', desc: 'Poucos falam e o resto escuta; quem fala chama os outros.' },
+        stream: { fam: 'voz', nome: 'Stream', fa: 'fa-tower-broadcast', desc: 'Uma pessoa por vez transmite a tela; o resto assiste e conversa no chat ao lado.' },
         separador: { fam: 'estrutura', nome: 'Separador', fa: 'fa-grip-lines', desc: 'Uma linha na lista, com título ou sem.' },
     };
     const CORES = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#5865f2', '#9b59b6', '#e91e63', '#95a5a6', '#ecf0f1', '#34495e'];
@@ -367,6 +370,9 @@ const Cargos = (() => {
                     <select id="cx-categoria" class="bz-input" style="padding-left:12px;"></select></div>
                 <div id="cx-limite-box"><label class="bz-label">Limite de pessoas <span class="cx-op">(vazio = sem limite)</span></label>
                     <input type="number" id="cx-limite" class="bz-input" min="1" max="99" placeholder="Sem limite" style="padding-left:12px;"></div>
+                <div id="cx-lojas-box" class="cx-opcao" style="display:none;">
+                    <label class="cx-marca"><input type="checkbox" id="cx-lojas-parc"> <span>Incluir as lojas parceiras do Pantheon</span></label>
+                    <span class="cx-op">Desligado (padrão): a vitrine mostra só as lojas das pessoas deste servidor. Ligado: as parceiras aparecem junto, com um filtro "Parceiras".</span></div>
             </div>
             <div class="cp-entrada" id="cx-perm-box" style="display:none;">
                 <button class="btn-cancel" id="cx-perm-abrir" type="button"><i class="fa-solid fa-shield-halved"></i> Permissões do canal</button>
@@ -415,6 +421,7 @@ const Cargos = (() => {
         }
         definirIconeDoCanal(editando ? (canal.icone || '') : '');
         document.getElementById('cx-limite').value = editando && canal.limite ? canal.limite : '';
+        const parc = document.getElementById('cx-lojas-parc'); if (parc) parc.checked = !!(editando && canal.opcoes && canal.opcoes.lojas_parceiras);
         // categoria: só quando já existem categorias de verdade (servidor antigo mostra as duas seções "virtuais")
         const sel = document.getElementById('cx-categoria');
         const cats = srv.categorias || [];
@@ -444,6 +451,7 @@ const Cargos = (() => {
         if (!sep) { const p = document.getElementById('channel-private-input'); if (p && membros) membros.style.display = p.checked ? 'block' : 'none'; }
         document.getElementById('cx-icone-box').style.display = sep ? 'none' : '';
         document.getElementById('cx-limite-box').style.display = fam === 'voz' ? '' : 'none';
+        document.getElementById('cx-lojas-box').style.display = tipo === 'lojas' ? '' : 'none';
         document.getElementById('cx-cat-box').style.display = (srv && (srv.categorias || []).length) ? '' : 'none';
     }
 
@@ -456,6 +464,7 @@ const Cargos = (() => {
         if (!sep) {
             out.icone = (document.getElementById('cx-icone').value || '').trim();
             if (familia(tipo) === 'voz') out.limite = document.getElementById('cx-limite').value || 0;
+            if (tipo === 'lojas') out.opcoes = { lojas_parceiras: !!document.getElementById('cx-lojas-parc').checked };   // o servidor só aceita chaves da lista fechada
         }
         const sel = document.getElementById('cx-categoria');
         if (sel && sel.parentElement.style.display !== 'none' && sel.value !== 'auto' && (!editando || sel.dataset.mexeu === '1')) out.categoria_id = Number(sel.value) || 0;
@@ -683,7 +692,7 @@ const Cargos = (() => {
     // As permissões ficam agrupadas (o dono achou a lista única grande e confusa) e cada uma é um interruptor, não uma caixinha.
     const GRUPOS_PERM = [
         ['Servidor', ['administrador', 'gerenciar_servidor', 'gerenciar_cargos', 'criar_convite', 'gerenciar_eventos']],
-        ['Canais e mensagens', ['gerenciar_canais', 'apagar_mensagens', 'fixar_mensagens', 'ver_canais_privados', 'enviar_anuncios']],
+        ['Canais e mensagens', ['gerenciar_canais', 'apagar_mensagens', 'fixar_mensagens', 'ver_canais_privados', 'enviar_anuncios', 'mencionar_todos']],
         ['Membros', ['expulsar']],
         ['Voz', ['falar_voz', 'falar_palco']],
     ];

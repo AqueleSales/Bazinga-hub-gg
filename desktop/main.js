@@ -1,7 +1,7 @@
 // Casca desktop do Pantheon: uma janela que carrega o site, mais o que o navegador não faz
 // (login pelo navegador do sistema, tray, captura de tela, auto-update). Nada do chat.html mora aqui.
 const {
-  app, BrowserWindow, Tray, Menu, shell, ipcMain, session, desktopCapturer, nativeImage, net, dialog,
+  app, BrowserWindow, Tray, Menu, shell, ipcMain, session, desktopCapturer, nativeImage, net, dialog, screen,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -337,14 +337,32 @@ function configurarSessao() {
   ses.setPermissionCheckHandler((_wc, permissao, origem) => liberadas.has(permissao) && origemOk(origem));
 
   // Sem isso o botão de compartilhar tela falha em silêncio no Electron.
-  ses.setDisplayMediaRequestHandler(async (_req, responder) => {
+  ses.setDisplayMediaRequestHandler(async (req, responder) => {
     try {
-      const fontes = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 } });
+      const fontes = await buscarFontes();
       const escolhida = await escolherFonte(fontes);
       if (!escolhida) return responder({});          // cancelou
-      responder({ video: escolhida, audio: 'loopback' });
+      // O som do computador só vai se a pessoa pediu (janela "Compartilhar tela" do site): sempre ligado, quem usava caixa de som
+      // fazia a voz da call voltar como eco pra todo mundo.
+      responder(req && req.audioRequested ? { video: escolhida, audio: 'loopback' } : { video: escolhida });
     } catch (_) { responder({}); }
   });
+}
+
+// Telas e janelas disponíveis. Cada tela ganha o nome do monitor ("Monitor 1 · 1920×1080 (principal)"), na ordem do Windows.
+async function buscarFontes() {
+  const fontes = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 }, fetchWindowIcons: true });
+  const telas = screen.getAllDisplays();
+  const principal = screen.getPrimaryDisplay();
+  for (const f of fontes) {
+    if (!f.id.startsWith('screen:')) continue;
+    const idx = telas.findIndex((d) => String(d.id) === String(f.display_id));
+    const d = idx >= 0 ? telas[idx] : null;
+    const n = idx >= 0 ? idx + 1 : (Number(f.id.split(':')[1]) || 0) + 1;
+    const res = d ? ` · ${Math.round(d.size.width * d.scaleFactor)}×${Math.round(d.size.height * d.scaleFactor)}` : '';
+    f.nomeAmigavel = `Monitor ${n}${res}${d && principal && d.id === principal.id ? ' (principal)' : ''}`;
+  }
+  return fontes;
 }
 
 let seletorAberto = null;
@@ -363,9 +381,25 @@ function escolherFonte(fontes) {
   });
 }
 
+function fonteParaTela(f) {
+  const ehTela = f.id.startsWith('screen:');
+  return {
+    id: f.id, tipo: ehTela ? 'tela' : 'janela', nome: ehTela ? (f.nomeAmigavel || f.name) : f.name,
+    miniatura: f.thumbnail.toDataURL(), icone: f.appIcon && !f.appIcon.isEmpty() ? f.appIcon.resize({ width: 20, height: 20 }).toDataURL() : null,
+  };
+}
 ipcMain.handle('seletor:fontes', (e) => {
   if (!vemDaTelaLocal(e) || !seletorAberto) return [];
-  return seletorAberto.fontes.map((f) => ({ id: f.id, nome: f.name, miniatura: f.thumbnail.toDataURL() }));
+  return seletorAberto.fontes.map(fonteParaTela);
+});
+// A janela do seletor pede de novo a cada poucos segundos: as miniaturas acompanham o que está na tela e aparecem janelas abertas depois.
+ipcMain.handle('seletor:atualizar', async (e) => {
+  if (!vemDaTelaLocal(e) || !seletorAberto) return [];
+  try {
+    const novas = await buscarFontes();
+    if (seletorAberto) seletorAberto.fontes = novas;
+    return novas.map(fonteParaTela);
+  } catch (_) { return []; }
 });
 
 ipcMain.on('seletor:escolher', (e, id) => {

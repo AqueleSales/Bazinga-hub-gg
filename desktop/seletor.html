@@ -8,20 +8,34 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #16171d; color: #f2f3f5; font-family: "Segoe UI", system-ui, sans-serif; padding: 18px; height: 100vh; display: flex; flex-direction: column; }
     h1 { font-size: 17px; margin-bottom: 4px; }
-    p { color: #9aa0a6; font-size: 12.5px; margin-bottom: 14px; }
+    p { color: #9aa0a6; font-size: 12.5px; margin-bottom: 12px; }
+    .abas { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .abas button { background: rgba(255,255,255,.07); color: #d7d9de; border: 0; border-radius: 999px; padding: 7px 15px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .abas button small { opacity: .7; margin-left: 5px; }
+    .abas button.on { background: #5865F2; color: #fff; }
+    .abas input { flex: 1; background: #20222a; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 7px 11px; color: inherit; font: inherit; font-size: 13px; min-width: 0; }
     .grade { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-content: start; padding-right: 4px; }
     .fonte { background: #20222a; border: 2px solid transparent; border-radius: 10px; padding: 8px; cursor: pointer; text-align: left; color: inherit; font: inherit; }
     .fonte:hover { border-color: #5865F2; }
-    .fonte img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; background: #000; display: block; }
-    .fonte span { display: block; margin-top: 6px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fonte > img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; background: #000; display: block; }
+    .fonte .linha { display: flex; align-items: center; gap: 6px; margin-top: 6px; min-width: 0; }
+    .fonte .ic { width: 16px; height: 16px; flex: none; }
+    .fonte span { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vazio { color: #9aa0a6; font-size: 13px; text-align: center; padding: 40px 0; }
     .rodape { padding-top: 12px; text-align: right; }
     button.cancelar { background: rgba(255,255,255,.08); color: #fff; border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; cursor: pointer; }
   </style>
 </head>
 <body>
   <h1>Compartilhar tela</h1>
-  <p>Escolha uma tela inteira ou uma janela.</p>
+  <p>Escolha um monitor inteiro ou uma janela. As miniaturas se atualizam sozinhas.</p>
+  <div class="abas">
+    <button data-aba="tela" class="on">Telas <small></small></button>
+    <button data-aba="janela">Janelas <small></small></button>
+    <input id="busca" type="search" placeholder="Procurar janela" autocomplete="off" style="display:none;">
+  </div>
   <div class="grade" id="grade"></div>
+  <div class="vazio" id="vazio" style="display:none;"></div>
   <div class="rodape"><button class="cancelar" id="cancelar">Cancelar</button></div>
   <script src="assets/seletor.js"></script>
 </body>

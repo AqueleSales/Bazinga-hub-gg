@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('panteao', {
   abrirChat: () => ipcRenderer.invoke('app:abrir-chat'),
   entrarComGoogle: () => ipcRenderer.invoke('login:iniciar'),
   fontesDeTela: () => ipcRenderer.invoke('seletor:fontes'),
+  atualizarFontes: () => ipcRenderer.invoke('seletor:atualizar'),
   escolherFonte: (id) => ipcRenderer.send('seletor:escolher', id),
   // Configurações > Geral (site)
   prefsGet: () => ipcRenderer.invoke('prefs:get'),

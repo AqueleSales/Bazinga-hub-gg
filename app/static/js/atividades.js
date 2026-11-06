@@ -13,6 +13,7 @@ const Atividades = (function () {
     let sans = [];              // notação (e4, Nf3...) dos lances do estado
     let sansDe = '';            // chave dos lances que geraram `sans`
     let selecionada = null, destinos = null;
+    let formSite = false;       // o formulário "qual site abrir" aberto no seletor
     let virado = false;         // quem assiste pode virar o tabuleiro
     let painel = null, seletor = null, chip = null;
     let escondidoPorMim = null; // id da atividade que eu fechei só pra mim
@@ -26,9 +27,12 @@ const Atividades = (function () {
         { tipo: 'ppt', nome: 'Pedra, papel e tesoura', icone: 'hand', desc: 'Melhor de 3, com as escolhas reveladas juntas.', pronto: true },
         { tipo: 'forca', nome: 'Forca', icone: 'forca', desc: 'Todo mundo da call chuta letras juntos. A palavra é sorteada.', pronto: true },
         { tipo: 'dados', nome: 'Dados e sorteio', icone: 'dice', desc: 'D6, D20, D100, cara ou coroa e sorteio de alguém da call.', pronto: true },
+        { tipo: 'site', nome: 'Mesa de RPG e sites', icone: 'site', desc: 'Quadro pra desenhar mapas junto, jogos de navegador e a sua mesa virtual (Owlbear, Roll20, Foundry): a call abre a mesma página.', pronto: true, form: true },
+        { tipo: 'sb_pessoal', nome: 'Soundboard pessoal', icone: 'sb', desc: 'Os seus sons: toque e a call inteira ouve. Cada um tem pausa entre um som e outro.', pronto: true, local: true },
+        { tipo: 'sb_servidor', nome: 'Soundboard do servidor', icone: 'sb', desc: 'Os sons que o servidor oferece pra qualquer pessoa da call tocar.', pronto: true, local: true },
         { tipo: 'musica', nome: 'Música na call', icone: 'music', desc: 'Todo mundo ouvindo a mesma playlist, sincronizado.', pronto: false },
     ];
-    const ICONES = { chess: 'fa-chess-knight', music: 'fa-music', robot: 'fa-robot', hash: 'fa-hashtag', hand: 'fa-hand-back-fist', forca: 'fa-spell-check', dice: 'fa-dice' };
+    const ICONES = { chess: 'fa-chess-knight', music: 'fa-music', robot: 'fa-robot', hash: 'fa-hashtag', hand: 'fa-hand-back-fist', forca: 'fa-spell-check', dice: 'fa-dice', sb: 'fa-volume-high', site: 'fa-dice-d20' };
     const nomeDoTipo = (t) => { const c = CATALOGO.find((x) => x.tipo === t); return c ? c.nome : t; };
 
     // Peças: usamos as formas cheias (♚♛♜♝♞♟) nas duas cores; a cor vem do CSS. O ︎ impede o emoji colorido.
@@ -66,6 +70,14 @@ const Atividades = (function () {
                 const a = b.dataset.at;
                 if (a === 'fechar') fecharSeletor();
                 else if (a === 'iniciar') { ctx.emitir('atividade_iniciar', { canal_id: ctx.canalId(), tipo: b.dataset.tipo }); fecharSeletor(); escondidoPorMim = null; }
+                else if (a === 'local') { fecharSeletor(); ctx.abrirLocal(b.dataset.tipo); }
+                else if (a === 'site-form') { formSite = !formSite; pintarSeletor(); const i = seletor.querySelector('#at-site-url'); if (i) i.focus(); }
+                else if (a === 'site-preset') { const i = seletor.querySelector('#at-site-url'); if (i) { i.value = b.dataset.url; i.focus(); } }
+                else if (a === 'site-ir') {
+                    const i = seletor.querySelector('#at-site-url'), url = (i && i.value || '').trim();
+                    if (!url) { ctx.toast('Cole o link da sala ou escolha um dos quadros.', 'info'); return; }
+                    ctx.emitir('atividade_iniciar', { canal_id: ctx.canalId(), tipo: 'site', url }); formSite = false; fecharSeletor(); escondidoPorMim = null;
+                }
                 else if (a === 'abrir') { fecharSeletor(); escondidoPorMim = null; mostrarPainel(true); }
                 else if (a === 'encerrar') { fecharSeletor(); confirmarEncerrar(); }
             });
@@ -88,7 +100,13 @@ const Atividades = (function () {
             <div class="at-grade">${CATALOGO.map((c) => `<div class="at-op${c.pronto ? '' : ' breve'}">
                 <div class="at-ic"><i class="fa-solid ${ICONES[c.icone]}"></i></div>
                 <div class="at-txt"><b>${esc(c.nome)}</b><small>${esc(c.desc)}</small></div>
-                ${c.pronto ? `<button type="button" data-at="iniciar" data-tipo="${c.tipo}"${estado ? ' disabled title="Já tem uma atividade na call"' : ''}>Começar</button>` : '<span class="em-breve">Em breve</span>'}</div>`).join('')}</div>
+                ${c.pronto ? (c.form ? `<button type="button" data-at="site-form"${estado ? ' disabled title="Já tem uma atividade na call"' : ''}>Escolher</button>` : c.local ? `<button type="button" data-at="local" data-tipo="${c.tipo}">Abrir</button>` : `<button type="button" data-at="iniciar" data-tipo="${c.tipo}"${estado ? ' disabled title="Já tem uma atividade na call"' : ''}>Começar</button>`) : '<span class="em-breve">Em breve</span>'}</div>`).join('')}</div>
+            ${formSite && !estado ? `<div class="at-site-form"><b>Qual página a call vai abrir junto?</b>
+                <div class="at-site-presets"><button type="button" data-at="site-preset" data-url="https://excalidraw.com/">Quadro (Excalidraw)</button><button type="button" data-at="site-preset" data-url="https://www.tldraw.com/">Quadro (tldraw)</button>
+                    <button type="button" data-at="site-preset" data-url="https://jklm.fun/">Jogos de palavras (JKLM)</button><button type="button" data-at="site-preset" data-url="https://skribbl.io/">Desenho e adivinha (skribbl.io)</button></div>
+                <input id="at-site-url" type="url" maxlength="300" placeholder="ou cole o link da sua sala: Owlbear Rodeo, Roll20, Foundry, D&D Beyond..." autocomplete="off" spellcheck="false">
+                <small>Só sites da lista abrem (o servidor confere). Os que não deixam aparecer aqui dentro (Owlbear, Roll20...) abrem numa aba, todo mundo no mesmo link.</small>
+                <button type="button" class="at-site-go" data-at="site-ir">Abrir pra todo mundo</button></div>` : ''}
             </div>`;
     }
     function resumoEstado() {
@@ -96,6 +114,7 @@ const Atividades = (function () {
         const j = estado.jogadores;
         if (estado.tipo === 'forca') return estado.resultado ? 'Palavra terminada.' : 'Todo mundo chutando letras.';
         if (estado.tipo === 'dados') return 'Rolando dados e sorteios.';
+        if (estado.tipo === 'site') return estado.site ? 'Página aberta: ' + esc(estado.site.nome) : '';
         if (estado.situacao === 'aguardando') return 'Esperando o segundo jogador sentar.';
         if (estado.situacao === 'fim') return 'Partida terminada.';
         if (estado.tipo !== 'xadrez') { const l = estado.lados || []; return `${esc(j[l[0]] ? j[l[0]].nome : '?')} × ${esc(j[l[1]] ? j[l[1]].nome : '?')}`; }
@@ -343,6 +362,7 @@ const Atividades = (function () {
         const rolagem = corpo.scrollTop;
         corpo.innerHTML = AtividadesJogos.corpo(estado, ajudantes());
         corpo.scrollTop = rolagem;
+        AtividadesJogos.depois(corpo, estado, ajudantes());        // campo da expressão e dados 3D (só os jogos que precisam)
         pintarChip();
     }
     function desenhar() {

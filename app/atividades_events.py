@@ -12,7 +12,7 @@ import time
 
 from flask import request
 
-from . import socketio, atividades
+from . import socketio, atividades, jogos
 from .events import usuario_logado, participantes_call, _call_por_sid, _meta_call
 
 _ultimo_lance = {}        # sid -> hora do último lance (freio de 0,15 s, só pra não afogar o servidor)
@@ -155,7 +155,14 @@ def atividade_iniciar(dados=None):
         return _recusar(chave, 'Quem só ouve a call não pode iniciar uma atividade.')
     if atividades.da_call(chave):
         return _recusar(chave, 'Já tem uma atividade rolando nesta call. Termine ela antes de começar outra.')
+    info_site = None
+    if tipo == 'site':                                         # mesa de RPG / quadro: o endereço tem que ser de um site da lista (jogos.SITES)
+        ok_site, info_site = jogos.escolher_site(dados.get('url'))
+        if not ok_site:
+            return _recusar(chave, info_site)
     atv = atividades.iniciar(chave, tipo, usuario.id)
+    if info_site is not None:
+        atv.definir(info_site)
     if getattr(atv, 'LADOS', True):                           # jogos de cadeira: quem começa já senta (lado sorteado)
         atv.sentar(usuario.id, usuario.name, usuario.avatar)
     avisar(chave)

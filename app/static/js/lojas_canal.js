@@ -75,13 +75,14 @@ const LojasCanal = (() => {
         dados = d;
         f.origem = d.origem || f.origem;
         const o = [['todas', 'Todas'], ['servidor', 'Do servidor'], ['parceiras', 'Parceiras']];
-        $('lc-origem').innerHTML = o.map(([id, n]) => `<button type="button" class="lc-chip ${f.origem === id ? 'on' : ''}" data-origem="${id}">${ctx.esc(n)}</button>`).join('');
+        // O filtro "Do servidor / Parceiras" só existe se quem gerencia o canal ligou "incluir as lojas parceiras" (senão é sempre só do servidor)
+        $('lc-origem').innerHTML = d.parceiras ? o.map(([id, n]) => `<button type="button" class="lc-chip ${f.origem === id ? 'on' : ''}" data-origem="${id}">${ctx.esc(n)}</button>`).join('') : '';
         $('lc-cats').innerHTML = `<button type="button" class="lc-chip ${!f.categoria ? 'on' : ''}" data-cat="">Tudo</button>` +
             (d.categorias || []).map((c) => `<button type="button" class="lc-chip ${f.categoria === c.id ? 'on' : ''}" data-cat="${ctx.esc(c.id)}">${ctx.esc(c.nome)}${c.qtd ? ` <small>${Number(c.qtd)}</small>` : ''}</button>`).join('');
         const itens = d.itens || [];
         $('lc-sub').textContent = itens.length
             ? `${Number(d.total)} ${d.total === 1 ? 'loja' : 'lojas'}${d.truncado ? ' (mostrando as primeiras)' : ''} · toque num produto pra pedir`
-            : 'Lojas do Bazar das pessoas deste servidor e as parceiras do Pantheon.';
+            : (d.parceiras ? 'Lojas do Bazar das pessoas deste servidor e as parceiras do Pantheon.' : 'Lojas do Bazar das pessoas deste servidor.');
         $('lc-grade').innerHTML = itens.length ? itens.map(cartao).join('')
             : `<div class="lc-vazio"><i class="fa-solid fa-store-slash"></i><b>${f.busca || f.categoria || f.origem !== 'todas' ? 'Nenhuma loja bate com esse filtro.' : 'Ainda não tem loja por aqui.'}</b>
                 <small>${f.busca || f.categoria || f.origem !== 'todas' ? 'Tire um filtro ou procure outra coisa.' : 'Quem do servidor abrir uma loja no Bazar (Mercado > Bazar > Minha lojinha) aparece nesta vitrine.'}</small></div>`;

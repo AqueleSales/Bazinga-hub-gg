@@ -9,6 +9,27 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 43, 'data': '06/11/2026', 'titulo': 'Chat com formatação e @, avisos de não lido, figurinhas, sons, dados 3D e canal de stream',
+        'itens': [
+            {'icone': 'fa-at', 'titulo': 'Mensagens com formatação, links bonitos e vários @',
+             'texto': 'Dá pra escrever **negrito**, *itálico*, ~~riscado~~, `código`, blocos de código com cores, títulos, listas, citações e ||spoiler||. Links ficam legíveis e os de YouTube, Spotify e SoundCloud viram prévia que só carrega quando você clica. Além de @pessoa, tem @todos, @aqui, @staff, @dono, @amigos, @alguem (sorteia alguém online) e @cargo, com a cor do cargo. Quem pode chamar todo mundo é uma permissão do servidor.'},
+            {'icone': 'fa-bell', 'titulo': 'Bolinha de não lido nos servidores e canais',
+             'texto': 'Os servidores e os canais mostram quando tem mensagem nova (e quantas vezes te citaram). "Marcar tudo como lido" na caixa de entrada agora zera tudo de verdade, e dá pra apagar um aviso só ou filtrar por tipo. No celular, as notificações da mesma conversa se juntam como no WhatsApp.'},
+            {'icone': 'fa-face-smile', 'titulo': 'Figurinhas',
+             'texto': 'Envie figurinhas no canal e na DM (as suas e as do servidor). Toda figurinha passa pela análise de segurança antes de aparecer pra alguém.'},
+            {'icone': 'fa-volume-high', 'titulo': 'Som de entrada na call e soundboard',
+             'texto': 'Em Meu Perfil escolha o som que toca quando você entra na call: tem uns prontos ou envie o seu (até 6 segundos). Nas Atividades da call há um soundboard pessoal e um do servidor.'},
+            {'icone': 'fa-dice-d20', 'titulo': 'Dados 3D e mesa de RPG',
+             'texto': 'Os dados rolam em 3D (d4, d6, d8, d10, d12, d20 e d100), com vários dados, modificador, vantagem e desvantagem, e dá pra jogar moedas. Em Atividades tem também a "Mesa de RPG e sites": a call abre junto um quadro (Excalidraw, tldraw), jogos de navegador ou a sua sala de Owlbear, Roll20 ou Foundry.'},
+            {'icone': 'fa-tower-broadcast', 'titulo': 'Canal de stream e compartilhar tela com mais opções',
+             'texto': 'O canal de stream é uma call com chat ao lado e uma pessoa transmitindo por vez. Ao compartilhar a tela você escolhe tela inteira, janela ou aba, a qualidade, o som do computador e o cursor.'},
+            {'icone': 'fa-store', 'titulo': 'Canal de lojas só com as lojas do servidor',
+             'texto': 'O canal de lojas agora mostra só as lojas de quem está no servidor. Quem gerencia o canal pode ligar a opção de incluir as lojas parceiras.'},
+            {'icone': 'fa-image', 'titulo': 'Papel de parede nas DMs',
+             'texto': 'O fundo personalizado agora também aparece nas conversas diretas e na tela de amigos. A gaveta de lojas do mapa não aparece mais por cima dessas telas.'},
+        ],
+    },
+    {
         'id': 42, 'data': '03/11/2026', 'titulo': 'Acompanhe a entrega do pedido no mapa',
         'itens': [
             {'icone': 'fa-route', 'titulo': 'Veja o entregador vindo, o trajeto e o tempo',

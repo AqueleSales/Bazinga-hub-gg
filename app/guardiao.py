@@ -273,6 +273,62 @@ def avaliar_imagem(dados):
 
 
 # ---------------------------------------------------------------------------
+# Acervo (figurinhas e sons): o contrário do resto. Sem IA = fica EM ANÁLISE (não libera).
+# ---------------------------------------------------------------------------
+AUDIO_GEMINI = {'audio/mpeg': 'audio/mp3', 'audio/ogg': 'audio/ogg', 'audio/wav': 'audio/wav'}      # formatos que o Gemini lê; m4a e webm vão pra análise manual
+
+
+def _quadros_para_ia(dados, maximo=3):
+    """Figurinha animada: o primeiro, o do meio e o último quadro (nudez escondida no meio de uma animação não passa)."""
+    from PIL import Image
+    im = Image.open(io.BytesIO(dados))
+    n = getattr(im, 'n_frames', 1)
+    indices = sorted({0, n // 2, n - 1}) if n > 1 else [0]
+    quadros = []
+    for i in indices[:maximo]:
+        im.seek(i)
+        q = im.convert('RGB')
+        q.thumbnail((768, 768))
+        saida = io.BytesIO()
+        q.save(saida, 'JPEG', quality=78)
+        quadros.append(saida.getvalue())
+    return quadros
+
+
+def _resultado_acervo(status, veredito):
+    return {'status': status, 'veredito': veredito}
+
+
+def avaliar_para_acervo(tipo, dados, mime):
+    """Decide se uma FIGURINHA ou um SOM pode ser visto/ouvido pelos outros: {'status': 'aprovado' | 'em_analise', 'veredito': {...}}.
+    Só 'aprovado' quando a IA olhou e liberou. IA desligada, fora do ar, formato que ela não lê ou suspeita = 'em_analise' (uma pessoa decide no
+    Estúdio). Aqui o erro é permanente e público (a figurinha fica e todo mundo usa; o som toca no ouvido da call), então não vale "na dúvida, libere"."""
+    if not ligado():
+        return _resultado_acervo('em_analise', _veredito(False, motivo='O Guardião está desligado: precisa de conferência manual.', fonte='regra'))
+    try:
+        if tipo == 'figurinha':
+            partes = [{'text': _REGRAS + '\n\nA entrada são quadros de uma FIGURINHA (sticker) que ficará disponível pra TODOS usarem no chat. Aqui o rigor é MAIOR: '
+                                       'retenha nudez (mesmo desenhada ou estilizada), conteúdo sexual ou sugestivo, menores em qualquer contexto sexual, violência gráfica, '
+                                       'símbolos de ódio, automutilação, golpe/phishing e documentos pessoais legíveis. Arte, meme, personagem e emoção comum podem ser liberados.'}]
+            partes += [{'inline_data': {'mime_type': 'image/jpeg', 'data': base64.b64encode(q).decode('ascii')}} for q in _quadros_para_ia(dados)]
+        else:
+            mime_ia = AUDIO_GEMINI.get(mime)
+            if not mime_ia:
+                return _resultado_acervo('em_analise', _veredito(False, motivo='Esse formato de áudio não tem análise automática: precisa de conferência manual.', fonte='regra'))
+            partes = [{'text': _REGRAS + '\n\nA entrada é um ÁUDIO curto (efeito sonoro, trecho de música ou fala) que vai tocar no ouvido de TODOS numa call de voz. '
+                                       'Retenha gemidos e conteúdo sexual, discurso de ódio, ameaça, assédio, voz de criança em contexto impróprio, gritos estridentes ou volume '
+                                       'abusivo feito pra estourar o ouvido, e dados pessoais falados. Efeito sonoro comum, música, meme sonoro e fala inofensiva podem ser liberados.'},
+                      {'inline_data': {'mime_type': mime_ia, 'data': base64.b64encode(dados).decode('ascii')}}]
+        r = _chamar(partes)
+    except Exception as e:                                   # ErroIA, imagem ilegível, qualquer coisa: não aprova no escuro
+        print(f'[GUARDIAO] acervo sem análise automática ({type(e).__name__}): {e}')
+        return _resultado_acervo('em_analise', _veredito(False, motivo='A análise automática não respondeu: precisa de conferência manual.', fonte='regra'))
+    if r['acao'] == 'reter':
+        return _resultado_acervo('em_analise', _veredito(True, r['categoria'], r['gravidade'], r['motivo'], 'ia', True))
+    return _resultado_acervo('aprovado', _veredito(False, avaliado=True, fonte='ia'))
+
+
+# ---------------------------------------------------------------------------
 # Casos (o que foi retido) e decisão do responsável
 # ---------------------------------------------------------------------------
 def registrar_caso(origem, pessoa_id, veredito, trecho=None, contexto=None, alvo_id=None, server_id=None, canal_id=None, anexo_url=None):
@@ -340,7 +396,11 @@ def decidir_caso(caso_id, admin_id, acao, nota=''):
         if acao == 'apagar':
             caso.trecho = caso.contexto = caso.anexo_url = None
         return caso
-    return comitar_com_retry(preparar)
+    caso_decidido = comitar_com_retry(preparar)
+    if caso_decidido.origem in ('figurinha', 'som') and caso_decidido.ref_id:        # a decisão vale pro item do acervo (liberar aprova; confirmar/apagar recusa)
+        from . import acervo
+        acervo.aplicar_decisao(caso_decidido.ref_id, acao)
+    return caso_decidido
 
 
 def purgar_antigos(dias=365):

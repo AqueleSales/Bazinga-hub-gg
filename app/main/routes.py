@@ -408,18 +408,35 @@ const VERSAO = '__VERSAO__';
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (er) { d = { corpo: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.titulo || '__NOME__', {
-    body: d.corpo || '',
-    tag: d.tag || undefined,
-    renotify: !!d.tag,
-    icon: d.icone || '/static/img/icone-192.png',   // a foto de quem escreveu / do servidor (como o WhatsApp); sem foto, o logo do app
-    // O Android desenha o ícone pequeno da barra de status só pelo canal alfa: precisa ser uma silhueta branca sobre
-    // fundo transparente. Com o PNG colorido ele virava um quadrado branco, ou o navegador usava o ícone dele (o "G").
-    badge: '/static/img/icone-badge.png',
-    data: d,
-    requireInteraction: !!d.urgente,
-    vibrate: d.urgente ? [300, 150, 300, 150, 300] : [120]
-  }));
+  e.waitUntil((async () => {
+    let titulo = d.titulo || '__NOME__', corpo = d.corpo || '';
+    // Conversa que já tem aviso na bandeja (mesma tag) NÃO vira um aviso novo por mensagem: empilha as últimas linhas no mesmo aviso,
+    // como o WhatsApp ("Fulano (3 mensagens)" com as 5 últimas embaixo). Só dm/menção mandam `agrupar`.
+    if (d.agrupar && d.tag) {
+      try {
+        const antes = await self.registration.getNotifications({ tag: d.tag });
+        const ant = antes[0] && antes[0].data;
+        const linhas = ((ant && ant.linhas) || []).concat([corpo]).slice(-5);
+        d.n = ((ant && ant.n) || 0) + 1;
+        d.linhas = linhas;
+        if (d.n > 1) { titulo = (d.titulo || titulo) + ' (' + d.n + ' mensagens)'; corpo = linhas.join('\n'); }
+      } catch (er) { /* sem agrupar: segue com o aviso simples */ }
+    }
+    await self.registration.showNotification(titulo, {
+      body: corpo,
+      tag: d.tag || undefined,
+      renotify: !!d.tag,
+      timestamp: Date.now(),
+      icon: d.icone || '/static/img/icone-192.png',   // a foto de quem escreveu / do servidor (como o WhatsApp); sem foto, o logo do app
+      // O Android desenha o ícone pequeno da barra de status só pelo canal alfa: precisa ser uma silhueta branca sobre
+      // fundo transparente. Com o PNG colorido ele virava um quadrado branco, ou o navegador usava o ícone dele (o "G").
+      badge: '/static/img/icone-badge.png',
+      data: d,
+      actions: d.url ? [{ action: 'abrir', title: 'Abrir' }] : [],
+      requireInteraction: !!d.urgente,
+      vibrate: d.urgente ? [300, 150, 300, 150, 300] : [120]
+    });
+  })());
 });
 
 self.addEventListener('notificationclick', e => {

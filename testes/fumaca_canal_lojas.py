@@ -114,9 +114,22 @@ with app.app_context():
     abrir_loja(parceira, 'Mega Parceira', 'digital', ('Cartão',))                # vai virar parceira
     BazarLoja.query.filter_by(owner_id=ids['parceira']).first().porte = 'grande'; db.session.commit()
     emitir(cris, 'bazar_salvar_loja', {'nome': 'Sem Produto', 'categoria': 'moda', 'cor': 'vinho', 'pix_chave': 'cris@exemplo.com', 'pix_nome': 'Cris', 'pix_cidade': 'Brasilia'})   # sem produto
+    # PADRÃO (Rodada 39): só as lojas das pessoas do servidor; as parceiras só entram se quem gerencia o canal ligar a opção
+    d = vitrine(emitir(ana, 'lojas_canal_pedir', {'canal_id': CID}))
+    ok(sorted(i['nome'] for i in d['itens']) == ['Arte do Beto', 'Doces da Ana'] and d['parceiras'] is False, 'padrão: só as lojas do servidor, parceiras de fora')
+    d = vitrine(emitir(ana, 'lojas_canal_pedir', {'canal_id': CID, 'origem': 'parceiras'}))
+    ok('Mega Parceira' not in [i['nome'] for i in d['itens']], 'pedir "parceiras" com a opção desligada não traz nada de parceira')
+    emitir(ana, 'editar_canal', {'canal_id': CID, 'opcoes': {'lojas_parceiras': True}})
+    ok('Mega Parceira' not in [i['nome'] for i in vitrine(emitir(ana, 'lojas_canal_pedir', {'canal_id': CID}))['itens']], 'membro comum não liga a opção (precisa gerenciar canais)')
+    emitir(dono, 'editar_canal', {'canal_id': CID, 'opcoes': {'lojas_parceiras': 'sim', 'inventada': True}})
+    ok(not cargos.opcoes_do_canal(Channel.query.get(CID)), 'opção com valor que não é bool ou chave inventada é descartada')
+    emitir(dono, 'editar_canal', {'canal_id': CID, 'opcoes': {'lojas_parceiras': True}})
+    ok(cargos.opcoes_do_canal(Channel.query.get(CID)) == {'lojas_parceiras': True}, 'o dono liga "incluir as lojas parceiras"')
+    ok(cargos.opcoes_do_canal(geral) == {} and not geral.opcoes, 'canal de texto comum não ganha opção de lojas')
+    emitir(dono, 'editar_canal', {'canal_id': geral.id, 'opcoes': {'lojas_parceiras': True}}); ok(not cargos.opcoes_do_canal(Channel.query.get(geral.id)), '... mesmo se mandarem')
     d = vitrine(emitir(ana, 'lojas_canal_pedir', {'canal_id': CID}))
     nomes = sorted(i['nome'] for i in d['itens'])
-    ok(nomes == ['Arte do Beto', 'Doces da Ana', 'Mega Parceira'], f'a vitrine tem as lojas dos membros e as parceiras: {nomes}')
+    ok(d['parceiras'] is True and nomes == ['Arte do Beto', 'Doces da Ana', 'Mega Parceira'], f'com a opção ligada a vitrine tem as lojas dos membros e as parceiras: {nomes}')
     ok('Loja de Fora' not in nomes, 'loja de quem NÃO está no servidor não aparece')
     ok('Sem Produto' not in nomes, 'loja sem produto à vista não ocupa a vitrine')
     por = {i['nome']: i for i in d['itens']}
