@@ -1,4 +1,4 @@
-// Dados 3D (static/js/dados3d.js) e a bandeja de dados (atividades_jogos.js) no Node, sem navegador. Chamado por testes/fumaca_dados.py.
+// Dados 3D (static/js/dados3d.js) e as contas puras do painel de dados (static/js/dados.js) no Node, sem navegador. Chamado por testes/fumaca_dados.py.
 const fs = require('fs'), path = require('path');
 const raiz = path.join(__dirname, '..', 'app', 'static', 'js');
 let falhas = 0;
@@ -106,32 +106,64 @@ relogio = 400; filaRaf.splice(0).forEach(fn => fn(400)); D.mostrar(c6, { ...entr
 relogio = 800; filaRaf.splice(0).forEach(fn => fn(800));
 ok(c6._g._chamadas.fill > 0, 'o painel redesenhou no meio: a animação segue no canvas novo (sem recomeçar nem sumir)');
 
-// ---- a bandeja e a expressão no painel ----
-const AJ = new Function(fs.readFileSync(path.join(raiz, 'atividades_jogos.js'), 'utf8') + '\nreturn AtividadesJogos;')();
-const h = { esc: (v) => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])), acao: (d) => { h.ultimo = d; }, meuId: () => 1, emitir() {}, confirmar() {} };
-const est = { tipo: 'dados', historico: [{ id: 1, quem: { id: 1, nome: 'Ana <b>' }, tipo: 'rolagem', texto: '22', expr: '2d20kh1+5', grupos: [{ dado: 'd20', valores: [17, 4], mantidos: [0], sinal: 1 }], mod: 5, total: 22 }], presentes: [] };
-let html = AJ.corpo(est, h);
-ok(html.includes('aj-d3') && html.includes('2d20kh1+5') && html.includes('<s>4</s>') && html.includes('<b>17</b>'), 'o resultado mostra a expressão e quais dados ficaram (os cortados riscados)');
-ok(!html.includes('Ana <b>') && html.includes('Ana &lt;b&gt;'), 'o nome de quem rolou é escapado');
-const btn = (j, d = {}) => ({ dataset: { j, ...d } });
-AJ.clique(btn('d-add', { d: 'd20' }), est, h); AJ.clique(btn('d-add', { d: 'd20' }), est, h); AJ.clique(btn('d-add', { d: 'd6' }), est, h);
-AJ.clique(btn('d-mod', { v: '1' }), est, h); AJ.clique(btn('d-mod', { v: '1' }), est, h); AJ.clique(btn('d-mod', { v: '1' }), est, h);
-ok(AJ._dados.exprDaBandeja() === '2d20+d6+3', `bandeja vira a expressão: ${AJ._dados.exprDaBandeja()}`);
-AJ.clique(btn('d-tirar', { d: 'd6' }), est, h); AJ.clique(btn('d-modo', { v: 'vantagem' }), est, h);
-ok(AJ._dados.exprDaBandeja() === '2d20kh1+3', `vantagem: ${AJ._dados.exprDaBandeja()}`);
-AJ.clique(btn('d-modo', { v: 'desvantagem' }), est, h); ok(AJ._dados.exprDaBandeja() === '2d20kl1+3', 'desvantagem');
-AJ.clique(btn('d-add', { d: 'd4' }), est, h); ok(AJ._dados.estado().modo === 'normal', 'com mais de um dado o modo volta a normal');
-AJ.clique(btn('d-rolar'), est, h);
-ok(h.ultimo && h.ultimo.acao === 'rolar' && h.ultimo.expr === '2d20+d4+3', `"Rolar" manda a expressão pro servidor: ${JSON.stringify(h.ultimo)}`);
-ok(AJ._dados.exprDaBandeja() === '', 'depois de rolar a bandeja esvazia');
-AJ.clique(btn('d-rapido', { e: '2d20kh1' }), est, h); ok(h.ultimo.expr === '2d20kh1', 'atalho: vantagem');
-AJ.clique(btn('d-moedas', { v: '1' }), est, h); AJ.clique(btn('d-moedas', { v: '1' }), est, h); AJ.clique(btn('moeda'), est, h);
-ok(h.ultimo.acao === 'moeda' && h.ultimo.qtd === 3, 'moedas: quantidade vai junto');
-for (let i = 0; i < 40; i++) AJ.clique(btn('d-add', { d: 'd8' }), est, h);
-ok(AJ._dados.estado().bandeja[0].qtd === 30, 'a bandeja para em 30 dados');
-for (let i = 0; i < 200; i++) AJ.clique(btn('d-mod', { v: '1' }), est, h);
-ok(AJ._dados.estado().modificador === 99, 'modificador limitado a ±99 na tela');
-ok(html.includes('data-d="d4"') && html.includes('data-d="d10"') && html.includes('data-d="d12"') && html.includes('data-d="d100"'), 'os sete dados estão na tela');
+// ---- instâncias independentes (Rodada 40): o painel e o aviso da call animam ao mesmo tempo, cada um no seu canvas ----
+{
+    const a = D.criar(), b = D.criar(), ca = canvasFalso(), cb = canvasFalso();
+    relogio = 0; filaRaf.length = 0; global.window.matchMedia = () => ({ matches: false });
+    let fimA = 0, fimB = 0;
+    a.mostrar(ca, { id: 201, tipo: 'rolagem', grupos: [{ dado: 'd20', valores: [14], mantidos: [0], sinal: 1 }] }, { animar: true, aoFim: () => { fimA++; } });
+    b.mostrar(cb, { id: 202, tipo: 'rolagem', grupos: [{ dado: 'd6', valores: [3, 5], mantidos: [0, 1], sinal: 1 }] }, { animar: true, aoFim: () => { fimB++; } });
+    ok(filaRaf.length === 2, 'duas instâncias agendam o próprio quadro (uma não cancela a outra)');
+    for (const t of [100, 500, 900, 1300, 1700, 2500]) { relogio = t; filaRaf.splice(0).forEach(fn => fn(t)); }
+    ok(fimA === 1 && fimB === 1, `cada uma avisa o seu fim uma vez só (A=${fimA}, B=${fimB})`);
+    ok(ca._g._chamadas.fill > 0 && cb._g._chamadas.fill > 0 && filaRaf.length === 0, 'as duas desenharam e os laços terminaram');
+    // sem animação: o aoFim sai na hora
+    let fimC = 0; const cc = canvasFalso(); a.mostrar(cc, { id: 203, tipo: 'rolagem', grupos: [{ dado: 'd8', valores: [2], mantidos: [0], sinal: 1 }] }, { animar: false, aoFim: () => { fimC++; } });
+    ok(fimC === 1 && filaRaf.length === 0, 'sem animar o "total" aparece na hora (aoFim chamado)');
+    // movimento reduzido: idem
+    global.window.matchMedia = () => ({ matches: true });
+    let fimR = 0; const cr = canvasFalso(); filaRaf.length = 0; a.mostrar(cr, { id: 204, tipo: 'rolagem', grupos: [{ dado: 'd12', valores: [9], mantidos: [0], sinal: 1 }] }, { animar: true, aoFim: () => { fimR++; } });
+    ok(fimR === 1 && filaRaf.length === 0, 'com "reduzir movimento" o resultado aparece parado e o total na hora');
+    global.window.matchMedia = () => ({ matches: false });
+    // entrada vazia (sorteio): limpa e avisa o fim
+    let fimV = 0; a.mostrar(canvasFalso(), { id: 205, tipo: 'sorteio', texto: 'Ana' }, { aoFim: () => { fimV++; } });
+    ok(fimV === 1, 'resultado sem dado (sorteio) não trava o aoFim');
+}
+
+// ---- os dados parados da seleção (sem rolar): sem número, sem laço, na ordem pedida ----
+{
+    const i = D.criar(), c = canvasFalso(); filaRaf.length = 0;
+    i.selecionar(c, ['d6', 'd6', 'd20']);
+    ok(c._g._chamadas.fill > 0 && c._g._chamadas.texto === 0, `seleção desenha os dados sem número (preenchimentos ${c._g._chamadas.fill}, textos ${c._g._chamadas.texto})`);
+    ok(filaRaf.length === 0, 'a seleção é parada: nenhum laço de animação');
+    const r = D.repouso(['d4', 'd6', 'd8', 'd10', 'd12', 'd20']);
+    ok(r.length === 6 && r.every(x => x.semNumero && x.geo && x.geo.faces.length > 0) && new Set(r.map(x => x.q.join())).size === 6, 'cada dado da seleção tem a sua geometria e um ângulo próprio');
+    const c2 = canvasFalso(); i.selecionar(c2, ['d99', 'x']); ok(c2._g._chamadas.fill === 0, 'nome de dado inventado é ignorado');
+    const c3 = canvasFalso(); i.selecionar(c3, []); ok(c3._g._chamadas.fill === 0, 'seleção vazia limpa o palco');
+    // trocar a seleção no meio da rolagem cancela a animação
+    const c4 = canvasFalso(); relogio = 0; filaRaf.length = 0; let fimX = 0;
+    i.mostrar(c4, { id: 301, tipo: 'rolagem', grupos: [{ dado: 'd20', valores: [7], mantidos: [0], sinal: 1 }] }, { animar: true, aoFim: () => { fimX++; } });
+    i.selecionar(c4, ['d6']); relogio = 2500; filaRaf.splice(0).forEach(fn => fn(2500));
+    ok(fimX === 0, 'mexer na seleção durante a rolagem cancela a animação (e o aoFim dela não dispara depois)');
+}
+ok(D.NOMES.includes('d100') && D.COR.d4[1] > D.COR.d4[0] && D.COR.d20[0] > D.COR.d20[2], 'as cores do palco existem pra todos os dados (d4 verde, d20 laranja)');
+
+// ---- o painel de dados (dados.js): as contas que não precisam de tela ----
+const P = new Function(fs.readFileSync(path.join(raiz, 'dados.js'), 'utf8') + '\nreturn Dados;')();
+{
+    const e1 = P._descreve({ id: 1, tipo: 'rolagem', expr: '2d20kh1+5', texto: '22', mod: 5, grupos: [{ dado: 'd20', valores: [17, 4], mantidos: [0], sinal: 1 }] });
+    ok(e1.rotulo === 'Total' && e1.texto.includes('2d20kh1+5') && e1.texto.includes('[17 (4)]') && e1.texto.endsWith('= 22') && e1.texto.includes('+ 5'), `rolagem vira uma linha: ${e1.texto}`);
+    const e2 = P._descreve({ id: 2, tipo: 'rolagem', expr: '1d20-1d4', texto: '10', mod: 0, grupos: [{ dado: 'd20', valores: [14], mantidos: [0], sinal: 1 }, { dado: 'd4', valores: [4], mantidos: [0], sinal: -1 }] });
+    ok(e2.texto.includes('[14] − [4]') && !e2.texto.includes('+ 0'), `termo com sinal de menos: ${e2.texto}`);
+    const e3 = P._descreve({ id: 3, tipo: 'moeda', texto: '2 caras e 1 coroa', moedas: ['Cara', 'Cara', 'Coroa'] });
+    ok(e3.rotulo === '3 moedas' && e3.icone === 'fa-coins', 'várias moedas');
+    ok(P._descreve({ id: 4, tipo: 'moeda', texto: 'Cara', moedas: ['Cara'] }).rotulo === 'Moeda', 'uma moeda');
+    const e5 = P._descreve({ id: 5, tipo: 'sorteio', texto: 'Ana' });
+    ok(e5.rotulo === 'Sorteado' && e5.texto === 'Sorteio: Ana', 'sorteio');
+    const e6 = P._estado();
+    ok(Object.keys(e6.sel).length === 0 && e6.mod === 0 && e6.esperando === false && e6.total.valor === '0', 'o painel nasce vazio, com total 0');
+    ok(P.aberto() === false, 'e fechado');
+}
 
 console.log(falhas ? `\n${falhas} FALHA(S)` : '\nTUDO OK');
 process.exit(falhas ? 1 : 0);

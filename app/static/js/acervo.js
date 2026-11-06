@@ -1,8 +1,9 @@
 /* Acervo (Rodada 39): figurinhas, soundboard e som de entrada na call. Objeto global `Acervo`. Regras e moderação: app/acervo.py (Guardião olha tudo antes).
  *
- * Contexto (Acervo.iniciar): { socket, esc, escUrl, toast, confirmar(titulo, texto, ok), meuId(), servidorAtivo(), canalDaCall(), emCall(), amSouOuvinte(),
- *   enviarFigurinha(item, destino), abrirEmoji(botao, cb) }
- * Eventos: acervo (a lista) · acervo_mudou · acervo_erro · som_entrada_ok · soundboard_tocou
+ * Contexto (Acervo.iniciar): { socket, esc, escUrl, toast, confirmar(titulo, texto, ok), meuId(), servidorAtivo(), servidorDaCall(): {id}|null, canalDaCall(), emCall(),
+ *   amSouOuvinte(), enviarFigurinha(item, destino), abrirEmoji(botao, cb), audioCtx() }
+ * Eventos: acervo (a lista) · acervo_mudou · acervo_erro · som_entrada_ok · soundboard_tocou · soundboard_precarregar
+ * Soundboard = botão #btn-main-soundboard da barra da call (alternarSoundboard): abre o painel de sons; quem abre avisa a call (soundboard_aquecer) e todos baixam os sons antes do 1º toque.
  * Arquivo entra por POST /api/acervo/upload e sai por GET /api/acervo/<id>/arquivo (só o que está APROVADO; o resto só o dono e os responsáveis).
  */
 const Acervo = (() => {
@@ -20,13 +21,18 @@ const Acervo = (() => {
     function iniciar(ctx) {
         C = ctx;
         C.socket.on('acervo', (d) => { dados = d; atualizarTudo(); });
-        C.socket.on('acervo_mudou', (d) => { if (!d || !d.server_id || Number(d.server_id) === Number((C.servidorAtivo() || {}).id)) carregar(); });
+        C.socket.on('acervo_mudou', (d) => { if (!d || !d.server_id || Number(d.server_id) === Number((srvDoPainel() || {}).id)) carregar(); });
         C.socket.on('acervo_erro', (d) => C.toast((d && d.msg) || 'Não deu certo.', 'warning'));
         C.socket.on('som_entrada_ok', (d) => { if (dados) dados.som_entrada = d.valor; C.aoMudarSomEntrada && C.aoMudarSomEntrada(d.valor); pintarSomEntrada(); });
         C.socket.on('soundboard_tocou', (d) => {
             if (!d) return;
-            if (!mudo()) Sons.tocarItem(Number(d.item_id), volSb());
+            if (!mudo()) Sons.tocarItem(Number(d.item_id), volSb(), { expira: 4000 });       // som que só ficaria pronto depois de 4 s não toca (o momento já passou)
             aviso(d);
+        });
+        // alguém abriu o soundboard: baixa e decodifica os sons dele em segundo plano, pra o 1º toque de cada um sair na hora aqui também
+        C.socket.on('soundboard_precarregar', (d) => {
+            if (!d || String(d.canal_id) !== String(C.canalDaCall()) || mudo()) return;
+            Sons.precarregar(d.ids);
         });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (envio) fecharEnvio(); else if (gerJanela) fecharGer(); else if (figPainel) fecharFig(); } }, true);
         document.addEventListener('mousedown', (e) => { if (figPainel && !e.target.closest('#ac-fig') && !e.target.closest('[data-abre-fig]')) fecharFig(); });
@@ -35,15 +41,18 @@ const Acervo = (() => {
     // ---------------------------------------------------------------------
     // dados
     // ---------------------------------------------------------------------
+    // Com o soundboard aberto, os sons "do servidor" são os do servidor DA CALL (os de outro servidor o servidor recusa tocar), não os do que estou olhando;
+    // numa call de DM não existe servidor.
+    function srvDoPainel() { return sbPainel && C.servidorDaCall ? (C.servidorDaCall() || null) : C.servidorAtivo(); }
     function carregar() {
-        const srv = C.servidorAtivo();
+        const srv = srvDoPainel();
         clearTimeout(pedido);
         pedido = setTimeout(() => C.socket.emit('acervo_listar', { server_id: srv ? srv.id : undefined }), 120);
     }
     const meus = (tipo) => (dados && dados.meus[tipo]) || [];
     const doServidor = (tipo) => (dados && dados.servidor && dados.servidor[tipo]) || [];
     const aprovados = (l) => l.filter(i => i.status === 'aprovado');
-    function atualizarTudo() { if (figPainel) pintarFig(); if (gerJanela) pintarGer(); if (sbPainel) pintarSb(); pintarSomEntrada(); }
+    function atualizarTudo() { if (figPainel) pintarFig(); if (gerJanela) pintarGer(); if (sbPainel) { pintarSb(); aquecer(false); } pintarSomEntrada(); }
     function meuSomEntrada() { return dados ? dados.som_entrada || null : (C && C.somEntradaInicial) || null; }
 
     // ---------------------------------------------------------------------
@@ -129,7 +138,7 @@ const Acervo = (() => {
                 <div class="${sons ? 'ac-lista' : 'ac-grade'}">${lista.map(i => sons ? somLinha(i, pode || i.meu) : figCartao(i, pode || i.meu)).join('') || `<div class="ac-vazio"><b>Nada por aqui ainda</b></div>`}</div>
             </div>
             <div class="ac-rodape"><small>${lista.length}${cota ? ' de ' + cota : ''} ${COTA_TEXTO[estado.gerTipo]}</small>
-                ${pode ? `<button type="button" class="btn-primary" data-ac="enviar"><i class="fa-solid fa-plus"></i> Enviar ${sons ? 'um som' : 'uma figurinha'}</button>` : ''}</div></div>`;
+                ${pode ? `<button type="button" class="btn btn-primary" data-ac="enviar"><i class="fa-solid fa-plus"></i> Enviar ${sons ? 'um som' : 'uma figurinha'}</button>` : ''}</div></div>`;
     }
     function figCartao(i, pode) {
         return `<div class="ac-fc" data-id="${Number(i.id)}"><div class="ac-fc-img"><img src="${C.escUrl(i.url)}" alt="" loading="lazy">${i.status !== 'aprovado' ? '<span class="ac-sel">em análise</span>' : ''}</div>
@@ -197,7 +206,7 @@ const Acervo = (() => {
                 <p class="ac-erro" id="ac-erro" hidden></p>
                 <p class="ac-nota"><i class="fa-solid fa-shield-halved"></i> O Guardião confere antes de os outros ${sons ? 'ouvirem' : 'verem'}. Sem a análise automática, uma pessoa responsável decide.</p>
             </div>
-            <div class="ac-rodape"><button type="button" class="btn-cancel" data-ac="x">Cancelar</button><button type="button" class="btn-primary" data-ac="mandar" id="ac-mandar" disabled><i class="fa-solid fa-paper-plane"></i> Enviar</button></div></div>`;
+            <div class="ac-rodape"><button type="button" class="btn btn-cancel" data-ac="x">Cancelar</button><button type="button" class="btn btn-primary" data-ac="mandar" id="ac-mandar" disabled><i class="fa-solid fa-paper-plane"></i> Enviar</button></div></div>`;
         document.body.appendChild(f); envio.el = f;
         const erro = (m) => { const e = $('ac-erro'); e.hidden = !m; e.textContent = m || ''; };
         f.addEventListener('mousedown', (e) => { if (e.target === f) fecharEnvio(); });
@@ -223,8 +232,8 @@ const Acervo = (() => {
                 envio.buf = await new Promise((ok, no) => ac.decodeAudioData(bytes, ok, no));
             } catch (er) { prev.innerHTML = ''; prev.hidden = true; erro('Não consegui abrir esse áudio. Tente um MP3, OGG ou WAV.'); return; }
             const dur = envio.buf.duration; envio.ini = 0; envio.fim = Math.min(dur, Sons.MAX_S);
-            prev.innerHTML = `<div class="ac-corte"><div><label>Começo <b id="ac-i-v">0,0 s</b></label><input type="range" id="ac-ini" min="0" max="${dur.toFixed(2)}" step="0.05" value="0"></div>
-                <div><label>Fim <b id="ac-f-v">${envio.fim.toFixed(1).replace('.', ',')} s</b></label><input type="range" id="ac-fim" min="0" max="${dur.toFixed(2)}" step="0.05" value="${envio.fim}"></div>
+            prev.innerHTML = `<div class="ac-corte"><div><label for="ac-ini">Começo <b id="ac-i-v">0,0 s</b></label><input type="range" class="faixa" id="ac-ini" min="0" max="${dur.toFixed(2)}" step="0.05" value="0"></div>
+                <div><label for="ac-fim">Fim <b id="ac-f-v">${envio.fim.toFixed(1).replace('.', ',')} s</b></label><input type="range" class="faixa" id="ac-fim" min="0" max="${dur.toFixed(2)}" step="0.05" value="${envio.fim}"></div>
                 <small id="ac-corte-info">${dur.toFixed(1).replace('.', ',')} s no arquivo. Fica no máximo ${Sons.MAX_S} s.</small>
                 <button type="button" class="ac-play-g" data-ac="ouvirpedaco"><i class="fa-solid fa-play"></i> Ouvir o pedaço</button></div>`;
             const ajusta = (de) => {
@@ -233,7 +242,11 @@ const Acervo = (() => {
                 if (fi - i < .2) { if (de === 'ini') fi = Math.min(dur, i + .2); else i = Math.max(0, fi - .2); }
                 envio.ini = Math.max(0, i); envio.fim = Math.min(dur, fi); $('ac-ini').value = envio.ini; $('ac-fim').value = envio.fim;
                 $('ac-i-v').textContent = envio.ini.toFixed(1).replace('.', ',') + ' s'; $('ac-f-v').textContent = envio.fim.toFixed(1).replace('.', ',') + ' s';
+                // o trilho dos dois mostra o pedaço que vai ficar (css/controles.css, .faixa), em vez de uma barra cheia da esquerda
+                const pIni = (envio.ini / dur) * 100, pFim = (envio.fim / dur) * 100;
+                ['ac-ini', 'ac-fim'].forEach((id) => { $(id).style.setProperty('--de', pIni + '%'); $(id).style.setProperty('--ate', pFim + '%'); });
             };
+            ajusta('ini');
             $('ac-ini').addEventListener('input', () => ajusta('ini')); $('ac-fim').addEventListener('input', () => ajusta('fim'));
             $('ac-mandar').disabled = false;
         });
@@ -257,13 +270,34 @@ const Acervo = (() => {
     }
 
     // ---------------------------------------------------------------------
-    // soundboard (uma "atividade" da call: pessoal e do servidor)
+    // soundboard: um BOTÃO da barra da call (como o do Discord), não uma atividade. Abre o painel direto, pra tocar rápido.
     // ---------------------------------------------------------------------
-    function abrirSoundboard(escopo) {
+    const idsDoPainel = () => [...aprovados(meus('som')), ...aprovados(doServidor('som'))].map(i => Number(i.id));
+    let sbAquecido = '';             // os ids que já avisei à call (não repete o aviso enquanto a lista é a mesma)
+    function aquecer(forcar) {
+        const ids = idsDoPainel();
+        if (!ids.length || !C.emCall()) return;
+        Sons.precarregar(ids);                                    // eu também baixo os meus (e os do servidor) antes do primeiro toque
+        const chave = ids.join(',');
+        if (!forcar && chave === sbAquecido) return;
+        sbAquecido = chave;
+        C.socket.emit('soundboard_aquecer', { canal_id: C.canalDaCall(), ids });
+    }
+    function posicionarSb() {
+        if (!sbPainel) return;
+        const btn = $('btn-main-soundboard'), r = btn && btn.getBoundingClientRect();
+        if (!r || !r.width || window.innerWidth <= 720) { sbPainel.style.left = sbPainel.style.right = sbPainel.style.bottom = ''; return; }          // celular: o CSS cola o painel acima da barra
+        const w = sbPainel.offsetWidth || 320;
+        sbPainel.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+        sbPainel.style.right = 'auto';
+        sbPainel.style.bottom = Math.max(8, window.innerHeight - r.top + 10) + 'px';
+    }
+    function marcarBotaoSb(aberto) { const b = $('btn-main-soundboard'); if (b) { b.classList.toggle('sb-aberto', !!aberto); b.setAttribute('aria-pressed', aberto ? 'true' : 'false'); } }
+    function abrirSoundboard() {
         if (!C.emCall()) { C.toast('Entre numa call pra usar o soundboard.', 'info'); return; }
-        estado.sbEscopo = escopo === 'servidor' ? 'servidor' : 'pessoa';
         if (!sbPainel) {
-            sbPainel = document.createElement('div'); sbPainel.id = 'ac-sb'; sbPainel.className = 'ac-sb'; document.body.appendChild(sbPainel);
+            sbPainel = document.createElement('div'); sbPainel.id = 'ac-sb'; sbPainel.className = 'ac-sb'; sbPainel.setAttribute('role', 'dialog'); sbPainel.setAttribute('aria-label', 'Soundboard');
+            document.body.appendChild(sbPainel);
             sbPainel.addEventListener('click', (e) => {
                 const b = e.target.closest('[data-ac]'); if (!b) return;
                 const a = b.dataset.ac;
@@ -274,29 +308,39 @@ const Acervo = (() => {
                 else if (a === 'tocar') {
                     if (C.amSouOuvinte()) { C.toast('Você está só ouvindo nesta call: não dá pra tocar sons.', 'info'); return; }
                     C.socket.emit('soundboard_tocar', { canal_id: C.canalDaCall(), item_id: Number(b.dataset.id) });
-                    sbPainel.querySelectorAll('.ac-pad').forEach(p => { p.classList.add('espera'); setTimeout(() => p.classList.remove('espera'), 2600); });
+                    b.classList.add('apertou'); setTimeout(() => b.classList.remove('apertou'), 180);
                 }
             });
-            sbPainel.addEventListener('input', (e) => { if (e.target.id === 'ac-vol') guardar('pnt_sb_vol', e.target.value); });
+            sbPainel.addEventListener('input', (e) => { if (e.target.id === 'ac-vol') { guardar('pnt_sb_vol', e.target.value); const p = $('ac-vol-v'); if (p) p.textContent = Math.round(e.target.value * 100) + '%'; } });
         }
-        pintarSb(); carregar();
+        sbPainel.hidden = false;
+        pintarSb(); posicionarSb(); marcarBotaoSb(true);
+        if (dados) aquecer(true);                                   // já tenho a lista: avisa a call agora; senão o aviso sai quando a lista chegar (atualizarTudo)
+        carregar();
     }
-    function fecharSb() { if (sbPainel) { sbPainel.remove(); sbPainel = null; } }
+    function fecharSb() { if (sbPainel) { sbPainel.remove(); sbPainel = null; } marcarBotaoSb(false); }
+    function alternarSoundboard() { if (sbPainel) fecharSb(); else abrirSoundboard(); }
     function pintarSb() {
         if (!sbPainel) return;
         const srv = dados && dados.servidor;
         if (estado.sbEscopo === 'servidor' && !srv) estado.sbEscopo = 'pessoa';
         const lista = aprovados(estado.sbEscopo === 'servidor' ? doServidor('som') : meus('som'));
+        const analise = (estado.sbEscopo === 'servidor' ? doServidor('som') : meus('som')).filter(i => i.status !== 'aprovado').length;
         sbPainel.innerHTML = `<div class="ac-sb-topo"><i class="fa-solid fa-volume-high"></i><b>Soundboard</b><span class="ac-esp"></span>
-                <button type="button" class="ic ${mudo() ? 'off' : ''}" data-ac="mudo" title="${mudo() ? 'Ouvir os sons de todos de novo' : 'Silenciar os sons que os outros tocam (neste aparelho)'}"><i class="fa-solid ${mudo() ? 'fa-volume-xmark' : 'fa-volume-high'}"></i></button>
-                <button type="button" class="ic" data-ac="gerir" title="Gerenciar sons"><i class="fa-solid fa-gear"></i></button>
-                <button type="button" class="ic" data-ac="x" title="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
+                <button type="button" class="ic ${mudo() ? 'off' : ''}" data-ac="mudo" title="${mudo() ? 'Ouvir os sons de todos de novo' : 'Silenciar os sons que os outros tocam (neste aparelho)'}" aria-label="Silenciar os sons dos outros"><i class="fa-solid ${mudo() ? 'fa-volume-xmark' : 'fa-volume-high'}"></i></button>
+                <button type="button" class="ic" data-ac="gerir" title="Gerenciar sons" aria-label="Gerenciar sons"><i class="fa-solid fa-gear"></i></button>
+                <button type="button" class="ic" data-ac="x" title="Fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
             <div class="ac-abas peq"><button type="button" class="${estado.sbEscopo === 'pessoa' ? 'on' : ''}" data-ac="aba" data-v="pessoa">Meus sons</button>${srv ? `<button type="button" class="${estado.sbEscopo === 'servidor' ? 'on' : ''}" data-ac="aba" data-v="servidor">${esc(srv.nome || 'Servidor')}</button>` : ''}</div>
             <div class="ac-pads">${lista.map(i => `<button type="button" class="ac-pad" data-ac="tocar" data-id="${Number(i.id)}" title="${esc(i.nome)}"><span>${esc(i.emoji || '🔊')}</span><small>${esc(i.nome)}</small></button>`).join('')
-                || `<div class="ac-vazio"><i class="fa-solid fa-volume-xmark"></i><b>Nenhum som aqui</b><small>${estado.sbEscopo === 'servidor' ? 'O servidor ainda não tem sons liberados.' : 'Abra a engrenagem e envie um som (até 6 s).'}</small></div>`}</div>
-            <div class="ac-sb-vol"><i class="fa-solid fa-volume-low"></i><input id="ac-vol" type="range" min="0" max="1" step="0.05" value="${volSb()}" aria-label="Volume dos sons dos outros"></div><div class="ac-feed" id="ac-feed"></div>`;
+                || `<div class="ac-vazio"><i class="fa-solid fa-volume-xmark"></i><b>Nenhum som aqui</b><small>${estado.sbEscopo === 'servidor' ? 'O servidor ainda não tem sons liberados.' : analise ? 'Seus sons estão em análise: o Guardião confere antes de a call poder ouvir.' : 'Abra a engrenagem e envie um som (até 6 s).'}</small></div>`}</div>
+            <div class="ac-sb-vol"><i class="fa-solid fa-volume-low" aria-hidden="true"></i><input id="ac-vol" type="range" min="0" max="1" step="0.05" value="${volSb()}" aria-label="Volume dos sons dos outros"><span id="ac-vol-v">${Math.round(volSb() * 100)}%</span></div><div class="ac-feed" id="ac-feed"></div>`;
     }
     function aviso(d) {
+        // o pad que tocou acende enquanto o som dura (quem está olhando vê qual foi)
+        if (sbPainel) {
+            const pad = sbPainel.querySelector(`.ac-pad[data-id="${Number(d.item_id)}"]`);
+            if (pad) { pad.classList.add('tocando'); setTimeout(() => pad.classList.remove('tocando'), Math.min(6000, Math.max(350, Number(d.dur_ms) || 800))); }
+        }
         if (!sbPainel) { if (!mudo()) C.toast(`${d.emoji || '🔊'} ${d.por_nome} tocou "${d.nome}"`, 'info'); return; }
         const f = $('ac-feed'); if (!f) return;
         const l = document.createElement('div'); l.className = 'ac-feed-l'; l.textContent = `${d.emoji || '🔊'} ${d.por_nome}: ${d.nome}`;
@@ -333,5 +377,5 @@ const Acervo = (() => {
         }
     }
 
-    return { iniciar, carregar, abrirFiguras, abrirGer, abrirEnvio, abrirSoundboard, pintarSomEntrada, meuSomEntrada, fecharSb, _prepararSom: prepararSom, _estado: () => ({ dados, estado }) };
+    return { iniciar, carregar, abrirFiguras, abrirGer, abrirEnvio, abrirSoundboard, alternarSoundboard, pintarSomEntrada, meuSomEntrada, fecharSb, _prepararSom: prepararSom, _estado: () => ({ dados, estado }) };
 })();

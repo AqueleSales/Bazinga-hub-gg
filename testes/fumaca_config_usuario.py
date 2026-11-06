@@ -66,7 +66,7 @@ with app.app_context():
     ok(preferencias.normalizar({'texto': 'g', 'densidade': 'ampla', 'sublinhar': True, 'n_dm': False}) == {'texto': 'g', 'densidade': 'ampla', 'sublinhar': True, 'n_dm': False}, 'valores válidos passam')
     ok(preferencias.normalizar({'texto': 'enorme', 'densidade': '<x>', 'sublinhar': 'true', 'reduz_mov': 1, 'hora12': None, 'n_dm': 'nao', 'inventada': True}) == {}, 'valor fora da lista, bool que não é bool e chave inventada são descartados')
     ok(preferencias.normalizar(['texto']) == {} and preferencias.normalizar('texto') == {} and preferencias.normalizar(None) == {}, 'entrada que não é objeto vira vazio')
-    ok(set(preferencias.PADRAO) == {'texto', 'densidade', 'sublinhar', 'reduz_mov', 'hora12'} | {'n_' + t for t in preferencias.IDS_AVISO}, 'os campos são exatamente os esperados')
+    ok(set(preferencias.PADRAO) == {'texto', 'densidade', 'sublinhar', 'reduz_mov', 'hora12', 'dados_publico'} |{'n_' + t for t in preferencias.IDS_AVISO}, 'os campos são exatamente os esperados')
     ok(all(preferencias.PADRAO['n_' + t] is True for t in preferencias.IDS_AVISO), 'todos os avisos nascem ligados')
     ok('sistema' not in preferencias.IDS_AVISO and preferencias.aviso_ligado(ids['ana'], 'sistema'), 'aviso de sistema não entra na lista e nunca é desligado')
 

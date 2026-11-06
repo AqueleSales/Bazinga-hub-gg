@@ -5,7 +5,10 @@
  * Um poliedro é só vértices e faces; a projeção é uma perspectiva simples e as faces são ordenadas do fundo pra frente (pintor): sem WebGL.
  * Tudo roda só enquanto anima (~1,6 s) e some do laço depois; `prefers-reduced-motion` mostra o resultado parado. Sem estado fora do módulo.
  *
- * API:  Dados3D.mostrar(canvas, entrada, { animar })   entrada = item do histórico: {id, tipo:'rolagem'|'d6'..|'moeda', grupos|texto, moedas}
+ * API:  Dados3D.criar() -> { mostrar, selecionar, parar }   UMA instância por canvas (o painel dos dados e o aviso da call animam juntos sem se atropelar)
+ *       inst.mostrar(canvas, entrada, { animar, aoFim })   entrada = resultado do servidor: {id, tipo:'rolagem'|'d6'..|'moeda', grupos|texto, moedas}
+ *       inst.selecionar(canvas, ['d6','d20'])              os dados da seleção, parados e sem número (antes de rolar)
+ *       Dados3D.mostrar/selecionar/parar                   a instância "de sempre" (atalho)
  *       Dados3D.geometria(nome) / Dados3D.alvo(geo, face)  (a matemática pura, que os testes do Node exercitam)
  */
 const Dados3D = (() => {
@@ -110,8 +113,9 @@ const Dados3D = (() => {
     // ---------------------------------------------------------------------
     // aparência
     // ---------------------------------------------------------------------
-    const COR = { d4: [224, 82, 122], d6: [58, 123, 213], d8: [53, 179, 126], d10: [161, 106, 232], d12: [242, 153, 74], d20: [217, 69, 61], d100: [142, 106, 79] };
-    const ESCALA_TEXTO = { d4: .8, d6: .95, d8: .75, d10: .62, d12: .6, d20: .5, d100: .55 };
+    // as cores dos botões do painel de dados (static/css/dados.css usa as mesmas): d4 verde, d6 turquesa, d8 roxo, d10 rosa, d12 vermelho, d20 laranja
+    const COR = { d4: [46, 160, 84], d6: [34, 168, 190], d8: [140, 76, 222], d10: [226, 62, 150], d12: [222, 60, 52], d20: [242, 124, 24], d100: [142, 106, 79] };
+    const ESCALA_TEXTO = { d4: 1.1, d6: 1.3, d8: 1.05, d10: .9, d12: .95, d20: .8, d100: .85 };       // (o dado agora é desenhado numa esfera padrão: o número acompanha, pra continuar legível com vários dados)
     const LUZ = unit([-.4, -.7, -.6]);
     const reduzMov = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
@@ -143,18 +147,21 @@ const Dados3D = (() => {
     // desenho
     // ---------------------------------------------------------------------
     function desenharDado(g, d, cx, cy, R, q, alfa) {
+        // todo dado cabe na mesma esfera: sem isso um d8 (vértices a 1) saía minúsculo ao lado de um d20 (a 1,9)
+        R = R * 1.7 / (d.geo.raio || (d.geo.raio = Math.max(...d.geo.verts.map(norma))));
         const cam = 7.5, proj = (p) => { const k = cam / (cam + p[2]); return [cx + p[0] * R * k, cy + p[1] * R * k, p[2]]; };
         const vs = d.geo.verts.map(v => qGira(q, v)), P = vs.map(proj);
         const cor = COR[d.dado], apagado = !d.mantido;
         const visiveis = d.geo.faces.map((f, i) => ({ i, n: qGira(q, f.n), z: f.idx.reduce((a, k) => a + vs[k][2], 0) / f.idx.length })).filter(f => f.n[2] < 0).sort((a, b) => b.z - a.z);
         g.save(); g.globalAlpha = alfa * (apagado ? .35 : 1); g.lineJoin = 'round';
+        const melhor = visiveis.reduce((m, f) => (!m || f.n[2] < m.n[2] ? f : m), null);          // a face mais virada pra câmera: só ela leva número (como no dado do Google), não todas as visíveis
         visiveis.forEach(f => {
             const luz = Math.max(0, -dot(f.n, LUZ)), t = .42 + .58 * luz;
             g.beginPath(); d.geo.faces[f.i].idx.forEach((k, j) => j ? g.lineTo(P[k][0], P[k][1]) : g.moveTo(P[k][0], P[k][1])); g.closePath();
             g.fillStyle = `rgb(${Math.round(cor[0] * t + 30 * luz)},${Math.round(cor[1] * t + 30 * luz)},${Math.round(cor[2] * t + 30 * luz)})`; g.fill();
             g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = Math.max(1, R * .03); g.stroke();
             const frente = -f.n[2];
-            if (frente > .4) {                                  // o número, no centro da face (some quando a face fica de lado)
+            if (frente > .4 && !d.semNumero && melhor && f.i === melhor.i) {   // o número, no centro da face de frente (some quando ela fica de lado; dado ainda não rolado não tem número)
                 const ce = proj(qGira(q, d.geo.faces[f.i].c)), fim = d.dado === 'd100' ? String(d.valor) : String(d.dado === 'd10' ? f.i + 1 : f.i + 1);
                 const rotulo = d.dado === 'd100' ? (f.i === faceDoValor('d100', d.valor) ? String(d.valor) : String((f.i + 1) * 10)) : fim;
                 g.fillStyle = `rgba(255,255,255,${Math.min(1, (frente - .4) * 2.2)})`; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -181,54 +188,85 @@ const Dados3D = (() => {
     const suave = (t) => t * t * (3 - 2 * t);
 
     // ---------------------------------------------------------------------
-    // animação (uma por vez; o canvas pode ser trocado no meio, porque o painel redesenha o HTML)
+    // animação: UMA POR CANVAS (`criar()`), pra o painel dos dados e o aviso da call rolarem ao mesmo tempo sem se atropelar.
+    // O canvas pode ser trocado no meio, porque o painel redesenha o HTML.
     // ---------------------------------------------------------------------
-    const A = { id: null, itens: [], inicio: 0, dur: 1600, canvas: null, raf: 0, fim: true };
     function layout(n, w, h) {
         const cols = Math.min(n, n <= 3 ? n : n <= 8 ? 4 : n <= 15 ? 6 : 8), linhas = Math.ceil(n / cols);
-        const R = Math.min(w / (cols * 2.5), h / (linhas * 2.6), 56);
+        const R = Math.min(w / (cols * 4.8), h / (linhas * 4.6), 44);          // o vértice mais longo (d20) chega a ~2,5 R com a perspectiva: com isso os dados não se cobrem nem passam da borda do palco
         return { cols, linhas, R, pos: (i) => ({ x: w * ((i % cols) + .5) / cols, y: h * (Math.floor(i / cols) + .56) / linhas }) };
-    }
-    function quadro(agora) {
-        const c = A.canvas; if (!c || !c.isConnected) { A.raf = 0; return; }
-        ajustarCanvas(c);                                        // o painel pode ter sido medido antes do layout (largura 0): confere a cada quadro
-        const g = c.getContext('2d'), dpr = c.width / (c.clientWidth || c.width), w = c.clientWidth || 300, h = c.clientHeight || 150;
-        g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
-        const t = A.fim ? 1 : Math.min(1, (agora - A.inicio) / A.dur), L = layout(A.itens.length, w, h);
-        A.itens.forEach((d, i) => {
-            const p = L.pos(i), loc = Math.max(0, Math.min(1, (t * A.dur - d.atraso * 1000) / (A.dur - 400))), fim = suave(Math.max(0, (loc - .55) / .45));
-            const queda = Math.exp(-3.2 * loc) * Math.abs(Math.cos(Math.PI * d.quedas * loc));
-            const altura = (h * .55) * (loc >= 1 ? 0 : queda * (1 - fim)), y = p.y - altura;
-            if (d.moeda) {
-                const ang = d.giros * Math.PI * 2 * (1 - Math.exp(-3 * loc)) * (1 - fim) + (d.face === 'Cara' ? 0 : Math.PI) * fim + (d.face === 'Cara' ? 0 : 0);
-                desenharMoeda(g, d, p.x, y, L.R, loc >= 1 ? (d.face === 'Cara' ? 0 : Math.PI) : ang, 1, 0);
-            } else {
-                const livre = qMul(d.q0, qEixo(d.eixo, (d.w0 / 3.2) * (1 - Math.exp(-3.2 * loc))));
-                desenharDado(g, d, p.x, y, L.R, loc >= 1 ? d.alvoQ : qSlerp(livre, d.alvoQ, fim), 1);
-            }
-        });
-        if (t < 1) A.raf = requestAnimationFrame(quadro); else { A.raf = 0; A.fim = true; }
     }
     function ajustarCanvas(c) {
         const dpr = Math.min(2, window.devicePixelRatio || 1), w = c.clientWidth || 300, h = c.clientHeight || 150;
         if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
     }
-    /** Mostra os dados desse resultado no canvas. `animar` só vale se a entrada for NOVA (id diferente da última animada) e o movimento estiver permitido. */
-    function mostrar(canvas, entrada, opc) {
-        if (!canvas) return;
-        const desc = descrever(entrada);
-        A.canvas = canvas; ajustarCanvas(canvas);
-        if (!desc.length) { const g = canvas.getContext('2d'); g.clearRect(0, 0, canvas.width, canvas.height); return; }
-        const novo = entrada.id !== A.id;
-        if (novo) {
-            A.id = entrada.id; A.itens = preparar(desc, entrada.id);
-            A.dur = Math.min(2300, 1500 + desc.length * 35); A.inicio = performance.now();
-            A.fim = !(opc && opc.animar !== false) || reduzMov();
-        }
-        if (A.fim) { cancelAnimationFrame(A.raf); A.raf = 0; quadro(performance.now()); return; }
-        if (!A.raf) A.raf = requestAnimationFrame(quadro);
+    /** Os dados PARADOS de uma seleção (ainda sem rolar): cada um num ângulo agradável e sem número, como o palco do widget de dados do Google. */
+    function repouso(lista) {
+        return lista.slice(0, 30).map((nome, i) => {
+            const geo = geometria(nome);
+            return { dado: nome, geo, valor: 1, mantido: true, semNumero: true, q: qMul(qEixo([1, 0, 0], .55 + (i % 3) * .08), qEixo([0, 1, 0], .7 + i * .85)) };
+        });
     }
-    function parar() { cancelAnimationFrame(A.raf); A.raf = 0; A.id = null; A.fim = true; }
+    function criar() {
+        const A = { id: null, itens: [], inicio: 0, dur: 1600, canvas: null, raf: 0, fim: true, parados: null, aoFim: null };
+        function limpar(c) { const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); }
+        function quadro(agora) {
+            const c = A.canvas; if (!c || !c.isConnected) { A.raf = 0; return; }
+            ajustarCanvas(c);                                        // o painel pode ter sido medido antes do layout (largura 0): confere a cada quadro
+            const g = c.getContext('2d'), dpr = c.width / (c.clientWidth || c.width), w = c.clientWidth || 300, h = c.clientHeight || 150;
+            g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+            if (A.parados) {                                          // sem rolagem: só os dados da seleção, parados
+                const L = layout(A.parados.length, w, h);
+                A.parados.forEach((d, i) => { const p = L.pos(i); desenharDado(g, d, p.x, p.y, L.R, d.q, 1); });
+                A.raf = 0; return;
+            }
+            const t = A.fim ? 1 : Math.min(1, (agora - A.inicio) / A.dur), L = layout(A.itens.length, w, h);
+            A.itens.forEach((d, i) => {
+                const p = L.pos(i), loc = Math.max(0, Math.min(1, (t * A.dur - d.atraso * 1000) / (A.dur - 400))), fim = suave(Math.max(0, (loc - .55) / .45));
+                const queda = Math.exp(-3.2 * loc) * Math.abs(Math.cos(Math.PI * d.quedas * loc));
+                const altura = (h * .55) * (loc >= 1 ? 0 : queda * (1 - fim)), y = p.y - altura;
+                if (d.moeda) {
+                    const ang = d.giros * Math.PI * 2 * (1 - Math.exp(-3 * loc)) * (1 - fim) + (d.face === 'Cara' ? 0 : Math.PI) * fim;
+                    desenharMoeda(g, d, p.x, y, L.R, loc >= 1 ? (d.face === 'Cara' ? 0 : Math.PI) : ang, 1, 0);
+                } else {
+                    const livre = qMul(d.q0, qEixo(d.eixo, (d.w0 / 3.2) * (1 - Math.exp(-3.2 * loc))));
+                    desenharDado(g, d, p.x, y, L.R, loc >= 1 ? d.alvoQ : qSlerp(livre, d.alvoQ, fim), 1);
+                }
+            });
+            if (t < 1) A.raf = requestAnimationFrame(quadro);
+            else { A.raf = 0; A.fim = true; const f = A.aoFim; A.aoFim = null; if (f) { try { f(); } catch (e) { /* o aviso de fim não derruba o desenho */ } } }
+        }
+        /** Mostra os dados desse resultado no canvas. `animar` só vale se a entrada for NOVA (id diferente da última animada) e o movimento estiver permitido.
+         *  `aoFim` roda quando os dados assentam (na hora, se não há animação): é o gancho pro "Total" aparecer só depois da rolagem. */
+        function mostrar(canvas, entrada, opc) {
+            if (!canvas) return;
+            const desc = descrever(entrada);
+            A.canvas = canvas; A.parados = null; ajustarCanvas(canvas);
+            if (opc && opc.aoFim) A.aoFim = opc.aoFim;
+            if (!desc.length) { limpar(canvas); const f = A.aoFim; A.aoFim = null; if (f) f(); return; }
+            const novo = entrada.id !== A.id;
+            if (novo) {
+                A.id = entrada.id; A.itens = preparar(desc, entrada.id);
+                A.dur = Math.min(2300, 1500 + desc.length * 35); A.inicio = performance.now();
+                A.fim = !(opc && opc.animar !== false) || reduzMov();
+            }
+            if (A.fim) { cancelAnimationFrame(A.raf); A.raf = 0; quadro(performance.now()); const f = A.aoFim; A.aoFim = null; if (f) f(); return; }
+            if (!A.raf) A.raf = requestAnimationFrame(quadro);
+        }
+        /** Os dados da seleção, parados e sem número (ainda não rolou). Cancela uma animação em curso (a seleção mudou). */
+        function selecionar(canvas, nomes) {
+            if (!canvas) return;
+            cancelAnimationFrame(A.raf); A.raf = 0; A.id = null; A.fim = true; A.aoFim = null; A.canvas = canvas;
+            ajustarCanvas(canvas);
+            const lista = (nomes || []).filter((n) => NOMES.includes(n));
+            if (!lista.length) { A.parados = null; limpar(canvas); return; }
+            A.parados = repouso(lista); quadro(performance.now());
+        }
+        function parar() { cancelAnimationFrame(A.raf); A.raf = 0; A.id = null; A.fim = true; A.parados = null; A.aoFim = null; }
+        return { mostrar, selecionar, parar };
+    }
+    const padrao = criar();      // a instância "de sempre" (a API antiga: mostrar/parar sem escolher instância)
 
-    return { mostrar, parar, geometria, alvo, faceDoValor, descrever, NOMES, _q: { qMul, qEixo, qGira, qDe, qSlerp }, _v: { dot, unit, cruz, sub, norma } };
+    return { criar, mostrar: padrao.mostrar, selecionar: padrao.selecionar, parar: padrao.parar, geometria, alvo, faceDoValor, descrever, repouso, NOMES, COR,
+             _q: { qMul, qEixo, qGira, qDe, qSlerp }, _v: { dot, unit, cruz, sub, norma } };
 })();

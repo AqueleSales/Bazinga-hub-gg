@@ -24,7 +24,7 @@
 #ux-menu .ux-sl { padding: 6px 10px 8px; }
 #ux-menu .ux-sl-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; font-weight: 700; }
 #ux-menu .ux-sl-topo .ux-pct { font-variant-numeric: tabular-nums; color: var(--text-muted, #949ba4); font-weight: 800; }
-#ux-menu .ux-sl input[type=range] { width: 100%; accent-color: var(--brand-color, #5865f2); cursor: pointer; margin: 0; }
+#ux-menu .ux-sl input[type=range] { width: 100%; margin: 0; }          /* a aparência da barra é a de css/controles.css (uma só pro app inteiro) */
 
 /* ---------- botões que aparecem nos quadros da call ---------- */
 .video-card .ux-barra { position: absolute; top: 8px; right: 8px; z-index: 6; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }

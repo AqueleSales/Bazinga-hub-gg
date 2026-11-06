@@ -10,7 +10,7 @@ const ConfigUsuario = (() => {
     let ctx = null;
 
     // Espelho de preferencias.py (o teste confere ids e padrões). Valores fora da lista o servidor descarta.
-    const PADRAO = { texto: 'm', densidade: 'padrao', sublinhar: false, reduz_mov: false, hora12: false,
+    const PADRAO = { texto: 'm', densidade: 'padrao', sublinhar: false, reduz_mov: false, hora12: false, dados_publico: false,
                      n_dm: true, n_mencao: true, n_amizade: true, n_ligacao: true, n_bazar: true, n_nota: true };
     const TIPOS_AVISO = [
         ['dm', 'Mensagens diretas', 'fa-envelope', 'Quando alguém te escreve numa conversa privada.'],
@@ -88,16 +88,20 @@ const ConfigUsuario = (() => {
         refazerHoras();
         pintarPrefs();
     }
+    const ouvintes = [];                  // quem quer saber quando uma preferência muda (o painel de dados, pelo olho)
+    const avisarMudou = () => ouvintes.forEach((f) => { try { f(Object.assign({}, prefs)); } catch (e) { /* um ouvinte ruim não derruba os outros */ } });
     function salvar(mudanca) {
         Object.assign(prefs, mudanca);
         tocouEm = Date.now();
         aplicar();
         if (ctx) ctx.socket.emit('salvar_preferencias', mudanca);
+        avisarMudou();
     }
     function receber(p) {
         if (!p || Date.now() - tocouEm < 1500) return;
         prefs = Object.assign({}, PADRAO, p);
         aplicar();
+        avisarMudou();
     }
 
     function aplicarVolumeSaida() {
@@ -547,5 +551,5 @@ const ConfigUsuario = (() => {
         aplicar();
     }
 
-    return { iniciar, avisa, somPermitido, volumeSons, volumeSaida, horaFmt, receber, prefs: () => Object.assign({}, prefs), sub, irPara };
+    return { iniciar, avisa, somPermitido, volumeSons, volumeSaida, horaFmt, receber, prefs: () => Object.assign({}, prefs), salvar, aoMudar: (f) => { if (typeof f === 'function') ouvintes.push(f); }, sub, irPara };
 })();

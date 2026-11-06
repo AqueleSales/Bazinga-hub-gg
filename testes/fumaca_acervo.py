@@ -246,8 +246,8 @@ with app.app_context():
     cl['Ana'].emit('soundboard_tocar', {'canal_id': sala, 'item_id': s_ana.id}); ok(any(m['name'] == 'acervo_erro' for m in ev(cl['Ana'])), 'quem está só ouvindo não toca sons')
     for p in events.participantes_call.get(str(sala), []): p['ouvinte'] = False
     # teto da call
-    acervo_events._historico[str(sala)] = [__import__('time').monotonic()] * 12; acervo_events._ultimo.clear()
-    cl['Ana'].emit('soundboard_tocar', {'canal_id': sala, 'item_id': s_ana.id}); ok(any('Muitos sons' in m['args'][0].get('msg', '') for m in ev(cl['Ana'], 'acervo_erro')), 'no máximo 12 sons a cada 20 s na call inteira')
+    acervo_events._historico[str(sala)] = [__import__('time').monotonic()] * acervo_events.TETO_CALL[0]; acervo_events._ultimo.clear()
+    cl['Ana'].emit('soundboard_tocar', {'canal_id': sala, 'item_id': s_ana.id}); ok(any('Muitos sons' in m['args'][0].get('msg', '') for m in ev(cl['Ana'], 'acervo_erro')), f'no máximo {acervo_events.TETO_CALL[0]} sons a cada 20 s na call inteira')
 
 # ================= o que o cliente promete =================
 chat = ler('app/templates/chat.html'); aj = ler('app/static/js/acervo.js'); sj_ = ler('app/static/js/sons.js'); ac = ler('app/static/js/atividades.js')
@@ -255,7 +255,7 @@ ok('js/acervo.js' in chat and 'js/sons.js' in chat and 'css/acervo.css' in chat,
 ok('Acervo.iniciar(' in chat and 'Sons.iniciar(' in chat and 'id="ac-som-entrada"' in chat and 'btn-figurinha' in chat and 'dm-btn-figurinha' in chat, 'o chat liga o acervo, os sons, o som de entrada e os botões de figurinha')
 ok("tipo === 'sticker'" in chat and 'msg-anexo sticker' in chat, 'a figurinha aparece grande, sem balão')
 ok('Acervo.meuSomEntrada()' in chat and 'd && d.som_entrada' in chat, 'o som de entrada vai pra quem entra (o meu e o dos outros)')
-ok("'sb_pessoal'" in ac and "'sb_servidor'" in ac and "data-at=\"local\"" in ac, 'Atividades: soundboard pessoal e do servidor')
+ok("'sb_pessoal'" not in ac and "'sb_servidor'" not in ac and 'id="btn-main-soundboard"' in chat and 'Acervo.alternarSoundboard()' in chat, 'o soundboard é um botão da barra da call (não é mais uma atividade); a velocidade dele está em fumaca_soundboard.py')
 ok('DynamicsCompressor' in sj_ and 'MAX_S' in sj_ and 'src.stop(' in sj_, 'sons: limitador de volume e corte em 6 s, seja qual for o arquivo')
 ok('eval(' not in aj and 'innerHTML' in aj and 'esc(i.nome)' in aj, 'acervo.js escapa o nome (sem eval)')
 ok('prepararSom' in aj and 'OfflineAudioContext' in aj and 'wavDe' in aj, 'o som é cortado, mixado em mono, com pico limitado e vira WAV antes de subir')
