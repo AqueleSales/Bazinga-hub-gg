@@ -1,4 +1,4 @@
-"""Rodada 35: jogos da call além do xadrez (velha, pedra-papel-tesoura, forca, dados/sorteio) e CONVITE com cadeira guardada.
+"""Rodada 35: jogos da call além do xadrez (velha, pedra-papel-tesoura, forca) e CONVITE com cadeira guardada. (Os dados saíram na Rodada 40: ver fumaca_dados.py.)
 Regra dos jogos (vez, casa ocupada, segredo da forca e do pedra-papel-tesoura), eventos (quem inicia/senta/joga, chamado a toda a call, convite que guarda a
 cadeira, recusa, ouvinte, regra 6) e o que o cliente promete (arquivos, ganchos no chat.html)."""
 import os
@@ -93,18 +93,8 @@ for l in 'sol':
     g.acao(1, 'A', None, {'acao': 'letra', 'letra': l})
 ok(g.resultado == {'venceu': True}, 'forca: completar a palavra vence')
 
-d = jogos.DadosESorteio(1)
-for _ in range(60):
-    d.acao(1, 'Ana', None, {'acao': 'rolar', 'dado': 'd6'})
-ok(all(1 <= int(h['texto']) <= 6 for h in d.historico if h['tipo'] == 'd6') and len(d.historico) == jogos.MAX_HISTORICO, 'dados: D6 fica entre 1 e 6 e o histórico tem teto')
-ok(d.acao(1, 'Ana', None, {'acao': 'rolar', 'dado': 'd1000'})[0] is False, 'dados: dado fora da lista é recusado')
-d.acao(1, 'Ana', None, {'acao': 'sortear'}, presentes=[{'nome': 'Ana'}, {'nome': 'Beto'}])
-ok(d.historico[0]['tipo'] == 'sorteio' and d.historico[0]['texto'] in ('Ana', 'Beto'), 'dados: sorteia alguém que está na call')
-ok(d.acao(1, 'Ana', None, {'acao': 'sortear'}, presentes=[])[0] is False, 'dados: sem ninguém, não sorteia')
-d.acao(1, 'Ana', None, {'acao': 'moeda'})
-ok(d.historico[0]['texto'] in ('Cara', 'Coroa'), 'dados: cara ou coroa')
 
-ok(set(atividades.TIPOS_ATIVIDADE) == {'xadrez', 'velha', 'ppt', 'forca', 'dados', 'site'}, 'a lista fechada de atividades tem os 5 jogos e a mesa de sites')
+ok(set(atividades.TIPOS_ATIVIDADE) == {'xadrez', 'velha', 'ppt', 'forca', 'site'}, 'a lista fechada de atividades tem os jogos de mesa e a mesa de sites (os dados saíram: são um painel pessoal)')
 ok(isinstance(atividades.iniciar('chave-teste', 'velha', 1), jogos.Velha), 'iniciar("velha") cria a mesa certa')
 atividades.encerrar('chave-teste')
 
@@ -243,26 +233,18 @@ with app.app_context():
     ok(ev(caio, 'atividade_erro'), 'jogo sem cadeira não tem convite (todo mundo já participa)')
     atividades.encerrar(str(V))
 
-    # --- dados: o sorteio usa quem está na call ---
-    ana.emit('atividade_iniciar', {'canal_id': V, 'tipo': 'dados'}); ev(ana)
-    for _ in range(12):
-        beto.emit('atividade_acao', {'canal_id': V, 'acao': 'sortear'})
-    est = ultimo(ana, 'atividade_estado')
-    sorteados = {h['texto'] for h in est['historico'] if h['tipo'] == 'sorteio'}
-    ok(sorteados and sorteados <= {'Ana', 'Beto', 'Caio', 'Dani'}, 'dados: o sorteado é sempre alguém que está na call')
-    atividades.encerrar(str(V))
 
 # ----------------------------------------------------- o que o cliente promete -----------------------------------------------
 aj, at, ui = ler('app/static/js/atividades_jogos.js'), ler('app/static/js/atividades.js'), ler('app/static/js/ui_extra.js')
 ch = ler('app/templates/chat.html')
-for tipo in ('velha', 'ppt', 'forca', 'dados'):
+for tipo in ('velha', 'ppt', 'forca'):
     ok(f"{tipo}:" in aj and f"tipo: '{tipo}'" in at, f'o cliente conhece o jogo {tipo} (catálogo e desenho)')
 ok("atividade_convidar" in aj and "atividade_convite_resposta" in at, 'o cliente convida e responde ao convite pelos eventos do servidor')
 for ev_nome in ('atividade_convite', 'atividade_chamada', 'atividade_convite_enviado', 'atividade_convite_recusado'):
     ok(f"socket.on('{ev_nome}'" in ch, f'chat.html escuta {ev_nome}')
 ok('atividades_jogos.js' in ch and ch.index('atividades_jogos.js') < ch.index("js/atividades.js"), 'atividades_jogos.js carrega ANTES de atividades.js')
 ok('textContent' in ui and 'innerHTML' not in ui.replace("b.innerHTML = '<i class=\"fa-solid ' + icone", '').replace("caixa.innerHTML = '<i", ''), 'ui_extra não joga texto de usuário em innerHTML')
-ok('h.esc(' in aj and aj.count('esc(') > 20, 'os jogos escapam nome e texto de usuário')
+ok('h.esc(' in aj and aj.count('esc(') > 12, 'os jogos escapam nome e texto de usuário')
 ok('palavra' not in ler('app/static/js/atividades_jogos.js').split('function corpoForca')[0].split('const INFO')[0], 'a palavra da forca só aparece no corpo da forca (quando o servidor manda)')
 
 print()

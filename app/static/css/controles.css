@@ -1,0 +1,43 @@
+/* Controles de formulário com UM estilo só (Rodada 40): barras de volume e de valor (input range). JS: static/js/controles.js (preenche --p).
+   Antes cada tela usava o range nativo do navegador (barra branca grossa com contorno azul de foco) ou um estilo próprio diferente.
+   Trilho fino e arredondado, parte cheia na cor de destaque (var(--brand-color)), bolinha, foco discreto; claro e escuro seguem as variáveis do tema.
+   Valem pra TODO input[type=range] do app (a especificidade vence o `.discord-slider` antigo). Sem animação além de transform/box-shadow curtos. */
+
+input[type="range"] {
+    --p: 100%;                                   /* quanto da barra está cheio (controles.js atualiza ao arrastar e quando o valor muda por código) */
+    --cheio: var(--brand-color, #5865f2);
+    --trilho: rgba(255, 255, 255, .17);
+    --bolinha: #fff;
+    -webkit-appearance: none; appearance: none;
+    height: 20px; padding: 0; margin: 0; background: transparent; border: 0; outline: none; box-shadow: none;
+    cursor: pointer; border-radius: 999px; accent-color: var(--cheio);
+}
+:root[data-claro] input[type="range"], :root[data-tema="light"] input[type="range"] { --trilho: rgba(0, 0, 0, .17); }
+
+/* WebKit/Blink: o trilho leva o degradê que faz a parte cheia */
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; border: 0; background: linear-gradient(to right, var(--cheio) 0 var(--p), var(--trilho) var(--p) 100%); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: 50%; border: 0; background: var(--bolinha);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .12); transition: transform .12s ease, box-shadow .12s ease; }
+input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.14); }
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.06); }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 1px 4px rgba(0, 0, 0, .55), 0 0 0 4px color-mix(in srgb, var(--cheio) 38%, transparent); }
+
+/* Firefox: tem a parte cheia pronta (-moz-range-progress) */
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; border: 0; background: var(--trilho); }
+input[type="range"]::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--cheio); }
+input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; border: 0; background: var(--bolinha); box-shadow: 0 1px 4px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .12); transition: transform .12s ease, box-shadow .12s ease; }
+input[type="range"]:hover::-moz-range-thumb { transform: scale(1.14); }
+input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 1px 4px rgba(0, 0, 0, .55), 0 0 0 4px color-mix(in srgb, var(--cheio) 38%, transparent); }
+
+input[type="range"]:disabled { opacity: .45; cursor: default; }
+
+/* a FAIXA escolhida (o corte de um som: começo e fim): o trilho mostra só o pedaço selecionado, em vez de uma parte cheia da esquerda. --de e --ate em %. */
+input[type="range"].faixa::-webkit-slider-runnable-track { background: linear-gradient(to right, var(--trilho) 0 var(--de, 0%), var(--cheio) var(--de, 0%) var(--ate, 100%), var(--trilho) var(--ate, 100%) 100%); }
+input[type="range"].faixa::-moz-range-track { background: linear-gradient(to right, var(--trilho) 0 var(--de, 0%), var(--cheio) var(--de, 0%) var(--ate, 100%), var(--trilho) var(--ate, 100%) 100%); }
+input[type="range"].faixa::-moz-range-progress { background: transparent; }
+
+/* o antigo `.discord-slider` só pedia margem em cima; a aparência agora é a de cima */
+input[type="range"].discord-slider { margin-top: 6px; }
+
+@media (prefers-reduced-motion: reduce) { input[type="range"]::-webkit-slider-thumb, input[type="range"]::-moz-range-thumb { transition: none; } }
+:root[data-reduz-mov="1"] input[type="range"]::-webkit-slider-thumb, :root[data-reduz-mov="1"] input[type="range"]::-moz-range-thumb { transition: none; }

@@ -26,10 +26,9 @@ const Atividades = (function () {
         { tipo: 'velha', nome: 'Jogo da velha', icone: 'hash', desc: 'Dois jogadores, rápido de jogar. Dá pra chamar alguém da call pra mesa.', pronto: true },
         { tipo: 'ppt', nome: 'Pedra, papel e tesoura', icone: 'hand', desc: 'Melhor de 3, com as escolhas reveladas juntas.', pronto: true },
         { tipo: 'forca', nome: 'Forca', icone: 'forca', desc: 'Todo mundo da call chuta letras juntos. A palavra é sorteada.', pronto: true },
-        { tipo: 'dados', nome: 'Dados e sorteio', icone: 'dice', desc: 'D6, D20, D100, cara ou coroa e sorteio de alguém da call.', pronto: true },
+        // Dados: painel PESSOAL (static/js/dados.js), não ocupa a atividade da call. O soundboard saiu daqui: tem botão próprio na barra da call.
+        { tipo: 'dados', nome: 'Dados e sorteio', icone: 'dice', desc: 'D4 a D20, cara ou coroa e sorteio. As rolagens são suas; você escolhe se a call vê.', pronto: true, local: true },
         { tipo: 'site', nome: 'Mesa de RPG e sites', icone: 'site', desc: 'Quadro pra desenhar mapas junto, jogos de navegador e a sua mesa virtual (Owlbear, Roll20, Foundry): a call abre a mesma página.', pronto: true, form: true },
-        { tipo: 'sb_pessoal', nome: 'Soundboard pessoal', icone: 'sb', desc: 'Os seus sons: toque e a call inteira ouve. Cada um tem pausa entre um som e outro.', pronto: true, local: true },
-        { tipo: 'sb_servidor', nome: 'Soundboard do servidor', icone: 'sb', desc: 'Os sons que o servidor oferece pra qualquer pessoa da call tocar.', pronto: true, local: true },
         { tipo: 'musica', nome: 'Música na call', icone: 'music', desc: 'Todo mundo ouvindo a mesma playlist, sincronizado.', pronto: false },
     ];
     const ICONES = { chess: 'fa-chess-knight', music: 'fa-music', robot: 'fa-robot', hash: 'fa-hashtag', hand: 'fa-hand-back-fist', forca: 'fa-spell-check', dice: 'fa-dice', sb: 'fa-volume-high', site: 'fa-dice-d20' };
@@ -113,7 +112,6 @@ const Atividades = (function () {
         if (!estado) return '';
         const j = estado.jogadores;
         if (estado.tipo === 'forca') return estado.resultado ? 'Palavra terminada.' : 'Todo mundo chutando letras.';
-        if (estado.tipo === 'dados') return 'Rolando dados e sorteios.';
         if (estado.tipo === 'site') return estado.site ? 'Página aberta: ' + esc(estado.site.nome) : '';
         if (estado.situacao === 'aguardando') return 'Esperando o segundo jogador sentar.';
         if (estado.situacao === 'fim') return 'Partida terminada.';
@@ -362,7 +360,6 @@ const Atividades = (function () {
         const rolagem = corpo.scrollTop;
         corpo.innerHTML = AtividadesJogos.corpo(estado, ajudantes());
         corpo.scrollTop = rolagem;
-        AtividadesJogos.depois(corpo, estado, ajudantes());        // campo da expressão e dados 3D (só os jogos que precisam)
         pintarChip();
     }
     function desenhar() {

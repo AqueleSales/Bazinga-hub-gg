@@ -153,20 +153,6 @@ button:focus-visible { outline-offset: 2px; }
 .aj-tecla.certa { background: rgba(35, 165, 89, .3); color: #7ee2a3; }
 .aj-tecla.errada { background: rgba(237, 66, 69, .25); color: #f3868a; text-decoration: line-through; }
 
-/* dados e sorteio */
-.aj-resultado { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; border-radius: 14px; background: var(--bg-tertiary); }
-.aj-resultado small { color: var(--text-muted); font-weight: 700; font-size: 12px; }
-.aj-resultado b { font-size: 40px; line-height: 1.1; color: var(--text-header); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.aj-resultado.vazio b { opacity: .35; }
-.aj-dados { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.aj-dados button { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; border-radius: 10px; padding: 9px 4px; background: var(--brand-color); color: #fff; font-weight: 800; font-size: 12px; }
-.aj-dados button i { font-size: 18px; }
-.aj-dados button:hover { filter: brightness(1.1); }
-.aj-dados button.largo { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 8px; background: var(--green-color); padding: 10px; font-size: 13px; }
-.aj-hist { display: flex; flex-direction: column; gap: 3px; max-height: 150px; overflow-y: auto; }
-.aj-h { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; background: var(--bg-tertiary); font-size: 12.5px; }
-.aj-h i { color: var(--text-muted); width: 16px; text-align: center; }
-.aj-h span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* convite pra jogar */
 .at-convite { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 1580; display: flex; align-items: center; gap: 12px; width: 440px; max-width: calc(100vw - 16px); padding: 12px 14px;
@@ -185,41 +171,11 @@ button:focus-visible { outline-offset: 2px; }
 }
 @media (prefers-reduced-motion: reduce) { .at-convite { animation: none; } }
 
-/* ---- dados e moeda (RPG), Rodada 39: palco 3D, bandeja, modificador, vantagem ---- */
-.aj-d3 { display: block; width: 100%; height: 150px; border-radius: 14px; background: radial-gradient(ellipse at 50% 85%, color-mix(in srgb, var(--brand-color) 22%, var(--bg-tertiary)), var(--bg-tertiary) 70%); margin-bottom: 8px; }
-.aj-resultado code, .aj-h code { font-family: ui-monospace, Consolas, monospace; font-size: .95em; background: rgba(255, 255, 255, .08); padding: 0 5px; border-radius: 5px; }
-.aj-resultado .aj-det { font-size: 12.5px; color: var(--text-muted); }
-.aj-resultado .aj-det s { opacity: .55; }
-.aj-resultado .aj-det b { font-size: inherit; color: var(--text-header); display: inline; }
-.aj-h s { opacity: .55; }
-.aj-bandeja-t { margin: 10px 0 5px; font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); }
-.aj-dados7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-.aj-dados7 button { border: 0; border-radius: 10px; padding: 9px 0; background: var(--brand-color); color: #fff; font: inherit; font-weight: 800; font-size: 11.5px; cursor: pointer; }
-.aj-dados7 button:hover { filter: brightness(1.12); }
-.aj-dados7 button:active { transform: scale(.94); }
-.aj-bandeja { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; min-height: 28px; align-items: center; }
+
+/* (os dados e a moeda saíram daqui na Rodada 40: são um painel pessoal, static/css/dados.css) */
 .aj-dica { font-size: 12px; color: var(--text-muted); }
-.aj-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--brand-color) 28%, transparent); color: var(--text-header); font-weight: 800; font-size: 12.5px; }
-.aj-chip button { border: 0; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 255, 255, .12); color: inherit; cursor: pointer; font-size: 10px; }
-.aj-linha { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
-.aj-passo { display: inline-flex; align-items: center; background: var(--bg-tertiary); border-radius: 10px; overflow: hidden; }
-.aj-passo button { border: 0; background: transparent; color: var(--text-header); width: 30px; height: 32px; cursor: pointer; font-size: 16px; font-weight: 800; }
-.aj-passo button:hover { background: rgba(255, 255, 255, .1); }
-.aj-passo span { min-width: 34px; text-align: center; font-weight: 800; color: var(--text-header); font-size: 13px; }
-.aj-seg { display: inline-flex; background: var(--bg-tertiary); border-radius: 10px; padding: 2px; }
-.aj-seg button { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
-.aj-seg button.on { background: var(--brand-color); color: #fff; }
-.aj-seg button:disabled { opacity: .35; cursor: default; }
-.aj-expr { flex: 1; min-width: 150px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .1); background: var(--bg-tertiary); color: var(--text-normal); font: inherit; font-size: 13px; }
 .aj-rolar { border: 0; border-radius: 10px; background: var(--green-color); color: #fff; font: inherit; font-weight: 800; padding: 8px 14px; cursor: pointer; }
 .aj-rolar:disabled { opacity: .4; cursor: default; }
-.aj-rapidos { display: flex; flex-wrap: wrap; gap: 5px; margin: 4px 0 8px; }
-.aj-rapidos button { border: 0; border-radius: 999px; padding: 5px 11px; background: rgba(255, 255, 255, .08); color: var(--text-normal); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.aj-rapidos button:hover { background: rgba(255, 255, 255, .16); }
-.aj-outros { margin-bottom: 8px; }
-.aj-b2 { border: 0; border-radius: 10px; background: var(--brand-color); color: #fff; font: inherit; font-weight: 800; font-size: 12.5px; padding: 8px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
-.aj-b2.verde { background: var(--green-color); }
-@media (max-width: 720px) { .aj-d3 { height: 120px; } }
 
 /* ---- mesa de RPG e sites (iframe de uma lista fechada) ---- */
 .at-painel.at-grande { position: fixed !important; left: 5vw !important; top: 5vh !important; width: 90vw !important; height: 88vh !important; max-width: none !important; max-height: none !important; z-index: 1535; }

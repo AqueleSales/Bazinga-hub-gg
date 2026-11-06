@@ -1,0 +1,110 @@
+/* Dados e sorteio PESSOAIS (Rodada 40). JS: static/js/dados.js. Só transform/opacity se mexem; nada de backdrop-filter (ver "Rolagem pesada" no CLAUDE.md).
+   As cores dos dados (--c) são as mesmas do palco 3D (static/js/dados3d.js, COR). */
+
+.dd { position: fixed; z-index: 1525; width: 340px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; background: var(--bg-quaternary); border: 1px solid rgba(255, 255, 255, .1); border-radius: 18px; box-shadow: 0 20px 54px rgba(0, 0, 0, .6); color: var(--text-normal); animation: ddEntra .16s both; }
+@keyframes ddEntra { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+.dd-topo { display: flex; align-items: center; gap: 4px; color: var(--text-header); cursor: grab; user-select: none; }
+.dd-topo:active { cursor: grabbing; }
+.dd-topo > b { font-size: 15px; margin: 0 6px 0 8px; }
+.dd-logo { color: var(--brand-color); font-size: 17px; }
+.dd-esp { flex: 1; }
+.dd-ic { border: 0; background: transparent; color: var(--text-muted); width: 30px; height: 30px; border-radius: 9px; cursor: pointer; font-size: 14px; display: grid; place-items: center; padding: 0; box-shadow: none; outline: none; }
+.dd-ic:hover { background: rgba(255, 255, 255, .09); color: var(--text-header); }
+.dd-ic.on { background: color-mix(in srgb, var(--brand-color) 28%, transparent); color: var(--text-header); }
+.dd-ic:focus-visible, .dd-d:focus-visible, .dd-menos:focus-visible, .dd-rolar:focus-visible, .dd-limpar:focus-visible, .dd-mais button:focus-visible, .dd-modbar button:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 2px; }
+
+/* o palco (o dado 3D) e o total no canto, como o do Google */
+.dd-palco { position: relative; height: 176px; border-radius: 14px; background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--bg-tertiary) 70%, #fff 6%), var(--bg-tertiary)); overflow: hidden; }
+.dd-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.dd-canvas[hidden], .dd-sorteado[hidden] { display: none; }
+.dd-total { position: absolute; right: 12px; bottom: 8px; display: flex; align-items: baseline; gap: 8px; pointer-events: none; text-shadow: 0 1px 3px rgba(0, 0, 0, .45); }
+.dd-total small { font-size: 13px; font-weight: 700; color: var(--text-muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-total b { font-size: 30px; line-height: 1; font-weight: 800; color: var(--text-header); font-variant-numeric: tabular-nums; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-sorteado { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; text-align: center; padding: 0 16px 28px; }
+.dd-sorteado i { font-size: 30px; color: var(--brand-color); }
+.dd-sorteado b { font-size: 26px; color: var(--text-header); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* a fileira de dados (cada um com a sua forma e cor) */
+.dd-fileira { display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 0 2px; }
+.dd-fileira.dd-tremer { animation: ddTremer .4s; }
+@keyframes ddTremer { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+.dd-dw { position: relative; display: grid; place-items: center; }
+.dd-d { width: 42px; height: 42px; display: grid; place-items: center; border: 0; background: transparent; padding: 0; border-radius: 50%; cursor: pointer; color: #fff; box-shadow: none; outline: none; transition: transform .12s; }
+.dd-d:hover { transform: scale(1.1); }
+.dd-d:active { transform: scale(.94); }
+.dd-d svg { width: 34px; height: 34px; display: block; overflow: visible; }
+.dd-d svg polygon, .dd-d svg rect { fill: var(--c); stroke: color-mix(in srgb, var(--c) 60%, #000); stroke-width: .8; }
+.dd-d svg text { fill: #fff; font: 800 8.6px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .25); stroke-width: .6px; }
+.dd-dw.on .dd-d { background: color-mix(in srgb, var(--c) 24%, transparent); }
+.dd-d4 { --c: #2ea054; } .dd-d6 { --c: #22a8be; } .dd-d8 { --c: #8c4cde; } .dd-d10 { --c: #e23e96; } .dd-d12 { --c: #de3c34; } .dd-d20 { --c: #f27c18; }
+.dd-mod { --c: #5d6068; background: #4a4d55; font-size: 19px; font-weight: 800; width: 34px; height: 34px; }
+.dd-mod:hover { background: #5a5d66; }
+.dd-mod.on { background: var(--brand-color); }
+.dd-barra { width: 1px; height: 28px; background: rgba(255, 255, 255, .14); margin: 0 2px; }
+.dd-qtd { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); min-width: 22px; padding: 0 5px; border-radius: 999px; background: var(--bg-primary); color: var(--text-header); font-size: 10.5px; font-weight: 800; line-height: 17px; text-align: center; border: 1px solid rgba(255, 255, 255, .15); pointer-events: none; }
+.dd-qtd[hidden], .dd-menos[hidden] { display: none; }
+.dd-modq { background: var(--brand-color); border-color: transparent; color: #fff; }
+.dd-menos { position: absolute; top: -5px; right: -3px; width: 17px; height: 17px; padding: 0; border: 0; border-radius: 50%; background: #3a3d44; color: #fff; font-size: 12px; line-height: 17px; cursor: pointer; opacity: 0; transition: opacity .12s; box-shadow: none; }
+.dd-dw:hover .dd-menos, .dd-menos:focus-visible { opacity: 1; }
+@media (hover: none) { .dd-menos { opacity: 1; } }
+.dd-menos:hover { background: var(--red-color); }
+
+.dd-modbar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: -2px; }
+.dd-modbar button { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--bg-tertiary); color: var(--text-header); font-size: 17px; font-weight: 800; cursor: pointer; padding: 0; line-height: 1; box-shadow: none; outline: none; }
+.dd-modbar button:hover { background: #4a4d55; }
+.dd-modbar output { min-width: 44px; text-align: center; font-size: 18px; font-weight: 800; color: var(--text-header); font-variant-numeric: tabular-nums; }
+.dd-modbar small { color: var(--text-muted); font-size: 11.5px; }
+.dd-modbar[hidden] { display: none; }
+
+/* Rolar e Limpar */
+.dd-acoes { display: flex; justify-content: center; gap: 10px; margin-top: 2px; }
+.dd-rolar, .dd-limpar { border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 800; padding: 9px 26px; cursor: pointer; box-shadow: none; outline: none; transition: transform .1s, background-color .15s; }
+.dd-rolar { background: var(--brand-color); color: #fff; min-width: 104px; }
+.dd-rolar:hover:not(:disabled) { background: var(--brand-hover, var(--brand-color)); }
+.dd-rolar:disabled { opacity: .6; cursor: default; }
+.dd-limpar { background: var(--bg-tertiary); color: var(--text-header); }
+.dd-limpar:hover { background: #4a4d55; }
+.dd-rolar:active:not(:disabled), .dd-limpar:active { transform: scale(.96); }
+
+/* moeda e sorteio: discretos */
+.dd-mais { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; border-top: 1px solid rgba(255, 255, 255, .07); padding-top: 8px; }
+.dd-mais button { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 8px; cursor: pointer; box-shadow: none; outline: none; }
+.dd-mais button:hover { background: rgba(255, 255, 255, .08); color: var(--text-header); }
+.dd-mais i { margin-right: 4px; }
+
+.dd-hist { display: flex; flex-direction: column; gap: 3px; }
+.dd-hist:empty { display: none; }
+.dd-h { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.dd-h > i:first-child { width: 14px; text-align: center; opacity: .7; }
+.dd-h span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-h:first-child { color: var(--text-normal); }
+.dd-h-v { font-size: 11px; color: var(--brand-color); }
+.dd-vis { font-size: 12px; color: var(--text-muted); display: flex; gap: 6px; align-items: center; }
+.dd-vis i { width: 14px; text-align: center; }
+
+/* a engrenagem: onde mostrar */
+.dd-config { background: var(--bg-tertiary); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+.dd-config[hidden] { display: none; }
+.dd-config b { color: var(--text-header); font-size: 13px; }
+.dd-config p { color: var(--text-muted); line-height: 1.4; margin: -4px 0 0; }
+.dd-cfg-l { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; color: var(--text-normal); }
+.dd-cfg-l.col { flex-direction: column; gap: 6px; cursor: default; }
+.dd-cfg-l small { color: var(--text-muted); font-size: 11.5px; display: block; margin-top: 1px; }
+.dd-cfg-l input[type=checkbox] { margin-top: 2px; accent-color: var(--brand-color); }
+.dd-cfg-l select { width: 100%; padding: 7px 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .1); background: var(--bg-primary); color: var(--text-normal); font: inherit; }
+
+/* a rolagem que outra pessoa da call mostrou */
+.dd-avisos { position: fixed; top: 72px; left: 50%; transform: translateX(-50%); z-index: 1545; display: flex; flex-direction: column; gap: 8px; pointer-events: none; width: max-content; max-width: calc(100vw - 24px); }
+.dd-aviso { display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 8px; background: var(--bg-quaternary); border: 1px solid rgba(255, 255, 255, .12); border-radius: 16px; box-shadow: 0 12px 34px rgba(0, 0, 0, .55); color: var(--text-normal); animation: ddEntra .2s both; transition: opacity .4s, transform .4s; }
+.dd-aviso.saindo { opacity: 0; transform: translateY(-8px); }
+.dd-aviso-cv { width: 112px; height: 62px; display: block; flex: none; border-radius: 10px; background: var(--bg-tertiary); }
+.dd-aviso-ic { width: 48px; text-align: center; font-size: 26px; color: var(--brand-color); }
+.dd-aviso-txt { display: flex; flex-direction: column; min-width: 0; }
+.dd-aviso-txt small { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.dd-aviso-txt small b { color: var(--text-header); }
+.dd-aviso-txt code { background: rgba(255, 255, 255, .08); padding: 0 5px; border-radius: 5px; font-size: 11.5px; }
+.dd-aviso-v { font-size: 28px; line-height: 1.1; color: var(--text-header); font-variant-numeric: tabular-nums; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 720px) { .dd { left: 8px !important; right: 8px; top: auto !important; bottom: calc(var(--nav-h, 64px) + 8px) !important; width: auto; max-height: 82vh; overflow-y: auto; } .dd-avisos { top: 60px; } }
+@media (prefers-reduced-motion: reduce) { .dd, .dd-aviso { animation: none; } .dd-fileira.dd-tremer { animation: none; } .dd-d, .dd-aviso { transition: none; } }
+:root[data-reduz-mov="1"] .dd, :root[data-reduz-mov="1"] .dd-aviso { animation: none; transition: none; }

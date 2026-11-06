@@ -1,4 +1,4 @@
-/* Jogos leves da call, além do xadrez: jogo da velha, pedra-papel-tesoura, forca e dados/sorteio (objeto global AtividadesJogos).
+/* Jogos leves da call, além do xadrez: jogo da velha, pedra-papel-tesoura, forca e a mesa de sites (objeto global AtividadesJogos). Os dados saíram daqui: são um painel pessoal (static/js/dados.js).
    O servidor (app/jogos.py) decide tudo; aqui só se desenha e se pede. Quem desenha o painel e liga os eventos é static/js/atividades.js,
    que chama `corpo()` (HTML do painel) e `clique()` (botões com data-j). Cadeiras e convite usam os mesmos botões do xadrez (data-t).
    Jogo novo: classe em app/jogos.py + id em JOGOS (python) + entrada em INFO e uma função em CORPOS aqui + cartão no CATALOGO de atividades.js. */
@@ -9,11 +9,9 @@ const AtividadesJogos = (function () {
         velha: { nome: 'Jogo da velha', icone: 'fa-hashtag', lados: { x: 'X', o: 'O' } },
         ppt: { nome: 'Pedra, papel e tesoura', icone: 'fa-hand-back-fist', lados: { a: 'Jogador 1', b: 'Jogador 2' } },
         forca: { nome: 'Forca', icone: 'fa-spell-check', lados: {} },
-        dados: { nome: 'Dados e sorteio', icone: 'fa-dice', lados: {} },
         site: { nome: 'Mesa de RPG e sites', icone: 'fa-dice-d20', lados: {} },
     };
     const MAO = { pedra: ['fa-hand-back-fist', 'Pedra'], papel: ['fa-hand', 'Papel'], tesoura: ['fa-hand-scissors', 'Tesoura'] };
-    const NOME_DADO = { d4: 'D4', d6: 'D6', d8: 'D8', d10: 'D10', d12: 'D12', d20: 'D20', d100: 'D100' };
 
     let abrirConvite = false;       // lista de "quem chamar" aberta
     let minhaMao = null;            // o que EU escolhi nesta rodada de pedra-papel-tesoura (só pra mostrar; o servidor guarda o segredo)
@@ -170,83 +168,6 @@ const AtividadesJogos = (function () {
     }
 
     // ---------------------------------------------------------------------------------------------------------------
-    // Dados e sorteio (RPG): bandeja de dados, modificador, vantagem/desvantagem, expressão livre, moeda e dados 3D (static/js/dados3d.js)
-    // ---------------------------------------------------------------------------------------------------------------
-    const DADOS = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
-    const LADOS = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20, d100: 100 };
-    let bandeja = [];               // [{dado, qtd}]  o que vai ser rolado
-    let modificador = 0, modo = 'normal', moedas = 1, exprTexto = '', d3Visto;     // d3Visto = id da última rolagem já mostrada (a que já estava lá ao abrir não "rola" de novo)
-
-    const sinalMod = (m) => (m > 0 ? '+' : '') + m;
-    function exprDaBandeja() {
-        if (!bandeja.length) return '';
-        let t;
-        if (modo !== 'normal' && bandeja.length === 1) t = '2' + bandeja[0].dado + (modo === 'vantagem' ? 'kh1' : 'kl1');   // vantagem/desvantagem: 2 dados, fica com o maior/menor
-        else t = bandeja.map((g) => (g.qtd > 1 ? g.qtd : '') + g.dado).join('+');
-        return t + (modificador ? sinalMod(modificador) : '');
-    }
-    function detalheRolagem(e, h) {
-        const grupos = (e.grupos || []).map((g, gi) => {
-            const vals = g.valores.map((v, i) => g.mantidos.includes(i) ? `<b>${Number(v)}</b>` : `<s>${Number(v)}</s>`).join(' ');
-            return `${gi ? (g.sinal < 0 ? ' − ' : ' + ') : (g.sinal < 0 ? '−' : '')}[${vals}]`;
-        }).join('');
-        const mod = e.mod ? ` ${e.mod > 0 ? '+' : '−'} ${Math.abs(e.mod)}` : '';
-        return `${grupos}${mod}`;
-    }
-    function linhaHistorico(e, h) {
-        const nome = h.esc(e.quem.nome);
-        if (e.tipo === 'moeda') return `<i class="fa-solid fa-coins"></i><span><b>${nome}</b> jogou ${e.moedas && e.moedas.length > 1 ? e.moedas.length + ' moedas' : 'a moeda'}: <b>${h.esc(e.texto)}</b></span>`;
-        if (e.tipo === 'sorteio') return `<i class="fa-solid fa-hat-wizard"></i><span><b>${nome}</b> sorteou: <b>${h.esc(e.texto)}</b></span>`;
-        if (e.tipo === 'rolagem') return `<i class="fa-solid fa-dice-d20"></i><span><b>${nome}</b> rolou <code>${h.esc(e.expr)}</code>: ${detalheRolagem(e, h)} = <b>${h.esc(e.texto)}</b></span>`;
-        return `<i class="fa-solid fa-dice"></i><span><b>${nome}</b> rolou ${h.esc(NOME_DADO[e.tipo] || e.tipo)}: <b>${h.esc(e.texto)}</b></span>`;
-    }
-    function corpoDados(est, h) {
-        const ult = est.historico[0];
-        let grande;
-        if (!ult) grande = '<div class="aj-resultado vazio"><small>Nada rolou ainda</small><b>?</b></div>';
-        else if (ult.tipo === 'rolagem') grande = `<div class="aj-resultado"><small>${h.esc(ult.quem.nome)} · <code>${h.esc(ult.expr)}</code></small><b>${h.esc(ult.texto)}</b><span class="aj-det">${detalheRolagem(ult, h)}</span></div>`;
-        else grande = `<div class="aj-resultado"><small>${h.esc(ult.quem.nome)} · ${ult.tipo === 'moeda' ? 'Cara ou coroa' : ult.tipo === 'sorteio' ? 'Sorteio' : h.esc(NOME_DADO[ult.tipo] || ult.tipo)}</small><b>${h.esc(ult.texto)}</b></div>`;
-        const expr = exprDaBandeja();
-        const unico = bandeja.length === 1;
-        return `<canvas class="aj-d3" data-d3 aria-label="Dados rolando" role="img"></canvas>${grande}
-            <div class="aj-bandeja-t">Escolha os dados</div>
-            <div class="aj-dados7">${DADOS.map((d) => `<button type="button" data-j="d-add" data-d="${d}" title="Somar um ${d.toUpperCase()}"><span>${d.toUpperCase()}</span></button>`).join('')}</div>
-            <div class="aj-bandeja">${bandeja.length ? bandeja.map((g) => `<span class="aj-chip">${g.qtd}×${g.dado.toUpperCase()}<button type="button" data-j="d-tirar" data-d="${g.dado}" title="Tirar" aria-label="Tirar ${g.dado}"><i class="fa-solid fa-xmark"></i></button></span>`).join('')
-                : '<span class="aj-dica">Toque nos dados pra montar a rolagem (ex.: 2 × D6).</span>'}</div>
-            <div class="aj-linha">
-                <div class="aj-passo" title="Modificador"><button type="button" data-j="d-mod" data-v="-1" aria-label="Menos 1">−</button><span>${modificador ? sinalMod(modificador) : '+0'}</span><button type="button" data-j="d-mod" data-v="1" aria-label="Mais 1">+</button></div>
-                <div class="aj-seg" role="group" aria-label="Modo"><button type="button" data-j="d-modo" data-v="normal" class="${modo === 'normal' || !unico ? 'on' : ''}">Normal</button>
-                    <button type="button" data-j="d-modo" data-v="vantagem" class="${modo === 'vantagem' && unico ? 'on' : ''}" ${unico ? '' : 'disabled'} title="Rola 2 dados e fica com o maior">Vantagem</button>
-                    <button type="button" data-j="d-modo" data-v="desvantagem" class="${modo === 'desvantagem' && unico ? 'on' : ''}" ${unico ? '' : 'disabled'} title="Rola 2 dados e fica com o menor">Desvantagem</button></div>
-            </div>
-            <div class="aj-linha"><input class="aj-expr" id="aj-expr" type="text" maxlength="60" placeholder="ou escreva: 2d6+3, 4d6kh3, 1d20+1d4+2" value="${h.esc(exprTexto)}" autocomplete="off" spellcheck="false">
-                <button type="button" class="aj-rolar" data-j="d-rolar" ${expr || exprTexto.trim() ? '' : 'disabled'}><i class="fa-solid fa-dice-d20"></i> Rolar${expr && !exprTexto.trim() ? ' ' + h.esc(expr) : ''}</button></div>
-            <div class="aj-rapidos">
-                <button type="button" data-j="d-rapido" data-e="1d20">D20</button><button type="button" data-j="d-rapido" data-e="2d20kh1">Vantagem</button><button type="button" data-j="d-rapido" data-e="2d20kl1">Desvantagem</button>
-                <button type="button" data-j="d-rapido" data-e="2d6">2D6</button><button type="button" data-j="d-rapido" data-e="4d6kh3">4D6 (3 maiores)</button><button type="button" data-j="d-rapido" data-e="1d100">D100</button></div>
-            <div class="aj-linha aj-outros">
-                <div class="aj-passo" title="Quantas moedas"><button type="button" data-j="d-moedas" data-v="-1" aria-label="Menos uma moeda">−</button><span>${moedas}</span><button type="button" data-j="d-moedas" data-v="1" aria-label="Mais uma moeda">+</button></div>
-                <button type="button" class="aj-b2" data-j="moeda"><i class="fa-solid fa-coins"></i> Jogar ${moedas > 1 ? moedas + ' moedas' : 'a moeda'}</button>
-                <button type="button" class="aj-b2 verde" data-j="sortear"><i class="fa-solid fa-hat-wizard"></i> Sortear alguém</button></div>
-            <div class="aj-hist">${est.historico.length ? est.historico.map((e) => `<div class="aj-h">${linhaHistorico(e, h)}</div>`).join('') : '<div class="at-vazio">O histórico aparece aqui pra todo mundo ver.</div>'}</div>
-            ${est.historico.length ? '<div class="at-acoes"><button type="button" class="sec" data-j="dados-limpar">Limpar histórico</button></div>' : ''}`;
-    }
-    /** Depois que o painel foi desenhado: liga o campo da expressão e põe os dados 3D no palco (a rolagem NOVA anima; a que já estava lá ao abrir não). */
-    function depois(raiz, est, h) {
-        if (!est || est.tipo !== 'dados' || !raiz) return;
-        const inp = raiz.querySelector('#aj-expr');
-        if (inp) {
-            inp.addEventListener('input', () => { exprTexto = inp.value; const b = raiz.querySelector('[data-j="d-rolar"]'); if (b) b.disabled = !(exprTexto.trim() || exprDaBandeja()); });
-            inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && inp.value.trim()) { e.preventDefault(); h.acao({ acao: 'rolar', expr: inp.value.trim() }); } });
-        }
-        const canvas = raiz.querySelector('canvas[data-d3]'), ult = est.historico[0];
-        if (!canvas || typeof Dados3D === 'undefined') return;
-        const nova = d3Visto !== undefined && ult && ult.id !== d3Visto;
-        if (ult) Dados3D.mostrar(canvas, ult, { animar: !!nova });
-        d3Visto = ult ? ult.id : null;
-    }
-
-    // ---------------------------------------------------------------------------------------------------------------
     // Mesa de RPG e sites: uma página que a call abre junto (o servidor só aceita sites da lista, app/jogos.py SITES)
     // ---------------------------------------------------------------------------------------------------------------
     function corpoSite(est, h) {
@@ -269,7 +190,7 @@ const AtividadesJogos = (function () {
             <small class="aj-site-end">${h.esc((s.url || '').replace(/^https:\/\//, '').slice(0, 70))}</small></div>${aviso}`;
     }
 
-    const CORPOS = { velha: corpoVelha, ppt: corpoPpt, forca: corpoForca, dados: corpoDados, site: corpoSite };
+    const CORPOS = { velha: corpoVelha, ppt: corpoPpt, forca: corpoForca, site: corpoSite };
 
     function corpo(est, h) {
         if (!ehJogo(est.tipo)) return '';
@@ -287,23 +208,6 @@ const AtividadesJogos = (function () {
         if (a === 'ppt-proxima') { minhaMao = null; h.acao({ acao: 'proxima' }); return false; }
         if (a === 'letra') { h.acao({ acao: 'letra', letra: btn.dataset.l }); return false; }
         if (a === 'forca-nova') { h.acao({ acao: 'nova' }); return false; }
-        if (a === 'dado') { h.acao({ acao: 'rolar', dado: btn.dataset.d }); return false; }
-        if (a === 'd-add') { const g = bandeja.find((x) => x.dado === btn.dataset.d); if (g) g.qtd = Math.min(30, g.qtd + 1); else bandeja.push({ dado: btn.dataset.d, qtd: 1 }); if (bandeja.length !== 1) modo = 'normal'; exprTexto = ''; return true; }
-        if (a === 'd-tirar') { bandeja = bandeja.filter((x) => x.dado !== btn.dataset.d); if (bandeja.length !== 1) modo = 'normal'; return true; }
-        if (a === 'd-mod') { modificador = Math.max(-99, Math.min(99, modificador + Number(btn.dataset.v))); return true; }
-        if (a === 'd-modo') { modo = modo === btn.dataset.v ? 'normal' : btn.dataset.v; return true; }
-        if (a === 'd-moedas') { moedas = Math.max(1, Math.min(10, moedas + Number(btn.dataset.v))); return true; }
-        if (a === 'd-rapido') { h.acao({ acao: 'rolar', expr: btn.dataset.e + (modificador ? sinalMod(modificador) : '') }); return false; }
-        if (a === 'd-rolar') {
-            const e = exprTexto.trim() || exprDaBandeja();
-            if (!e) return false;
-            h.acao({ acao: 'rolar', expr: e });
-            if (!exprTexto.trim()) { bandeja = []; modo = 'normal'; modificador = 0; }
-            exprTexto = ''; return true;
-        }
-        if (a === 'moeda') { h.acao({ acao: 'moeda', qtd: moedas }); return false; }
-        if (a === 'sortear') { h.acao({ acao: 'sortear' }); return false; }
-        if (a === 'dados-limpar') { h.acao({ acao: 'limpar' }); return false; }
         if (a === 'site-abrir') { const u = btn.dataset.url; if (/^https:\/\//.test(u || '')) window.open(u, '_blank', 'noopener,noreferrer'); return false; }
         if (a === 'site-recarregar') { const f = document.querySelector('iframe.aj-site'); if (f) f.src = f.src; return false; }
         if (a === 'site-expandir') { const p = document.getElementById('at-painel'); if (p) p.classList.toggle('at-grande'); return false; }
@@ -312,6 +216,5 @@ const AtividadesJogos = (function () {
         return false;
     }
 
-    return { ehJogo, info: (tipo) => INFO[tipo], corpo, clique, depois, meuLado, nomeDe, _esquecer() { abrirConvite = false; minhaMao = null; d3Visto = undefined; try { Dados3D.parar(); } catch (e) {} },
-             _dados: { exprDaBandeja, detalheRolagem, estado: () => ({ bandeja, modificador, modo, moedas }) } };
+    return { ehJogo, info: (tipo) => INFO[tipo], corpo, clique, meuLado, nomeDe, _esquecer() { abrirConvite = false; minhaMao = null; } };
 })();

@@ -9,6 +9,17 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 44, 'data': '06/11/2026', 'titulo': 'Soundboard na hora, dados mais simples e só seus, barras e botões com cara nova',
+        'itens': [
+            {'icone': 'fa-volume-high', 'titulo': 'Soundboard com botão na barra da call, e sem atraso',
+             'texto': 'O soundboard agora tem o próprio botão (o alto-falante, ao lado da câmera) e abre direto pra você tocar. O som chega na hora pra todo mundo da call e dá pra tocar várias vezes seguidas: quando você abre o painel, os outros já baixam os seus sons. Ele deixou de ser uma atividade.'},
+            {'icone': 'fa-dice-d20', 'titulo': 'Dados mais simples e só seus',
+             'texto': 'Os dados foram refeitos no estilo do dado do Google: toque num dado (d4 a d20) pra somar mais um, use o ± pro modificador, Rolar e Limpar, e o total aparece no canto. As rolagens são suas e não ocupam mais a atividade da call. O olho ao lado do título escolhe se a call vê o resultado; a engrenagem escolhe onde mostrar (aviso na call e/ou uma mensagem num canal de texto).'},
+            {'icone': 'fa-sliders', 'titulo': 'Barras de volume e botões novos',
+             'texto': 'Todas as barras de volume ficaram finas, com a parte cheia na cor do app (volume de cada pessoa, soundboard, corte do som, configurações). Os botões da janela de sons perderam o contorno branco estranho, e o corte do som mostra só o pedaço que vai ficar.'},
+        ],
+    },
+    {
         'id': 43, 'data': '06/11/2026', 'titulo': 'Chat com formatação e @, avisos de não lido, figurinhas, sons, dados 3D e canal de stream',
         'itens': [
             {'icone': 'fa-at', 'titulo': 'Mensagens com formatação, links bonitos e vários @',

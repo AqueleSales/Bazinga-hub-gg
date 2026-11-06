@@ -5,7 +5,8 @@
  * Tudo que toca por aqui passa por um LIMITADOR (compressor) e por um corte de 6 s: som de OUTRA pessoa nunca estoura o ouvido nem toca pra sempre,
  * mesmo que o arquivo seja alto ou comprido. O volume final é o dos sons do app (Configurações > Voz e vídeo > Sons).
  *
- * Contexto (Sons.iniciar): { audioCtx(): AudioContext já "acordado" ou null, volume(): 0..1 }
+ * Contexto (Sons.iniciar): { audioCtx(): o AudioContext do app (pode estar suspenso: o Sons o acorda), volume(): 0..1, aoBloquear?(): o navegador segurou o som }
+ * Soundboard: `precarregar(ids)` baixa e decodifica os sons antes do toque; `tocarItem(id, vol, {expira})` toca do cache na hora (ver soundboard_aquecer em acervo_events.py).
  */
 const Sons = (() => {
     'use strict';
@@ -61,34 +62,86 @@ const Sons = (() => {
         g.connect(lim); lim.connect(ac.destination);
         return g;
     }
+    // Cada som do acervo é baixado e DECODIFICADO uma vez só; depois toca do cache na hora. O atraso que o soundboard tinha vinha daqui: o ouvinte só baixava
+    // o arquivo (e o decodificava) no instante do primeiro toque, e o contexto de áudio suspenso engolia o toque. Agora quem abre o soundboard avisa a call
+    // (`soundboard_aquecer`) e todo mundo já tem os sons prontos (`precarregar`), e o toque espera o contexto acordar em vez de se perder.
+    const MAX_BUFFERS = 80;
+    const prontos = new Map();       // id -> AudioBuffer já decodificado (toque síncrono)
+    const fila = [];                 // ids esperando pra serem pré-carregados
+    let bombeando = false;
     function buffer(ac, id) {
+        id = Number(id);
         if (!buffers.has(id)) {
-            const p = fetch(`/api/acervo/${Number(id)}/arquivo`, { credentials: 'same-origin' })
+            const p = fetch(`/api/acervo/${id}/arquivo`, { credentials: 'same-origin', priority: 'low' })
                 .then(r => { if (!r.ok) throw new Error('arquivo'); return r.arrayBuffer(); })
                 .then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no)));
-            p.catch(() => buffers.delete(id));
+            p.then(buf => { prontos.set(id, buf); }, () => { buffers.delete(id); prontos.delete(id); });
             buffers.set(id, p);
-            if (buffers.size > 40) buffers.delete(buffers.keys().next().value);
+            while (buffers.size > MAX_BUFFERS) { const velho = buffers.keys().next().value; buffers.delete(velho); prontos.delete(velho); }
         }
         return buffers.get(id);
     }
+    /** Baixa e decodifica esses sons em segundo plano, um de cada vez (decodeAudioData funciona mesmo com o contexto suspenso). */
+    function precarregar(ids) {
+        const ac = C.audioCtx(); if (!ac || !Array.isArray(ids)) return;
+        ids.slice(0, 40).forEach(i => { const id = Number(i); if (id > 0 && !buffers.has(id) && !fila.includes(id)) fila.push(id); });
+        if (bombeando) return;
+        bombeando = true;
+        (async () => {
+            while (fila.length) {
+                const id = fila.shift();
+                try { await buffer(C.audioCtx(), id); } catch (e) { /* arquivo sumiu: o toque trata */ }
+                await new Promise(r => setTimeout(r, 40));
+            }
+            bombeando = false;
+        })();
+    }
+    /** Acorda o contexto (política de autoplay) e espera um instante: antes o toque que chegava com o contexto ainda "suspended" era descartado em silêncio. */
+    function acordar(ac) {
+        if (ac.state === 'running') return Promise.resolve(true);
+        let p; try { p = ac.resume(); } catch (e) { p = null; }
+        return Promise.race([Promise.resolve(p).catch(() => {}), new Promise(r => setTimeout(r, 450))]).then(() => ac.state === 'running');
+    }
+    let esperandoGesto = false;
+    function bloqueado(ac) {
+        if (C.aoBloquear) C.aoBloquear();
+        if (esperandoGesto) return;
+        esperandoGesto = true;
+        const volta = () => { esperandoGesto = false; ['pointerdown', 'keydown', 'touchend'].forEach(e => document.removeEventListener(e, volta, true)); try { ac.resume(); } catch (e) {} };
+        ['pointerdown', 'keydown', 'touchend'].forEach(e => document.addEventListener(e, volta, true));
+    }
+    function tocarBuffer(ac, buf, vol) {
+        const src = ac.createBufferSource(); src.buffer = buf;
+        src.connect(cadeia(ac, vol != null ? vol : C.volume()));
+        src.start(); src.stop(ac.currentTime + Math.min(MAX_S, buf.duration + .05));      // nunca passa de 6 s, seja qual for o arquivo
+    }
     /** Toca um valor ('preset:x' | 'custom:id'). Devolve true se começou (ou vai começar). `volume` opcional (0..1); sem ele vale o dos sons do app. */
     function tocar(valor, volume) {
-        const ac = C.audioCtx(); if (!ac || ac.state !== 'running' || typeof valor !== 'string') return false;
+        const ac = C.audioCtx(); if (!ac || typeof valor !== 'string') return false;
         const vol = volume != null ? volume : C.volume();
         if (vol <= 0) return false;
         let m = /^preset:([a-z]+)$/.exec(valor);
-        if (m && SINT[m[1]]) { const saida = cadeia(ac, vol * .9); SINT[m[1]](ac, saida, ac.currentTime + .005); return true; }
+        if (m && SINT[m[1]]) {
+            const f = SINT[m[1]];
+            if (ac.state === 'running') { f(ac, cadeia(ac, vol * .9), ac.currentTime + .005); return true; }
+            acordar(ac).then(ok => { if (ok) f(ac, cadeia(ac, vol * .9), ac.currentTime + .005); else bloqueado(ac); });
+            return true;
+        }
         m = /^custom:(\d{1,9})$/.exec(valor);
         if (m) return tocarItem(Number(m[1]), vol);
         return false;
     }
-    function tocarItem(id, vol) {
-        const ac = C.audioCtx(); if (!ac || ac.state !== 'running') return false;
-        buffer(ac, id).then(buf => {
-            const src = ac.createBufferSource(); src.buffer = buf;
-            src.connect(cadeia(ac, vol != null ? vol : C.volume()));
-            src.start(); src.stop(ac.currentTime + Math.min(MAX_S, buf.duration + .05));      // nunca passa de 6 s, seja qual for o arquivo
+    /** Toca um som do acervo. `opc.expira` (ms): se o som só ficar pronto depois disso, não toca (um aplauso 10 s atrasado só atrapalha). */
+    function tocarItem(id, vol, opc) {
+        const ac = C.audioCtx(); if (!ac) return false;
+        id = Number(id);
+        const v = vol != null ? vol : C.volume();
+        if (v <= 0) return false;
+        if (ac.state === 'running' && prontos.has(id)) { tocarBuffer(ac, prontos.get(id), v); return true; }          // o caminho rápido: já está baixado e decodificado
+        const t0 = performance.now(), expira = opc && opc.expira;
+        acordar(ac).then(ok => {
+            if (!ok) { bloqueado(ac); return null; }
+            return buffer(ac, id).then(buf => { if (!expira || performance.now() - t0 <= expira) tocarBuffer(ac, buf, v); });
         }).catch(() => {});
         return true;
     }
@@ -96,5 +149,5 @@ const Sons = (() => {
     function prever(valor) { return tocar(valor); }
 
     function iniciar(c) { C = Object.assign(C, c || {}); }
-    return { iniciar, tocar, tocarItem, prever, PRESETS, MAX_S, _SINT: SINT };
+    return { iniciar, tocar, tocarItem, precarregar, prever, PRESETS, MAX_S, _SINT: SINT, _estado: () => ({ prontos: prontos.size, baixando: buffers.size, fila: fila.length }) };
 })();

@@ -58,14 +58,23 @@ def _entrega(item):
 
 @acervo_bp.route('/api/acervo/<int:item_id>/arquivo')
 def acervo_arquivo(item_id):
-    usuario = _pessoa()
-    if not usuario:
+    if not session.get('user_id'):
         abort(401)
+    # O que está APROVADO é de qualquer pessoa logada e fica em cache na memória (acervo.arquivo_rapido): quando alguém toca um som na call, todo mundo
+    # baixa o mesmo arquivo ao mesmo tempo, e cada ida ao Neon (pessoa + arquivo) atrasava o som. Só o que NÃO está aprovado precisa saber quem pede.
+    rapido = acervo.arquivo_rapido(item_id)
+    if rapido:
+        return _entrega(rapido)
     item = com_retry(lambda: AcervoItem.query.options(undefer(AcervoItem.dados)).get(item_id))
     if not item or not item.dados:
         abort(404)
     if item.status != 'aprovado':
+        usuario = _pessoa()
+        if not usuario:
+            abort(401)
         from .bazar import ids_dos_admins
         if item.status == 'recusado' or (item.person_id != usuario.id and usuario.id not in ids_dos_admins()):
             abort(404)
+    else:
+        acervo.guardar_arquivo(item)
     return _entrega(item)

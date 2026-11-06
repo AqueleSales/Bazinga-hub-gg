@@ -16,6 +16,8 @@ import hashlib
 import io
 import re
 import struct
+import time
+from collections import OrderedDict
 
 from . import cargos, guardiao
 from .models import db, AcervoItem, GuardiaoCaso, Person, Server
@@ -256,6 +258,7 @@ def apagar(usuario, item_id):
         Person.query.filter(Person.som_entrada == f'custom:{item.id}').update({'som_entrada': None}, synchronize_session=False)
         db.session.delete(item)
     comitar_com_retry(preparar)
+    invalidar_item(item.id)
     return item.id
 
 
@@ -268,6 +271,7 @@ def renomear(usuario, item_id, nome, emoji):
         item.nome = limpar_nome(nome, item.nome)
         item.emoji = cargos.emoji_valido(emoji)
     comitar_com_retry(preparar)
+    invalidar_item(item.id)
     return item
 
 
@@ -285,6 +289,135 @@ def item_usavel(usuario, item_id, tipo):
     if item.escopo == 'pessoa':
         return item if item.person_id == usuario.id else None
     return item if item.server_id and eh_membro(usuario, item.server_id) else None
+
+
+# ---------------------------------------------------------------------------
+# cache do SOUNDBOARD: tocar um som NÃO pode custar ida ao banco (em produção cada consulta é uma viagem até o Neon, e o toque tem que chegar na hora)
+# ---------------------------------------------------------------------------
+# `_META`: o que o toque precisa saber de um som APROVADO (dono, servidor, nome, duração). `_BYTES`: o arquivo de um item aprovado, pra o download
+# (/api/acervo/<id>/arquivo) dos ouvintes não ir ao banco cada vez. Só entra o que está APROVADO; qualquer mudança (apagar, renomear, decisão do
+# Guardião) chama `invalidar_item`, e o prazo de 10 min é só a rede de segurança. Processo único (`-w 1`, ver Deploy): sem Redis.
+TTL_CACHE_S = 600
+MAX_META = 2000
+MAX_ITENS_BYTES = 60
+MAX_BYTES_TOTAL = 16 * 1024 * 1024
+_META = {}                 # id -> (instante, dict)
+_BYTES = OrderedDict()     # id -> (instante, ArquivoEmCache)
+_bytes_total = [0]
+
+
+class ArquivoEmCache:
+    """O que a rota do arquivo precisa (sem objeto do banco: o cache vive mais que a sessão)."""
+    __slots__ = ('dados', 'mime', 'sha', 'status')
+
+    def __init__(self, item):
+        self.dados, self.mime, self.sha, self.status = bytes(item.dados), item.mime, item.sha, item.status
+
+
+def invalidar_item(item_id=None):
+    """Esquece o item (ou tudo, sem argumento). Chamado em toda mudança que pode tirar ou alterar um som aprovado."""
+    if item_id is None:
+        _META.clear(); _BYTES.clear(); _bytes_total[0] = 0
+        return
+    try:
+        iid = int(item_id)
+    except (TypeError, ValueError):
+        return
+    _META.pop(iid, None)
+    velho = _BYTES.pop(iid, None)
+    if velho:
+        _bytes_total[0] -= len(velho[1].dados)
+
+
+def _meta_de(item):
+    return {'id': item.id, 'tipo': item.tipo, 'escopo': item.escopo, 'person_id': item.person_id, 'server_id': item.server_id,
+            'nome': item.nome, 'emoji': item.emoji, 'dur_ms': item.dur_ms}
+
+
+def _guardar_meta(info, agora):
+    if len(_META) >= MAX_META:
+        for k in list(_META)[:MAX_META // 2]:
+            _META.pop(k, None)
+    _META[info['id']] = (agora, info)
+
+
+def som_info(item_id):
+    """Os dados de um som APROVADO (do cache; no 1º uso, uma consulta), ou None (não existe, não é som, não está aprovado)."""
+    try:
+        iid = int(item_id)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    agora = time.monotonic()
+    c = _META.get(iid)
+    if c and agora - c[0] < TTL_CACHE_S:
+        return c[1]
+    item = com_retry(lambda: AcervoItem.query.get(iid))
+    if not item or item.tipo != 'som' or item.status != 'aprovado':
+        _META.pop(iid, None)
+        return None
+    info = _meta_de(item)
+    _guardar_meta(info, agora)
+    return info
+
+
+def _usavel_na_call(info, pessoa_id, server_id_da_call):
+    """Som pessoal = só do dono. Som de servidor = só na call DESSE servidor (quem está na call do servidor é membro dele: a entrada já conferiu)."""
+    if not info:
+        return False
+    if info['escopo'] == 'pessoa':
+        return info['person_id'] == pessoa_id
+    return bool(info['server_id']) and info['server_id'] == server_id_da_call
+
+
+def som_para_call(pessoa_id, item_id, server_id_da_call):
+    """O som que essa pessoa pode tocar na call, ou None. Zero consulta quando o som já está no cache."""
+    info = som_info(item_id)
+    return info if _usavel_na_call(info, pessoa_id, server_id_da_call) else None
+
+
+def sons_para_call(pessoa_id, ids, server_id_da_call, limite=36):
+    """Dos `ids` pedidos, os que a pessoa pode tocar na call, na mesma ordem (sem repetir, no máximo `limite`). Os que faltam no cache vêm numa consulta só."""
+    pedidos, vistos = [], set()
+    for i in (ids or [])[:limite * 2]:
+        try:
+            n = int(i)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if n > 0 and n not in vistos:
+            vistos.add(n); pedidos.append(n)
+        if len(pedidos) >= limite:
+            break
+    agora = time.monotonic()
+    faltam = [n for n in pedidos if not (_META.get(n) and agora - _META[n][0] < TTL_CACHE_S)]
+    if faltam:
+        achados = com_retry(lambda: AcervoItem.query.filter(AcervoItem.id.in_(faltam), AcervoItem.tipo == 'som', AcervoItem.status == 'aprovado').all())
+        for item in achados:
+            _guardar_meta(_meta_de(item), agora)
+    return [n for n in pedidos if _META.get(n) and _usavel_na_call(_META[n][1], pessoa_id, server_id_da_call)]
+
+
+def arquivo_rapido(item_id):
+    """O arquivo de um item APROVADO que já está no cache de bytes, ou None (a rota vai ao banco e chama `guardar_arquivo`)."""
+    c = _BYTES.get(item_id)
+    if not c:
+        return None
+    if time.monotonic() - c[0] > TTL_CACHE_S:
+        invalidar_item(item_id)
+        return None
+    _BYTES.move_to_end(item_id)
+    return c[1]
+
+
+def guardar_arquivo(item):
+    """Põe no cache o arquivo de um item aprovado (e só dele). Tira os mais antigos quando passa do teto de itens ou de bytes."""
+    if item.status != 'aprovado' or not item.dados or len(item.dados) > MAX_BYTES_TOTAL // 4:
+        return
+    invalidar_item(item.id)
+    _BYTES[item.id] = (time.monotonic(), ArquivoEmCache(item))
+    _bytes_total[0] += len(item.dados)
+    while _BYTES and (len(_BYTES) > MAX_ITENS_BYTES or _bytes_total[0] > MAX_BYTES_TOTAL):
+        _, (_, velho) = _BYTES.popitem(last=False)
+        _bytes_total[0] -= len(velho.dados)
 
 
 def som_entrada_valido(pessoa):
@@ -339,3 +472,4 @@ def aplicar_decisao(item_id, acao):
                 item.tamanho = 0
             Person.query.filter(Person.som_entrada == f'custom:{item.id}').update({'som_entrada': None}, synchronize_session=False)
     comitar_com_retry(preparar)
+    invalidar_item(item.id)             # recusado/apagado tem que parar de tocar NA HORA (o cache nunca segura decisão velha)
