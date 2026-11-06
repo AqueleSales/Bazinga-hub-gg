@@ -10,7 +10,7 @@ Erro de regra volta como `geonote_erro {id, msg}`; erro inesperado como `erro_ba
 import time
 
 from flask import request
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, notas_mapa
 from .notas_mapa import ErroNota

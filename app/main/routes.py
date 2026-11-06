@@ -18,6 +18,7 @@ from ..utils import (eh_membro, com_retry, comitar_com_retry, canal_permitido, m
                      aparelho_pelo_user_agent, tema_do_aparelho)
 from .. import socketio, APP_NOME, MOEDA_NOME, APP_VERSAO
 from ..importar import baixar_imagem_externa, ErroImportar
+from ..seguranca import erro_publico
 from ..novidades import novidade_atual, novidades_para_cliente
 from ..events import sala_servidor, sala_pessoal, servidor_para_json, servidores_para_json, _estado_inventario
 from ..passe import titulo_publico
@@ -51,6 +52,32 @@ ASSINATURAS_IMAGEM = (
 # (ver comprimirImagem() no chat.html), então 8 MB é folga de sobra.
 LIMITE_IMAGEM = 8 * 1024 * 1024
 LIMITE_VIDEO = 25 * 1024 * 1024
+
+
+FORMATOS_IMAGEM_REAIS = ('PNG', 'JPEG', 'GIF', 'WEBP')
+
+
+def _imagem_de_verdade(stream):
+    """O Pillow abre o cabeçalho (formato REAL, não o que o nome ou os primeiros bytes dizem), recusa dimensão absurda (o teto de pixels de
+    `Image.MAX_IMAGE_PIXELS` levanta DecompressionBombError aqui, sem decodificar nada) e `verify()` confere a estrutura. Qualquer erro = não é imagem."""
+    from PIL import Image
+    try:
+        stream.seek(0)
+        with Image.open(stream) as im:
+            if im.format not in FORMATOS_IMAGEM_REAIS:
+                return False
+            largura, altura = im.size
+            if largura < 1 or altura < 1 or largura * altura > 100_000_000:
+                return False
+            im.verify()
+        return True
+    except Exception:
+        return False
+    finally:
+        try:
+            stream.seek(0)
+        except Exception:
+            pass
 
 
 def _assinatura_de_video(cabecalho):
@@ -900,6 +927,9 @@ def upload_imagem():
             return jsonify({'error': 'Esse arquivo não é uma imagem de verdade'}), 400
         if tamanho > LIMITE_IMAGEM:
             return jsonify({'error': 'Imagem muito pesada (máximo 8 MB)'}), 400
+        # 16 bytes de assinatura são só o começo: "GIF89a<?php ...>" e um PNG que declara 100 mil x 100 mil pixels (bomba de descompressão) passavam.
+        if not _imagem_de_verdade(arquivo.stream):
+            return jsonify({'error': 'Esse arquivo não é uma imagem de verdade'}), 400
 
     # Guardião: a imagem é vista pela IA ANTES de a URL voltar. Retida = sobe pra uma pasta separada (só pra os responsáveis revisarem),
     # vira caso "em análise" e quem enviou recebe a recusa. Vídeo não passa por aqui (precisaria extrair quadros: ver Rodada 31).
@@ -925,7 +955,7 @@ def upload_imagem():
         )
     except Exception as e:
         print(f"[ERRO UPLOAD] Falha ao enviar pro Cloudinary: {e}")
-        return jsonify({'error': f'Não foi possível enviar o arquivo: {e}'}), 500
+        return jsonify({'error': erro_publico(e, 'Não foi possível enviar o arquivo')}), 500
 
     url = resultado.get('secure_url')
     if retida or (veredito and veredito.get('alerta')):
@@ -987,11 +1017,13 @@ def recortar_gif():
         if not _RE_GIPHY_URL.match(url):
             return jsonify({'error': 'Origem não permitida'}), 400
         try:
-            resp = requests.get(url, timeout=10, stream=True)
+            # allow_redirects=False: o regex acima vale pro endereço PEDIDO; seguir um redirecionamento levaria a outro host (SSRF).
+            resp = requests.get(url, timeout=10, stream=True, allow_redirects=False)
             resp.raise_for_status()
             dados = resp.raw.read(LIMITE_GIF_BYTES + 1, decode_content=True)
         except Exception as e:
-            return jsonify({'error': f'Não consegui baixar o GIF: {e}'}), 502
+            print(f"[ERRO RECORTE GIF] download: {type(e).__name__}")
+            return jsonify({'error': 'Não consegui baixar o GIF agora. Tente de novo ou envie o arquivo.'}), 502
     if not dados or len(dados) > LIMITE_GIF_BYTES:
         return jsonify({'error': 'GIF muito pesado (máximo 10 MB)'}), 400
     if not dados.startswith((b'GIF8', b'RIFF', b'\x89PNG')):

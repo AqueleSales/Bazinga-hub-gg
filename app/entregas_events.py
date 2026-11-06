@@ -3,7 +3,7 @@
 Regra 6: toda mudança chega às TRÊS pontas (comprador, vendedor e entregador, que pode ser a mesma pessoa que vende) em todas as abas delas.
 A posição ao vivo (`entrega_ao_vivo`) só vai pra elas e nunca é gravada. Erro de regra volta como `bazar_erro` ({msg, ref}), igual ao Bazar.
 """
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, bazar, entregas
 from .bazar import ErroBazar

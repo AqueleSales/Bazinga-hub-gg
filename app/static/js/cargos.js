@@ -9,6 +9,8 @@
    Permissão por canal (Rodada 29b): cada canal marcado (`sobrescrita`) chega com `perms` (o que EU posso nele) e, só pra quem gerencia cargos, `ow` (quem tem o quê). */
 const Cargos = (() => {
     'use strict';
+    // valor DENTRO de url('...') num style="": esc() vira &#39; e o HTML o decodifica antes do CSS (a aspa fecharia o url()). Aspa, parêntese, espaço e \ viram %XX.
+    const urlCss = (u) => String(u == null ? '' : u).replace(/['"()\\\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
     let C = null;
 
     // ---------------------------------------------------------------------
@@ -604,7 +606,7 @@ const Cargos = (() => {
     }
     let bannerNovo;      // undefined = não mexeu; '' = tirou
     function pintarBanner(url) {
-        const u = C.escUrl(url);
+        const u = C.escUrl(urlCss(url));
         ['cx-banner-previa', 'cx-banner-previa-r'].forEach((id) => {
             const box = document.getElementById(id);
             if (box) { box.style.backgroundImage = u ? `url('${u}')` : ''; box.classList.toggle('vazio', !u); box.textContent = u ? '' : 'Sem banner'; }
@@ -1187,7 +1189,7 @@ const Cargos = (() => {
         document.getElementById('cx-bv')?.remove();
         const el = document.createElement('div');
         el.id = 'cx-bv'; el.className = 'modal-overlay'; el.style.display = 'flex';
-        const banner = C.escUrl(srv.bannerUrl);
+        const banner = C.escUrl(urlCss(srv.bannerUrl));
         el.innerHTML = `<div class="bazinga-modal cx-bv-card" style="width:440px;">
             ${banner ? `<div class="cx-bv-banner" style="background-image:url('${banner}')"></div>` : ''}
             <div class="modal-header"><h2>Bem-vindo(a) a ${E(srv.name)}</h2></div>
@@ -1207,7 +1209,7 @@ const Cargos = (() => {
     function pintarCabecalho(srv) {
         const cab = document.querySelector('#bazinga-sidebar .channels-header');
         if (!cab) return;
-        const u = C.escUrl(srv && srv.bannerUrl);
+        const u = C.escUrl(urlCss(srv && srv.bannerUrl));
         cab.classList.toggle('com-banner', !!u);
         cab.style.setProperty('--banner-img', u ? `url('${u}')` : 'none');
     }

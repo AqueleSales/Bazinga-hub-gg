@@ -21,6 +21,7 @@ from .cosmeticos import CATALOGO, CATEGORIAS, DESCONTO_PACOTE, itens_para_conced
 from .estudio_arquivos import ErroArquivo
 from .pacotes import ErroPacote
 from .models import db, Person, Posse
+from .seguranca import erro_publico
 from .utils import com_retry, comitar_com_retry
 
 estudio_bp = Blueprint('estudio', __name__, url_prefix='/estudio')
@@ -71,7 +72,7 @@ def _tratar(fn):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ESTUDIO] {e}")
-        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+        return jsonify({'erro': erro_publico(e, 'Erro inesperado')}), 500
 
 
 @estudio_bp.route('')

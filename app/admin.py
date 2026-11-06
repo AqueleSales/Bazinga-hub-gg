@@ -20,6 +20,7 @@ from .bazar import eh_admin, ids_dos_admins, definir_admin
 from .cosmeticos import CATALOGO, ROTULO_TIPO, RARIDADES
 from .models import db, Person, Posse
 from .passe import ErroPasse
+from .seguranca import erro_publico
 from .utils import com_retry, comitar_com_retry, MISSOES, DRC_POR_MISSAO, QTD_DIARIAS, OFERTA_SEMANAIS, ESCOLHAS_SEMANAIS, TEMAS_EXCLUSIVOS
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -63,7 +64,7 @@ def _tratar(fn):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN] {e}")
-        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+        return jsonify({'erro': erro_publico(e, 'Erro inesperado')}), 500
 
 
 @admin_bp.route('')
@@ -118,7 +119,7 @@ def geral(pessoa):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN GERAL] {e}")
-        return jsonify({'erro': f'Não foi possível montar os números: {e}'}), 500
+        return jsonify({'erro': erro_publico(e, 'Não foi possível montar os números')}), 500
     dados.update({
         'temporada': {'id': snap['id'], 'nome': snap['nome'], 'fim': snap['fim'].isoformat() if snap['fim'] else None} if snap else None,
         'admins': [{'id': p.id, 'nome': p.name, 'username': p.username or ''} for p in admins],
@@ -135,7 +136,7 @@ def pessoas_lista(pessoa):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN PESSOAS] {e}")
-        return jsonify({'erro': f'Não foi possível listar as pessoas: {e}'}), 500
+        return jsonify({'erro': erro_publico(e, 'Não foi possível listar as pessoas')}), 500
     return jsonify(dados), 200, {'Cache-Control': 'no-store'}
 
 
@@ -316,7 +317,7 @@ def servidores_despublicar(pessoa, sid):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN SERVIDORES] {e}")
-        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+        return jsonify({'erro': erro_publico(e, 'Erro inesperado')}), 500
 
 
 # ------------------------------------------------------------
@@ -346,7 +347,7 @@ def guardiao_decidir(pessoa, cid):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN GUARDIAO] {e}")
-        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+        return jsonify({'erro': erro_publico(e, 'Erro inesperado')}), 500
 
 
 # ------------------------------------------------------------
@@ -381,4 +382,4 @@ def lojas_checkout(pessoa, lid):
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ADMIN LOJAS] {e}")
-        return jsonify({'erro': f'Erro inesperado: {e}'}), 500
+        return jsonify({'erro': erro_publico(e, 'Erro inesperado')}), 500

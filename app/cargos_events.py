@@ -4,7 +4,7 @@ Padrão de todo handler: pega o servidor, calcula o `contexto` da pessoa NO BANC
 e, se deu certo, manda a cada membro a SUA versão do servidor (`avisar_servidor(..., 'servidor_estrutura')`, regra 6): cargo e categoria
 mudam permissão, cor e quais canais cada um enxerga. Importado no FIM do events.py (usa daqui o usuario_logado e o avisar_servidor).
 """
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio
 from . import cargos

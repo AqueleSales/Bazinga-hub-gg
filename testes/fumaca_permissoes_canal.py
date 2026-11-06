@@ -4,6 +4,7 @@ SQLite em memória + socketio.test_client (molde: fumaca_cargos.py)."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+os.environ['LIMITE_EVENTOS'] = '0'      # este teste dispara dezenas de eventos em milissegundos (rajada que humano não faz): o teto de eventos é testado em fumaca_ataques.py
 import app.config as c
 c.Config.SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 c.Config.SQLALCHEMY_ENGINE_OPTIONS = {}

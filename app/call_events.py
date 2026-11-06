@@ -8,7 +8,7 @@ está fora do app.
 import time
 
 from flask import request
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, cargos
 from .models import db, Person, Server, Channel

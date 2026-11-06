@@ -13,6 +13,11 @@ from .models import db
 
 socketio = SocketIO()
 
+# Defesa do socket (flood de eventos, conexões em massa, erro de handler): instalada JÁ AQUI, na importação do pacote, antes de qualquer handler se
+# registrar pelo `socketio.on` (quem importa `app.events` direto, como os testes, também passa por ela). Ver app/seguranca.py.
+from . import seguranca
+seguranca.instalar(socketio)
+
 # Nome exibido do app. Trocar aqui troca no chat, login, manifesto do PWA etc.
 # (identificadores internos - colunas do banco, eventos do socket - mantêm o
 # nome antigo de propósito: renomear isso exigiria migração sem ganho nenhum.)
@@ -51,7 +56,15 @@ def create_app():
     app.config.from_object(Config)
 
     db.init_app(app)
-    socketio.init_app(app, cors_allowed_origins=_origens_do_socket())
+    # max_http_buffer_size: o padrão (1 MB por mensagem) é folga demais; nenhum evento do app carrega mais que texto curto (arquivo vai por /api/upload).
+    socketio.init_app(app, cors_allowed_origins=_origens_do_socket(), max_http_buffer_size=262144)
+    # Por FORA do Socket.IO: o handshake (abrir conexão nova) nunca passa pelo before_request do Flask.
+    app.wsgi_app = seguranca.LimiteDeHandshake(app.wsgi_app)
+
+    # Bomba de descompressão: um PNG/WebP minúsculo que "abre" em dezenas de milhares de pixels de lado come a RAM do Render (512 MB) de uma vez.
+    # O Pillow avisa acima deste teto e RECUSA (DecompressionBombError) acima do dobro: ~60 milhões de pixels. Foto de celular (12 a 50 MP) passa.
+    from PIL import Image as _Imagem
+    _Imagem.MAX_IMAGE_PIXELS = 30_000_000
 
     # --- INÍCIO DO NOVO CÓDIGO (Registrando o OAuth) ---
     from .auth.routes import auth_bp, init_oauth
@@ -77,6 +90,9 @@ def create_app():
             return super().should_set_cookie(app, session)
 
     app.session_interface = _SessaoCookie()
+
+    # CSRF (segunda camada, além do cookie SameSite=Lax): POST/PUT/DELETE de outro site é recusado. Antes do limite: é mais barato e não conta pedido forjado.
+    app.before_request(seguranca.verificar_origem)
 
     # Teto de requisições por pessoa (ou por IP, nas rotas de entrada) nas rotas que gastam serviço de fora ou são de login: app/limites.py
     from . import limites
@@ -105,9 +121,19 @@ def create_app():
         h.setdefault('X-Content-Type-Options', 'nosniff')
         h.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')   # o player do YouTube exige Referer
         h.setdefault('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self), display-capture=(self), payment=(), usb=()')
-        h.setdefault('Content-Security-Policy', "frame-ancestors 'self'; base-uri 'self'; object-src 'none'")
+        # form-action: nenhum formulário do app manda dados pra fora (o login do Google é por navegação, não por formulário).
+        # upgrade-insecure-requests só em produção (HTTPS): em http://localhost de desenvolvimento quebraria o carregamento de tudo.
+        csp = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
+        if os.getenv('RENDER'):
+            csp += "; upgrade-insecure-requests"
+        h.setdefault('Content-Security-Policy', csp)
+        h.setdefault('X-Permitted-Cross-Domain-Policies', 'none')
         if request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https':
-            h.setdefault('Strict-Transport-Security', 'max-age=31536000')
+            h.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        # Resposta de API/painel é da PESSOA: nada de cache compartilhado (proxy/CDN) guardando JSON de uma conta pra outra.
+        # (/estudio/arquivo/ define o próprio cache; o resto dos estáticos não passa por aqui.)
+        if request.path.startswith(('/api/', '/admin', '/estudio')) and 'Cache-Control' not in h:
+            h['Cache-Control'] = 'no-store'
         return resp
 
     @app.after_request

@@ -26,7 +26,7 @@ from .models import (db, br_now, Person, BazarLoja, BazarProduto, BazarPedido, B
                      BazarFavorito, BazarAnuncio, BazarDisputa, BazarBanimento,
                      Denuncia, ConfigApp, Friendship, GeoNote, GeoNoteResposta, MapServer, Message, DirectMessage)
 from . import pagamentos
-from .utils import (comitar_com_retry, url_de_imagem_ok, texto_tem_link, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, distancia_m)
+from .utils import (comitar_com_retry, url_de_imagem_ok, url_cloudinary_do_app, texto_tem_link, localizacao_ligada, MSG_LOCALIZACAO_DESLIGADA, distancia_m)
 
 
 class ErroBazar(Exception):
@@ -152,7 +152,7 @@ def _url_video(valor):
     v = str(valor or '').strip()
     if not v:
         return None
-    if len(v) > 255 or not v.startswith('https://res.cloudinary.com/') or not _RE_URL_SEGURA.match(v):
+    if len(v) > 255 or not url_cloudinary_do_app(v) or not _RE_URL_SEGURA.match(v):
         raise ErroBazar('Vídeo: use um vídeo enviado pelo próprio app.')
     return v
 

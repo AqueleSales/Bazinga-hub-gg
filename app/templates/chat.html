@@ -5074,10 +5074,16 @@
 
         // Para URLs que vão em src=""/href="": só deixa passar http(s) e
         // caminhos do próprio site, barrando javascript: e data:.
+        // `//outro.site/x` e `/\outro.site` NÃO são "caminho do próprio site": o navegador completa com o esquema da página e busca em outro host
+        // (rastreador). O `(?![\/\\])` barra os dois; mensagem guardada antes da correção também fica neutralizada na hora de desenhar.
+        // valor DENTRO de url('...') num style="": esc() vira &#39; e o HTML o decodifica antes do CSS (a aspa fecharia o url()). Aspa, parêntese, espaço e \ viram %XX.
+        // Use escUrl(urlCss(x)).
+        function urlCss(u) { return String(u == null ? '' : u).replace(/['"()\\\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')); }
+
         function escUrl(url) {
             if (!url) return '';
             const limpa = String(url).trim();
-            if (/^(https?:\/\/|\/)/i.test(limpa)) return esc(limpa);
+            if (/^(https?:\/\/|\/(?![\/\\]))/i.test(limpa)) return esc(limpa);
             return '';
         }
 
@@ -8722,7 +8728,7 @@
                 ? Number(ownerId) === Number(currentUserId)
                 : (owner === currentUserName);
 
-            const bannerMapa = escUrl((extras && extras.banner_url) || '');
+            const bannerMapa = escUrl(urlCss((extras && extras.banner_url) || ''));
             const corCapa = /^#[0-9a-fA-F]{6}$/.test((extras && extras.banner_color) || '') ? extras.banner_color : null;
             const capaEstilo = corCapa ? `background:linear-gradient(135deg, ${corCapa}, color-mix(in srgb, ${corCapa} 55%, #000));` : '';
             const nivelPino = Math.max(0, Math.min(4, Number(extras && extras.nivel) || 0));
@@ -10062,7 +10068,7 @@
         }
 
         function faixaDe(pf) {
-            const url = escUrl(pf.banner_url || '');
+            const url = escUrl(urlCss(pf.banner_url || ''));
             const camada = camadaGif(pf.banner_url, pf.banner_ajuste);
             if (url && camada) return { classe: '', estilo: 'background:#0b0b0e;', camada };
             if (url) return { classe: '', estilo: `background-image:url('${url}');` };
@@ -10095,7 +10101,7 @@
             } else if (valor.startsWith('img:')) {
                 const { url, ajuste } = partesDoTemaImg(valor);
                 if (estiloDeAjuste(ajuste)) return 'background:#0b0b0e;';      // GIF enquadrado: a imagem vai numa camada (temaCamadaHtml)
-                const u = escUrl(url);
+                const u = escUrl(urlCss(url));
                 if (u) return `background:linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.68)), url('${u}') center/cover;`;
             }
             return '';

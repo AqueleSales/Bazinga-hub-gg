@@ -8,7 +8,7 @@ Visibilidade (regra 4): as conexões de alguém só saem pra quem convive com a 
 import time
 
 from flask import current_app, request
-from flask_socketio import emit
+from .seguranca import emit
 
 from . import socketio, conexoes
 from .conexoes import ErroConexao
