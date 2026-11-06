@@ -1,4 +1,4 @@
-from flask import session, request
+from flask import session, request, current_app
 from flask_socketio import join_room, leave_room
 from .seguranca import emit
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,7 +9,7 @@ import json
 import re
 import time
 from . import socketio, APP_VERSAO
-from .models import (db, br_now, ServerBoost, Message, Person, DirectMessage, Server, Channel,
+from .models import (db, br_now, ServerBoost, ServerRole, Message, Person, DirectMessage, Server, Channel,
                      GeoNote, GeoNoteResposta, GeoNoteReacao, MapServer, Reaction, Invite, Event, Friendship,
                      Denuncia, Notificacao, Silenciado, BazarLoja, BazarProduto, server_members, channel_members)
 from .utils import (identidade_mini, resumos_de_resposta_canal, resumos_de_resposta_dm, texto_tem_link, com_retry, comitar_com_retry, canal_permitido, pode_ver_canal,
@@ -31,6 +31,9 @@ from . import guardiao
 from . import termos
 from . import ordem
 from . import preferencias
+from . import avisos
+from . import mencoes
+from . import acervo
 from .passe import titulo_publico
 from .efeitos import mapa_para_cliente as efeitos_custom_mapa
 from .bazar import contar_pendencias as bazar_pendencias, ids_dos_admins as bazar_ids_dos_admins
@@ -146,6 +149,18 @@ def _tirar_da_call(chave, peer_id, avisar=True):
         atividades_events.ao_sair_da_call(chave, meta['usuario_id'] if meta else None, avisar)
     except Exception as e:
         print(f"[ERRO ATIVIDADE AO SAIR] {e}")
+    # Canal de stream: quem transmitia saiu (ou a call esvaziou) = a vez fica livre e todo mundo é avisado.
+    try:
+        from . import stream_events
+        stream_events.ao_sair_da_call(chave, meta['usuario_id'] if meta else None)
+    except Exception as e:
+        print(f"[ERRO STREAM AO SAIR] {e}")
+    # Call híbrida (preparação do SFU): call vazia esquece o transporte e a próxima nasce P2P de novo.
+    try:
+        from . import sfu_events
+        sfu_events.ao_sair_da_call(chave)
+    except Exception as e:
+        print(f"[ERRO SFU AO SAIR] {e}")
     if avisar:
         socketio.emit('usuario_saiu_call', {'peer_id': peer_id}, to=f"voz_{chave}")
         _avisar_participantes(chave, meta['server_id'] if meta else None)
@@ -158,7 +173,7 @@ def _sair_apos_graca(chave, peer_id, token):
         _tirar_da_call(chave, peer_id)
 
 
-def _entrar_em_call(chave, peer_id, usuario, server_id=None, ouvinte=False):
+def _entrar_em_call(chave, peer_id, usuario, server_id=None, ouvinte=False, som_entrada=None):
     """Registra a entrada. Devolve True se é uma REENTRADA (mesmo peer voltando depois de uma queda do socket).
     `ouvinte` = entrou sem poder falar (sem "Falar nos canais de voz", ou no palco sem ser orador): vai marcado pra todo mundo."""
     chave_atual = (chave, peer_id)
@@ -192,7 +207,7 @@ def _entrar_em_call(chave, peer_id, usuario, server_id=None, ouvinte=False):
     lista[:] = [p for p in lista if p['peer_id'] != peer_id]
     lista.append({'peer_id': peer_id, 'usuario_id': usuario.id, 'nome': usuario.name, 'avatar': usuario.avatar,
                   'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario),
-                  'ouvinte': bool(ouvinte)})
+                  'ouvinte': bool(ouvinte), 'som_entrada': som_entrada})
     _meta_call[chave_atual] = {'sid': request.sid, 'usuario_id': usuario.id, 'server_id': server_id}
     _call_por_sid[request.sid] = chave_atual
     return reentrada
@@ -339,7 +354,8 @@ def canal_para_json(c):
         'topic': c.topic,
         'is_private': bool(c.is_private),
         'membros': [p.id for p in c.allowed_members] if c.is_private else [],
-        'categoria_id': c.category_id, 'icone': c.icon, 'limite': c.user_limit, 'pos': c.position or 0
+        'categoria_id': c.category_id, 'icone': c.icon, 'limite': c.user_limit, 'pos': c.position or 0,
+        'opcoes': cargos.opcoes_do_canal(c)
     }
 
 
@@ -386,6 +402,8 @@ def _json_de_servidor(srv, dados, usuario=None):
             'membros': sorted(permitidos.get(c.id, ())) if c.is_private else [],
             'categoria_id': c.category_id, 'icone': c.icon, 'limite': c.user_limit, 'pos': c.position or 0
         }
+        if c.opcoes:
+            item['opcoes'] = cargos.opcoes_do_canal(c)
         # Permissão por canal: só canais marcados custam algo. Quem não pode ver o canal NÃO recebe nem o nome (nem a categoria, que depende dos visíveis).
         if c.sobrescrita:
             mascara = cargos.mascara_no_canal_em_memoria(perms_u, ids_u, est, c.id)
@@ -604,6 +622,13 @@ def handle_connect():
             db.session.rollback()
             print(f"[ERRO CONNECT SOCIAL] {e}")
 
+        # Mensagens novas nos canais dos servidores (a bolinha nos ícones e na lista de canais). Em try próprio: falhar aqui não derruba o resto.
+        try:
+            emit('canais_nao_lidos', avisos.nao_lidas(usuario.id, avisos.canais_com_chat(servidores)))
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO CONNECT AVISOS] {e}")
+
         # Só avisa quem divide servidor com ela quando é o PRIMEIRO socket
         # dela (outra aba/dispositivo já conectado não deve gerar aviso de novo).
         era_offline = not esta_online(usuario.id)
@@ -708,31 +733,78 @@ def handle_leave(dados):
 _RE_MENCAO = re.compile(r'<@(\d{1,10})>')
 
 
-def _notificar_mencoes(autor, canal, msg):
-    """Avisa quem foi citado (`<@id>` no texto). Só vale pra quem é membro do
-    servidor E enxerga o canal - citar não pode vazar canal privado nem
-    "chamar" quem não tem acesso. Nunca quebra o envio da mensagem."""
+def _notificar_mencoes(autor, canal, msg, extras=None):
+    """Avisa quem foi citado (`<@id>` no texto) e quem uma menção especial chamou (`extras`: pessoa_id -> tipo, ver app/mencoes.py: @todos, @aqui,
+    @cargo, @staff, @dono, @amigos, @alguem). Só vale pra quem é membro do servidor E enxerga o canal - citar não pode vazar canal privado nem
+    "chamar" quem não tem acesso. Mais de 5 pessoas vai em lote (uma gravação só; o push sai em segundo plano). Nunca quebra o envio da mensagem."""
     try:
         ids = {int(i) for i in _RE_MENCAO.findall(msg.text or '')}
         ids.discard(autor.id)
-        if not ids or canal.server_id is None:
+        extras = {int(k): v for k, v in (extras or {}).items() if int(k) != autor.id}
+        if canal.server_id is None or (not ids and not extras):
             return
         srv = Server.query.get(canal.server_id)
-        alvos = Person.query.filter(Person.id.in_(list(ids)[:10])).all()
+        motivos = {i: 'pessoa' for i in list(ids)[:10]}        # citação direta vale mais que a especial
+        for i, tipo in extras.items():
+            motivos.setdefault(i, tipo)
+        alvos = Person.query.filter(Person.id.in_(list(motivos))).all()
         nomes = {p.id: p.name for p in alvos}
-        trecho = _RE_MENCAO.sub(lambda m: '@' + nomes.get(int(m.group(1)), 'alguém'), msg.text or '')[:140]
+        cargos_srv = {c.id: c for c in ServerRole.query.filter_by(server_id=srv.id).all()} if '<@&' in (msg.text or '') else {}
+        trecho = mencoes.trecho_legivel(msg.text, nomes, cargos_srv)
+        membros_ids = {m.id for m in srv.members}
+        privado = bool(canal.is_private or canal.sobrescrita)
+        ref = f'{canal.server_id}:{canal.id}'
+        icone = srv.icon_url or autor.avatar
+        lote = []
         for alvo in alvos:
-            if alvo in srv.members and pode_ver_canal(alvo, canal):
-                emit('mencao_recebida', {
-                    'canal_id': canal.id, 'canal_nome': canal.name, 'server_id': canal.server_id,
-                    'autor': autor.name, 'trecho': trecho, 'msg_id': msg.id
-                }, to=sala_pessoal(alvo.id))
-                criar_notificacao(alvo.id, 'mencao', f'{autor.name} te citou em #{canal.name}', trecho,
-                                  de_id=autor.id, ref=f'{canal.server_id}:{canal.id}', icone=(srv.icon_url or autor.avatar))
+            if alvo.id not in membros_ids or (privado and not pode_ver_canal(alvo, canal)):
+                continue
+            tipo = motivos[alvo.id]
+            emit('mencao_recebida', {
+                'canal_id': canal.id, 'canal_nome': canal.name, 'server_id': canal.server_id,
+                'autor': autor.name, 'trecho': trecho, 'msg_id': msg.id, 'motivo': tipo
+            }, to=sala_pessoal(alvo.id))
+            titulo = mencoes.titulo_do_aviso(autor.name, tipo, canal.name)
+            if len(alvos) > 5:
+                lote.append((alvo.id, titulo))
+            else:
+                criar_notificacao(alvo.id, 'mencao', titulo, trecho, de_id=autor.id, ref=ref, icone=icone)
+        if lote:
+            _notificar_mencoes_em_lote(lote, trecho, autor, ref, icone)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MENCOES] {e}")
 
+
+def _notificar_mencoes_em_lote(lote, trecho, autor, ref, icone):
+    """Aviso pra muita gente de uma vez (@todos, @aqui, @cargo): uma gravação só e o push em segundo plano, senão cada pessoa custaria
+    várias idas ao banco dentro do handler da mensagem."""
+    lote = [(pid, t) for pid, t in lote if preferencias.aviso_ligado(pid, 'mencao')]
+    if not lote:
+        return
+
+    def preparar():
+        linhas = [Notificacao(person_id=pid, tipo='mencao', de_id=autor.id, titulo=t[:120], texto=(trecho or '')[:300] or None,
+                              ref=ref, quantidade=1, lida=False) for pid, t in lote]
+        db.session.add_all(linhas)
+        return linhas
+
+    linhas = comitar_com_retry(preparar)
+    for n in linhas:
+        emit('notificacao_nova', notificacao_json(n), to=sala_pessoal(n.person_id))
+    app = current_app._get_current_object()
+    de_id, fotos = autor.id, icone
+
+    def tarefa():
+        with app.app_context():
+            for pid, t in lote:
+                try:
+                    push_se_ausente(pid, t, trecho, tag=f'mencao-{ref}', url='/chat', tipo_aviso='mencao',
+                                    extra={'tipo': 'mencao', 'de_id': de_id, 'ref': ref, 'icone': fotos, 'agrupar': True})
+                except Exception as e:
+                    print(f"[ERRO PUSH LOTE] {e}")
+
+    socketio.start_background_task(tarefa)
 
 
 # ==========================================
@@ -810,6 +882,17 @@ def lidar_com_mensagem(dados):
     if not anexo_url:
         anexo_tipo = anexo_nome = None
 
+    # Figurinha (acervo): só a APROVADA que é da pessoa ou de um servidor onde ela está. O servidor monta o endereço: o cliente só diz o id.
+    if dados.get('sticker_id') is not None:
+        figurinha = acervo.item_usavel(usuario, dados.get('sticker_id'), 'figurinha')
+        if not figurinha:
+            emit('erro_bazinga', {'msg': 'Essa figurinha não está disponível (em análise, apagada ou de outro servidor).'})
+            temp = temp_id_seguro(dados)
+            if temp:
+                emit('mensagem_recusada', {'temp_id': temp, 'canal_id': canal.id}, to=request.sid)
+            return
+        anexo_url, anexo_tipo, anexo_nome, texto = f'/api/acervo/{figurinha.id}/arquivo', 'sticker', figurinha.nome, ''
+
     # Mensagem vazia sem anexo não vale
     if not texto and not anexo_url:
         return
@@ -832,6 +915,21 @@ def lidar_com_mensagem(dados):
     # Guardião: a mensagem só sai se passar pela triagem/IA (o que é retido fica "em análise" pros responsáveis).
     if _guardiao_avaliar(usuario, 'canal', texto, canal=canal, temp_id=temp_id_seguro(dados)):
         return
+
+    # Menções especiais (@todos, @aqui, @cargo, @staff, @dono, @amigos, @alguem): o servidor confere permissão e intervalo e decide quem é chamado.
+    # Sem permissão (ou cedo demais) o token vira texto simples e a mensagem sai sem chamar ninguém. Texto sem token especial não custa consulta nenhuma.
+    mencoes_extras = {}
+    if canal.server_id is not None and mencoes.tem_especial(texto):
+        try:
+            res = mencoes.preparar(usuario, com_retry(lambda: Server.query.get(canal.server_id)), canal, texto,
+                                   esta_online=lambda p: status_visivel(p) != 'offline', pode_ver=pode_ver_canal)
+            texto, mencoes_extras = res.texto, res.destinos
+            for aviso in res.avisos[:3]:
+                emit('erro_bazinga', {'msg': aviso}, to=request.sid)
+        except Exception as e:
+            db.session.rollback()
+            print(f"[ERRO MENCOES ESPECIAIS] {e}")
+            texto = mencoes.RE_TOKEN.sub(lambda m: '@' + (m.group(1) if not m.group(2) else 'cargo'), texto)     # na dúvida, ninguém é chamado
 
     # Resposta: só vale citar mensagem DESTE canal (o resumo vem do banco, não do cliente).
     resposta = None
@@ -904,7 +1002,8 @@ def lidar_com_mensagem(dados):
             if not eventos_missao['mencao']:
                 del eventos_missao['mencao']
         _emitir_progresso(usuario, eventos_missao)
-    _notificar_mencoes(usuario, canal, nova_msg)
+    _notificar_mencoes(usuario, canal, nova_msg, mencoes_extras)
+    avisar_atividade(usuario, canal, nova_msg)      # acende a bolinha de "mensagem nova" pra quem não está nesse canal (avisos_events.py)
 
 
 @socketio.on('editar_mensagem')
@@ -931,6 +1030,7 @@ def editar_mensagem(dados):
         texto = (dados.get('texto') or '').strip()[:2000]
         if not texto and not msg.attachment_url:
             return
+        texto = mencoes.sem_especiais_novos(msg.text, texto)     # editar não chama ninguém: @todos/@cargo que não estavam na mensagem original viram texto
 
         def preparar():
             msg.text = texto or None
@@ -1166,7 +1266,8 @@ def lidar_entrar_call(dados):
 
         sala_call = f"voz_{chave}"
         join_room(sala_call)
-        reentrada = _entrar_em_call(chave, peer_id, usuario, server_id, ouvinte)
+        som_entrada = acervo.som_entrada_valido(usuario)          # só custa consulta quem tem um som próprio escolhido
+        reentrada = _entrar_em_call(chave, peer_id, usuario, server_id, ouvinte, som_entrada)
         emit('palco_papel', {'canal_id': chave, 'ouvinte': ouvinte, 'palco': bool(server_id is not None and canal.channel_type == 'palco')})
 
         # Quem já está na call liga pra quem chegou (só quem JÁ estava dentro disca). Na reentrada (o socket piscou) o
@@ -1174,7 +1275,7 @@ def lidar_entrar_call(dados):
         emit('novo_usuario_call', {
             'peer_id': peer_id, 'usuario': usuario.name, 'avatar': usuario.avatar,
             'moldura': usuario.moldura, 'nome_estilo': usuario.nome_estilo, 'equipados': equipados_da_pessoa(usuario),
-            'canal_id': chave, 'reentrada': reentrada
+            'canal_id': chave, 'reentrada': reentrada, 'som_entrada': som_entrada
         }, to=sala_call, include_self=False)
 
         # Prévia pra quem está com o servidor/DM aberto mas ainda não entrou, e a lista oficial pra quem chegou
@@ -1185,6 +1286,10 @@ def lidar_entrar_call(dados):
         from . import atividades_events
         if atividades_events.atividades.da_call(chave):
             atividades_events.avisar(chave)         # vai pra sala inteira: o recém-chegado recebe e a cadeira de quem voltou fica "presente"
+        from . import stream_events
+        stream_events.avisar_quem_chegou(chave)       # transmissão em andamento: o recém-chegado fica sabendo quem é o apresentador
+        from . import sfu_events
+        sfu_events.ao_entrar_na_call(chave)           # passou do limite do P2P? (só age com o SFU configurado; sem ele nada acontece)
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO ENTRAR CALL] {e}")
@@ -1528,6 +1633,8 @@ def criar_canal(dados):
             novo = Channel(name=nome, channel_type=tipo, server_id=srv.id, topic=topico, is_private=privado,
                            position=cargos.proxima_posicao(srv.id, categoria_id), category_id=categoria_id,
                            icon=icone, user_limit=limite)
+            if not separador and isinstance(dados.get('opcoes'), dict):
+                cargos.definir_opcoes(novo, dados.get('opcoes'))
             if privado:
                 novo.allowed_members = escolhidos
             db.session.add(novo)
@@ -1655,6 +1762,8 @@ def editar_canal(dados):
                 canal.icon = cargos.emoji_valido(dados.get('icone'))
             if 'limite' in dados:
                 canal.user_limit = cargos.limite_de_voz(dados.get('limite')) if canal.channel_type in cargos.TIPOS_VOZ else None
+            if isinstance(dados.get('opcoes'), dict):
+                cargos.definir_opcoes(canal, dados.get('opcoes'))     # só chaves da lista fechada e que valem pro tipo do canal
             if 'categoria_id' in dados:
                 cat = cargos.resolver_categoria(srv, dados.get('categoria_id'))
                 novo_cat = cat.id if cat else None
@@ -3956,7 +4065,7 @@ def criar_notificacao(destino_id, tipo, titulo, texto=None, de_id=None, ref=None
         emit('notificacao_nova', notificacao_json(n), to=sala_pessoal(destino_id))
         # Aviso no aparelho (só se a pessoa não está olhando o app). DM abre a conversa ao tocar.
         try:
-            extra = {'tipo': tipo, 'de_id': de_id, 'ref': ref}
+            extra = {'tipo': tipo, 'de_id': de_id, 'ref': ref, 'agrupar': tipo in ('dm', 'mencao')}   # o aparelho empilha as mensagens da mesma conversa (como o WhatsApp)
             if icone:
                 extra['icone'] = icone       # foto de quem escreveu ou do servidor: é o que o aviso do aparelho desenha
             url = f'/chat?dm={de_id}' if tipo == 'dm' and de_id else '/chat'
@@ -4001,11 +4110,48 @@ def marcar_notificacoes_lidas(dados=None):
                 q = q.filter(Notificacao.id.in_([int(i) for i in ids[:100]]))
             q.update({'lida': True}, synchronize_session=False)
 
-        comitar_com_retry(preparar)
+        # "Marcar tudo como lido" vale pra TUDO: também as DMs e os canais dos servidores (antes só mexia nas linhas da caixa e as
+        # bolinhas das conversas continuavam acesas, então parecia que o botão não fazia nada).
+        remetentes = []
+        if not ids:
+            remetentes = list(contagem_dms_nao_lidas(usuario))
+
+            def preparar_tudo():
+                preparar()
+                DirectMessage.query.filter(DirectMessage.receiver_id == usuario.id, DirectMessage.lida == False  # noqa: E712
+                                           ).update({'lida': True}, synchronize_session=False)
+            comitar_com_retry(preparar_tudo)
+            avisos.marcar_tudo_lido(usuario.id)
+            for rid in remetentes:
+                emit('dm_lidas', {'amigo_id': int(rid)}, to=sala_pessoal(usuario.id))
+            emit('canais_nao_lidos', {}, to=sala_pessoal(usuario.id))
+        else:
+            comitar_com_retry(preparar)
         com_retry(lambda: enviar_notificacoes(usuario))
     except Exception as e:
         db.session.rollback()
         print(f"[ERRO MARCAR NOTIFICACOES] {e}")
+
+
+@socketio.on('apagar_notificacao')
+def apagar_notificacao(dados=None):
+    """Apaga UM aviso da caixa de entrada (o X do item). Só mexe nos da própria pessoa."""
+    usuario = usuario_logado()
+    if not usuario or not isinstance(dados, dict):
+        return
+    try:
+        nid = int(dados.get('id'))
+    except (TypeError, ValueError):
+        return
+    try:
+        def preparar():
+            Notificacao.query.filter_by(id=nid, person_id=usuario.id).delete(synchronize_session=False)
+
+        comitar_com_retry(preparar)
+        com_retry(lambda: enviar_notificacoes(usuario))
+    except Exception as e:
+        db.session.rollback()
+        print(f"[ERRO APAGAR NOTIFICACAO] {e}")
 
 
 @socketio.on('limpar_notificacoes')
@@ -4067,6 +4213,14 @@ def on_enviar_mensagem_direta(data):
         anexo_tipo = anexo_nome = None
     elif not anexo_tipo:
         anexo_tipo = 'image'
+
+    # Figurinha (acervo): só a aprovada que é da pessoa ou de um servidor onde ela está. Vale a regra de anexo (não amigo não manda).
+    if data.get('sticker_id') is not None:
+        figurinha = acervo.item_usavel(usuario, data.get('sticker_id'), 'figurinha')
+        if not figurinha:
+            emit('erro_bazinga', {'msg': 'Essa figurinha não está disponível (em análise, apagada ou de outro servidor).'})
+            return
+        anexo_url, anexo_tipo, anexo_nome, texto = f'/api/acervo/{figurinha.id}/arquivo', 'sticker', figurinha.nome, ''
 
     if not texto and not anexo_url:
         return
@@ -4665,3 +4819,12 @@ from . import config_usuario_events  # noqa: E402,F401
 # Prestígio (impulso) de servidor e o canal de lojas (Rodada 35): handlers em outros arquivos, também no FIM (importam daqui).
 from . import prestigio_events  # noqa: E402,F401
 from . import lojas_canal_events  # noqa: E402,F401
+# Mensagem nova nos canais dos servidores (bolinha de "não lida", Rodada 39): handlers em outro arquivo, também no FIM (importa daqui).
+from . import avisos_events  # noqa: E402,F401
+# Canal de stream (uma tela por vez, chat ao lado): handlers em outro arquivo, também no FIM (importa daqui).
+from . import stream_events  # noqa: E402,F401
+# Call híbrida P2P + SFU (preparação, Rodada 39): token de entrada no SFU e aviso de troca de transporte, também no FIM (importa daqui).
+from . import sfu_events  # noqa: E402,F401
+# Figurinhas, sons de entrada e soundboard (acervo, Rodada 39): handlers em outro arquivo, também no FIM (importa daqui).
+from . import acervo_events  # noqa: E402,F401
+from .avisos_events import avisar_atividade  # noqa: E402,F401

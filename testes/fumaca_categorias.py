@@ -204,7 +204,7 @@ with app.app_context():
     ok(erro(dono) and Channel.query.filter_by(name='hack').count() == 0, 'Tipo malicioso é recusado')
     dono.emit('criar_canal', {'server_id': sid, 'nome': 'sem-tipo'}); ev(dono)
     ok(Channel.query.filter_by(name='sem-tipo').first().channel_type == 'text', 'Sem tipo = texto, como sempre foi')
-    ok(set(cargos.TIPOS_CANAL) == {'text', 'anuncios', 'regras', 'midia', 'lojas', 'voice', 'palco', 'separador'}, 'Conjunto fechado de tipos')
+    ok(set(cargos.TIPOS_CANAL) == {'text', 'anuncios', 'regras', 'midia', 'lojas', 'voice', 'palco', 'stream', 'separador'}, 'Conjunto fechado de tipos')
 
     dono.emit('criar_canal', {'server_id': sid, 'nome': 'avisos', 'tipo': 'anuncios', 'icone': '📣'}); ev(dono)
     dono.emit('criar_canal', {'server_id': sid, 'nome': 'regras', 'tipo': 'regras', 'icone': '<script>'}); ev(dono)

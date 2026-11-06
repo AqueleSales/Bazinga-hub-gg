@@ -14,6 +14,7 @@ COMO AS PERMISSÕES FUNCIONAM
   não ganham query nenhuma. Nos que usam, a estrutura é carregada em 3 queries de uma vez e fica em memória (`_CACHE`, invalidada em TODA escrita daqui). O cache
   só alimenta o que é DESENHADO na tela; quem decide se uma ação vale (`contexto`) sempre lê o banco.
 """
+import json
 import re
 import time
 import unicodedata
@@ -44,6 +45,7 @@ PERMISSOES = [
     ('falar_voz', 'Falar nos canais de voz', 'Sem isso a pessoa entra em voz só como ouvinte (microfone travado).'),
     ('enviar_anuncios', 'Publicar em anúncios e regras', 'Escrever em canais de anúncios e de regras (todo mundo pode ler).'),
     ('falar_palco', 'Falar no palco', 'Ser orador em canal de palco e chamar ouvintes ao palco.'),
+    ('mencionar_todos', 'Mencionar todos e cargos', 'Usar @todos, @aqui e @cargo, que avisam muita gente de uma vez (@staff, @dono e @amigos qualquer um usa, com intervalo).'),
 ]
 BIT = {p[0]: 1 << i for i, p in enumerate(PERMISSOES)}
 TODAS = (1 << len(PERMISSOES)) - 1
@@ -120,6 +122,7 @@ TIPOS_CANAL = {
     'lojas': {'familia': 'texto', 'nome': 'Lojas', 'desc': 'Vitrine com as lojas do Bazar das pessoas do servidor (e as parceiras). Não tem conversa: é pra procurar e pedir.'},
     'voice': {'familia': 'voz', 'nome': 'Voz', 'desc': 'Conversa por voz e vídeo, com limite de pessoas opcional.'},
     'palco': {'familia': 'voz', 'nome': 'Palco', 'desc': 'Poucos falam e o resto escuta. Quem fala é quem tem "Falar no palco" ou foi chamado ao palco.'},
+    'stream': {'familia': 'voz', 'nome': 'Stream', 'desc': 'Uma pessoa por vez transmite a tela; o resto assiste e conversa no chat ao lado, sem sair da call.'},
     'separador': {'familia': 'estrutura', 'nome': 'Separador', 'desc': 'Uma linha na lista de canais, com título ou sem. Não guarda mensagens.'},
 }
 TIPOS_TEXTO = tuple(t for t, i in TIPOS_CANAL.items() if i['familia'] == 'texto')
@@ -127,6 +130,42 @@ TIPOS_VOZ = tuple(t for t, i in TIPOS_CANAL.items() if i['familia'] == 'voz')
 TIPOS_SO_LEITURA = ('anuncios', 'regras')
 TIPOS_SEM_MENSAGEM = ('lojas',)      # canal-vitrine: ninguém escreve (nem o dono); o cliente troca a conversa pela lista de lojas
 LIMITE_VOZ_MAX = 99
+TIPOS_COM_CHAT_NA_CALL = ('stream',)      # canal de VOZ que também guarda conversa (o chat fica ao lado da call)
+
+# Opções por tipo de canal, guardadas em JSON em Channel.opcoes. Lista FECHADA: chave que não está aqui, ou que não vale pro tipo do canal, é
+# descartada, e o valor tem que ser do tipo certo (nada de texto livre indo parar numa classe/estilo do navegador).
+OPCOES_CANAL = {
+    # canal de lojas: além das lojas das pessoas do servidor, mostra as PARCEIRAS do Pantheon (padrão desligado: só as do servidor)
+    'lojas_parceiras': {'tipos': ('lojas',), 'valor': bool},
+}
+
+
+def _filtrar_opcoes(d, tipo):
+    if not isinstance(d, dict):
+        return {}
+    saida = {}
+    for chave, regra in OPCOES_CANAL.items():
+        if chave in d and tipo in regra['tipos'] and isinstance(d[chave], regra['valor']):
+            saida[chave] = d[chave]
+    return saida
+
+
+def opcoes_do_canal(canal):
+    """Opções do canal já limpas ({} se não tem nenhuma ou se o JSON estiver quebrado)."""
+    bruto = getattr(canal, 'opcoes', None)
+    if not bruto:
+        return {}
+    try:
+        return _filtrar_opcoes(json.loads(bruto), canal.channel_type)
+    except (TypeError, ValueError):
+        return {}
+
+
+def definir_opcoes(canal, novas):
+    """Junta as opções válidas de `novas` às do canal e grava (NULL quando tudo volta ao padrão)."""
+    atuais = opcoes_do_canal(canal)
+    atuais.update(_filtrar_opcoes(novas, canal.channel_type))
+    canal.opcoes = json.dumps(atuais, separators=(',', ':')) if atuais else None
 
 
 def familia_do_tipo(tipo):

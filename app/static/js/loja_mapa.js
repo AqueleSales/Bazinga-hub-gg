@@ -272,7 +272,7 @@ const LojaMapa = (function () {
         if (!dock) return;
         const itens = listaFiltrada();
         const total = pinos.size;
-        dock.querySelector('.lg-conta').textContent = String(total);
+        dock.querySelector('.lg-conta').textContent = total ? `${total} ${total === 1 ? 'loja' : 'lojas'} no seu alcance · pedido rápido` : 'Pedido rápido, sem sair do mapa';
         dock.classList.toggle('vazio', !total);
         dock.querySelector('.lg-chips-cat').innerHTML = chipsDeCategoria();
         dock.querySelectorAll('[data-lmp="ordem"]').forEach((b) => b.classList.toggle('on', b.dataset.v === filtro.ordem));
@@ -294,9 +294,10 @@ const LojaMapa = (function () {
         if (!mapaEl || !mapaEl.parentElement || dock) return;
         dock = document.createElement('aside');
         dock.className = 'lg-dock'; dock.id = 'lg-dock';
-        dock.innerHTML = `<button type="button" class="lg-aba" data-lmp="alternar" aria-label="Lojas por perto" aria-expanded="false"><i class="fa-solid fa-store"></i><span class="lg-conta">0</span><b>Lojas</b></button>
+        // Sem contador na aba: o número vermelho parecia notificação (o dono achou que era mensagem não lida). A contagem fica DENTRO da gaveta.
+        dock.innerHTML = `<button type="button" class="lg-aba" data-lmp="alternar" aria-label="Lojas por perto" aria-expanded="false"><i class="fa-solid fa-store"></i><b>Lojas</b></button>
             <div class="lg-gaveta" role="region" aria-label="Lojas por perto">
-                <div class="lg-topo"><div><b>Lojas por perto</b><small>Pedido rápido, sem sair do mapa</small></div><button type="button" class="lg-x" data-lmp="fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
+                <div class="lg-topo"><div><b>Lojas por perto</b><small class="lg-conta">Pedido rápido, sem sair do mapa</small></div><button type="button" class="lg-x" data-lmp="fechar" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button></div>
                 <label class="lg-busca"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="lg-q" placeholder="Buscar loja ou produto" maxlength="40" autocomplete="off" spellcheck="false"></label>
                 <div class="lg-chips-cat"></div>
                 <div class="lg-ordem" role="group" aria-label="Ordenar">${ORDENS.map(([v, n]) => `<button type="button" data-lmp="ordem" data-v="${v}">${n}</button>`).join('')}</div>

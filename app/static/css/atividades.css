@@ -184,3 +184,69 @@ button:focus-visible { outline-offset: 2px; }
     .aj-escolha, .aj-mao { min-width: 80px; }
 }
 @media (prefers-reduced-motion: reduce) { .at-convite { animation: none; } }
+
+/* ---- dados e moeda (RPG), Rodada 39: palco 3D, bandeja, modificador, vantagem ---- */
+.aj-d3 { display: block; width: 100%; height: 150px; border-radius: 14px; background: radial-gradient(ellipse at 50% 85%, color-mix(in srgb, var(--brand-color) 22%, var(--bg-tertiary)), var(--bg-tertiary) 70%); margin-bottom: 8px; }
+.aj-resultado code, .aj-h code { font-family: ui-monospace, Consolas, monospace; font-size: .95em; background: rgba(255, 255, 255, .08); padding: 0 5px; border-radius: 5px; }
+.aj-resultado .aj-det { font-size: 12.5px; color: var(--text-muted); }
+.aj-resultado .aj-det s { opacity: .55; }
+.aj-resultado .aj-det b { font-size: inherit; color: var(--text-header); display: inline; }
+.aj-h s { opacity: .55; }
+.aj-bandeja-t { margin: 10px 0 5px; font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); }
+.aj-dados7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.aj-dados7 button { border: 0; border-radius: 10px; padding: 9px 0; background: var(--brand-color); color: #fff; font: inherit; font-weight: 800; font-size: 11.5px; cursor: pointer; }
+.aj-dados7 button:hover { filter: brightness(1.12); }
+.aj-dados7 button:active { transform: scale(.94); }
+.aj-bandeja { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; min-height: 28px; align-items: center; }
+.aj-dica { font-size: 12px; color: var(--text-muted); }
+.aj-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--brand-color) 28%, transparent); color: var(--text-header); font-weight: 800; font-size: 12.5px; }
+.aj-chip button { border: 0; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 255, 255, .12); color: inherit; cursor: pointer; font-size: 10px; }
+.aj-linha { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+.aj-passo { display: inline-flex; align-items: center; background: var(--bg-tertiary); border-radius: 10px; overflow: hidden; }
+.aj-passo button { border: 0; background: transparent; color: var(--text-header); width: 30px; height: 32px; cursor: pointer; font-size: 16px; font-weight: 800; }
+.aj-passo button:hover { background: rgba(255, 255, 255, .1); }
+.aj-passo span { min-width: 34px; text-align: center; font-weight: 800; color: var(--text-header); font-size: 13px; }
+.aj-seg { display: inline-flex; background: var(--bg-tertiary); border-radius: 10px; padding: 2px; }
+.aj-seg button { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.aj-seg button.on { background: var(--brand-color); color: #fff; }
+.aj-seg button:disabled { opacity: .35; cursor: default; }
+.aj-expr { flex: 1; min-width: 150px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .1); background: var(--bg-tertiary); color: var(--text-normal); font: inherit; font-size: 13px; }
+.aj-rolar { border: 0; border-radius: 10px; background: var(--green-color); color: #fff; font: inherit; font-weight: 800; padding: 8px 14px; cursor: pointer; }
+.aj-rolar:disabled { opacity: .4; cursor: default; }
+.aj-rapidos { display: flex; flex-wrap: wrap; gap: 5px; margin: 4px 0 8px; }
+.aj-rapidos button { border: 0; border-radius: 999px; padding: 5px 11px; background: rgba(255, 255, 255, .08); color: var(--text-normal); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.aj-rapidos button:hover { background: rgba(255, 255, 255, .16); }
+.aj-outros { margin-bottom: 8px; }
+.aj-b2 { border: 0; border-radius: 10px; background: var(--brand-color); color: #fff; font: inherit; font-weight: 800; font-size: 12.5px; padding: 8px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.aj-b2.verde { background: var(--green-color); }
+@media (max-width: 720px) { .aj-d3 { height: 120px; } }
+
+/* ---- mesa de RPG e sites (iframe de uma lista fechada) ---- */
+.at-painel.at-grande { position: fixed !important; left: 5vw !important; top: 5vh !important; width: 90vw !important; height: 88vh !important; max-width: none !important; max-height: none !important; z-index: 1535; }
+.at-painel.at-grande .aj-site-moldura { height: calc(88vh - 190px); }
+.aj-site-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.aj-site-topo b { color: var(--text-header); display: block; font-size: 14px; }
+.aj-site-topo small { color: var(--text-muted); font-size: 11.5px; line-height: 1.3; display: block; }
+.aj-site-btns { display: flex; gap: 4px; flex: none; }
+.aj-site-btns button { border: 0; width: 32px; height: 32px; border-radius: 9px; background: var(--bg-tertiary); color: var(--text-header); cursor: pointer; }
+.aj-site-btns button:hover { background: var(--brand-color); color: #fff; }
+.aj-site-moldura { height: 360px; border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid rgba(255, 255, 255, .1); }
+.aj-site { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+.aj-site-aviso { margin-top: 8px; font-size: 11.5px; color: var(--text-muted); display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
+.aj-site-aviso i { color: var(--green-color); margin-top: 2px; }
+.aj-site-cartao { text-align: center; padding: 22px 14px; background: var(--bg-tertiary); border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.aj-site-cartao > i { font-size: 34px; color: var(--brand-color); }
+.aj-site-cartao b { color: var(--text-header); font-size: 15px; }
+.aj-site-cartao p { color: var(--text-muted); font-size: 12.5px; line-height: 1.45; max-width: 320px; }
+.aj-site-end { color: var(--text-muted); font-size: 11px; word-break: break-all; }
+.at-site-form { margin-top: 12px; padding: 12px; border-radius: 14px; background: var(--bg-tertiary); display: flex; flex-direction: column; gap: 8px; }
+.at-site-form b { color: var(--text-header); font-size: 13.5px; }
+.at-site-form small { color: var(--text-muted); font-size: 11.5px; line-height: 1.4; }
+.at-site-form input { padding: 9px 11px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .12); background: var(--bg-primary); color: var(--text-normal); font: inherit; font-size: 13px; }
+.at-site-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.at-site-presets button { border: 0; border-radius: 999px; padding: 6px 12px; background: rgba(255, 255, 255, .08); color: var(--text-normal); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.at-site-presets button:hover { background: var(--brand-color); color: #fff; }
+.at-site-go { align-self: flex-end; border: 0; border-radius: 10px; background: var(--green-color); color: #fff; font: inherit; font-weight: 800; padding: 9px 16px; cursor: pointer; }
+.aj-site-aviso > span { flex: 1; min-width: 0; }
+.aj-site-aviso b { color: var(--text-header); }
+.aj-site-dica { display: block; margin-top: 6px; color: var(--text-muted); font-size: 11px; text-transform: none; letter-spacing: 0; }

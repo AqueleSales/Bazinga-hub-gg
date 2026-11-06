@@ -104,7 +104,7 @@ ok(d.acao(1, 'Ana', None, {'acao': 'sortear'}, presentes=[])[0] is False, 'dados
 d.acao(1, 'Ana', None, {'acao': 'moeda'})
 ok(d.historico[0]['texto'] in ('Cara', 'Coroa'), 'dados: cara ou coroa')
 
-ok(set(atividades.TIPOS_ATIVIDADE) == {'xadrez', 'velha', 'ppt', 'forca', 'dados'}, 'a lista fechada de atividades tem os 5 jogos')
+ok(set(atividades.TIPOS_ATIVIDADE) == {'xadrez', 'velha', 'ppt', 'forca', 'dados', 'site'}, 'a lista fechada de atividades tem os 5 jogos e a mesa de sites')
 ok(isinstance(atividades.iniciar('chave-teste', 'velha', 1), jogos.Velha), 'iniciar("velha") cria a mesa certa')
 atividades.encerrar('chave-teste')
 

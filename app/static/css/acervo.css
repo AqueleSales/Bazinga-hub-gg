@@ -1,0 +1,107 @@
+/* Acervo (Rodada 39): figurinhas, soundboard e som de entrada. Lógica em static/js/acervo.js e sons.js. Só transform/opacity se mexem. */
+
+/* ---- figurinha na conversa: grande, sem balão ---- */
+.msg-anexo.sticker { max-width: 168px; }
+.msg-anexo.sticker img { width: 168px; height: auto; max-height: 168px; object-fit: contain; border-radius: 0; background: transparent; cursor: default; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .35)); }
+.msg-anexo.sticker.carregando { min-height: 80px; }
+
+/* ---- painel de figurinhas (ao lado do campo de mensagem) ---- */
+.ac-fig { position: fixed; z-index: 6100; width: 336px; max-width: calc(100vw - 16px); height: 340px; max-height: 60vh; display: flex; flex-direction: column; background: var(--bg-quaternary); border: 1px solid rgba(255, 255, 255, .1); border-radius: 14px; box-shadow: 0 18px 44px rgba(0, 0, 0, .55); overflow: hidden; }
+.ac-fig-topo { display: flex; align-items: center; gap: 4px; padding: 8px 8px 6px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.ac-fig-topo button, .ac-abas button, .ac-seg button { border: 0; border-radius: 999px; background: transparent; color: var(--text-muted); font: inherit; font-size: 12.5px; font-weight: 700; padding: 5px 12px; cursor: pointer; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-fig-topo button.on, .ac-abas button.on, .ac-seg button.on { background: color-mix(in srgb, var(--brand-color) 26%, transparent); color: var(--text-header); }
+.ac-fig-topo button:hover:not(.on), .ac-abas button:hover:not(.on) { background: rgba(255, 255, 255, .07); }
+.ac-fig-topo button.ic { width: 30px; height: 30px; padding: 0; border-radius: 8px; }
+.ac-esp { flex: 1; }
+.ac-fig-grade { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; padding: 8px; align-content: start; }
+.ac-fi { position: relative; aspect-ratio: 1; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .04); padding: 6px; cursor: pointer; display: grid; place-items: center; }
+.ac-fi:hover { background: rgba(255, 255, 255, .11); transform: scale(1.04); }
+.ac-fi img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.ac-fi.analise img { opacity: .55; filter: grayscale(.6); }
+.ac-sel { position: absolute; left: 4px; bottom: 4px; font-size: 9.5px; font-weight: 800; letter-spacing: .3px; padding: 1px 6px; border-radius: 6px; background: #d9822b; color: #1b1100; }
+.ac-sl .ac-sel, .ac-se .ac-sel { position: static; margin-left: auto; }
+.ac-vazio { grid-column: 1 / -1; text-align: center; padding: 26px 16px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.ac-vazio i { font-size: 30px; opacity: .35; }
+.ac-vazio b { color: var(--text-header); font-size: 14px; }
+.ac-vazio small { font-size: 12px; line-height: 1.4; }
+
+/* ---- janela (gerenciar e enviar) ---- */
+.ac-fundo { z-index: 10540; }
+.ac-cartao { width: min(620px, 94vw); max-height: 90vh; display: flex; flex-direction: column; background: var(--bg-quaternary); border: 1px solid rgba(255, 255, 255, .1); border-radius: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, .6); overflow: hidden; color: var(--text-normal); animation: modalPop .16s both; }
+.ac-cartao.estreito { width: min(460px, 94vw); }
+.ac-topo { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 6px; }
+.ac-topo h3 { font-size: 16px; color: var(--text-header); display: flex; gap: 10px; align-items: center; }
+.ac-x { border: 0; background: transparent; color: var(--text-muted); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+.ac-x:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.ac-abas { display: flex; align-items: center; gap: 4px; padding: 4px 14px 8px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.ac-abas.peq { padding: 2px 10px 6px; }
+.ac-corpo { padding: 10px 18px; overflow-y: auto; flex: 1; }
+.ac-dica { font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.45; }
+.ac-dica b { color: var(--text-normal); }
+.ac-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.ac-fc { background: var(--bg-tertiary); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; position: relative; }
+.ac-fc-img { aspect-ratio: 1; display: grid; place-items: center; position: relative; }
+.ac-fc-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.ac-fc-nome { font-size: 12px; text-align: center; color: var(--text-header); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-fc-acoes { display: flex; justify-content: center; gap: 4px; }
+.ac-fc-acoes button, .ac-sl > button:not(.ac-play) { border: 0; width: 28px; height: 28px; border-radius: 8px; background: rgba(255, 255, 255, .06); color: var(--text-muted); cursor: pointer; font-size: 12px; }
+.ac-fc-acoes button:hover, .ac-sl > button:not(.ac-play):hover { background: rgba(255, 255, 255, .15); color: var(--text-header); }
+.ac-lista { display: flex; flex-direction: column; gap: 6px; }
+.ac-sl, .ac-se { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 12px; background: var(--bg-tertiary); }
+.ac-sl small, .ac-se small { color: var(--text-muted); font-size: 11.5px; }
+.ac-sl-emoji { font-size: 18px; width: 24px; text-align: center; flex: none; }
+.ac-sl-nome { font-weight: 700; color: var(--text-header); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+.ac-play { border: 0; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--brand-color) 70%, #000); color: #fff; cursor: pointer; font-size: 11px; padding-left: 2px; flex: none; }
+.ac-play:hover:not(:disabled) { background: var(--brand-color); }
+.ac-play:disabled { opacity: .3; cursor: default; }
+.ac-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px 16px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.ac-rodape small { color: var(--text-muted); }
+.ac-solta { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px; border: 2px dashed rgba(255, 255, 255, .18); border-radius: 14px; cursor: pointer; text-align: center; color: var(--text-muted); }
+.ac-solta:hover { border-color: var(--brand-color); }
+.ac-solta i { font-size: 26px; color: var(--brand-color); }
+.ac-solta b { color: var(--text-header); }
+.ac-solta small { font-size: 11.5px; }
+.ac-previa { margin-top: 10px; display: flex; justify-content: center; }
+.ac-previa img { max-width: 160px; max-height: 160px; object-fit: contain; border-radius: 10px; background: rgba(255, 255, 255, .05); }
+.ac-corte { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.ac-corte label { font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; }
+.ac-corte input[type=range] { width: 100%; accent-color: var(--brand-color); }
+.ac-play-g { align-self: flex-start; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .08); color: var(--text-header); padding: 7px 12px; cursor: pointer; font: inherit; font-size: 12.5px; }
+.ac-campo { margin-top: 12px; }
+.ac-campo > label { display: block; font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
+.ac-campo input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .1); background: var(--bg-tertiary); color: var(--text-normal); font: inherit; }
+.ac-emoji { border: 1px solid rgba(255, 255, 255, .1); background: var(--bg-tertiary); border-radius: 10px; width: 48px; height: 40px; font-size: 20px; cursor: pointer; }
+.ac-seg { display: flex; gap: 4px; }
+.ac-erro { margin-top: 10px; color: #ff8e8e; font-size: 12.5px; }
+.ac-nota { margin-top: 12px; font-size: 11.5px; color: var(--text-muted); display: flex; gap: 8px; line-height: 1.4; }
+.ac-nota i { color: var(--green-color); margin-top: 2px; }
+
+/* ---- soundboard (painel flutuante da call) ---- */
+.ac-sb { position: fixed; right: 18px; bottom: 96px; z-index: 1530; width: 320px; max-width: calc(100vw - 24px); max-height: 60vh; display: flex; flex-direction: column; background: var(--bg-quaternary); border: 1px solid rgba(255, 255, 255, .1); border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); overflow: hidden; color: var(--text-normal); }
+.ac-sb-topo { display: flex; align-items: center; gap: 8px; padding: 10px 10px 4px 14px; color: var(--text-header); }
+.ac-sb-topo .ic { border: 0; background: transparent; color: var(--text-muted); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; }
+.ac-sb-topo .ic:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.ac-sb-topo .ic.off { color: var(--red-color); }
+.ac-pads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 6px 12px 10px; overflow-y: auto; }
+.ac-pad { border: 0; border-radius: 14px; background: var(--bg-tertiary); color: var(--text-header); padding: 12px 4px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font: inherit; transition: transform .1s, background-color .15s; }
+.ac-pad span { font-size: 26px; line-height: 1; }
+.ac-pad small { font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.ac-pad:hover { background: color-mix(in srgb, var(--brand-color) 30%, var(--bg-tertiary)); }
+.ac-pad:active { transform: scale(.94); }
+.ac-pad.espera { opacity: .5; }
+.ac-sb-vol { display: flex; align-items: center; gap: 8px; padding: 2px 14px 10px; color: var(--text-muted); font-size: 12px; }
+.ac-sb-vol input { flex: 1; accent-color: var(--brand-color); }
+.ac-feed { padding: 0 14px 10px; display: flex; flex-direction: column; gap: 3px; }
+.ac-feed:empty { display: none; }
+.ac-feed-l { font-size: 12px; color: var(--text-muted); animation: acFeed .2s both; }
+@keyframes acFeed { from { opacity: 0; transform: translateY(4px); } }
+
+/* ---- som de entrada (Configurações > Meu Perfil) ---- */
+.ac-se-lista { display: flex; flex-direction: column; gap: 5px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+.ac-se.on { outline: 2px solid var(--brand-color); background: color-mix(in srgb, var(--brand-color) 12%, var(--bg-tertiary)); }
+.ac-se.analise { opacity: .7; }
+.ac-escolher { margin-left: auto; border: 0; border-radius: 9px; background: rgba(255, 255, 255, .09); color: var(--text-header); font: inherit; font-size: 12px; font-weight: 700; padding: 5px 12px; cursor: pointer; flex: none; }
+.ac-se.on .ac-escolher { background: var(--brand-color); color: #fff; }
+.ac-se-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+@media (max-width: 720px) { .ac-sb { right: 8px; left: 8px; width: auto; bottom: calc(var(--nav-h, 64px) + 8px); } }
+@media (prefers-reduced-motion: reduce) { .ac-cartao, .ac-feed-l { animation: none; } .ac-fi:hover, .ac-pad:active { transform: none; } }

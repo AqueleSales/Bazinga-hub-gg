@@ -211,3 +211,8 @@ body.cg-arrastando, body.cg-arrastando * { cursor: grabbing !important; user-sel
 .cp-botoes { display: flex; gap: 10px; margin-top: 14px; }
 @media (max-width: 760px) { .cp-layout { grid-template-columns: 1fr; max-height: none; overflow: visible; } .cp-alvos { flex-direction: row; flex-wrap: wrap; max-height: none; } .cp-editor { max-height: 52vh; } }
 .cp-botoes .btn:disabled, .cp-botoes .btn-cancel:disabled { opacity: .45; cursor: default; }
+
+/* opção própria de um tipo de canal (ex.: canal de lojas: "incluir as lojas parceiras") */
+.cx-opcao { margin: 10px 0 2px; display: flex; flex-direction: column; gap: 4px; }
+.cx-marca { display: flex; align-items: center; gap: 9px; cursor: pointer; color: var(--text-header); font-weight: 700; font-size: 13.5px; }
+.cx-marca input { width: 17px; height: 17px; accent-color: var(--brand-color); cursor: pointer; }

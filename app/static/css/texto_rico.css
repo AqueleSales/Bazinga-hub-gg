@@ -1,0 +1,89 @@
+/* Texto formatado das mensagens (Rodada 39). Lógica em static/js/texto_rico.js.
+   O texto da mensagem agora é um <div> (blocos como citação, lista e código não cabem num <p>); quebra de linha vem do próprio render (<br>), então o
+   `white-space: pre-wrap` antigo sai. Só opacity/transform se mexem e nada anima durante a rolagem. */
+
+:root { --link: #6db3ff; --link-hover: #a4d0ff; --cod-fundo: rgba(0, 0, 0, .32); --cod-borda: rgba(255, 255, 255, .09);
+        --tk-k: #ff7b72; --tk-s: #a5d6ff; --tk-n: #79c0ff; --tk-c: #8b949e; --tk-f: #d2a8ff; --tk-v: #ffa657; }
+:root[data-claro] { --link: #0b5ed7; --link-hover: #0a3d91; --cod-fundo: rgba(0, 0, 0, .06); --cod-borda: rgba(0, 0, 0, .12);
+        --tk-k: #cf222e; --tk-s: #0a3069; --tk-n: #0550ae; --tk-c: #6e7781; --tk-f: #8250df; --tk-v: #953800; }
+
+.message .message-text { white-space: normal; }
+.message-text > .rt-embeds { margin-top: 6px; }
+
+/* ---- links: legíveis no tema claro e no escuro (antes ficavam no azul escuro do navegador) ---- */
+.message-text a.lnk { color: var(--link); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--link) 45%, transparent); text-underline-offset: 2px; overflow-wrap: anywhere; cursor: pointer; }
+.message-text a.lnk:hover, .message-text a.lnk:focus-visible { color: var(--link-hover); text-decoration-color: currentColor; }
+.message-text a.lnk[data-aviso="1"]::after { content: '\f071'; font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: .7em; margin-left: 4px; opacity: .6; }
+
+/* ---- ênfase ---- */
+.message-text strong { font-weight: 800; color: var(--text-header); }
+.message-text em { font-style: italic; }
+.message-text u { text-underline-offset: 2px; }
+.message-text s { opacity: .72; }
+.message-text mark.rt-mark { background: color-mix(in srgb, var(--yellow-color, #faa61a) 38%, transparent); color: inherit; padding: 0 3px; border-radius: 4px; }
+.message-text .spoiler { background: var(--text-muted, #7a7f87); color: transparent; border-radius: 5px; padding: 0 3px; cursor: pointer; user-select: none; transition: background-color .15s, color .15s; }
+.message-text .spoiler * { visibility: hidden; }
+.message-text .spoiler.aberto { background: color-mix(in srgb, var(--text-muted) 22%, transparent); color: inherit; user-select: text; }
+.message-text .spoiler.aberto * { visibility: visible; }
+.message-text .spoiler:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 1px; }
+
+/* ---- blocos ---- */
+.rt-h { font-weight: 800; color: var(--text-header); line-height: 1.25; margin: 6px 0 2px; }
+.rt-h1 { font-size: 1.55em; } .rt-h2 { font-size: 1.28em; } .rt-h3 { font-size: 1.1em; }
+.rt-sub { font-size: .8em; color: var(--text-muted); margin: 1px 0; }
+.rt-q { margin: 4px 0; padding: 2px 0 2px 12px; border-left: 4px solid color-mix(in srgb, var(--text-muted) 55%, transparent); color: var(--text-normal); }
+.rt-l { margin: 3px 0; padding-left: 22px; }
+.rt-l li { margin: 1px 0; }
+.rt-l li::marker { color: var(--text-muted); }
+
+/* ---- código ---- */
+.cod-i { font-family: ui-monospace, 'Cascadia Code', Consolas, Menlo, monospace; font-size: .88em; padding: 1px 6px; border-radius: 6px; background: var(--cod-fundo); border: 1px solid var(--cod-borda); overflow-wrap: anywhere; }
+.cod { margin: 6px 0; border-radius: 10px; background: var(--cod-fundo); border: 1px solid var(--cod-borda); overflow: hidden; max-width: min(100%, 720px); }
+.cod-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 4px 12px; border-bottom: 1px solid var(--cod-borda); font-size: 11.5px; color: var(--text-muted); }
+.cod-lang { text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
+.cod-copiar { border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); font: inherit; font-size: 11.5px; padding: 3px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.cod-copiar:hover, .cod-copiar:focus-visible { background: rgba(255, 255, 255, .1); color: var(--text-header); }
+.cod-copiar.ok { color: var(--green-color, #43b581); }
+.cod-pre { margin: 0; padding: 10px 12px; max-height: 360px; overflow: auto; tab-size: 4; white-space: pre; font-family: ui-monospace, 'Cascadia Code', Consolas, Menlo, monospace; font-size: 13px; line-height: 1.5; color: var(--text-normal); }
+.cod-pre code { font: inherit; }
+.tk-k { color: var(--tk-k); } .tk-s { color: var(--tk-s); } .tk-n { color: var(--tk-n); } .tk-c { color: var(--tk-c); font-style: italic; } .tk-f { color: var(--tk-f); } .tk-v { color: var(--tk-v); }
+
+/* ---- menções (as especiais e as de cargo) ---- */
+.mencao.esp { display: inline-flex; align-items: center; gap: 4px; background: rgba(250, 166, 26, .2); color: #ffcf7a; }
+.mencao.esp i { font-size: .78em; opacity: .85; }
+:root[data-claro] .mencao.esp { color: #8a5a00; }
+.mencao.esp-alguem { background: rgba(235, 69, 158, .22); color: #ff9bd0; }
+.mencao.cargo { background: color-mix(in srgb, var(--c, #99aab5) 24%, transparent); color: color-mix(in srgb, var(--c, #99aab5) 78%, var(--text-header)); }
+.mencao.cargo:hover { background: var(--c, #99aab5); color: #fff; }
+.mencao.cargo.mencao-eu { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, #99aab5) 70%, transparent); }
+
+/* ---- prévias ---- */
+.rt-embeds { display: flex; flex-direction: column; gap: 8px; max-width: min(100%, 460px); }
+.emb { position: relative; border-radius: 12px; overflow: hidden; background: var(--cod-fundo); border: 1px solid var(--cod-borda); }
+.emb-capa { position: relative; display: block; width: 100%; padding: 0; border: 0; background: #000; cursor: pointer; aspect-ratio: 16 / 9; color: #fff; overflow: hidden; }
+.emb-capa.sem-img { background: linear-gradient(135deg, color-mix(in srgb, var(--brand-color) 55%, #000), #111); }
+.emb-capa.baixo { aspect-ratio: auto; height: 78px; }
+.emb-capa img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s, opacity .2s; opacity: .92; }
+.emb-capa:hover img { transform: scale(1.03); opacity: 1; }
+.emb-play { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(0, 0, 0, .62); display: grid; place-items: center; font-size: 22px; padding-left: 3px; box-shadow: 0 6px 20px rgba(0, 0, 0, .5); transition: transform .15s, background-color .15s; }
+.emb-capa.baixo .emb-play { left: 14px; top: 50%; margin: -22px 0 0; width: 44px; height: 44px; font-size: 20px; padding-left: 0; }
+.emb-capa:hover .emb-play, .emb-capa:focus-visible .emb-play { transform: scale(1.08); background: var(--brand-color); }
+.emb-selo { position: absolute; left: 10px; bottom: 8px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(0, 0, 0, .66); display: inline-flex; align-items: center; gap: 6px; }
+.emb-capa.baixo .emb-selo { left: 70px; bottom: auto; top: 50%; transform: translateY(-50%); background: transparent; font-size: 13px; padding: 0; }
+.emb-yt .fa-youtube { color: #ff3b3b; }
+.emb-sp .fa-spotify, .emb-sp .emb-play { color: #1ed760; }
+.emb.aberto { background: transparent; border: 0; }
+.emb-iframe { display: block; max-width: 100%; }
+.emb-au { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.emb-au > i { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--brand-color) 30%, transparent); font-size: 16px; flex: none; }
+.emb-au-corpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.emb-au-nome { font-size: 12.5px; font-weight: 700; color: var(--text-header); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.emb-au audio { width: 100%; height: 34px; }
+.emb-vi video { display: block; width: 100%; max-height: 320px; background: #000; }
+
+/* ---- o menu do @ com cargos e menções especiais ---- */
+.mencao-item .mencao-ic { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(250, 166, 26, .22); color: #ffcf7a; font-size: 12px; flex: none; }
+.mencao-item .mencao-cor { width: 12px; height: 12px; border-radius: 50%; flex: none; margin: 0 7px; }
+.mencao-item small { max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) { .emb-capa img, .emb-play { transition: none; } }

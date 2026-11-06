@@ -621,7 +621,7 @@
     // ------------------------------------------------------------
     // Guardião: o que a IA reteve fica "em análise" até uma pessoa decidir
     // ------------------------------------------------------------
-    const ROTULO_CASO = { canal: 'Mensagem de canal', dm: 'Mensagem privada', imagem: 'Imagem', call: 'Chamada' };
+    const ROTULO_CASO = { canal: 'Mensagem de canal', dm: 'Mensagem privada', imagem: 'Imagem', call: 'Chamada', figurinha: 'Figurinha', som: 'Som' };
     const ROTULO_STATUS = { em_analise: 'Em análise', liberado: 'Liberado', confirmado: 'Violação confirmada', apagado: 'Conteúdo apagado' };
     const GRAV = { 1: 'leve', 2: 'média', 3: 'grave' };
     async function vGuardiao() {
@@ -640,6 +640,7 @@
                 <div style="color:var(--muda);margin-bottom:6px">${esc(c.motivo || '')}</div>
                 ${c.trecho ? `<div style="background:var(--fundo2,#1b1e24);border-radius:8px;padding:8px 10px;white-space:pre-wrap;word-break:break-word">${esc(c.trecho)}</div>` : ''}
                 ${c.anexo_url && /^https:\/\/res\.cloudinary\.com\//.test(c.anexo_url) ? `<div style="margin-top:8px"><img src="${esc(c.anexo_url)}" alt="imagem retida" style="max-width:240px;max-height:200px;border-radius:8px"></div>` : ''}
+                ${c.anexo_url && /^\/api\/acervo\/\d+\/arquivo$/.test(c.anexo_url) ? (c.origem === 'som' ? `<div style="margin-top:8px"><audio controls preload="none" src="${esc(c.anexo_url)}"></audio></div>` : `<div style="margin-top:8px"><img src="${esc(c.anexo_url)}" alt="figurinha em análise" style="max-width:200px;max-height:200px;border-radius:8px;background:#fff1"></div>`) : ''}
                 ${c.contexto ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--muda)">Conversa antes</summary><div style="white-space:pre-wrap;color:var(--muda);padding:6px 0">${esc(c.contexto)}</div></details>` : ''}
                 ${c.nota ? `<div style="margin-top:6px"><small>Nota: ${esc(c.nota)}</small></div>` : ''}
                 ${c.status === 'em_analise' ? `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="es-btn mini" data-a="liberar">Liberar (engano)</button><button class="es-btn mini perigo" data-a="confirmar">Confirmar violação</button><button class="es-btn mini" data-a="apagar">Apagar conteúdo</button></div>` : ''}

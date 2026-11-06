@@ -1,0 +1,137 @@
+// Dados 3D (static/js/dados3d.js) e a bandeja de dados (atividades_jogos.js) no Node, sem navegador. Chamado por testes/fumaca_dados.py.
+const fs = require('fs'), path = require('path');
+const raiz = path.join(__dirname, '..', 'app', 'static', 'js');
+let falhas = 0;
+const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALHA') + ' ' + m); if (!c) falhas++; };
+
+// ---- ambiente mínimo de navegador ----
+const filaRaf = [];
+global.window = { matchMedia: () => ({ matches: false }), devicePixelRatio: 1 };
+global.requestAnimationFrame = (f) => { filaRaf.push(f); return filaRaf.length; };
+global.cancelAnimationFrame = () => {};
+let relogio = 0; global.performance = { now: () => relogio };
+function contexto() {
+    const chamadas = { fill: 0, texto: 0, elipse: 0 };
+    const g = new Proxy({}, { get(_, k) {
+        if (k === '_chamadas') return chamadas;
+        if (k === 'fill') return () => { chamadas.fill++; };
+        if (k === 'fillText') return () => { chamadas.texto++; };
+        if (k === 'ellipse') return () => { chamadas.elipse++; };
+        if (k === 'createLinearGradient') return () => ({ addColorStop() {} });
+        return () => {};
+    }, set() { return true; } });
+    return g;
+}
+function canvasFalso() { const g = contexto(); return { width: 300, height: 150, clientWidth: 300, clientHeight: 150, isConnected: true, getContext: () => g, _g: g }; }
+
+const D = new Function(fs.readFileSync(path.join(raiz, 'dados3d.js'), 'utf8') + '\nreturn Dados3D;')();
+const { _q: Q, _v: V } = D;
+
+// ---- geometria: cada sólido tem o número certo de faces, planas e com a normal pra fora ----
+const esperado = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20, d100: 10 };
+const lados = { d4: 3, d6: 4, d8: 3, d10: 4, d12: 5, d20: 3, d100: 4 };
+Object.keys(esperado).forEach((n) => {
+    const g = D.geometria(n);
+    ok(g.faces.length === esperado[n], `${n}: ${g.faces.length} faces (esperado ${esperado[n]})`);
+    ok(g.faces.every(f => f.idx.length === lados[n]), `${n}: todas as faces têm ${lados[n]} vértices`);
+    const planas = g.faces.every(f => { const pts = f.idx.map(i => g.verts[i]); return pts.every(p => Math.abs(V.dot(V.sub(p, pts[0]), f.n)) < 1e-6); });
+    ok(planas, `${n}: faces planas (o polígono não fica torto)`);
+    ok(g.faces.every(f => V.dot(f.n, f.c) > 0), `${n}: normais apontam pra fora`);
+    ok(Math.abs(V.norma(f0(g).n) - 1) < 1e-9, `${n}: normal unitária`);
+    // fechado: toda aresta é compartilhada por exatamente 2 faces
+    const arestas = {};
+    g.faces.forEach(f => f.idx.forEach((a, i) => { const b = f.idx[(i + 1) % f.idx.length], k = a < b ? a + '-' + b : b + '-' + a; arestas[k] = (arestas[k] || 0) + 1; }));
+    ok(Object.values(arestas).every(c => c === 2), `${n}: sólido fechado (cada aresta tem 2 faces)`);
+});
+function f0(g) { return g.faces[0]; }
+
+// ---- a rotação final põe a face sorteada de frente pra câmera ----
+Object.keys(esperado).forEach((n) => {
+    const g = D.geometria(n); let pior = 0;
+    for (let v = 1; v <= (n === 'd100' ? 100 : esperado[n]); v++) {
+        const f = D.faceDoValor(n, v), q = D.alvo(g, f, (v % 7) * .1);
+        const normal = Q.qGira(q, g.faces[f].n);
+        pior = Math.max(pior, Math.hypot(normal[0], normal[1], normal[2] + 1));
+    }
+    ok(pior < 1e-6, `${n}: em todo valor possível, a face do resultado fica virada pra câmera (erro ${pior.toExponential(1)})`);
+});
+ok(D.faceDoValor('d20', 20) === 19 && D.faceDoValor('d6', 1) === 0 && D.faceDoValor('d10', 10) === 9, 'o valor 1..N vai pra face N-1');
+ok(D.faceDoValor('d100', 47) === 6 && D.faceDoValor('d100', 100) === 9, 'd100: o resultado aparece numa face do d10');
+ok(D.faceDoValor('d20', 999) === 19 && D.faceDoValor('d20', -3) === 0, 'valor fora da faixa não quebra');
+const qa = Q.qEixo([0, 1, 0], 1.0), qb = Q.qEixo([1, 0, 0], 2.0);
+ok(V.norma(Q.qSlerp(qa, qb, .5)) > .999 && V.norma(Q.qSlerp(qa, qb, .5)) < 1.001, 'slerp mantém o quaternion unitário');
+const s0 = Q.qSlerp(qa, qb, 0), s1 = Q.qSlerp(qa, qb, 1);
+ok(s0.every((x, i) => Math.abs(x - qa[i]) < 1e-9) && s1.every((x, i) => Math.abs(Math.abs(x) - Math.abs(qb[i])) < 1e-9), 'slerp começa e termina nos extremos');
+
+// ---- do histórico do servidor para os dados a desenhar ----
+const d1 = D.descrever({ id: 1, tipo: 'rolagem', grupos: [{ dado: 'd20', valores: [17, 4], mantidos: [0], sinal: 1 }, { dado: 'd6', valores: [3], mantidos: [0], sinal: -1 }] });
+ok(d1.length === 3 && d1[0].mantido && !d1[1].mantido && d1[2].sinal === -1, 'rolagem: um desenho por dado, o que ficou de fora marcado');
+ok(D.descrever({ id: 2, tipo: 'd6', texto: '4' })[0].valor === 4, 'formato antigo (um dado só) também desenha');
+ok(D.descrever({ id: 3, tipo: 'moeda', texto: 'Cara', moedas: ['Cara', 'Coroa', 'Coroa'] }).length === 3, 'moedas');
+ok(D.descrever({ id: 4, tipo: 'sorteio', texto: 'Ana' }).length === 0 && D.descrever(null).length === 0, 'sorteio e vazio não desenham dado');
+ok(D.descrever({ id: 5, tipo: 'rolagem', grupos: [{ dado: 'x99', valores: [1], mantidos: [0], sinal: 1 }] }).length === 0, 'dado inventado é ignorado');
+ok(D.descrever({ id: 6, tipo: 'rolagem', grupos: [{ dado: 'd6', valores: Array(500).fill(1), mantidos: [], sinal: 1 }] }).length === 30, 'no máximo 30 dados na tela');
+
+// ---- a animação roda quadro a quadro sem quebrar, com todos os sólidos e a moeda ----
+const entradas = [
+    { id: 10, tipo: 'rolagem', grupos: ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'].map((d, i) => ({ dado: d, valores: [d === 'd4' ? 3 : d === 'd100' ? 47 : 5], mantidos: i % 2 ? [] : [0], sinal: 1 })) },
+    { id: 11, tipo: 'moeda', texto: '2 caras e 1 coroa', moedas: ['Cara', 'Cara', 'Coroa'] },
+    { id: 12, tipo: 'rolagem', grupos: [{ dado: 'd6', valores: Array.from({ length: 30 }, (_, i) => 1 + i % 6), mantidos: Array.from({ length: 30 }, (_, i) => i), sinal: 1 }] },
+];
+entradas.forEach((e) => {
+    const c = canvasFalso(); let erro = null;
+    try {
+        relogio = 0; filaRaf.length = 0; D.mostrar(c, e, { animar: true });
+        for (const t of [0, 100, 400, 800, 1200, 1600, 2400]) { relogio = t; const f = filaRaf.splice(0); f.forEach(fn => fn(t)); }
+    } catch (x) { erro = x; }
+    ok(!erro, `animação do item ${e.id} roda sem erro${erro ? ': ' + erro.stack.split('\n')[1] : ''}`);
+    ok(c._g._chamadas.fill > 0 && (e.tipo === 'moeda' ? c._g._chamadas.elipse > 0 : c._g._chamadas.texto > 0), `item ${e.id}: desenhou (${JSON.stringify(c._g._chamadas)})`);
+    ok(filaRaf.length === 0, `item ${e.id}: o laço de animação termina (não fica rodando pra sempre)`);
+});
+// resultado parado (abrir o painel com histórico) = nada de laço
+const c2 = canvasFalso(); filaRaf.length = 0; D.parar(); D.mostrar(c2, entradas[0], { animar: false });
+ok(filaRaf.length === 0 && c2._g._chamadas.fill > 0, 'sem animar: desenha o resultado de uma vez e não agenda quadro');
+// movimento reduzido
+global.window.matchMedia = () => ({ matches: true });
+const c3 = canvasFalso(); filaRaf.length = 0; D.parar(); D.mostrar(c3, { ...entradas[0], id: 99 }, { animar: true });
+ok(filaRaf.length === 0 && c3._g._chamadas.fill > 0, 'com "reduzir movimento": mostra parado, sem animação');
+global.window.matchMedia = () => ({ matches: false });
+// canvas que saiu da página no meio da animação
+const c4 = canvasFalso(); filaRaf.length = 0; D.parar(); D.mostrar(c4, { ...entradas[0], id: 120 }, { animar: true }); c4.isConnected = false;
+relogio = 300; filaRaf.splice(0).forEach(fn => fn(300));
+ok(filaRaf.length === 0, 'se o canvas sai da tela, o laço para sozinho');
+// painel redesenhado no meio da rolagem: troca o canvas e a mesma animação continua
+const c5 = canvasFalso(), c6 = canvasFalso(); filaRaf.length = 0; D.parar(); relogio = 0; D.mostrar(c5, { ...entradas[0], id: 130 }, { animar: true });
+relogio = 400; filaRaf.splice(0).forEach(fn => fn(400)); D.mostrar(c6, { ...entradas[0], id: 130 }, { animar: false });
+relogio = 800; filaRaf.splice(0).forEach(fn => fn(800));
+ok(c6._g._chamadas.fill > 0, 'o painel redesenhou no meio: a animação segue no canvas novo (sem recomeçar nem sumir)');
+
+// ---- a bandeja e a expressão no painel ----
+const AJ = new Function(fs.readFileSync(path.join(raiz, 'atividades_jogos.js'), 'utf8') + '\nreturn AtividadesJogos;')();
+const h = { esc: (v) => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])), acao: (d) => { h.ultimo = d; }, meuId: () => 1, emitir() {}, confirmar() {} };
+const est = { tipo: 'dados', historico: [{ id: 1, quem: { id: 1, nome: 'Ana <b>' }, tipo: 'rolagem', texto: '22', expr: '2d20kh1+5', grupos: [{ dado: 'd20', valores: [17, 4], mantidos: [0], sinal: 1 }], mod: 5, total: 22 }], presentes: [] };
+let html = AJ.corpo(est, h);
+ok(html.includes('aj-d3') && html.includes('2d20kh1+5') && html.includes('<s>4</s>') && html.includes('<b>17</b>'), 'o resultado mostra a expressão e quais dados ficaram (os cortados riscados)');
+ok(!html.includes('Ana <b>') && html.includes('Ana &lt;b&gt;'), 'o nome de quem rolou é escapado');
+const btn = (j, d = {}) => ({ dataset: { j, ...d } });
+AJ.clique(btn('d-add', { d: 'd20' }), est, h); AJ.clique(btn('d-add', { d: 'd20' }), est, h); AJ.clique(btn('d-add', { d: 'd6' }), est, h);
+AJ.clique(btn('d-mod', { v: '1' }), est, h); AJ.clique(btn('d-mod', { v: '1' }), est, h); AJ.clique(btn('d-mod', { v: '1' }), est, h);
+ok(AJ._dados.exprDaBandeja() === '2d20+d6+3', `bandeja vira a expressão: ${AJ._dados.exprDaBandeja()}`);
+AJ.clique(btn('d-tirar', { d: 'd6' }), est, h); AJ.clique(btn('d-modo', { v: 'vantagem' }), est, h);
+ok(AJ._dados.exprDaBandeja() === '2d20kh1+3', `vantagem: ${AJ._dados.exprDaBandeja()}`);
+AJ.clique(btn('d-modo', { v: 'desvantagem' }), est, h); ok(AJ._dados.exprDaBandeja() === '2d20kl1+3', 'desvantagem');
+AJ.clique(btn('d-add', { d: 'd4' }), est, h); ok(AJ._dados.estado().modo === 'normal', 'com mais de um dado o modo volta a normal');
+AJ.clique(btn('d-rolar'), est, h);
+ok(h.ultimo && h.ultimo.acao === 'rolar' && h.ultimo.expr === '2d20+d4+3', `"Rolar" manda a expressão pro servidor: ${JSON.stringify(h.ultimo)}`);
+ok(AJ._dados.exprDaBandeja() === '', 'depois de rolar a bandeja esvazia');
+AJ.clique(btn('d-rapido', { e: '2d20kh1' }), est, h); ok(h.ultimo.expr === '2d20kh1', 'atalho: vantagem');
+AJ.clique(btn('d-moedas', { v: '1' }), est, h); AJ.clique(btn('d-moedas', { v: '1' }), est, h); AJ.clique(btn('moeda'), est, h);
+ok(h.ultimo.acao === 'moeda' && h.ultimo.qtd === 3, 'moedas: quantidade vai junto');
+for (let i = 0; i < 40; i++) AJ.clique(btn('d-add', { d: 'd8' }), est, h);
+ok(AJ._dados.estado().bandeja[0].qtd === 30, 'a bandeja para em 30 dados');
+for (let i = 0; i < 200; i++) AJ.clique(btn('d-mod', { v: '1' }), est, h);
+ok(AJ._dados.estado().modificador === 99, 'modificador limitado a ±99 na tela');
+ok(html.includes('data-d="d4"') && html.includes('data-d="d10"') && html.includes('data-d="d12"') && html.includes('data-d="d100"'), 'os sete dados estão na tela');
+
+console.log(falhas ? `\n${falhas} FALHA(S)` : '\nTUDO OK');
+process.exit(falhas ? 1 : 0);

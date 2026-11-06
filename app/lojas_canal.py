@@ -11,7 +11,7 @@ Regras:
 """
 from sqlalchemy import select, func, or_
 
-from . import bazar
+from . import bazar, cargos
 from .models import db, BazarLoja, BazarProduto, server_members
 from .utils import com_retry
 
@@ -21,7 +21,12 @@ ORIGENS = ('todas', 'servidor', 'parceiras')
 
 def listar(canal, busca='', categoria='', origem='todas', seed=''):
     """{itens, total, categorias, origem, ...} das lojas deste canal. `canal` já foi conferido (tipo lojas + a pessoa pode vê-lo)."""
+    # Padrão: SÓ as lojas das pessoas do servidor. As parceiras do Pantheon só entram se quem gerencia o canal ligou "incluir lojas parceiras"
+    # (Opções do canal, cargos.OPCOES_CANAL): um servidor que não quer propaganda de loja grande não tem que aguentar.
+    parceiras = bool(cargos.opcoes_do_canal(canal).get('lojas_parceiras'))
     origem = origem if origem in ORIGENS else 'todas'
+    if not parceiras:
+        origem = 'servidor'
     termo = (busca or '').strip().lower()[:40]
     seed = bazar._seed_limpa(seed)
     do_servidor = select(server_members.c.person_id).where(server_members.c.server_id == canal.server_id)
@@ -32,7 +37,7 @@ def listar(canal, busca='', categoria='', origem='todas', seed=''):
     elif origem == 'parceiras':
         q = q.filter(BazarLoja.porte == 'grande')
     else:
-        q = q.filter(or_(BazarLoja.owner_id.in_(do_servidor), BazarLoja.porte == 'grande'))
+        q = q.filter(or_(BazarLoja.owner_id.in_(do_servidor), BazarLoja.porte == 'grande'))   # (só chega aqui com parceiras ligadas)
     if categoria in bazar.IDS_CATEGORIA:
         q = q.filter(BazarLoja.categoria == categoria)
     if termo:
@@ -62,4 +67,4 @@ def listar(canal, busca='', categoria='', origem='todas', seed=''):
     for _, j in itens:
         cont[j['categoria']] = cont.get(j['categoria'], 0) + 1
     return {'canal_id': canal.id, 'itens': resultado, 'total': len(itens), 'truncado': len(itens) > MAX_LOJAS, 'busca': termo, 'categoria': categoria if categoria in bazar.IDS_CATEGORIA else '',
-            'origem': origem, 'seed': seed, 'categorias': [{'id': i, 'nome': n, 'qtd': cont.get(i, 0)} for i, n in bazar.CATEGORIAS]}
+            'origem': origem, 'parceiras': parceiras, 'seed': seed, 'categorias': [{'id': i, 'nome': n, 'qtd': cont.get(i, 0)} for i, n in bazar.CATEGORIAS]}

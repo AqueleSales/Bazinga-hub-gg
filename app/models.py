@@ -132,6 +132,8 @@ class Person(db.Model):
     olimpo_ate = db.Column(db.DateTime, nullable=True)
     # Preferências da conta (Notificações por tipo, Acessibilidade, formato da hora): JSON só com o que difere do padrão, validado em app/preferencias.py. Anulável.
     preferencias = db.Column(db.Text, nullable=True)
+    # Som que toca pra quem está na call quando a pessoa entra: 'preset:<id>' (lista fechada em app/acervo.py) ou 'custom:<id do AcervoItem>'. NULL = o do item equipado / o padrão.
+    som_entrada = db.Column(db.String(40), nullable=True)
     # Cosméticos em slots extras (efeito de avatar/perfil/fala/radar/chat, som de entrada, pin de nota).
     # JSON {"efeito_avatar": "gogeta", ...}; só ids do catálogo com posse (ver cosmeticos.py).
     equipados = db.Column(db.Text, nullable=True)
@@ -281,6 +283,8 @@ class Channel(db.Model):
     # True quando o canal tem alguma ChannelOverwrite (permissão por cargo só neste canal). NULL/False = nenhuma: nada consulta a tabela
     # (enviar mensagem, ver o canal e a lista do servidor ficam com o custo de antes).
     sobrescrita = db.Column(db.Boolean, nullable=True)
+    # Opções próprias do tipo do canal, em JSON (lista fechada em cargos.OPCOES_CANAL; ex.: canal de lojas "incluir as parceiras"). NULL = tudo no padrão.
+    opcoes = db.Column(db.Text, nullable=True)
 
     # Canal pode pertencer a um Servidor criado por um usuário. Nulo = canal
     # padrão do "Bazinga Hub" (o servidor global inicial, fora do sistema de Servers).
@@ -302,6 +306,8 @@ class Channel(db.Model):
 
 class Message(db.Model):
     __tablename__ = 'message'
+    # (canal, id): a contagem de "não lidas" (app/avisos.py) e o histórico paginado só olham as mensagens de UM canal
+    __table_args__ = (db.Index('ix_message_canal_id', 'channel_id', 'id'),)
     id = db.Column(db.Integer, primary_key=True)
     # Mensagem só de anexo (foto/vídeo/gif) vem com texto vazio, por isso
     # nullable=True aqui - antes era obrigatório ter texto.
@@ -618,6 +624,18 @@ class ConfigApp(db.Model):
     __tablename__ = 'config_app'
     chave = db.Column(db.String(60), primary_key=True)
     valor = db.Column(db.Text, nullable=True)
+
+
+class CanalLeitura(db.Model):
+    """Até qual mensagem a pessoa já leu em cada canal de servidor (Rodada 39). É daqui que saem a bolinha/contador de "não lida" nos
+    servidores e canais, em qualquer aparelho. Sem FK de propósito: apagar canal/pessoa não pode travar nem depender de cascata; a
+    linha órfã é inofensiva (a consulta só olha os canais que a pessoa ainda enxerga). Uma linha por (pessoa, canal)."""
+    __tablename__ = 'canal_leitura'
+    __table_args__ = (db.UniqueConstraint('person_id', 'channel_id', name='uq_canal_leitura'),)
+    id = db.Column(db.Integer, primary_key=True)
+    person_id = db.Column(db.Integer, nullable=False, index=True)
+    channel_id = db.Column(db.Integer, nullable=False)
+    ultimo_id = db.Column(db.Integer, nullable=False, default=0)
 
 
 class Silenciado(db.Model):
@@ -1048,7 +1066,7 @@ class GuardiaoCaso(db.Model):
     __tablename__ = 'guardiao_caso'
     id = db.Column(db.Integer, primary_key=True)
     criado_em = db.Column(db.DateTime, default=br_now, index=True)
-    origem = db.Column(db.String(10), nullable=False)       # canal | dm | imagem | call
+    origem = db.Column(db.String(10), nullable=False)       # canal | dm | imagem | call | figurinha | som
     person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=True, index=True)   # quem tentou enviar
     alvo_id = db.Column(db.Integer, nullable=True)           # DM: quem receberia
     server_id = db.Column(db.Integer, nullable=True)
@@ -1064,6 +1082,7 @@ class GuardiaoCaso(db.Model):
     revisado_por = db.Column(db.Integer, nullable=True)
     revisado_em = db.Column(db.DateTime, nullable=True)
     nota = db.Column(db.String(240), nullable=True)
+    ref_id = db.Column(db.Integer, nullable=True)            # figurinha/som: o AcervoItem que está em análise (a decisão do responsável aprova ou recusa ele)
 
 
 # ==========================================
@@ -1084,3 +1103,33 @@ class Cobranca(db.Model):
     expira_em = db.Column(db.DateTime, nullable=True)
     criada_em = db.Column(db.DateTime, default=br_now)
     paga_em = db.Column(db.DateTime, nullable=True)
+
+
+# ==========================================
+# ACERVO (Rodada 39): FIGURINHAS e SONS (soundboard e som de entrada na call)
+# ------------------------------------------------------------
+# Um arquivo por linha, com os bytes aqui mesmo (colunas `deferred`: a lista nunca os carrega; saem por /api/acervo/<id>/arquivo).
+# `escopo`: 'pessoa' (o acervo pessoal de quem enviou) ou 'servidor' (a figurinha/som que o servidor oferece a todos os membros).
+# `status`: o Guardião olha cada item ANTES de os outros poderem ver: 'aprovado' (a IA liberou) | 'em_analise' (sem IA, IA fora do ar ou
+# suspeita: só quem enviou vê/ouve até uma pessoa responsável decidir no Estúdio) | 'recusado' (o responsável confirmou a violação).
+# Regras e validação em app/acervo.py. A tabela nasce pelo create_all (sem ALTER).
+# ==========================================
+class AcervoItem(db.Model):
+    __tablename__ = 'acervo_item'
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(10), nullable=False, index=True)           # figurinha | som
+    escopo = db.Column(db.String(8), nullable=False, default='pessoa')    # pessoa | servidor
+    person_id = db.Column(db.Integer, nullable=False, index=True)         # quem enviou (sem FK: apagar a conta não pode travar nem derrubar o item do servidor)
+    server_id = db.Column(db.Integer, nullable=True, index=True)          # só no escopo 'servidor'
+    nome = db.Column(db.String(24), nullable=False)
+    emoji = db.Column(db.String(16), nullable=True)
+    mime = db.Column(db.String(30), nullable=False)
+    dados = db.deferred(db.Column(db.LargeBinary, nullable=False))
+    tamanho = db.Column(db.Integer, nullable=False, default=0)
+    dur_ms = db.Column(db.Integer, nullable=True)                         # som: duração; figurinha animada: duração de uma volta
+    largura = db.Column(db.SmallInteger, nullable=True)
+    altura = db.Column(db.SmallInteger, nullable=True)
+    animado = db.Column(db.Boolean, nullable=True)
+    sha = db.Column(db.String(64), nullable=False)
+    status = db.Column(db.String(12), nullable=False, default='em_analise', index=True)
+    criado_em = db.Column(db.DateTime, default=br_now)

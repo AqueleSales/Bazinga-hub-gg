@@ -81,6 +81,9 @@ def create_app():
     from .estudio import estudio_bp
     app.register_blueprint(estudio_bp)
 
+    from .acervo_routes import acervo_bp
+    app.register_blueprint(acervo_bp)
+
     class _SessaoCookie(SecureCookieSessionInterface):
         def should_set_cookie(self, app, session):
             # Sessão permanente renova o cookie em TODA resposta (é o que faz o prazo andar a cada visita). Em arquivo
@@ -205,6 +208,10 @@ def create_app():
             d['key'] = chave
         return d
 
+    def _call_politica():
+        from . import sfu
+        return sfu.politica_da_pagina()
+
     @app.context_processor
     def _injetar_marca():
         from .cosmeticos import GERADO
@@ -227,7 +234,10 @@ def create_app():
                 'config_usuario_css_v': _versao_estatico('css/config_usuario.css'), 'config_usuario_js_v': _versao_estatico('js/config_usuario.js'),
                 'prestigio_css_v': _versao_estatico('css/prestigio.css'), 'prestigio_js_v': _versao_estatico('js/prestigio.js'),
                 'lojas_canal_css_v': _versao_estatico('css/lojas_canal.css'), 'lojas_canal_js_v': _versao_estatico('js/lojas_canal.js'),
-                'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'peer_servidor': _peer_servidor(), 'novidade_atual': novidade_atual()}
+                # sv('js/x.js') = versão do arquivo pra pôr no ?v= (arquivos novos usam isto em vez de uma variável por arquivo)
+                'sv': _versao_estatico,
+                'app_versao': APP_VERSAO, 'ice_servers': _servidores_ice(), 'peer_servidor': _peer_servidor(), 'novidade_atual': novidade_atual(),
+                'call_politica': _call_politica()}          # P2P x SFU (app/sfu.py): só modo, limite e endereço público; a chave e o segredo ficam no servidor
 
     with app.app_context():
         try:

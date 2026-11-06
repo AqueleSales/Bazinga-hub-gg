@@ -1468,7 +1468,11 @@
         :root[data-tema="custom"][data-fundo] .chat-area, :root[data-tema="custom"][data-fundo] .market-wrapper { background-color: color-mix(in srgb, var(--bg-primary) var(--painel-opac), transparent); }
         :root[data-tema="custom"][data-fundo] .chat-header, :root[data-tema="custom"][data-fundo] .market-header, :root[data-tema="custom"][data-fundo] .channels-header { background-color: color-mix(in srgb, var(--bg-primary) calc(var(--painel-opac) - 8%), transparent); }
         :root[data-tema="custom"][data-fundo] .user-controls { background-color: color-mix(in srgb, var(--bg-tertiary) var(--painel-opac), transparent); }
-        :root[data-tema="custom"][data-fundo] .chat-area-main, :root[data-tema="custom"][data-fundo] #text-view, :root[data-tema="custom"][data-fundo] #messages-container, :root[data-tema="custom"][data-fundo] #dm-chat-view, :root[data-tema="custom"][data-fundo] #home-content-wrapper { background-color: transparent; }
+        /* O fundo da DM e da tela de Amigos vinha de um style="" inline (e do #amigos-view mais abaixo), que ganha de qualquer regra do tema:
+           com o papel de parede personalizado a imagem sumia nessas duas telas. Agora o fundo mora aqui e o tema o solta. */
+        #dm-chat-view { background-color: var(--bg-primary); }
+        :root[data-tema="custom"][data-fundo] .chat-area-main, :root[data-tema="custom"][data-fundo] #text-view, :root[data-tema="custom"][data-fundo] #messages-container, :root[data-tema="custom"][data-fundo] #dm-chat-view, :root[data-tema="custom"][data-fundo] #amigos-view, :root[data-tema="custom"][data-fundo] #home-content-wrapper { background-color: transparent; background: transparent; }
+        :root[data-tema="custom"][data-fundo] #dm-chat-view .chat-input-container, :root[data-tema="custom"][data-fundo] #amigos-view .av2-topo { background-color: color-mix(in srgb, var(--bg-primary) calc(var(--painel-opac) - 8%), transparent); }
 
         /* grade de temas e painel do personalizado (Configurações > Aparência) */
         .temas-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px; }
@@ -2154,6 +2158,21 @@
         .ib-item:hover { background: rgba(255,255,255,.06); }
         .ib-item.nao-lida { background: color-mix(in srgb, var(--brand-color) 12%, transparent); }
         .ib-item.nao-lida::after { content: ''; position: absolute; right: 12px; top: 50%; width: 9px; height: 9px; border-radius: 50%; background: var(--brand-color); transform: translateY(-50%); }
+        /* lida = quieta: sem fundo, sem contador vermelho, texto mais fraco (antes "marcar tudo como lido" não mudava nada na tela, porque o
+           número vermelho de mensagens agrupadas aparecia mesmo com o aviso lido) */
+        .ib-item:not(.nao-lida) { opacity: .66; }
+        .ib-item:not(.nao-lida):hover { opacity: 1; }
+        .ib-item:not(.nao-lida) .ib-tit { font-weight: 600; }
+        .ib-item:not(.nao-lida) .ib-ico { filter: saturate(.45); }
+        .ib-tit .ib-qtd.lida { background: rgba(255,255,255,.14); color: var(--text-muted); }
+        .ib-x { position: absolute; right: 8px; top: 6px; width: 24px; height: 24px; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; opacity: 0; transition: opacity .12s, background .12s; }
+        .ib-item:hover .ib-x, .ib-x:focus-visible { opacity: 1; }
+        .ib-x:hover { background: rgba(255,255,255,.12); color: var(--text-header); }
+        .ib-filtro { display: flex; gap: 6px; padding: 8px 12px 2px; }
+        .ib-filtro button { border: 0; border-radius: 999px; padding: 5px 12px; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .ib-filtro button.on { background: color-mix(in srgb, var(--brand-color) 22%, transparent); color: var(--text-header); }
+        .ib-filtro button:hover:not(.on) { background: rgba(255,255,255,.07); }
+        .ib-filtro span:not(:empty) { margin-left: 4px; background: var(--red-color); color: #fff; border-radius: 8px; padding: 0 6px; font-size: 10.5px; }
         .ib-ico { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; color: #fff; }
         .ib-ico.dm { background: #5865F2; } .ib-ico.amizade { background: var(--green-color); } .ib-ico.mencao { background: #eb459e; } .ib-ico.bazar { background: #d9822b; } .ib-ico.sistema { background: #4e5058; }
         .ib-txt { flex: 1; min-width: 0; padding-right: 16px; }
@@ -3013,6 +3032,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/bazar.css') }}?v={{ bazar_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/entrega_mapa.css') }}?v={{ entrega_mapa_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ordem.css') }}?v={{ ordem_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/avisos.css') }}?v={{ sv('css/avisos.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/texto_rico.css') }}?v={{ sv('css/texto_rico.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stream.css') }}?v={{ sv('css/stream.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/acervo.css') }}?v={{ sv('css/acervo.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/config_usuario.css') }}?v={{ config_usuario_css_v }}">
 </head>
 <body>
@@ -3261,7 +3284,7 @@
                 <div id="bazinga-map"></div>
 
                 <!-- NOVO: CHAT DE MENSAGEM DIRETA (Sobrepõe o mapa quando ativo) -->
-                <div id="dm-chat-view" style="display: none; flex-direction: column; background-color: var(--bg-primary); position: absolute; top: 48px; left: 0; right: 0; bottom: 0; z-index: 2;">
+                <div id="dm-chat-view" style="display: none; flex-direction: column; position: absolute; top: 48px; left: 0; right: 0; bottom: 0; z-index: 2;">
                     <!-- Área de Mensagens -->
                     <div class="chat-messages" id="dm-messages-container" style="flex-grow: 1; padding: 16px; overflow-y: auto;">
                         <div class="dm-welcome-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; opacity: 0.5;">
@@ -3278,6 +3301,7 @@
                             <input type="file" id="dm-input-anexo" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none;">
                             <textarea class="chat-input" id="dm-message-input" rows="1" maxlength="2000" placeholder="Conversar em Mensagem Direta" autocomplete="off"></textarea>
                             <div class="chat-input-actions">
+                                <button class="chat-input-btn" id="dm-btn-figurinha" data-abre-fig title="Figurinhas"><i class="fa-regular fa-note-sticky"></i></button>
                                 <button class="chat-input-btn" id="dm-btn-gif" title="Buscar GIF" style="font-size: 11px; font-weight: 800; letter-spacing: .3px;">GIF</button>
                                 <button class="chat-input-btn" id="dm-btn-emoji" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
                                 <button class="chat-input-btn dm-enviar" id="dm-btn-enviar" title="Enviar" style="display:none;"><i class="fa-solid fa-paper-plane"></i></button>
@@ -3391,6 +3415,7 @@
                                 <input type="file" id="input-anexo" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none;">
                                 <textarea class="chat-input" id="message-input" rows="1" maxlength="2000" placeholder="Conversar em #geral" autocomplete="off"></textarea>
                                 <div class="chat-input-actions">
+                                    <button class="chat-input-btn" id="btn-figurinha" data-abre-fig title="Figurinhas"><i class="fa-regular fa-note-sticky"></i></button>
                                     <button class="chat-input-btn" id="btn-anexar-gif" title="Buscar GIF" style="font-size: 11px; font-weight: 800; letter-spacing: .3px;">GIF</button>
                                     <button class="chat-input-btn" id="btn-emoji-mensagem" data-abre-emoji title="Emojis"><i class="fa-solid fa-face-smile"></i></button>
                                     <button class="chat-input-btn dm-enviar" id="btn-enviar-canal" title="Enviar" style="display:none;"><i class="fa-solid fa-paper-plane"></i></button>
@@ -4592,6 +4617,15 @@
                                 </div>
                             </div>
 
+                            <div class="pf-bloco" id="pf-bloco-sons">
+                                <div class="pf-bloco-tit">Sons e figurinhas</div>
+                                <div class="pf-grupo">
+                                    <span class="control-label">Som de entrada na call</span>
+                                    <div id="ac-som-entrada"></div>
+                                    <span class="pf-dica">Toca pra todo mundo da call quando você entra. Escolha um pronto ou envie o seu (até 6 segundos; o Guardião confere antes de os outros ouvirem).</span>
+                                </div>
+                            </div>
+
                             <div class="pf-bloco">
                                 <div class="pf-bloco-tit">Status</div>
                                 <div class="pf-grupo">
@@ -4941,6 +4975,10 @@
                 <button class="ib-mini" id="ib-som" title="Som das notificações"><i class="fa-solid fa-volume-high"></i></button>
             </div>
         </div>
+        <div class="ib-filtro" id="ib-filtro" role="tablist" aria-label="Filtrar avisos">
+            <button type="button" role="tab" data-f="tudo" class="on">Tudo</button>
+            <button type="button" role="tab" data-f="nao">Não lidas <span id="ib-n-nao"></span></button>
+        </div>
         <div class="ib-lista scroll-invisivel" id="ib-lista"></div>
     </div>
 
@@ -5001,6 +5039,7 @@
     <script src="{{ url_for('static', filename='js/conexoes.js') }}?v={{ conexoes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/call_ui.js') }}?v={{ call_ui_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/dados3d.js') }}?v={{ sv('js/dados3d.js') }}"></script>
     <script src="{{ url_for('static', filename='js/atividades_jogos.js') }}?v={{ atividades_jogos_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/atividades.js') }}?v={{ atividades_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/prestigio.js') }}?v={{ prestigio_js_v }}"></script>
@@ -5012,6 +5051,13 @@
     <script src="{{ url_for('static', filename='js/entrega_mapa.js') }}?v={{ entrega_mapa_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/bazar.js') }}?v={{ bazar_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/ordem.js') }}?v={{ ordem_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/avisos.js') }}?v={{ sv('js/avisos.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/texto_rico.js') }}?v={{ sv('js/texto_rico.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/stream.js') }}?v={{ sv('js/stream.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/compartilhar.js') }}?v={{ sv('js/compartilhar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/call_transporte.js') }}?v={{ sv('js/call_transporte.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sons.js') }}?v={{ sv('js/sons.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/acervo.js') }}?v={{ sv('js/acervo.js') }}"></script>
     <script src="{{ url_for('static', filename='js/config_usuario.js') }}?v={{ config_usuario_js_v }}"></script>
     <script>
         // 1. INJEÇÃO SEGURA DE VARIÁVEIS DO FLASK
@@ -5030,6 +5076,7 @@
         // ICE da call (TURN próprio via variável de ambiente, se configurado).
         const VERSAO_PAGINA = {{ app_versao|tojson }};
         const ICE_SERVERS = {{ ice_servers|tojson }};
+        const CALL_POLITICA = {{ call_politica|tojson }};   // P2P x SFU (app/sfu.py): só modo, limite e endereço público (nunca a chave nem o segredo)
         const PEER_SERVIDOR = {{ peer_servidor|tojson }};   // servidor de sinalização da call (a nuvem pública, ou o PeerServer próprio por variável de ambiente)
 
         const rawUserAvatar = "{{ usuario_atual.avatar or '' }}";
@@ -5207,6 +5254,7 @@
 
         function switchMainView(viewName) {
             vistaAtual = viewName;
+            document.body.dataset.vista = viewName;   // CSS que só vale numa aba (ex.: a gaveta "Lojas" só existe com o mapa à vista)
             try { if (inCall) callMinimizar(); } catch (e) {}   // navegou: a call vira janela mini (try: pode rodar antes de inCall existir)
             // Hide all main containers
             const homeContent = document.getElementById('home-content-wrapper');
@@ -5825,6 +5873,10 @@
         const ordemServidoresIniciais = {{ ordem_servidores_inicial|tojson }};
         const dmsFixasIniciais = {{ dms_fixas_ids|tojson }};
         Ordem.iniciar({ socket, layout: ordemServidoresIniciais, fixas: dmsFixasIniciais, escUrl });
+        // Mensagem nova nos servidores e canais (bolinha no ícone, número de citações, canal em destaque): static/js/avisos.js. Tudo por função, lido na hora do uso.
+        Avisos.iniciar({ socket, meuId: () => currentUserId, canalAtual: () => currentChannelId, vistaAtual: () => vistaAtual,
+                         servidores: () => meUserServers, notificacoes: () => (typeof notifs !== 'undefined' ? notifs.itens : []),
+                         marcarMencoesLidas: (canal) => { if (typeof notifs === 'undefined') return; notifs.itens.forEach(n => { if (n.tipo === 'mencao' && n.ref && Number(String(n.ref).split(':')[1]) === Number(canal)) n.lida = true; }); recontarNotifs(); } });
         setTimeout(() => { if (!meUserServers.length) aplicarMeusServidores(servidoresIniciais); }, 0);
 
         socket.on('servidor_discord_criado', function(srv) {
@@ -8969,6 +9021,9 @@
                             <video controls preload="metadata" src="${limpa}"></video>
                         </div>`;
             }
+            if (tipo === 'sticker') {     // figurinha do acervo: grande, sem balão (o arquivo vem do próprio app, já aprovado)
+                return `<div class="msg-anexo sticker"><img src="${limpa}" alt="${esc(nome || 'figurinha')}" title="${esc(nome || 'figurinha')}" loading="lazy" decoding="async"></div>`;
+            }
             // Cloudinary entrega uma versão leve (f_auto,q_auto,w_900) em vez da foto original
             // de vários MB; se falhar, cai no original. Mensagem que acabou de chegar carrega
             // na hora (eager) em vez de esperar o lazy-load, e mostra um esqueleto até a foto vir.
@@ -9061,7 +9116,7 @@
             // Texto BRUTO (com os <@id>): o que aparece na tela é só o nome em destaque,
             // mas editar/copiar precisam do original.
             div.setAttribute('data-texto', texto || '');
-            if (texto && Number(autorId) !== Number(currentUserId) && texto.includes('<@' + currentUserId + '>')) {
+            if (texto && Number(autorId) !== Number(currentUserId) && mencionaMim(texto)) {
                 div.classList.add('mencionando-me');
             }
             div.setAttribute('data-sou-autor', souAutor ? '1' : '0');
@@ -9093,8 +9148,8 @@
             const cartoesConviteHtml = htmlCartoesDeConvite(codigosConvite);
             // Mensagem só de anexo não mostra o parágrafo de texto vazio
             const textoHtml = textoMostrado
-                ? `<p class="message-text">${htmlTexto(textoMostrado)}${marcaEditada}</p>`
-                : (marcaEditada ? `<p class="message-text">${marcaEditada}</p>` : '');
+                ? `<div class="message-text">${htmlTexto(textoMostrado)}${marcaEditada}</div>`
+                : (marcaEditada ? `<div class="message-text">${marcaEditada}</div>` : '');
 
             // Citação da mensagem respondida (o resumo vem do servidor; mesmo assim passa por esc())
             let citacaoHtml = '';
@@ -9163,6 +9218,7 @@
                 currentChannelId = btn.getAttribute('data-id');
                 socket.emit('entrar_canal', { canal_id: currentChannelId });
                 salvarUltimaVista();
+                Avisos.abriuCanal(currentChannelId);   // abriu = leu: a bolinha de "mensagem nova" apaga (e nas outras abas/aparelhos também)
 
                 const channelName = btn.getAttribute('data-name');
                 document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-hashtag" style="color: var(--text-muted); font-size: 20px;"></i> ${esc(channelName)}`;
@@ -9365,6 +9421,7 @@
             }
             appendMessageGrouped(container, dados.id, dados.usuario, dados.avatar, dados.texto,
                                  dados.hora, dados.cor, { ...dados, animar: true });
+            Avisos.chegouNoAberto(dados.canal_id || currentChannelId, dados.usuario_id);   // está olhando este canal: já conta como lida
         });
 
         // 4. MENUS DE CONTEXTO E MODAIS GERAIS
@@ -9598,7 +9655,7 @@
             if (!msg) return;
             let p = msg.querySelector('.message-text');
             if (!p) {
-                p = document.createElement('p');
+                p = document.createElement('div');
                 p.className = 'message-text';
                 msg.querySelector('.message-content')?.prepend(p);
             }
@@ -11484,13 +11541,34 @@
         // ==========================================
         const mencoesPendentes = {};   // nome exibido escolhido no autocomplete -> id
 
-        function htmlTexto(texto) {
-            return esc(texto).replace(/&lt;@(\d{1,10})&gt;/g, (_, id) => {
-                const m = membrosDoServidor.find(x => Number(x.id) === Number(id));
-                const eu = Number(id) === Number(currentUserId);
-                return `<span class="mencao ${eu ? 'mencao-eu' : ''}" data-perfil-id="${Number(id)}">@${esc(m ? m.nome : 'usuário')}</span>`;
-            });
+        // Texto formatado (negrito, código, listas, links, prévias, menções): static/js/texto_rico.js. Tudo escapado lá dentro.
+        function previasLigadas() { try { return localStorage.getItem('pnt_previas') !== '0'; } catch (e) { return true; } }
+        function ctxTexto() {
+            const srv = (typeof servidorAtivo === 'function') ? servidorAtivo() : null;
+            const perms = (srv && srv.minhasPerms) || [];
+            return {
+                membros: () => membrosDoServidor, cargos: () => (srv && srv.cargos) || [], meuId: currentUserId,
+                meusCargos: (srv && srv.meusCargos) || [], souDono: !!srv && Number(srv.owner_id) === Number(currentUserId),
+                podeGerir: !!srv && (Number(srv.owner_id) === Number(currentUserId) || perms.includes('administrador') || perms.includes('gerenciar_servidor') || perms.includes('expulsar')),
+                previas: previasLigadas()
+            };
         }
+        function podeMencionarTodos() {
+            const srv = servidorAtivo(); if (!srv) return false;
+            return Number(srv.owner_id) === Number(currentUserId) || (srv.minhasPerms || []).includes('mencionar_todos') || (srv.minhasPerms || []).includes('administrador');
+        }
+        function htmlTexto(texto) { return TextoRico.render(texto, ctxTexto()); }
+        /** A mensagem me chama? (eu, @todos, @aqui, um cargo que eu tenho, @staff se eu moderar, @dono se eu for o dono) */
+        function mencionaMim(texto) {
+            const t = String(texto || '');
+            if (t.indexOf('<@') < 0) return false;
+            if (t.includes('<@' + currentUserId + '>') || /<@(todos|aqui)>/.test(t)) return true;
+            const c = ctxTexto();
+            if (/<@dono>/.test(t) && c.souDono) return true;
+            if (/<@staff>/.test(t) && c.podeGerir) return true;
+            return (t.match(/<@&(\d{1,10})>/g) || []).some(x => c.meusCargos.map(Number).includes(Number(x.slice(3, -1))));
+        }
+        TextoRico.iniciar({ confirmarLink: (href, host, abrir) => openConfirmModal('Abrir este link?', `O link leva para ${host}:\n${href}\n\nSó abra se confiar em quem mandou.`, abrir) });
 
         // Quando a lista de membros chega/muda, corrige o nome das menções já desenhadas
         function atualizarMencoes() {
@@ -11506,7 +11584,7 @@
                 if (!m) return tok;
                 mencoesPendentes[m.nome] = m.id;
                 return '@' + m.nome;
-            });
+            }).replace(/<@(&?)(\d{1,10}|todos|aqui|staff|dono|alguem|amigos)>/g, (tok) => TextoRico.tokensParaDigitado(tok, ctxTexto()));
         }
 
         function converterMencoes(texto) {
@@ -11520,6 +11598,8 @@
                 const m = membrosDoServidor.find(x => x.username === u);
                 return m ? `${pre}<@${m.id}>` : full;
             });
+            // @todos, @aqui, @staff, @NomeDoCargo...: viram token e o SERVIDOR confere a permissão (sem ela, vira texto e ninguém é chamado)
+            if (vistaAtual === 'server') out = TextoRico.digitadoParaTokens(out, ctxTexto());
             return out;
         }
 
@@ -11535,16 +11615,19 @@
         function desenharMencao() {
             if (!mencaoSt.itens.length) { fecharMencao(); return; }
             mencaoBox.innerHTML = mencaoSt.itens.map((m, i) => {
+                const sel = i === mencaoSt.sel ? 'sel' : '';
+                if (m.tipo === 'esp') return `<button type="button" class="mencao-item ${sel}" data-i="${i}"><span class="mencao-ic"><i class="fa-solid ${esc(m.icone)}"></i></span><b>@${esc(m.nome)}</b><small>${esc(m.desc)}</small></button>`;
+                if (m.tipo === 'cargo') return `<button type="button" class="mencao-item ${sel}" data-i="${i}"><span class="mencao-cor" style="background:${esc(m.cor)}"></span><b style="color:${esc(m.cor)}">@${esc(m.nome)}</b><small>Cargo</small></button>`;
                 const av = escUrl(m.avatar || '');
-                return `<button type="button" class="mencao-item ${i === mencaoSt.sel ? 'sel' : ''}" data-i="${i}">
+                return `<button type="button" class="mencao-item ${sel}" data-i="${i}">
                     <span class="mencao-av">${av ? `<img src="${av}" alt="">` : esc((m.nome || '?')[0].toUpperCase())}</span>
-                    <b class="${classeNome(m.nome_estilo)}">${esc(m.nome)}</b>
+                    <b class="${classeNome(m.estilo)}">${esc(m.nome)}</b>
                     ${m.username ? `<small>@${esc(m.username)}</small>` : ''}
                 </button>`;
             }).join('');
             const r = msgInput.getBoundingClientRect();
             mencaoBox.style.left = r.left + 'px';
-            mencaoBox.style.width = Math.min(r.width, 380) + 'px';
+            mencaoBox.style.width = Math.min(r.width, 420) + 'px';
             mencaoBox.style.bottom = (window.innerHeight - r.top + 8) + 'px';
             mencaoBox.style.display = 'flex';
         }
@@ -11557,7 +11640,7 @@
             msgInput.value = v.slice(0, mencaoSt.inicio) + inserido + v.slice(pos);
             const novaPos = mencaoSt.inicio + inserido.length;
             msgInput.setSelectionRange(novaPos, novaPos);
-            mencoesPendentes[m.nome] = m.id;
+            if (m.tipo === 'pessoa') mencoesPendentes[m.nome] = m.id;     // especial e cargo viram token em converterMencoes (pelo nome)
             fecharMencao();
             msgInput.focus();
         }
@@ -11566,16 +11649,13 @@
             const pos = msgInput.selectionStart;
             const achou = /(^|\s)@([^\s@]{0,32})$/.exec(msgInput.value.slice(0, pos));
             if (!achou) { fecharMencao(); return; }
-            const termo = achou[2].toLowerCase();
             mencaoSt.inicio = pos - achou[2].length - 1;
-            mencaoSt.itens = membrosDoServidor
-                .filter(m => Number(m.id) !== Number(currentUserId) &&
-                    ((m.nome || '').toLowerCase().includes(termo) || (m.username || '').includes(termo)))
-                .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
-                .slice(0, 6);
+            mencaoSt.itens = TextoRico.sugestoes(achou[2], { ...ctxTexto(), podeMencionarTodos: podeMencionarTodos(), emServidor: vistaAtual === 'server' && !!servidorAtivo() });
             mencaoSt.sel = 0;
             desenharMencao();
         });
+        TextoRico.ligarAtalhos(msgInput);                                   // Ctrl+B negrito, Ctrl+I itálico, Ctrl+U sublinhado, Ctrl+Shift+X riscado, Ctrl+E código
+        TextoRico.ligarAtalhos(document.getElementById('dm-message-input'));
         msgInput.addEventListener('keydown', (e) => {
             if (!mencaoSt.itens.length) return;
             if (e.key === 'ArrowDown') { e.preventDefault(); mencaoSt.sel = (mencaoSt.sel + 1) % mencaoSt.itens.length; desenharMencao(); }
@@ -11593,8 +11673,13 @@
         });
 
         // Alguém me citou
+        const FRASE_MENCAO = { pessoa: 'te citou', todos: 'chamou todo mundo', aqui: 'chamou quem está online', staff: 'chamou a moderação', dono: 'chamou o dono',
+                               amigos: 'chamou os amigos', alguem: 'te sorteou', cargo: 'chamou o seu cargo' };
         socket.on('mencao_recebida', (d) => {
-            showToast(`${d.autor} te citou em #${d.canal_nome}: ${d.trecho}`, 'info');
+            showToast(`${d.autor} ${FRASE_MENCAO[d.motivo] || 'te citou'} em #${d.canal_nome}: ${d.trecho}`, 'info');
+            // a mensagem que chegou antes do aviso ganha o destaque amarelo (as especiais não têm o meu id no texto)
+            const el = document.querySelector(`#messages-container .message[data-msg-id="${Number(d.msg_id)}"]`);
+            if (el) el.classList.add('mencionando-me');
         });
 
         // ==========================================
@@ -12784,7 +12869,7 @@
                 const alvo = (document.querySelector('#server-content-wrapper .chat-area-main') && document.getElementById('server-content-wrapper').style.display !== 'none' && !callEhDM())
                     ? document.querySelector('#server-content-wrapper .chat-area-main') : document.querySelector('.chat-area');
                 const r = alvo.getBoundingClientRect();
-                const chat = 0;
+                const chat = Stream.largura();    // canal de stream: o chat fica ao lado da call (350 px)
                 Object.assign(callJanela.style, { left: r.left + 'px', top: r.top + 'px', width: Math.max(300, r.width - chat) + 'px', height: r.height + 'px' });
             } else {
                 const w = callJanela.offsetWidth || 400, h = callJanela.offsetHeight || 260;
@@ -12808,12 +12893,38 @@
             posicionarCall();
             videoGrid.querySelectorAll('video').forEach(v => { try { v.play().catch(() => {}); } catch (e) {} });
             CallUI.aoMostrar(modo);   // fecha o "+"/menu, recalcula a grade e afasta a janela da Música se elas se cobrirem
+            Stream.aoMostrar(modo);   // canal de stream: o chat volta a ficar ao lado da call
         }
         function callMinimizar() { if (callJanela.classList.contains('ativa') && callModo === 'cheia') callMostrar('mini'); }
         function callOcultar() {
             callJanela.classList.remove('ativa');
             isCallChatOpen = false; textView.classList.remove('sidebar-mode');
         }
+        // Canal de stream (static/js/stream.js): uma tela por vez e o chat do canal ao lado da call.
+        function abrirChatDoStream(canal) {
+            if (String(currentChannelId) !== String(canal.id)) {
+                socket.emit('sair_canal', { canal_id: currentChannelId });
+                currentChannelId = String(canal.id);
+                socket.emit('entrar_canal', { canal_id: currentChannelId });
+                document.querySelectorAll('.text-channel').forEach(b => b.classList.remove('active'));
+                document.getElementById('current-channel-header').innerHTML = `<i class="fa-solid fa-tower-broadcast" style="color: var(--text-muted); font-size: 20px;"></i> ${esc(canal.name)}`;
+                document.getElementById('message-input').placeholder = `Conversar em ${canal.name}`;
+                Cargos.aoAbrirCanal(canal);
+                carregarMensagensIniciais();
+                Avisos.abriuCanal(canal.id);
+            }
+            textView.classList.remove('hidden'); textView.classList.add('sidebar-mode'); isCallChatOpen = true;
+            posicionarCall();
+        }
+        CallTransporte.iniciar({ socket, politica: CALL_POLITICA });     // P2P x SFU: só política e token por enquanto (sem adaptador, toda call segue P2P)
+        Stream.iniciar({
+            socket, meuId: () => currentUserId, toast: showToast,
+            canalPorId: (id) => acharCanal(Number(id)),
+            abrirChat: (canal) => abrirChatDoStream(canal),
+            fecharChat: () => { textView.classList.remove('sidebar-mode'); isCallChatOpen = false; },
+            pararTelas: () => pararTodosCompartilhamentos(),
+            souGerente: () => { const sv = servidorAtivo(); const pm = (sv && sv.minhasPerms) || []; return !!sv && (Number(sv.owner_id) === Number(currentUserId) || pm.includes('gerenciar_canais') || pm.includes('administrador')); }
+        });
         document.getElementById('cj-expandir').addEventListener('click', () => callMostrar('cheia'));
         document.getElementById('cj-recolher').addEventListener('click', () => callMostrar('mini'));
         document.getElementById('cj-topo').addEventListener('dblclick', () => callMostrar(callModo === 'mini' ? 'cheia' : 'mini'));
@@ -12864,7 +12975,24 @@
             esc, escUrl, toast: (m, t) => showToast(m, t), emitir: (n, d) => socket.emit(n, d), som: (t) => tocarSom(t),
             confirmar: (t, x, ok) => openConfirmModal(t, x, ok), meuId: () => currentUserId,
             canalId: () => currentVoiceChannelId, emCall: () => inCall, carregarChess: () => carregarLib(URL_CHESS),
+            abrirLocal: (tipo) => { if (tipo === 'sb_pessoal') Acervo.abrirSoundboard('pessoa'); else if (tipo === 'sb_servidor') Acervo.abrirSoundboard('servidor'); },
         });
+        Sons.iniciar({ audioCtx: () => { const ac = garantirAudio(); return ac && ac.state === 'running' ? ac : null; }, volume: () => ConfigUsuario.volumeSons() });
+        Acervo.iniciar({
+            socket, esc, escUrl, toast: (m, t) => showToast(m, t), confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
+            meuId: () => currentUserId, servidorAtivo: () => servidorAtivo(), canalDaCall: () => currentVoiceChannelId, emCall: () => inCall,
+            amSouOuvinte: () => { try { return !!Cargos.micTravado(); } catch (e) { return false; } },
+            audioCtx: () => garantirAudio(), abrirEmoji: (botao, cb) => abrirEmojiPicker(botao, cb),
+            somEntradaInicial: {{ (usuario_atual.som_entrada or '')|tojson }} || null,
+            enviarFigurinha: (item, destino) => {
+                if (destino === 'dm') { if (currentDmUserId) socket.emit('enviar_mensagem_direta', { target_id: parseInt(currentDmUserId), texto: '', sticker_id: item.id }); }
+                else socket.emit('enviar_mensagem', { canal_id: currentChannelId, texto: '', sticker_id: item.id });
+            },
+        });
+        document.getElementById('btn-figurinha')?.addEventListener('click', (e) => { e.stopPropagation(); Acervo.abrirFiguras(e.currentTarget, 'canal'); });
+        document.getElementById('dm-btn-figurinha')?.addEventListener('click', (e) => { e.stopPropagation(); Acervo.abrirFiguras(e.currentTarget, 'dm'); });
+        document.querySelector('.set-tab[data-target="set-perfil"]')?.addEventListener('click', () => { Acervo.carregar(); Acervo.pintarSomEntrada(); });
+        setTimeout(() => Acervo.pintarSomEntrada(), 0);
         socket.on('atividade_estado', (d) => Atividades.aoEstado(d));
         socket.on('atividade_erro', (d) => Atividades.aoErro(d));
         socket.on('atividade_convite', (d) => Atividades.aoConvite(d));
@@ -13308,6 +13436,7 @@
 
                 callMostrar(ehDM ? 'mini' : 'cheia');
                 document.getElementById('call-switch-overlay').classList.remove('active');
+                Stream.aoEntrar(ehDM ? null : acharCanal(Number(voiceId)));   // canal de stream: chat ao lado e vez de transmitir
 
                 // Sem TURN, o PeerJS só tenta conexão direta (STUN) - atrás de
                 // NAT/firewall mais fechado (rede de faculdade/trabalho, 4G de
@@ -13327,7 +13456,7 @@
                     // repetir o som de entrada nem ligar a câmera outra vez.
                     if (!jaAbriu) {
                         jaAbriu = true;
-                        tocarSomDeEntrada((perfilMeu.equipados || {}).som_call);
+                        tocarSomDeEntrada((perfilMeu.equipados || {}).som_call, Acervo.meuSomEntrada());
                         // Chamada de VÍDEO já abre com a câmera ligada; a de voz fica só no áudio.
                         if (opcoes.video) setTimeout(() => { if (inCall && !myCamStream) document.getElementById('btn-main-camera').click(); }, 600);
                     }
@@ -13364,6 +13493,7 @@
                         }
                         ((call) => {
                     if (call.metadata && call.metadata.type === 'screen') {
+                      const aceitarTela = () => {
                         call.answer();
                         // Chave por STREAM, não só por pessoa - com só `call.peer`
                         // aqui, a segunda tela de quem já estava compartilhando uma
@@ -13391,6 +13521,10 @@
                                 videoGrid.classList.add('focused-mode');
                             }
                         });
+                      };
+                      // Canal de stream: só vale a tela de quem o SERVIDOR diz que é o apresentador (o resto é descartado)
+                      if (Stream.ativo()) Stream.aceitaTelaDe(call.peer).then(okTela => { if (okTela) aceitarTela(); else { try { call.close(); } catch (e) {} } });
+                      else aceitarTela();
                     } else {
                         call.answer(streamParaChamada());
                         prepararVideoDaCall(call);
@@ -13816,32 +13950,36 @@
         // de bitrate em monitorarEAjustarBitrate(), chamado logo abaixo.
         const TELA_RES_PADRAO = 720; const TELA_FPS_PADRAO = 30;
 
-        function handleScreenShareBtn() {
+        function handleScreenShareBtn(ev) {
             if(!inCall) return;
-            if(activeScreenStreams.length > 0) streamActionModal.style.display = 'flex'; else iniciarCompartilhamentoTela();
+            if (activeScreenStreams.length > 0) {
+                if (Stream.ativo()) { pararTodosCompartilhamentos(); return; }   // canal de stream: uma tela só, o botão liga e desliga
+                streamActionModal.style.display = 'flex';
+            } else iniciarCompartilhamentoTela(ev);
         }
         document.getElementById('btn-main-screen').addEventListener('click', handleScreenShareBtn);
         document.getElementById('btn-side-screen').addEventListener('click', handleScreenShareBtn);
 
-        document.getElementById('btn-add-stream').addEventListener('click', () => { streamActionModal.style.display = 'none'; iniciarCompartilhamentoTela(); });
+        document.getElementById('btn-add-stream').addEventListener('click', (ev) => { streamActionModal.style.display = 'none'; iniciarCompartilhamentoTela(ev); });
         document.getElementById('btn-stop-all-streams').addEventListener('click', () => { streamActionModal.style.display = 'none'; pararTodosCompartilhamentos(); });
 
-        async function iniciarCompartilhamentoTela() {
+        async function iniciarCompartilhamentoTela(ev) {
+            // Antes do seletor do navegador/do app: o que mostrar, qualidade, som do computador e cursor (static/js/compartilhar.js).
+            // Shift + clique traz a janela de volta mesmo com "não perguntar de novo".
+            const op = await Compartilhar.perguntar({ forcar: !!(ev && ev.shiftKey), stream: Stream.ativo() });
+            if (!op) return;
+            // Canal de stream: só uma pessoa por vez. O servidor dá a vez (ou diz quem já está no ar).
+            if (Stream.ativo() && !(await Stream.pedirTela())) return;
             // "ideal" sozinho deixa o navegador negociar bem mais que o
             // pedido (ex: manda a tela em 1440p nativa); com "max" travado
             // no mesmo valor, o encoder do WebRTC nunca sai da faixa - era um
             // dos motivos do compartilhamento pesar mais que devia.
-            const alvoTela = telaAlvo();
-            const constraints = {
-                video: { height: { ideal: alvoTela.h, max: alvoTela.h }, frameRate: { ideal: alvoTela.fps, max: alvoTela.fps } },
-                audio: true,
-                selfBrowserSurface: 'exclude',      // não oferece esta própria aba (a que gera o espelho infinito)
-                surfaceSwitching: 'include'
-            };
+            const alvoTela = Compartilhar.alvo(op, telaAlvo());
+            const constraints = Compartilhar.constraints(op, alvoTela);
             try {
                 const newStream = await navigator.mediaDevices.getDisplayMedia(constraints);
                 // "detail" mantém texto e código nítidos (perde fluidez se a rede apertar); "motion" faz o contrário (jogos, vídeo)
-                newStream.getVideoTracks().forEach(tr => { try { tr.contentHint = opcaoCall('otimizar', 'fluidez') === 'nitidez' ? 'detail' : 'motion'; } catch (e) {} });
+                newStream.getVideoTracks().forEach(tr => { try { tr.contentHint = Compartilhar.dica(op) || (opcaoCall('otimizar', 'fluidez') === 'nitidez' ? 'detail' : 'motion'); } catch (e) {} });
                 const streamId = Date.now();
                 // `calls` guarda as ligações PeerJS abertas pra essa tela em
                 // cada peer - sem isso, pararCompartilhamento() não tinha
@@ -13872,7 +14010,10 @@
                     screenObj.calls.push(call);
                 });
                 newStream.getVideoTracks()[0].onended = () => pararCompartilhamento(streamId);
-            } catch(e) {}
+            } catch(e) {
+                if (Stream.ativo()) Stream.liberarTela();     // cancelou o seletor: devolve a vez
+                if (e && e.name && !['NotAllowedError', 'AbortError'].includes(e.name)) showToast('Não consegui compartilhar a tela' + (e.message ? ` (${e.message})` : '.'), 'error');
+            }
         }
 
         function pararCompartilhamento(id) {
@@ -13889,7 +14030,7 @@
             }
             const card = document.getElementById(`screen-card-${id}`);
             if(card) { if(card.classList.contains('focused')) videoGrid.classList.remove('focused-mode'); card.remove(); }
-            if(activeScreenStreams.length === 0) { document.getElementById('btn-main-screen').classList.remove('active-green'); document.getElementById('btn-side-screen').classList.remove('active-stream'); }
+            if(activeScreenStreams.length === 0) { document.getElementById('btn-main-screen').classList.remove('active-green'); document.getElementById('btn-side-screen').classList.remove('active-stream'); Stream.liberarTela(); }
         }
         function pararTodosCompartilhamentos() { const idsParaParar = activeScreenStreams.map(s => s.id); idsParaParar.forEach(id => pararCompartilhamento(id)); }
 
@@ -14169,6 +14310,7 @@
             resetarMudo();
             document.getElementById('voice-panel').classList.remove('active');
             callOcultar();
+            Stream.aoSair();
             CallUI.aoSair(); Atividades.aoSairDaCall();
             document.getElementById('text-view').classList.remove('hidden'); document.getElementById('text-view').classList.remove('sidebar-mode');
             document.getElementById('video-grid').classList.remove('focused-mode');
@@ -14375,9 +14517,11 @@
             ligando: [[440, 0, .45, .09], [480, 0, .45, .09]]                           // chamando (em loop)
         };
         // Som de entrada equipado por quem entrou (só quem tem o item); sem ele, o bipe padrão.
-        function tocarSomDeEntrada(idSom) {
+        function tocarSomDeEntrada(idSom, somProprio) {
             if (!CallUI.sonsLigados()) return;
             if (!ConfigUsuario.somPermitido('call_entrar')) return;     // Configurações > Voz e vídeo > Sons
+            // som que a PESSOA escolheu (pronto ou do acervo dela): vale mais que o do item equipado. Passa pelo limitador e corta em 6 s (static/js/sons.js).
+            if (somProprio && somLigado() && perfilMeu.status !== 'dnd' && Sons.tocar(somProprio)) return;
             if (idSom) {
                 if (!somLigado() || perfilMeu.status === 'dnd') return;
                 const ctx = garantirAudio();
@@ -15187,6 +15331,7 @@
             document.querySelectorAll('.inbox-badge').forEach(b => { b.textContent = notifs.naoLidas > 99 ? '99+' : notifs.naoLidas; b.style.display = notifs.naoLidas ? 'inline-flex' : 'none'; });
             atualizarTituloAba();
             if (inboxPanel.style.display === 'flex') renderInbox();
+            Avisos.pintar();   // as citações (menções não lidas) dos servidores saem desta lista
         }
         function quandoTexto(n) {
             const s = Math.max(0, Math.floor((Date.now() - n.chegouEm) / 1000));
@@ -15210,17 +15355,23 @@
         });
 
         const ICONE_NOTIF = { dm: 'fa-message', amizade: 'fa-user-plus', mencao: 'fa-at', bazar: 'fa-store', nota: 'fa-comment-dots', sistema: 'fa-bell' };
+        let ibFiltro = 'tudo';
         function renderInbox() {
             const lista = document.getElementById('ib-lista');
-            if (!notifs.itens.length) { lista.innerHTML = '<div class="ib-vazio"><i class="fa-regular fa-bell-slash"></i>Tudo em dia! Mensagens, pedidos de amizade e menções aparecem aqui.</div>'; }
-            else lista.innerHTML = notifs.itens.map(n => `
+            const naoLidas = notifs.itens.filter(n => !n.lida).length;
+            const mostrar = ibFiltro === 'nao' ? notifs.itens.filter(n => !n.lida) : notifs.itens;
+            const contaEl = document.getElementById('ib-n-nao'); if (contaEl) contaEl.textContent = naoLidas ? String(naoLidas > 99 ? '99+' : naoLidas) : '';
+            document.querySelectorAll('#ib-filtro button').forEach(b => b.classList.toggle('on', b.dataset.f === ibFiltro));
+            if (!mostrar.length) { lista.innerHTML = `<div class="ib-vazio"><i class="fa-regular fa-bell-slash"></i>${ibFiltro === 'nao' ? 'Nada novo por aqui.' : 'Tudo em dia! Mensagens, pedidos de amizade e menções aparecem aqui.'}</div>`; }
+            else lista.innerHTML = mostrar.map(n => `
                 <div class="ib-item ${n.lida ? '' : 'nao-lida'}" data-id="${Number(n.id)}">
                     <div class="ib-ico ${esc(n.tipo)}"><i class="fa-solid ${ICONE_NOTIF[n.tipo] || 'fa-bell'}"></i></div>
                     <div class="ib-txt">
-                        <div class="ib-tit">${esc(n.titulo)}${n.quantidade > 1 ? `<span class="ib-qtd">${n.quantidade}</span>` : ''}</div>
+                        <div class="ib-tit">${esc(n.titulo)}${n.quantidade > 1 ? `<span class="ib-qtd ${n.lida ? 'lida' : ''}">${n.lida ? '×' : ''}${n.quantidade}</span>` : ''}</div>
                         ${n.texto ? `<div class="ib-sub">${esc(n.texto)}</div>` : ''}
                         <div class="ib-quando">${quandoTexto(n)}</div>
                     </div>
+                    <button type="button" class="ib-x" data-ib-x="${Number(n.id)}" title="Apagar este aviso" aria-label="Apagar este aviso"><i class="fa-solid fa-xmark"></i></button>
                 </div>`).join('');
             emojificar(lista);
             const som = document.getElementById('ib-som');
@@ -15256,7 +15407,19 @@
             if (somLigado()) tocarSom('msg');
             renderInbox();
         });
+        document.getElementById('ib-filtro').addEventListener('click', (e) => {
+            const b = e.target.closest('button[data-f]'); if (!b) return;
+            ibFiltro = b.dataset.f; renderInbox();
+        });
         document.getElementById('ib-lista').addEventListener('click', (e) => {
+            const x = e.target.closest('[data-ib-x]');
+            if (x) {                                  // apagar só este aviso (sem abrir a conversa)
+                e.stopPropagation();
+                const id = Number(x.dataset.ibX);
+                notifs.itens = notifs.itens.filter(n => n.id !== id);
+                socket.emit('apagar_notificacao', { id });
+                recontarNotifs(); return;
+            }
             const it = e.target.closest('.ib-item'); if (!it) return;
             const n = notifs.itens.find(x => x.id === Number(it.dataset.id)); if (!n) return;
             if (!n.lida) { n.lida = true; socket.emit('marcar_notificacoes_lidas', { ids: [n.id] }); recontarNotifs(); }
@@ -15436,7 +15599,7 @@
             if (d.subiu_nivel) tocarSom('nivel');
         });
         socket.on('missao_concluida', () => tocarSom('missao'));
-        socket.on('novo_usuario_call', (d) => { if (d && d.reentrada) return; tocarSomDeEntrada(((d && d.equipados) || {}).som_call); });   // alguém entrou na call em que eu estou
+        socket.on('novo_usuario_call', (d) => { if (d && d.reentrada) return; tocarSomDeEntrada(((d && d.equipados) || {}).som_call, d && d.som_entrada); });   // alguém entrou na call em que eu estou
         socket.on('usuario_saiu_call', () => tocarSom('call_sair'));
 
         // ---------- MARQUEE: texto grande rola devagar (3s parado no começo, vai até o fim, 3s, volta) ----------

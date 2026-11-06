@@ -30,6 +30,8 @@ REGRAS = (
     ('POST', '/api/imagem/importar', 15, 60, 'importação de imagem'),
     ('POST', '/api/conexoes/importar-cv', 8, 60, 'leitura de currículo'),
     ('POST', '/estudio/api/arquivos', 30, 60, 'envio de arquivos do Estúdio'),
+    ('POST', '/api/acervo/upload', 20, 60, 'envio de figurinhas e sons'),
+    ('GET', '/api/acervo/', 240, 60, 'figurinhas e sons'),
     ('GET', '/api/gifs', 60, 60, 'busca de GIF'),
     ('GET', '/api/localizacao/ip', 30, 60, 'localização por IP'),
     ('GET', '/api/meus-dados', 6, 60, 'cópia dos dados'),

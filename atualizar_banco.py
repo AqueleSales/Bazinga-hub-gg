@@ -335,6 +335,22 @@ def atualizar_banco():
             # 45. Pacotes do Estúdio e efeito do Estúdio à venda (Rodada 37): a tabela pacote_custom nasce pelo create_all; aqui só a flag "vender avulso" do efeito.
             add_column_se_nao_existir("efeito_custom", "vender BOOLEAN")
 
+            # 47. Opcoes por tipo de canal (Rodada 39): canal de lojas "incluir as parceiras" e afins, em JSON (cargos.OPCOES_CANAL). NULL = tudo no padrao.
+            add_column_se_nao_existir("channel", "opcoes TEXT")
+
+            # 48. Acervo (figurinhas e sons, Rodada 39): a tabela acervo_item nasce pelo create_all; aqui as colunas novas de tabelas que ja existem.
+            add_column_se_nao_existir("person", "som_entrada VARCHAR(40)")
+            add_column_se_nao_existir("guardiao_caso", "ref_id INTEGER")
+
+            # 46. Mensagem nova nos canais (Rodada 39): a tabela canal_leitura nasce pelo create_all. O índice (canal, id) é o que deixa a
+            # contagem de "não lidas" rápida (sem ele cada conexão varre a tabela message inteira).
+            try:
+                db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_message_canal_id ON message (channel_id, id)"))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print("aviso: índice ix_message_canal_id não criado:", e)
+
             print("\n🚀 Banco de Dados 100% atualizado e pronto!")
         except Exception as e:
             print("❌ Erro fatal ao atualizar o banco:", e)
