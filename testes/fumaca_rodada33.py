@@ -31,9 +31,9 @@ secoes = re.search(r"const INV_SECOES = \[(.*?)\];", js, re.S).group(1)
 ids_secoes = re.findall(r"\['([a-z_]+)', '", secoes)
 tipos_catalogo = {k.split(':')[0] for k in cos.CATALOGO}
 ok(set(ids_secoes) >= tipos_catalogo - {'pacote'} or set(ids_secoes) >= tipos_catalogo, 'o inventário tem uma seção pra todo tipo de item do catálogo (nenhum some)')
-efeitos_py = {'efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota', 'efeito_servidor'}
+efeitos_py = {'efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota', 'efeito_servidor', 'efeito_pagina'}
 subs = set(re.findall(r"\['(efeito_[a-z]+|pin_nota|som_call)', '", re.search(r"const INV_SUBS_EFEITO = \[(.*?)\];", js, re.S).group(1)))
-ok(subs == efeitos_py, 'a aba Efeitos separa por TIPO de efeito (avatar, perfil, fala, radar, digitando, pin, som, servidor)')
+ok(subs == efeitos_py, 'a aba Efeitos separa por TIPO de efeito (avatar, perfil, fala, radar, digitando, pin, som, servidor, shader da página)')
 ok('data-filtro="busca"' in js and 'data-filtro="tema"' in js and 'data-filtro="origem"' in js, 'filtros por busca, tema e origem (exclusivos x livres)')
 ok('el._invFiltro' in js and "if (aba !== 'efeito') f.sub = 'todos'" in js, 'os filtros sobrevivem ao redesenho do servidor e o de tipo de efeito só vale na aba Efeitos')
 ok(re.search(r'\.inv-topo \{[^}]*z-index: 40[^}]*background: var\(--bg-primary\)', css, re.S) and '.inv-item { isolation: isolate' in css,
