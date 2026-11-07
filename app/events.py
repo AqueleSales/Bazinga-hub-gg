@@ -4827,4 +4827,6 @@ from . import stream_events  # noqa: E402,F401
 from . import sfu_events  # noqa: E402,F401
 # Figurinhas, sons de entrada e soundboard (acervo, Rodada 39): handlers em outro arquivo, também no FIM (importa daqui).
 from . import acervo_events  # noqa: E402,F401
+# Dados pessoais (Rodada 40): rolagem sorteada no servidor, resposta só pra quem rolou (público só se a pessoa escolher): handlers em outro arquivo, também no FIM.
+from . import dados_events  # noqa: E402,F401
 from .avisos_events import avisar_atividade  # noqa: E402,F401

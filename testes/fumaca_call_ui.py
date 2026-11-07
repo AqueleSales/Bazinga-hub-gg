@@ -41,7 +41,7 @@ ok("carregarLib(URL_CHESS)" in chat, 'o xadrez baixa o chess.js sob demanda (car
 
 # ---- barra da call: ids que outros códigos usam continuam ----
 for i in ('cf-main', 'btn-main-screen', 'btn-main-clip', 'media-popup', 'pop-btn-gravar', 'pop-btn-clipar', 'switch-clip-auto', 'clip-alerta',
-          'btn-main-mic', 'btn-main-deafen', 'btn-main-camera', 'btn-main-disconnect', 'btn-side-ruido'):
+          'btn-main-mic', 'btn-main-deafen', 'btn-main-camera', 'btn-main-disconnect', 'btn-side-ruido', 'btn-main-soundboard'):
     ok(f'id="{i}"' in chat, f'id {i} existe no chat.html')
 ok('.media-btn-wrap, .cf-fan, #cf-camada' in chat, 'o clique fora que fecha o popup do clipe conhece o "+" e a camada do leque')
 ok(re.search(r'#btn-main-screen,\s*\.media-btn-wrap', chat) is not None, 'no celular a tela compartilhada continua escondida (não existe no aparelho)')

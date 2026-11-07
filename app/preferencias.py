@@ -31,6 +31,7 @@ CAMPOS = {
     'reduz_mov': ((True, False), False),                         # reduzir animações
     'hora12': ((True, False), False),                            # relógio de 12 h (AM/PM)
     'shaders': ((True, False), True),                            # efeitos de tela inteira (shaders de página, só computador)
+    'dados_publico': ((True, False), False),                     # o olho do painel de dados: a call vê as minhas rolagens (padrão: só eu)
 }
 for _id in IDS_AVISO:
     CAMPOS['n_' + _id] = ((True, False), True)

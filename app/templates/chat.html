@@ -2789,8 +2789,8 @@
             .video-card { aspect-ratio: 1 / 1; max-height: none; border-radius: 14px; }
             .video-avatar { width: 64px; height: 64px; font-size: 26px; }
             .video-label { bottom: 8px; left: 8px; font-size: 12px; max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            .call-controls-bar { opacity: 1 !important; transform: translateX(-50%) !important; pointer-events: auto !important; bottom: 14px; gap: 10px; padding: 8px 14px; border-radius: 32px; }
-            .call-btn { width: 50px; height: 50px; font-size: 19px; }
+            .call-controls-bar { opacity: 1 !important; transform: translateX(-50%) !important; pointer-events: auto !important; bottom: 14px; gap: 8px; padding: 8px 12px; border-radius: 32px; }
+            .call-btn { width: 44px; height: 44px; font-size: 17px; }          /* 6 botões (mic, fone, câmera, soundboard, "+", desligar) cabem em 375 px */
             #btn-main-screen, .media-btn-wrap, .call-controls-bar > div[style*="width: 1px"] { display: none !important; }
             .call-janela.mini { width: 200px; height: 172px; min-width: 0; min-height: 0; resize: none; border-radius: 16px; }
             .call-janela.mini .video-grid { grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); padding: 6px 6px 48px; }
@@ -2811,7 +2811,7 @@
             body.mob-em-call .discord-app { margin-top: 54px; height: calc(100vh - var(--nav-h) - 54px); height: calc(100dvh - var(--nav-h) - 54px); }
             body.mob-em-call .left-sidebar-wrapper { top: 54px; }
             .call-janela { z-index: 1280; }   /* abaixo da barra de baixo (1300): o losango do botão do meio nunca fica cortado */
-            .call-btn { width: 56px; height: 56px; font-size: 21px; }
+            .call-btn { width: 46px; height: 46px; font-size: 18px; }          /* 6 botões na barra (com o soundboard): 6x46 + folgas = 340 px, cabe em 375 */
             #mob-multi.losango::before { content: ''; position: absolute; top: -14px; left: 50%; margin-left: 12px; width: 11px; height: 11px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 0 3px var(--bg-tertiary); z-index: 2; animation: mobBatida 1.4s ease-in-out infinite; }
 
             /* modais e configurações: tela cheia / folha larga */
@@ -3037,7 +3037,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/texto_rico.css') }}?v={{ sv('css/texto_rico.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/stream.css') }}?v={{ sv('css/stream.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/acervo.css') }}?v={{ sv('css/acervo.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dados.css') }}?v={{ sv('css/dados.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/config_usuario.css') }}?v={{ config_usuario_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/controles.css') }}?v={{ sv('css/controles.css') }}">
 </head>
 <body>
     <div class="discord-app">
@@ -3377,6 +3379,8 @@
                             <button class="call-btn" id="btn-main-mic" title="Silenciar"><i class="fa-solid fa-microphone"></i></button>
                             <button class="call-btn" id="btn-main-deafen" title="Ensurdecer (parar de ouvir)"><i class="fa-solid fa-headphones"></i></button>
                             <button class="call-btn" id="btn-main-camera" title="Ligar Câmera"><i class="fa-solid fa-video"></i></button>
+                            <!-- Soundboard: botão direto na barra (como o do Discord), abre o painel de sons pra tocar rápido (static/js/acervo.js). Não é uma atividade. -->
+                            <button class="call-btn" id="btn-main-soundboard" title="Soundboard" aria-label="Soundboard" aria-pressed="false"><i class="fa-solid fa-volume-high"></i></button>
                             <!-- O "+" abre em leque: transmitir tela, clipe, convidar, atividades e os 3 pontinhos (static/js/call_ui.js).
                                  #btn-main-screen, #btn-main-clip e #media-popup mantêm o id e os ouvintes; o CallUI.iniciar() os leva pra
                                  camada do leque (#cf-camada), fora da janela da call, que corta o que passa da borda. -->
@@ -5041,6 +5045,8 @@
     <script src="{{ url_for('static', filename='js/musica.js') }}?v={{ musica_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/call_ui.js') }}?v={{ call_ui_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/dados3d.js') }}?v={{ sv('js/dados3d.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dados.js') }}?v={{ sv('js/dados.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/controles.js') }}?v={{ sv('js/controles.js') }}"></script>
     <script src="{{ url_for('static', filename='js/atividades_jogos.js') }}?v={{ atividades_jogos_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/atividades.js') }}?v={{ atividades_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/prestigio.js') }}?v={{ prestigio_js_v }}"></script>
@@ -12979,12 +12985,23 @@
             esc, escUrl, toast: (m, t) => showToast(m, t), emitir: (n, d) => socket.emit(n, d), som: (t) => tocarSom(t),
             confirmar: (t, x, ok) => openConfirmModal(t, x, ok), meuId: () => currentUserId,
             canalId: () => currentVoiceChannelId, emCall: () => inCall, carregarChess: () => carregarLib(URL_CHESS),
-            abrirLocal: (tipo) => { if (tipo === 'sb_pessoal') Acervo.abrirSoundboard('pessoa'); else if (tipo === 'sb_servidor') Acervo.abrirSoundboard('servidor'); },
+            abrirLocal: (tipo) => { if (tipo === 'dados') Dados.abrir(); },          // os dados são um painel PESSOAL (static/js/dados.js), não uma atividade da call
         });
-        Sons.iniciar({ audioCtx: () => { const ac = garantirAudio(); return ac && ac.state === 'running' ? ac : null; }, volume: () => ConfigUsuario.volumeSons() });
+        // Dados pessoais: o servidor sorteia e responde SÓ a quem rolou; o olho (conta) escolhe se a call/um canal vê; a engrenagem, onde. Ver app/dados_events.py.
+        Dados.iniciar({
+            socket, esc, toast: (m, t) => showToast(m, t), emCall: () => inCall, som: (t) => tocarSom(t),
+            prefs: { publico: () => !!ConfigUsuario.prefs().dados_publico, definirPublico: (v) => ConfigUsuario.salvar({ dados_publico: !!v }), aoMudar: (f) => ConfigUsuario.aoMudar(f) },
+            canais: () => (meUserServers || []).map(sv => ({ servidor: sv.name, canais: (sv.channels || []).filter(c => c.type === 'text').map(c => ({ id: c.id, name: c.name })) })).filter(g => g.canais.length),
+        });
+        // um toque do soundboard que o navegador seguraria (contexto de áudio suspenso até o primeiro clique): avisa uma vez só
+        let _avisouSomPreso = 0;
+        Sons.iniciar({ audioCtx: () => garantirAudio(), volume: () => ConfigUsuario.volumeSons(),
+            aoBloquear: () => { if (Date.now() - _avisouSomPreso > 60000) { _avisouSomPreso = Date.now(); showToast('O navegador está segurando o som. Clique em qualquer lugar da página pra liberar.', 'warning'); } } });
+        document.getElementById('btn-main-soundboard')?.addEventListener('click', (e) => { e.stopPropagation(); Acervo.alternarSoundboard(); });
         Acervo.iniciar({
             socket, esc, escUrl, toast: (m, t) => showToast(m, t), confirmar: (t, x, ok) => openConfirmModal(t, x, ok),
             meuId: () => currentUserId, servidorAtivo: () => servidorAtivo(), canalDaCall: () => currentVoiceChannelId, emCall: () => inCall,
+            servidorDaCall: () => { const cid = String(currentVoiceChannelId || ''); const s = cid && !cid.startsWith('dm_') ? (meUserServers || []).find(sv => (sv.channels || []).some(c => String(c.id) === cid)) : null; return s ? { id: s.id } : null; },
             amSouOuvinte: () => { try { return !!Cargos.micTravado(); } catch (e) { return false; } },
             audioCtx: () => garantirAudio(), abrirEmoji: (botao, cb) => abrirEmojiPicker(botao, cb),
             somEntradaInicial: {{ (usuario_atual.som_entrada or '')|tojson }} || null,
@@ -14315,7 +14332,7 @@
             document.getElementById('voice-panel').classList.remove('active');
             callOcultar();
             Stream.aoSair();
-            CallUI.aoSair(); Atividades.aoSairDaCall();
+            CallUI.aoSair(); Atividades.aoSairDaCall(); Acervo.fecharSb();
             document.getElementById('text-view').classList.remove('hidden'); document.getElementById('text-view').classList.remove('sidebar-mode');
             document.getElementById('video-grid').classList.remove('focused-mode');
             document.getElementById('btn-main-camera').classList.remove('active'); document.getElementById('btn-side-camera').classList.remove('active-stream');

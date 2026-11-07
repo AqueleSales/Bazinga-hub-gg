@@ -9,7 +9,7 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
-        'id': 44, 'data': '07/11/2026', 'titulo': 'Chainsaw Man, JoJo, Homem-Aranha, Evangelion e os primeiros efeitos de tela inteira',
+        'id': 45, 'data': '07/11/2026', 'titulo': 'Chainsaw Man, JoJo, Homem-Aranha, Evangelion e os primeiros efeitos de tela inteira',
         'itens': [
             {'icone': 'fa-gears', 'titulo': 'Chainsaw Man: Denji, Reze, Makima, Power e Aki',
              'texto': 'Cada um com todos os itens, lendários: o Denji (rabinho do Pochita, motosserra saindo da sua foto, chuva de sangue), a Reze (pino de granada, detonação, fogos e a gérbera), a Makima (coleira, olhos de anéis), a Power (chifres e lua de sangue) e o Aki (cigarro, katana e o contrato vermelho).'},
@@ -19,6 +19,17 @@ NOVIDADES = [
              'texto': 'O traje vermelho e azul, o sentido de aranha e a cidade; o pacote NERV e as Unidades 00, 01 e 02 do Evangelion (quem compra um desses pacotes leva uma insígnia exclusiva); e o Cyberpunk Edgerunners com David (Sandevistan), Lucy (a Lua), Rebecca (a escopeta turquesa) e Adam Smasher (o olho vermelho).'},
             {'icone': 'fa-wand-magic-sparkles', 'titulo': 'Shaders: efeitos que tomam a tela inteira',
              'texto': 'Um tipo novo de cosmético, só no computador: motosserra que corta a página, teia nos dois botões do mouse, lança de Evangelion e alerta de Anjo, o tempo apagado do JoJo, cyberpsicose, chuva de código, ondinhas, rastro de arco-íris e uma lagoa com sapos. Dá pra ver o efeito antes de comprar e desligar tudo em Configurações > Acessibilidade.'},
+        ],
+    },
+    {
+        'id': 44, 'data': '06/11/2026', 'titulo': 'Soundboard na hora, dados mais simples e só seus, barras e botões com cara nova',
+        'itens': [
+            {'icone': 'fa-volume-high', 'titulo': 'Soundboard com botão na barra da call, e sem atraso',
+             'texto': 'O soundboard agora tem o próprio botão (o alto-falante, ao lado da câmera) e abre direto pra você tocar. O som chega na hora pra todo mundo da call e dá pra tocar várias vezes seguidas: quando você abre o painel, os outros já baixam os seus sons. Ele deixou de ser uma atividade.'},
+            {'icone': 'fa-dice-d20', 'titulo': 'Dados mais simples e só seus',
+             'texto': 'Os dados foram refeitos no estilo do dado do Google: toque num dado (d4 a d20) pra somar mais um, use o ± pro modificador, Rolar e Limpar, e o total aparece no canto. As rolagens são suas e não ocupam mais a atividade da call. O olho ao lado do título escolhe se a call vê o resultado; a engrenagem escolhe onde mostrar (aviso na call e/ou uma mensagem num canal de texto).'},
+            {'icone': 'fa-sliders', 'titulo': 'Barras de volume e botões novos',
+             'texto': 'Todas as barras de volume ficaram finas, com a parte cheia na cor do app (volume de cada pessoa, soundboard, corte do som, configurações). Os botões da janela de sons perderam o contorno branco estranho, e o corte do som mostra só o pedaço que vai ficar.'},
         ],
     },
     {

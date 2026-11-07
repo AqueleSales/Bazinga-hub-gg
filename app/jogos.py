@@ -1,4 +1,4 @@
-"""Jogos leves da call (sem socket): jogo da velha, pedra-papel-tesoura, forca e dados/sorteio.
+"""Jogos leves da call (sem socket): jogo da velha, pedra-papel-tesoura, forca e a mesa de sites (os dados viraram painel pessoal: app/dados.py).
 
 O xadrez mora em `atividades.py` (motor próprio). Estes jogos seguem a MESMA interface que `atividades_events.py` espera de uma atividade:
 `id`, `tipo`, `iniciador_id`, `seq`, `lados` (assento -> id da pessoa), `lado_de`, `sentar`, `levantar`, `partida` (None até a mesa estar completa),
@@ -395,162 +395,6 @@ class Forca(Mesa):
 
 
 # =====================================================================================================================
-# Dados e sorteio ("Bots": rolar dado, cara ou coroa, sortear alguém da call)
-# =====================================================================================================================
-DADOS = {'d4': 4, 'd6': 6, 'd8': 8, 'd10': 10, 'd12': 12, 'd20': 20, 'd100': 100}
-MAX_HISTORICO = 14
-MAX_DADOS_NA_ROLAGEM = 30
-MAX_MOEDAS = 10
-MAX_MODIFICADOR = 999
-_RE_TERMO = re.compile(r'^(\d{1,2})?d(4|6|8|10|12|20|100)(?:(kh|kl)(\d{1,2}))?$')
-
-
-class ErroRolagem(Exception):
-    """A expressão não vale: a mensagem vai pra quem rolou."""
-
-
-def ler_expressao(expr):
-    """"2d20kh1+1d6+5" -> ([{'dado': 'd20', 'qtd': 2, 'sinal': 1, 'manter': ('kh', 1)}, ...], modificador). Lista fechada de dados, no máximo
-    MAX_DADOS_NA_ROLAGEM dados; kh<N> = fica com os N maiores (vantagem é 2d20kh1), kl<N> = os N menores (desvantagem é 2d20kl1)."""
-    s = re.sub(r'\s+', '', str(expr or '')).lower()
-    if not s or len(s) > 60:
-        raise ErroRolagem('Escreva algo como 2d6+3 (até 60 caracteres).')
-    termos = re.findall(r'[+-]?[^+-]+', s)
-    if ''.join(termos) != s:
-        raise ErroRolagem('Não entendi essa expressão.')
-    grupos, mod, total = [], 0, 0
-    for t in termos:
-        sinal = -1 if t.startswith('-') else 1
-        corpo = t.lstrip('+-')
-        if corpo.isdigit():
-            mod += sinal * int(corpo)
-            continue
-        m = _RE_TERMO.match(corpo)
-        if not m:
-            raise ErroRolagem(f'Não entendi "{corpo[:12]}". Dados aceitos: d4, d6, d8, d10, d12, d20 e d100.')
-        qtd = int(m.group(1) or 1)
-        if qtd < 1:
-            raise ErroRolagem('Quantidade de dados inválida.')
-        manter = None
-        if m.group(3):
-            n = int(m.group(4))
-            if n < 1 or n > qtd:
-                raise ErroRolagem(f'"{m.group(3)}{n}" precisa ficar entre 1 e a quantidade de dados ({qtd}).')
-            manter = (m.group(3), n)
-        total += qtd
-        grupos.append({'dado': 'd' + m.group(2), 'qtd': qtd, 'sinal': sinal, 'manter': manter})
-    if not grupos:
-        raise ErroRolagem('Falta um dado na expressão (ex.: 1d20+4).')
-    if total > MAX_DADOS_NA_ROLAGEM:
-        raise ErroRolagem(f'No máximo {MAX_DADOS_NA_ROLAGEM} dados de uma vez.')
-    if abs(mod) > MAX_MODIFICADOR:
-        raise ErroRolagem(f'O modificador vai de -{MAX_MODIFICADOR} a +{MAX_MODIFICADOR}.')
-    return grupos, mod
-
-
-def expressao_de(dados):
-    """Monta a expressão a partir do pedido estruturado {dado, qtd, mod, modo} (o que os botões mandam). `modo`: normal | vantagem | desvantagem."""
-    dado = dados.get('dado')
-    if dado not in DADOS:
-        raise ErroRolagem('Dado inválido.')
-    try:
-        qtd = int(dados.get('qtd') or 1)
-        mod = int(dados.get('mod') or 0)
-    except (TypeError, ValueError):
-        raise ErroRolagem('Quantidade ou modificador inválido.')
-    modo = dados.get('modo') or 'normal'
-    if modo not in ('normal', 'vantagem', 'desvantagem'):
-        raise ErroRolagem('Modo inválido.')
-    corpo = f'{max(1, qtd)}{dado}'
-    if modo != 'normal':
-        corpo = f'2{dado}' + ('kh1' if modo == 'vantagem' else 'kl1')
-    return corpo + (f'{mod:+d}' if mod else '')
-
-
-def rolar_grupos(grupos, mod):
-    """Rola de verdade (SystemRandom). Devolve (total, lista de grupos com os valores e quais ficaram)."""
-    saida, soma = [], 0
-    for g in grupos:
-        lados = DADOS[g['dado']]
-        valores = [_alea.randint(1, lados) for _ in range(g['qtd'])]
-        mantidos = list(range(len(valores)))
-        if g['manter']:
-            tipo, n = g['manter']
-            ordem = sorted(range(len(valores)), key=lambda k: valores[k], reverse=(tipo == 'kh'))
-            mantidos = sorted(ordem[:n])
-        subtotal = sum(valores[k] for k in mantidos)
-        soma += g['sinal'] * subtotal
-        saida.append({'dado': g['dado'], 'valores': valores, 'mantidos': mantidos, 'sinal': g['sinal']})
-    return soma + mod, saida
-
-
-class DadosESorteio(Mesa):
-    TIPO = 'dados'
-    LADOS = ()
-
-    def __init__(self, iniciador_id):
-        super().__init__(iniciador_id)
-        self.historico = []                   # mais novo primeiro
-        self._seq = 0
-
-    def terminou(self):
-        return False
-
-    def _registrar(self, usuario_id, nome, avatar, tipo, texto, **extra):
-        self._seq += 1
-        self.nomes[usuario_id] = {'nome': nome, 'avatar': avatar}
-        self.historico.insert(0, {'id': self._seq, 'quem': {'id': usuario_id, 'nome': nome}, 'tipo': tipo, 'texto': texto, 'em': int(time.time()), **extra})
-        del self.historico[MAX_HISTORICO:]
-
-    def acao(self, usuario_id, nome, avatar, dados, presentes=None, ouvinte=False):
-        a = dados.get('acao')
-        if ouvinte:
-            return False, 'Quem só ouve a call assiste, mas não rola.'
-        if a == 'rolar':
-            d = dados.get('dado')
-            estruturado = any(k in dados for k in ('qtd', 'mod', 'modo'))
-            if 'expr' not in dados and not estruturado:
-                # um dado só, sem expressão (o formato antigo): mantém a mesma resposta
-                if d not in DADOS:
-                    return False, 'Dado inválido.'
-                self._registrar(usuario_id, nome, avatar, d, str(_alea.randint(1, DADOS[d])))
-                return True, ''
-            try:
-                expr = re.sub(r'\s+', '', str(dados['expr'])).lower() if 'expr' in dados else expressao_de(dados)
-                grupos, mod = ler_expressao(expr)
-            except ErroRolagem as e:
-                return False, str(e)
-            total, detalhe = rolar_grupos(grupos, mod)
-            self._registrar(usuario_id, nome, avatar, 'rolagem', str(total), expr=expr, grupos=detalhe, mod=mod, total=total)
-            return True, ''
-        if a == 'moeda':
-            try:
-                qtd = max(1, min(MAX_MOEDAS, int(dados.get('qtd') or 1)))
-            except (TypeError, ValueError):
-                return False, 'Quantidade de moedas inválida.'
-            faces = [_alea.choice(('Cara', 'Coroa')) for _ in range(qtd)]
-            if qtd == 1:
-                self._registrar(usuario_id, nome, avatar, 'moeda', faces[0], moedas=faces)
-            else:
-                caras = faces.count('Cara')
-                self._registrar(usuario_id, nome, avatar, 'moeda', f'{caras} {"cara" if caras == 1 else "caras"} e {qtd - caras} {"coroa" if qtd - caras == 1 else "coroas"}', moedas=faces)
-            return True, ''
-        if a == 'sortear':
-            nomes = [p['nome'] for p in (presentes or []) if p.get('nome')]
-            if not nomes:
-                return False, 'Não tem ninguém pra sortear.'
-            self._registrar(usuario_id, nome, avatar, 'sorteio', _alea.choice(nomes))
-            return True, ''
-        if a == 'limpar':
-            self.historico = []
-            return True, ''
-        return False, 'Ação desconhecida.'
-
-    def extra(self):
-        return {'historico': list(self.historico)}
-
-
-# =====================================================================================================================
 # Mesa de RPG e sites: uma PÁGINA que a call inteira abre junta (quadro de desenho, mapa de batalha, jogo de navegador, mesa virtual)
 # =====================================================================================================================
 # Lista FECHADA de sites (nada de endereço qualquer: uma iframe de página escolhida por um desconhecido seria porta de golpe e de rastreio).
@@ -629,4 +473,5 @@ class SiteCompartilhado(Mesa):
         return {'site': dict(self.info)}
 
 
-JOGOS = {c.TIPO: c for c in (Velha, PedraPapelTesoura, Forca, DadosESorteio, SiteCompartilhado)}
+# Os dados NÃO estão aqui: a partir da Rodada 40 são um painel PESSOAL (app/dados.py, dados_events.py), não uma atividade que ocupa a call.
+JOGOS = {c.TIPO: c for c in (Velha, PedraPapelTesoura, Forca, SiteCompartilhado)}

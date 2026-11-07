@@ -56,6 +56,12 @@
 .ac-play:disabled { opacity: .3; cursor: default; }
 .ac-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px 16px; border-top: 1px solid rgba(255, 255, 255, .07); }
 .ac-rodape small { color: var(--text-muted); }
+/* os botões do rodapé são os do app (`.btn`, sem a borda 2px outset que o navegador põe em <button> sem classe: era o "contorno branco" estranho) */
+.ac-rodape .btn, .ac-rodape .btn-cancel { padding: 9px 18px; font-size: 13.5px; font-weight: 700; border-radius: 10px; }
+.ac-rodape .btn-primary:disabled { opacity: .5; cursor: default; box-shadow: none; transform: none; }
+.ac-rodape .btn:focus-visible, .ac-play-g:focus-visible { outline: 2px solid var(--brand-color); outline-offset: 2px; }
+.ac-play-g { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; outline: none; box-shadow: none; }
+.ac-play-g:hover { background: rgba(255, 255, 255, .15); }
 .ac-solta { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px; border: 2px dashed rgba(255, 255, 255, .18); border-radius: 14px; cursor: pointer; text-align: center; color: var(--text-muted); }
 .ac-solta:hover { border-color: var(--brand-color); }
 .ac-solta i { font-size: 26px; color: var(--brand-color); }
@@ -65,7 +71,7 @@
 .ac-previa img { max-width: 160px; max-height: 160px; object-fit: contain; border-radius: 10px; background: rgba(255, 255, 255, .05); }
 .ac-corte { width: 100%; display: flex; flex-direction: column; gap: 6px; }
 .ac-corte label { font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; }
-.ac-corte input[type=range] { width: 100%; accent-color: var(--brand-color); }
+.ac-corte input[type=range] { width: 100%; }
 .ac-play-g { align-self: flex-start; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .08); color: var(--text-header); padding: 7px 12px; cursor: pointer; font: inherit; font-size: 12.5px; }
 .ac-campo { margin-top: 12px; }
 .ac-campo > label { display: block; font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px; }
@@ -87,10 +93,14 @@
 .ac-pad span { font-size: 26px; line-height: 1; }
 .ac-pad small { font-size: 11px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
 .ac-pad:hover { background: color-mix(in srgb, var(--brand-color) 30%, var(--bg-tertiary)); }
-.ac-pad:active { transform: scale(.94); }
-.ac-pad.espera { opacity: .5; }
-.ac-sb-vol { display: flex; align-items: center; gap: 8px; padding: 2px 14px 10px; color: var(--text-muted); font-size: 12px; }
-.ac-sb-vol input { flex: 1; accent-color: var(--brand-color); }
+.ac-pad:active, .ac-pad.apertou { transform: scale(.94); }
+.ac-pad.tocando { background: color-mix(in srgb, var(--brand-color) 38%, var(--bg-tertiary)); box-shadow: 0 0 0 2px var(--brand-color); }       /* o som que está tocando agora (de quem for) */
+.ac-sb[hidden] { display: none; }
+.ac-sb-vol { display: flex; align-items: center; gap: 10px; padding: 2px 14px 12px; color: var(--text-muted); font-size: 12px; }
+.ac-sb-vol input { flex: 1; min-width: 0; }
+.ac-sb-vol span { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+/* o botão do soundboard na barra da call */
+.call-btn#btn-main-soundboard.sb-aberto { background: var(--brand-color); color: #fff; }
 .ac-feed { padding: 0 14px 10px; display: flex; flex-direction: column; gap: 3px; }
 .ac-feed:empty { display: none; }
 .ac-feed-l { font-size: 12px; color: var(--text-muted); animation: acFeed .2s both; }
