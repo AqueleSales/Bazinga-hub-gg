@@ -9,7 +9,7 @@ const B = require('./base');
 
 const RAIZ = path.resolve(__dirname, '..', '..');
 const ESTATICO = path.join(RAIZ, 'app', 'static');
-const { CATEGORIAS } = require('./dsl');
+const { CATEGORIAS, R } = require('./dsl');
 
 function carregarTemas() {
     const dir = path.join(__dirname, 'temas');
@@ -25,7 +25,7 @@ function gerar() {
     const temas = carregarTemas();
     const saidaCss = {}, saidaJs = {}, catalogo = { temas: [], itens: [] };
     const usados = new Set(), idsTema = new Set();
-    for (const cat of CATEGORIAS) saidaCss[cat] = { vars: {}, regras: [] }, saidaJs[cat] = { avatar: {}, perfil: {}, ids: {}, sons: {} };
+    for (const cat of CATEGORIAS) saidaCss[cat] = { vars: {}, regras: [] }, saidaJs[cat] = { avatar: {}, perfil: {}, ids: {}, sons: {}, arqsom: {}, shaders: {} };
 
     for (const t of temas) {
         if (idsTema.has(t.id)) throw new Error('tema repetido: ' + t.id);
@@ -48,8 +48,10 @@ function gerar() {
             const rg = r.reg || {};
             if (rg.avatar) reg.avatar[id] = rg.avatar;
             if (rg.perfil) reg.perfil[id] = rg.perfil;
-            for (const k of ['fala', 'radar', 'chat', 'som', 'pin', 'servidor']) if (rg[k]) (reg.ids[k] = reg.ids[k] || []).push(rg[k]);
+            for (const k of ['fala', 'radar', 'chat', 'som', 'pin', 'servidor', 'pagina']) if (rg[k]) (reg.ids[k] = reg.ids[k] || []).push(rg[k]);
             if (rg.receita) reg.sons[id] = rg.receita;
+            if (rg.arq) reg.arqsom[id] = rg.arq;
+            if (rg.shader) reg.shaders[id] = rg.shader;
             catalogo.itens.push({ tipo: it.tipo, id, nome: it.nome, desc: it.desc, tema: t.id, raridade: it.raridade, animado: it.animado !== false });
         });
     }
@@ -60,12 +62,24 @@ function gerar() {
         const c = saidaCss[cat], j = saidaJs[cat];
         if (!c.regras.length) continue;
         usadas.push(cat);
-        const vars = Object.entries(c.vars).map(([k, v]) => `${k}:${v}`).join(';');
-        arquivos[path.join(ESTATICO, 'css', `cosm_${cat}.css`)] = `/* GERADO por tools/cosm/gerar.js (categoria ${cat}). NÃO edite: mude o tema em tools/cosm/temas/ e rode o gerador. */\n:root{${vars}}\n${c.regras.join('\n')}\n`;
+        let vars = Object.entries(c.vars).map(([k, v]) => `${k}:${v}`).join(';');
+        let corpo = c.regras.join('\n');
+        // arte por código (arte.js): cada data-URI repetido vira `var(--img-...)`, definido uma vez só no :root
+        const defsImg = [];
+        for (const im of R.todas()) {
+            let usou = false;
+            for (const forma of [`url('${im.url}')`, `url("${im.url}")`, `url(${im.url})`]) {
+                if (corpo.includes(forma)) { corpo = corpo.split(forma).join(`var(${im.variavel})`); usou = true; }
+                if (vars.includes(forma)) { vars = vars.split(forma).join(`var(${im.variavel})`); usou = true; }
+            }
+            if (usou) defsImg.push(`${im.variavel}:url("${im.url}")`);
+        }
+        if (defsImg.length) vars = (vars ? vars + ';' : '') + defsImg.join(';');
+        arquivos[path.join(ESTATICO, 'css', `cosm_${cat}.css`)] = `/* GERADO por tools/cosm/gerar.js (categoria ${cat}). NÃO edite: mude o tema em tools/cosm/temas/ e rode o gerador. */\n:root{${vars}}\n${corpo}\n`;
         const fn = (m) => `{${Object.entries(m).map(([id, h]) => `'${id}':()=>${JSON.stringify(h)}`).join(',')}}`;
         const ids = `{${Object.entries(j.ids).map(([k, v]) => `${k}:[${v.map((x) => `'${x}'`).join(',')}]`).join(',')}}`;
         const lista = { avatar: Object.keys(j.avatar), perfil: Object.keys(j.perfil), ...j.ids, som_receita: Object.keys(j.sons) };
-        arquivos[path.join(ESTATICO, 'js', `cosm_${cat}.js`)] = `/* GERADO por tools/cosm/gerar.js (categoria ${cat}). NÃO edite. */\n/*IDS ${JSON.stringify(lista)} */\n(function(){if(typeof Cosm==='undefined')return;Cosm.registrarTema({avatar:${fn(j.avatar)},perfil:${fn(j.perfil)},ids:${ids},sons:${JSON.stringify(j.sons)}});})();\n`;
+        arquivos[path.join(ESTATICO, 'js', `cosm_${cat}.js`)] = `/* GERADO por tools/cosm/gerar.js (categoria ${cat}). NÃO edite. */\n/*IDS ${JSON.stringify(lista)} */\n(function(){if(typeof Cosm==='undefined')return;Cosm.registrarTema({avatar:${fn(j.avatar)},perfil:${fn(j.perfil)},ids:${ids},sons:${JSON.stringify(j.sons)},arqsom:${JSON.stringify(j.arqsom)},shaders:${JSON.stringify(j.shaders)}});})();\n`;
     }
     catalogo.arquivos = usadas;
     arquivos[path.join(RAIZ, 'app', 'cosm_gen.json')] = JSON.stringify(catalogo, null, 1) + '\n';

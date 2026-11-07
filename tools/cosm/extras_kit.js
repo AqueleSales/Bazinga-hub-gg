@@ -38,7 +38,11 @@ function CHAT(nome, desc, o, ex = {}) {
         let css = `.chat-input-container.chat-ef-${id}.digitando,.inv-chat.chat-ef-${id}{border-color:${c1}!important;box-shadow:0 0 0 2px ${alfa(c1, .9)},0 0 16px ${alfa(c2, .55)}!important;animation:k-${id}-c ${dur(o.dur || 1.2)} ease-in-out infinite alternate}@keyframes k-${id}-c{from{box-shadow:0 0 0 2px ${alfa(c1, .9)},0 0 8px ${alfa(c2, .3)}}to{box-shadow:0 0 0 3px ${c2},0 0 20px ${alfa(c1, .7)}}}`;
         let part = `.ef-envio-${id} i{position:absolute;bottom:4px;opacity:0;min-width:9px;min-height:9px;animation:envioSobe var(--t) ease-out forwards;`;
         const pa = o.particula || { forma: 'circulo' };
-        if (pa.icone) {
+        if (pa.img) {                         // recorte PNG (Rodada 40); pa.tam = largura mínima em px
+            const v = nomeVar(id, 'e');
+            ctx.vars[v] = `url('${pa.img}')`;
+            part += `background:var(${v}) center/contain no-repeat;min-width:${pa.tam || 16}px;min-height:${pa.tam || 16}px;}`;
+        } else if (pa.icone) {
             const v = nomeVar(id, 'e');
             ctx.vars[v] = uri(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>${icone(pa.icone, { ...p, ...(pa.pal || {}) })}</svg>`);
             part += `background:var(${v}) center/contain no-repeat;}`;
@@ -55,8 +59,10 @@ function CHAT(nome, desc, o, ex = {}) {
 function PIN(nome, desc, o, ex = {}) {
     return { tipo: 'pin_nota', nome, desc, raridade: ex.r || 'epico', animado: !!o.bal, id: ex.id, extra: ex.css, gerar(ctx) {
         const id = ctx.id, p = palDe(ctx, o), v = nomeVar(id, 'pin');
-        ctx.vars[v] = uri(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>${icone(o.icone, { ...p, ...(o.pal || {}) })}</svg>`);
-        return { css: `.geo-note-bubble.pin-${id}.minimized{background:var(${v}) center/115% no-repeat!important;border:0!important;border-radius:0!important;box-shadow:none!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));opacity:1!important;${o.bal ? `animation:k-${id}-pin ${dur(o.bal)} ease-in-out infinite alternate;` : ''}}.geo-note-bubble.pin-${id}.minimized>.note-emoji{position:relative;z-index:1;font-size:11px!important}.geo-note-bubble.pin-${id}:not(.minimized){box-shadow:0 0 0 2px ${alfa(p.m, .8)},0 8px 24px rgba(0,0,0,.6)}${o.bal ? `@keyframes k-${id}-pin{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-2px) rotate(4deg)}}` : ''}`, reg: { pin: id } };
+        // o.img = url de um recorte PNG (Rodada 40); senão o.icone (SVG por código)
+        if (o.img) ctx.vars[v] = `url('${o.img}')`;
+        else ctx.vars[v] = uri(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>${icone(o.icone, { ...p, ...(o.pal || {}) })}</svg>`);
+        return { css: `.geo-note-bubble.pin-${id}.minimized{background:var(${v}) center/${o.img ? 'contain' : '115%'} no-repeat!important;border:0!important;border-radius:0!important;box-shadow:none!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));opacity:1!important;${o.bal ? `animation:k-${id}-pin ${dur(o.bal)} ease-in-out infinite alternate;` : ''}}.geo-note-bubble.pin-${id}.minimized>.note-emoji{position:relative;z-index:1;font-size:11px!important}.geo-note-bubble.pin-${id}:not(.minimized){box-shadow:0 0 0 2px ${alfa(p.m, .8)},0 8px 24px rgba(0,0,0,.6)}${o.bal ? `@keyframes k-${id}-pin{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-2px) rotate(4deg)}}` : ''}`, reg: { pin: id } };
     } };
 }
 
@@ -72,8 +78,20 @@ function SERV(nome, desc, o, ex = {}) {
 function SOM(nome, desc, o, ex = {}) {
     return { tipo: 'som_call', nome, desc, raridade: ex.r || 'epico', animado: false, id: ex.id, extra: ex.css, gerar(ctx) {
         const fim = Math.max(0, ...(o.notas || []).map((n) => n.t + n.d), ...(o.ruidos || []).map((n) => n.t + n.d));
-        return { css: '', reg: { som: ctx.id, receita: { notas: o.notas || [], ruidos: o.ruidos || [], total: f1(fim + .05) } } };
+        // o.arquivo = nome de um mp3/ogg em app/static/audio (o dono coloca o áudio da obra ali); só vale se o arquivo EXISTIR na hora de gerar.
+        // Se faltar, fica a receita sintetizada. Depois de colocar o arquivo: rode o gerador de novo.
+        let arq;
+        if (o.arquivo && require('fs').existsSync(require('path').resolve(__dirname, '..', '..', 'app', 'static', 'audio', o.arquivo))) arq = [`/static/audio/${o.arquivo}`, o.vol || .9];
+        return { css: '', reg: { som: ctx.id, receita: { notas: o.notas || [], ruidos: o.ruidos || [], total: f1(fim + .05) }, arq } };
     } };
 }
 
-module.exports = { FALA, RADAR, CHAT, PIN, SERV, SOM };
+/** SHADER DA PÁGINA (Rodada 40): efeito de tela inteira disparado pelo mouse/teclado/tempo parado (só computador). o: { preset, cor, ...parâmetros do preset }.
+ *  O motor mora em static/js/shaders.js (presets fechados: nada de código vindo do cliente). */
+function PAGINA(nome, desc, o, ex = {}) {
+    return { tipo: 'efeito_pagina', nome, desc, raridade: ex.r || 'lendario', animado: true, id: ex.id, extra: ex.css, gerar(ctx) {
+        return { css: '', reg: { pagina: ctx.id, shader: { ...o } } };
+    } };
+}
+
+module.exports = { FALA, RADAR, CHAT, PIN, SERV, SOM, PAGINA };

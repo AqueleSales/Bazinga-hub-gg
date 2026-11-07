@@ -403,9 +403,9 @@
     // PACOTES (bundles): juntam itens de QUALQUER tema, um por slot. O servidor (app/pacotes.py) valida e confere o preço; aqui só se monta.
     // ------------------------------------------------------------
     const XP = { lista: [], catalogo: [], porId: {}, estados: [], icones: [], categorias: [], desconto: 30, minItens: 2, atual: null, novo: true };
-    const SLOTS_PACOTE = ['moldura', 'nome', 'placa', 'faixa', 'efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota'];
+    const SLOTS_PACOTE = ['moldura', 'nome', 'placa', 'faixa', 'efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota', 'efeito_pagina'];
     const ROT_SLOT = { moldura: 'Moldura', nome: 'Estilo de nome', placa: 'Placa', faixa: 'Faixa do perfil', efeito_avatar: 'Efeito de avatar', efeito_perfil: 'Efeito de perfil',
-        efeito_fala: 'Efeito de fala', efeito_radar: 'Efeito do radar', efeito_chat: 'Efeito do chat', som_call: 'Som de entrada', pin_nota: 'Pin de nota' };
+        efeito_fala: 'Efeito de fala', efeito_radar: 'Efeito do radar', efeito_chat: 'Efeito do chat', som_call: 'Som de entrada', pin_nota: 'Pin de nota', efeito_pagina: 'Shader da página' };
     const ESTADO_ROT = { rascunho: 'Rascunho (só no Estúdio)', a_venda: 'À venda no Armazém (DRC)', so_dar: 'Só dar (admin ou recompensa do passe)' };
     const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const novoPacote = () => ({ id: '', nome: '', descricao: '', icone: 'fa-box-open', categoria: 'fantasia', cor1: '#d4a24c', cor2: '#3a2f1c', estado: 'rascunho',

@@ -292,6 +292,7 @@ const Cosm = (() => {
         bazinga:      { nome: 'BAZINGA', desc: 'on top!', cor: '#3ddc6e' },
         coder:        { nome: 'Coder', desc: 'Mexeu no código por baixo do capô.', cor: '#22d3ee' },
         so_nos:       { nome: 'Só nós', desc: 'Uma sarça que arde e não se consome. Só quem começou isso tem.', cor: '#ff8a1f' },
+        nerv_marca:   { nome: 'Marca da NERV', desc: 'A folha vermelha da NERV: quem comprou o pacote NERV ou o de uma das unidades do Evangelion.', cor: '#e5201a' },
         olimpo:       { nome: 'Brasa', desc: 'Quem sustenta o Pantheon. Uma letra Ômega de lava: o fim e o começo, com raios correndo por dentro.', cor: '#ff7a18' },
     };
     // Chama de 7 pontos (contorno em coordenadas 0-1, ponta em cima, "lambida" na esquerda), escalada pra caixa dada.
@@ -333,6 +334,8 @@ const Cosm = (() => {
 
     let bdOmegaN = 0;      // ids únicos por desenho (máscara e degradê do Ômega)
     const DESENHO_BADGE = {
+        // a folha da NERV desenhada por código sobre um hexágono escuro
+        nerv_marca: () => `<path d="M32 3L58 17.5V46.5L32 61L6 46.5V17.5Z" fill="#14060a" stroke="#e5201a" stroke-width="2.2" stroke-linejoin="round"/><g transform="translate(14 12) scale(.36)" fill="#ff1a14"><path d="M22 12L42 36Q50 18 70 12Q96 8 98 30Q88 38 96 48Q100 66 90 76Q84 82 88 94L90 108L46 66Q30 40 22 12Z"/></g><text x="12" y="50" font-family="Times New Roman,Georgia,serif" font-size="15" font-weight="700" fill="#ff1a14">NE</text><text x="30" y="58" font-family="Times New Roman,Georgia,serif" font-size="15" font-weight="700" fill="#ff1a14">RV</text>`,
         // capacete de construção (no popover gira como objeto 3D: ver svgBadge3D)
         criador: () => `
             <path d="M5 45 Q5 40.5 11 40.5 L53 40.5 Q59 40.5 59 45 L59 47 Q59 51 54 51 L10 51 Q5 51 5 47 Z" fill="url(#bdg-cobre)" stroke="#7a3e05" stroke-width="1.7" stroke-linejoin="round"/>
@@ -573,11 +576,13 @@ const Cosm = (() => {
 
     // Temas novos (static/js/cosm_temas.js) registram aqui os efeitos que precisam de HTML gerado por código: id -> função que devolve o HTML.
     // `ids` = ids dos efeitos que só viram classe CSS (fala, radar, chat, som, pin, servidor).
-    const EXTRA = { avatar: {}, perfil: {}, sons: {} };
+    const EXTRA = { avatar: {}, perfil: {}, sons: {}, shaders: {} };
     function registrarTema(t) {
         Object.assign(EXTRA.avatar, t.avatar || {});
         Object.assign(EXTRA.perfil, t.perfil || {});
         Object.assign(EXTRA.sons, t.sons || {});        // sons por "receita" (notas e ruídos), tocados por tocarReceita()
+        Object.assign(EXTRA.shaders, t.shaders || {});    // shaders de página inteira: { id: { preset, cor, ...parâmetros } } (static/js/shaders.js lê com Cosm.shaderDe)
+        Object.assign(ARQ_SOM, t.arqsom || {});         // sons que vêm de arquivo (o dono coloca o áudio em static/audio; o gerador só registra se o arquivo existir)
         Object.entries(t.ids || {}).forEach(([tipo, lista]) => { (IDS_EFEITO[tipo] = IDS_EFEITO[tipo] || []).push(...lista); });
     }
 
@@ -815,6 +820,7 @@ const Cosm = (() => {
     }
     function somEntrada(id, ctx, destino) {
         if (!IDS_EFEITO.som.includes(id) || !ctx) return 0;
+        if (ARQ_SOM[id] && EXTRA.sons[id] && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext) && tocarArquivoSom(id)) return 2;   // arquivo da obra primeiro; a receita sintetizada é a reserva
         if (EXTRA.sons[id]) return tocarReceita(EXTRA.sons[id], ctx, destino);
         if (ARQ_SOM[id] && !(typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext) && tocarArquivoSom(id)) return 2;
         const t0 = ctx.currentTime;
@@ -1027,11 +1033,11 @@ const Cosm = (() => {
     // ---------------------------------------------------------------------
     const INV_ABAS = [['tudo', 'Tudo'], ['badge', 'Insígnias'], ['moldura', 'Molduras'], ['placa', 'Placas'], ['nome', 'Nomes'],
                       ['faixa', 'Faixas'], ['efeito', 'Efeitos'], ['pacote', 'Pacotes'], ['patentes', 'Patentes']];
-    const TIPOS_EFEITO = ['efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota', 'efeito_servidor'];
+    const TIPOS_EFEITO = ['efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota', 'efeito_servidor', 'efeito_pagina'];
     const ROTULO_TIPO = { badge: 'Insígnia', moldura: 'Moldura', placa: 'Placa', nome: 'Estilo de nome', faixa: 'Faixa', efeito_avatar: 'Efeito de avatar',
         efeito_perfil: 'Efeito de perfil', efeito_fala: 'Efeito de fala', efeito_radar: 'Efeito do radar', efeito_chat: 'Efeito do chat',
-        som_call: 'Som de entrada', pin_nota: 'Pin de nota', efeito_servidor: 'Efeito de servidor', pacote: 'Pacote de tema' };
-    const ICONE_TIPO = { efeito_fala: 'fa-microphone-lines', efeito_radar: 'fa-satellite-dish', efeito_chat: 'fa-keyboard', som_call: 'fa-volume-high', pin_nota: 'fa-location-dot', pacote: 'fa-box-open' };
+        som_call: 'Som de entrada', pin_nota: 'Pin de nota', efeito_servidor: 'Efeito de servidor', efeito_pagina: 'Shader da página', pacote: 'Pacote de tema' };
+    const ICONE_TIPO = { efeito_fala: 'fa-microphone-lines', efeito_radar: 'fa-satellite-dish', efeito_chat: 'fa-keyboard', som_call: 'fa-volume-high', pin_nota: 'fa-location-dot', efeito_pagina: 'fa-wand-magic-sparkles', pacote: 'fa-box-open' };
     const NOME_TEMA = { gogeta: 'Gogeta', sasuke: 'Sasuke', fusao: 'Fusão', relojoaria: 'Relojoaria', dualidade: 'Dualidade' };
 
     function previaItem(it, ctx) {
@@ -1051,6 +1057,7 @@ const Cosm = (() => {
             case 'efeito_radar': return `<span class="inv-radar radar-${v}"><i></i><i></i><i></i><b></b></span>`;
             case 'efeito_chat': return `<span class="inv-chat chat-ef-${v} digitando"><span>Digitando…</span></span>`;
             case 'pin_nota': return `<span class="inv-pin"><span class="geo-note-bubble minimized pin-${v}" style="--note-color:#5865F2"><span class="note-emoji">💬</span></span></span>`;
+            case 'efeito_pagina': return `<span class="inv-pagina" style="--c:${esc(((EXTRA.shaders[v] || {}).cor) || '#7289da')}"><i class="fa-solid fa-wand-magic-sparkles"></i><button type="button" class="inv-ouvir" data-shader-demo="${v}"><i class="fa-solid fa-play"></i> Ver o efeito</button></span>`;
             case 'som_call': return `<button type="button" class="inv-ouvir" data-acao="ouvir" data-som="${v}"><i class="fa-solid fa-play"></i> Ouvir</button>`;
             case 'pacote': {
                 const cor = (ctx.temas[v] || {}).cor || '#7289da';
@@ -1101,9 +1108,9 @@ const Cosm = (() => {
     /** Ordem e nome (plural) das seções do inventário: cada tipo de item tem a sua, em vez de uma lista só misturada. */
     const INV_SECOES = [['badge', 'Insígnias'], ['moldura', 'Molduras'], ['placa', 'Placas'], ['nome', 'Estilos de nome'], ['faixa', 'Faixas'],
         ['efeito_avatar', 'Efeitos de avatar'], ['efeito_perfil', 'Efeitos de perfil'], ['efeito_fala', 'Efeitos de fala'], ['efeito_radar', 'Efeitos do radar'],
-        ['efeito_chat', 'Efeitos ao digitar'], ['pin_nota', 'Pins de nota'], ['som_call', 'Sons de entrada'], ['efeito_servidor', 'Efeitos de servidor'], ['pacote', 'Pacotes de tema']];
+        ['efeito_chat', 'Efeitos ao digitar'], ['pin_nota', 'Pins de nota'], ['som_call', 'Sons de entrada'], ['efeito_servidor', 'Efeitos de servidor'], ['efeito_pagina', 'Shaders da página'], ['pacote', 'Pacotes de tema']];
     const INV_SUBS_EFEITO = [['todos', 'Todos os efeitos'], ['efeito_avatar', 'Avatar'], ['efeito_perfil', 'Perfil'], ['efeito_fala', 'Fala'], ['efeito_radar', 'Radar'],
-        ['efeito_chat', 'Ao digitar'], ['pin_nota', 'Pin de nota'], ['som_call', 'Som de entrada'], ['efeito_servidor', 'Servidor']];
+        ['efeito_chat', 'Ao digitar'], ['pin_nota', 'Pin de nota'], ['som_call', 'Som de entrada'], ['efeito_servidor', 'Servidor'], ['efeito_pagina', 'Shader da página']];
 
     /** Desenha o inventário em `el`. ctx: { livres:[{tipo,valor,nome}], nome, avatarHtml, aba, temas, aoEquipar(id), aoRemover(tipo), aoAba(aba) }
      *  Os filtros (tipo de efeito, tema, origem e busca) ficam guardados em `el._invFiltro` e sobrevivem aos redesenhos que o servidor provoca. */
@@ -1665,5 +1672,5 @@ const Cosm = (() => {
 
     return { PAL, PT_IDS, BADGES, svgPatente, htmlPatente, svgBadge, svgBadge3D, htmlBadge, htmlBadges, htmlEfeitoAvatar, htmlEfeitoPerfil,
         renderInventario, previaItem, svgOlho: olhoHumanoSvg, svgMarcasSukuna: marcasSukunaSvg, svgTimao: timaoSvg, abrirMontanha, somImpacto, classeFala, classeRadar, classePin, classeServidor, classeNomeServidor, somEntrada, efeitoEnvio, ligarEfeitoChat, aplicarEfeitoChat,
-        mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, registrarTema, _passo: passoCanvas };
+        mostrarOrb, esconderOrb, iniciar, injetarDefs, ROMANOS, registrarTema, shaderDe: (id) => EXTRA.shaders[id] || null, _passo: passoCanvas };
 })();

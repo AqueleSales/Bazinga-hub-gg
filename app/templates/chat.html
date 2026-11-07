@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-tema="{{ tema_id }}" data-texto="{{ prefs_iniciais.texto }}" data-densidade="{{ prefs_iniciais.densidade }}"{% if prefs_iniciais.sublinhar %} data-sublinhar{% endif %}{% if prefs_iniciais.reduz_mov %} data-reduz-mov{% endif %}{% if prefs_iniciais.hora12 %} data-hora12{% endif %}{% if tema_claro %} data-claro{% endif %}{% if tema_id == 'custom' %} data-base="{{ tema_custom.base }}"{% if tema_custom.img %} data-fundo{% endif %} style="--brand-color: {{ tema_custom.cor }}; --fundo-escuro: {{ tema_custom.escuro / 100 }}; --painel-opac: {{ tema_custom.painel }}%;{% if tema_custom.img %} --fundo-img: url('{{ tema_custom.img }}');{% endif %}"{% endif %}>
+<html lang="pt-BR" data-tema="{{ tema_id }}" data-texto="{{ prefs_iniciais.texto }}" data-densidade="{{ prefs_iniciais.densidade }}"{% if prefs_iniciais.sublinhar %} data-sublinhar{% endif %}{% if prefs_iniciais.reduz_mov %} data-reduz-mov{% endif %}{% if prefs_iniciais.hora12 %} data-hora12{% endif %}{% if not prefs_iniciais.shaders %} data-sem-shaders{% endif %}{% if tema_claro %} data-claro{% endif %}{% if tema_id == 'custom' %} data-base="{{ tema_custom.base }}"{% if tema_custom.img %} data-fundo{% endif %} style="--brand-color: {{ tema_custom.cor }}; --fundo-escuro: {{ tema_custom.escuro / 100 }}; --painel-opac: {{ tema_custom.painel }}%;{% if tema_custom.img %} --fundo-img: url('{{ tema_custom.img }}');{% endif %}"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
@@ -3010,6 +3010,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosmeticos.css') }}?v={{ cosm_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosm_base.css') }}?v={{ cosm_base_css_v }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cosm_temas.css') }}?v={{ cosm_temas_css_v }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/shaders.css') }}?v={{ sv('css/shaders.css') }}">
 {% for g in cosm_gen %}<link rel="stylesheet" href="{{ url_for('static', filename='css/cosm_' ~ g.cat ~ '.css') }}?v={{ g.css_v }}">
 {% endfor %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loja.css') }}?v={{ loja_css_v }}">
@@ -5051,6 +5052,7 @@
     <script src="{{ url_for('static', filename='js/prestigio.js') }}?v={{ prestigio_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/lojas_canal.js') }}?v={{ lojas_canal_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/ui_extra.js') }}?v={{ ui_extra_js_v }}"></script>
+    <script src="{{ url_for('static', filename='js/shaders.js') }}?v={{ sv('js/shaders.js') }}"></script>
     <script src="{{ url_for('static', filename='js/clipes.js') }}?v={{ clipes_js_v }}"></script>
     <script src="{{ url_for('static', filename='js/cargos.js') }}?v={{ cargos_js_v }}"></script>
     <script>Efeitos.registrar({{ efeitos_custom_iniciais|tojson }});</script>
@@ -11472,8 +11474,10 @@
             }
             Cosm.aplicarEfeitoChat(eq.efeito_chat);
             aplicarMeuVisualNaCall();
+            Shaders.definir(eq.efeito_pagina);               // shader de página inteira (só computador; Configurações > Acessibilidade liga/desliga)
         }
         Cosm.ligarEfeitoChat(() => (perfilMeu.equipados || {}).efeito_chat);
+        Shaders.iniciar({ shaderDe: (id) => Cosm.shaderDe(id), somOk: () => somLigado() && ConfigUsuario.volumeSons() > 0 && perfilMeu.status !== 'dnd', volume: () => ConfigUsuario.volumeSons() });
         aplicarEfeitosPessoais();
 
         // Efeito de servidor: o dono escolhe em qual servidor dele aplicar (ou tirar). O servidor confere dono + posse.

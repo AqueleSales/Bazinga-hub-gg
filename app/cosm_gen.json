@@ -1,6 +1,91 @@
 {
  "temas": [
   {
+   "id": "denji",
+   "nome": "Denji",
+   "categoria": "anime",
+   "cor": "#ff7a1a",
+   "cores": [
+    "#ff7a1a",
+    "#e5001f"
+   ],
+   "icone": "fa-gears",
+   "lema": "Eu sou a motosserra.",
+   "desc": "O cachorrinho Pochita e o caçador de demônios: o rabinho abanando, a motosserra rasgando a foto, sangue que espirra, voa, escorre e some.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "makima",
+   "nome": "Makima",
+   "categoria": "anime",
+   "cor": "#f2c230",
+   "cores": [
+    "#b5352a",
+    "#f2c230"
+   ],
+   "icone": "fa-bullseye",
+   "lema": "Eu sou a sua dona.",
+   "desc": "A Diabo do Controle: a coleira com a corrente, olhos de anéis que te prendem, círculos dourados que se abrem e um contrato assinado em vermelho.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "power",
+   "nome": "Power",
+   "categoria": "anime",
+   "cor": "#c4141c",
+   "cores": [
+    "#c4141c",
+    "#f2d8a0"
+   ],
+   "icone": "fa-droplet",
+   "lema": "Eu sou a grande Power!",
+   "desc": "A Diabo do Sangue: os chifres, o sangue que escorre e a lua vermelha.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "aki",
+   "nome": "Aki Hayakawa",
+   "categoria": "anime",
+   "cor": "#c4141c",
+   "cores": [
+    "#1c2a4a",
+    "#c4141c"
+   ],
+   "icone": "fa-fire-flame-simple",
+   "lema": "Vou matar o Diabo da Arma.",
+   "desc": "O caçador de demônios de gravata: o cigarro e a fumaça, a katana que corta e o contrato vermelho.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "reze",
+   "nome": "Reze",
+   "categoria": "anime",
+   "cor": "#ff7a2a",
+   "cores": [
+    "#ff7a2a",
+    "#3a1458"
+   ],
+   "icone": "fa-bomb",
+   "lema": "Boom.",
+   "desc": "A garota da bomba: o pino da granada no pescoço, a explosão que vira o demônio, fogos de artifício e uma margarida.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
    "id": "chama_azul",
    "nome": "Chama Azul",
    "categoria": "anime",
@@ -69,6 +154,74 @@
    "existente": false
   },
   {
+   "id": "edg_david",
+   "nome": "David Martinez",
+   "categoria": "anime",
+   "cor": "#f3e600",
+   "cores": [
+    "#f3e600",
+    "#00e5ff"
+   ],
+   "icone": "fa-bolt",
+   "lema": "Eu vou mais longe que todo mundo.",
+   "desc": "David e o Sandevistan: a coluna de implante brilhando, ecos de velocidade em volta da foto, riscos de movimento e a jaqueta amarela de Night City.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "edg_lucy",
+   "nome": "Lucy",
+   "categoria": "anime",
+   "cor": "#00e5ff",
+   "cores": [
+    "#00e5ff",
+    "#ff2a8a"
+   ],
+   "icone": "fa-moon",
+   "lema": "Eu quero ver a Lua.",
+   "desc": "Lucy, a netrunner: a Lua crescente, o visor de dados em hexágonos, a chuva de código e o cabelo em preto e ciano.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "edg_rebecca",
+   "nome": "Rebecca",
+   "categoria": "anime",
+   "cor": "#ff2a8a",
+   "cores": [
+    "#ff2a8a",
+    "#00e5ff"
+   ],
+   "icone": "fa-gun",
+   "lema": "Atira primeiro, ri depois.",
+   "desc": "A escopeta dela: o corpo turquesa de faixas rosa, clarões de tiro em rosa e ciano e rastros de bala.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "edg_smasher",
+   "nome": "Adam Smasher",
+   "categoria": "anime",
+   "cor": "#ff2020",
+   "cores": [
+    "#ff2020",
+    "#6a7080"
+   ],
+   "icone": "fa-robot",
+   "lema": "Eu sou a lenda de Night City.",
+   "desc": "Adam Smasher, o ciborgue que sobrou do homem: o olho vermelho, varredura de laser e faíscas de metal.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
    "id": "ego",
    "nome": "Ego",
    "categoria": "anime",
@@ -80,6 +233,74 @@
    "icone": "fa-fire",
    "lema": "Só o melhor sobrevive. E é você.",
    "desc": "A chama azul da \"zona\", uma gaiola de linhas em arame, a trajetória exata do chute e a reação que explode quando dois egos se encontram.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "eva_nerv",
+   "nome": "NERV",
+   "categoria": "anime",
+   "cor": "#e5201a",
+   "cores": [
+    "#e5201a",
+    "#ff8a2a"
+   ],
+   "icone": "fa-triangle-exclamation",
+   "lema": "Deus está no céu, e tudo está bem no mundo.",
+   "desc": "O pacote NERV: a folha da logo, o campo AT que quebra, a Lança de Longinus, hexágonos na barra de mensagem e o alerta de Anjo. Quem leva este pacote (ou o de uma unidade) ganha a insígnia da NERV.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "eva_zero",
+   "nome": "Evangelion Unidade-00",
+   "categoria": "anime",
+   "cor": "#2a5ab0",
+   "cores": [
+    "#2a5ab0",
+    "#ff8a2a"
+   ],
+   "icone": "fa-shield-halved",
+   "lema": "Eu não sei o que dizer. Mas vou pilotar.",
+   "desc": "O protótipo azul e laranja: o olho único, o campo AT em octógonos, o canhão de pósitrons. Quem compra este pacote leva a insígnia da NERV.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "eva_um",
+   "nome": "Evangelion Unidade-01",
+   "categoria": "anime",
+   "cor": "#6a3ab0",
+   "cores": [
+    "#6a3ab0",
+    "#5ae05a"
+   ],
+   "icone": "fa-bolt",
+   "lema": "Eu não vou fugir.",
+   "desc": "O Eva roxo e verde: o plug de entrada cheio de LCL, o modo berserk, o campo AT em pedaços. Quem compra este pacote leva a insígnia da NERV.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "eva_dois",
+   "nome": "Evangelion Unidade-02",
+   "categoria": "anime",
+   "cor": "#d82a1a",
+   "cores": [
+    "#d82a1a",
+    "#ff8a2a"
+   ],
+   "icone": "fa-fire",
+   "lema": "Eu sou a melhor piloto.",
+   "desc": "O Eva vermelho: as presilhas de interface laranjas, os quatro olhos acendendo, chamas e o campo AT quebrando. Quem compra este pacote leva a insígnia da NERV.",
    "premium": true,
    "sem_pacote": false,
    "sem_hero": true,
@@ -200,6 +421,125 @@
    "lema": "Quebrar, só pra voltar inteiro.",
    "desc": "Cristais rosados que se estilhaçam e voltam ao lugar: um tema de cidade tranquila ao entardecer, onde nada se perde de vez.",
    "premium": false,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "jj_abba",
+   "nome": "Leone Abbacchio",
+   "categoria": "anime",
+   "cor": "#6a8ad8",
+   "cores": [
+    "#d0d4de",
+    "#6a8ad8"
+   ],
+   "icone": "fa-backward",
+   "lema": "Eu nunca me arrependo.",
+   "desc": "O carretel que rebobina o tempo, anéis de relógio ao contrário, setas voltando e a tela de fita VHS.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "jj_giorno",
+   "nome": "Giorno Giovanna",
+   "categoria": "anime",
+   "cor": "#f2c230",
+   "cores": [
+    "#f2c230",
+    "#d63a8a"
+   ],
+   "icone": "fa-seedling",
+   "lema": "Eu tenho um sonho.",
+   "desc": "O broche da joaninha, joaninhas voando, o ゴゴゴ e brilhos dourados. E o tempo que se apaga quando você fica parado.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "jj_bruno",
+   "nome": "Bruno Bucciarati",
+   "categoria": "anime",
+   "cor": "#5b8bd6",
+   "cores": [
+    "#e8ecf4",
+    "#5b8bd6"
+   ],
+   "icone": "fa-link",
+   "lema": "Arrivederci.",
+   "desc": "O zíper que corre pela borda da foto, a abertura de zíper com dentes dourados e o terno branco de bolinhas pretas.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "jj_mista",
+   "nome": "Guido Mista",
+   "categoria": "anime",
+   "cor": "#f0772a",
+   "cores": [
+    "#2d63c8",
+    "#f0772a"
+   ],
+   "icone": "fa-gun",
+   "lema": "Nunca o número quatro.",
+   "desc": "O tambor do revólver girando, balas douradas orbitando a foto, rajadas de tiros e o tigre laranja.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "jj_narancia",
+   "nome": "Narancia Ghirga",
+   "categoria": "anime",
+   "cor": "#f08a2a",
+   "cores": [
+    "#f08a2a",
+    "#5a3a8a"
+   ],
+   "icone": "fa-plane",
+   "lema": "Aerosmith, detecte o CO2.",
+   "desc": "Narancia e o Aerosmith: um radar de gás carbônico girando, o avião que cruza a foto de tempos em tempos, e o laranja e roxo do colete.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "jj_fugo",
+   "nome": "Pannacotta Fugo",
+   "categoria": "anime",
+   "cor": "#8e4ad8",
+   "cores": [
+    "#e03a5a",
+    "#8e4ad8"
+   ],
+   "icone": "fa-flask",
+   "lema": "Purple Haze.",
+   "desc": "A cápsula do vírus, o gás roxo que sobe e a nuvem que se espalha em volta da foto.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "jj_trish",
+   "nome": "Trish Una",
+   "categoria": "anime",
+   "cor": "#ff8ac8",
+   "cores": [
+    "#ff8ac8",
+    "#b79af0"
+   ],
+   "icone": "fa-heart",
+   "lema": "Spice Girl, amoleça.",
+   "desc": "Gotas cor-de-rosa amolecendo a borda da foto, corações de borracha e tudo que vira rosa mole.",
+   "premium": true,
    "sem_pacote": false,
    "sem_hero": true,
    "existente": false
@@ -1106,6 +1446,23 @@
    "existente": true
   },
   {
+   "id": "aranha_classico",
+   "nome": "Homem-Aranha",
+   "categoria": "quadrinhos",
+   "cor": "#d4161e",
+   "cores": [
+    "#d4161e",
+    "#1a3aa0"
+   ],
+   "icone": "fa-spider",
+   "lema": "Com grandes poderes vêm grandes responsabilidades.",
+   "desc": "O traje vermelho e azul, o sentido de aranha, a teia que sai nos dois botões do mouse e a cidade ao entardecer.",
+   "premium": true,
+   "sem_pacote": false,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
    "id": "gotham",
    "nome": "Noite em Gotham",
    "categoria": "quadrinhos",
@@ -1920,9 +2277,592 @@
    "sem_pacote": false,
    "sem_hero": true,
    "existente": false
+  },
+  {
+   "id": "edgerunners",
+   "nome": "Cyberpunk: Edgerunners",
+   "categoria": "anime",
+   "cor": "#ff1744",
+   "cores": [
+    "#ff1744",
+    "#00e5ff"
+   ],
+   "icone": "fa-microchip",
+   "lema": "Eu vou até a Lua.",
+   "desc": "Night City e a cyberpsicose: o implante que passa do limite e a tela começa a falhar.",
+   "premium": false,
+   "sem_pacote": true,
+   "sem_hero": true,
+   "existente": false
+  },
+  {
+   "id": "telas",
+   "nome": "Efeitos de Tela",
+   "categoria": "basico",
+   "cor": "#4be07a",
+   "cores": [
+    "#4be07a",
+    "#7ad7ff"
+   ],
+   "icone": "fa-wand-magic-sparkles",
+   "lema": "A página inteira reage a você.",
+   "desc": "Efeitos que tomam a tela toda: código verde, ondinhas, rastro de arco-íris e uma lagoa com sapos. Só no computador.",
+   "premium": false,
+   "sem_pacote": true,
+   "sem_hero": true,
+   "existente": false
   }
  ],
  "itens": [
+  {
+   "tipo": "moldura",
+   "id": "dnj_rabinho_do_pochita",
+   "nome": "Rabinho do Pochita",
+   "desc": "A cordinha preta do rabinho do Pochita, que termina num triângulo, saindo da borda da foto: abana forte de tempos em tempos e para.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "dnj_motosserra",
+   "nome": "Motosserra",
+   "desc": "A motosserra do Denji rasga a sua foto e sai na sua direção, com a corrente correndo e o cabo escondido atrás.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "dnj_chuva_de_sangue",
+   "nome": "Chuva de Sangue",
+   "desc": "Sangue espirra no cartão, voa em gotas, escorre pra baixo, mancha e vai sumindo, de tempos em tempos.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "dnj_homem_motosserra",
+   "nome": "Homem-Motosserra",
+   "desc": "Laranja e vermelho de sangue com contorno preto, e uma motosserrinha ao lado do nome.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "dnj_corrente",
+   "nome": "Corrente",
+   "desc": "Laranja de sangue com dentes de corrente correndo e uma motosserra do lado.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "dnj_cidade_do_diabo",
+   "nome": "Cidade do Diabo",
+   "desc": "Uma cidade vermelha sob a chuva de cinzas, com a corrente correndo na base.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "dnj_motor_ligado",
+   "nome": "Motor Ligado",
+   "desc": "Quando você fala na call, o card treme em laranja e vermelho, como a motosserra no talo.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "dnj_corrente",
+   "nome": "Corrente",
+   "desc": "As ondas do radar viram uma corrente de motosserra correndo em laranja.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "dnj_esguicho",
+   "nome": "Esguicho",
+   "desc": "A barra de mensagem acende em vermelho ao digitar e esguicha sangue ao enviar.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "dnj_motosserra_ligando",
+   "nome": "Motosserra Ligando",
+   "desc": "O cordão puxado, o motor engasgando e a motosserra pegando no talo, ao entrar na call.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "dnj_motosserra",
+   "nome": "Motosserra",
+   "desc": "Suas notas no mapa viram uma motosserra, balançando.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "dnj_servidor_motosserra",
+   "nome": "Servidor Motosserra",
+   "desc": "O ícone do servidor pisca em laranja e vermelho, no ritmo do motor.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "dnj_motosserra_ligada",
+   "nome": "Motosserra Ligada",
+   "desc": "Clique várias vezes seguidas e a motosserra pega no talo, com o barulho. Aí é só passar o mouse: ela corta a página, o sangue jorra e vai sumindo. Parou de mexer, ela desliga.",
+   "tema": "denji",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "mak_coleira_e_corrente",
+   "nome": "Coleira e Corrente",
+   "desc": "Uma coleira preta com a corrente balançando, presa embaixo da foto.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "mak_olhos_de_controle",
+   "nome": "Olhos de Controle",
+   "desc": "Círculos dourados se abrem em volta da sua foto e os olhos de anéis surgem sobre você.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "mak_contrato",
+   "nome": "Contrato",
+   "desc": "Círculos dourados se abrem sem parar no cartão como um olhar que prende, e a borda pulsa em vinho.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "mak_diabo_do_controle",
+   "nome": "Diabo do Controle",
+   "desc": "Vermelho-cabelo e dourado de anéis, com contorno escuro.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "mak_escritorio",
+   "nome": "Escritório",
+   "desc": "Preto e vinho com riscas de contrato e os olhos de anéis do lado.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "mak_olhar_de_cima",
+   "nome": "Olhar de Cima",
+   "desc": "Um fundo vinho com os olhos de anéis dourados olhando de lado.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "mak_ordem",
+   "nome": "Ordem",
+   "desc": "Quando você fala na call, o card pisca em dourado e vinho, como uma ordem.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "mak_circulos",
+   "nome": "Círculos",
+   "desc": "As ondas do radar viram anéis dourados duplos que se abrem.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "mak_assinatura",
+   "nome": "Assinatura",
+   "desc": "A barra de mensagem acende em dourado ao digitar e solta anéis ao enviar.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "mak_voz_calma",
+   "nome": "Voz Calma",
+   "desc": "Um acorde grave e calmo com um tilintar de corrente, ao entrar na call.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "mak_olhos_de_aneis",
+   "nome": "Olhos de Anéis",
+   "desc": "Suas notas no mapa viram os olhos de anéis da Makima.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "mak_servidor_do_controle",
+   "nome": "Servidor do Controle",
+   "desc": "O ícone do servidor pisca em dourado e vinho.",
+   "tema": "makima",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "pow_chifres",
+   "nome": "Chifres",
+   "desc": "Os dois chifres vermelhos da Power no alto da foto, balançando de orgulho.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "pow_sangue_vivo",
+   "nome": "Sangue Vivo",
+   "desc": "O sangue escorre pela sua foto, que pulsa em vermelho.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "pow_lua_de_sangue",
+   "nome": "Lua de Sangue",
+   "desc": "Uma lua vermelha sobe no cartão e gotas de sangue caem, com a borda pulsando em vermelho.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "pow_a_grande_power",
+   "nome": "A Grande Power",
+   "desc": "Vermelho de sangue e loiro com contorno escuro.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "pow_fome_de_sangue",
+   "nome": "Fome de Sangue",
+   "desc": "Vermelho com gotas e os chifres da Power do lado.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "pow_noite_do_demonio",
+   "nome": "Noite do Demônio",
+   "desc": "Um céu vermelho com uma lua enorme sobre a cidade.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "pow_grito",
+   "nome": "Grito",
+   "desc": "Quando você fala na call, o card pisca em vermelho e laranja, como um grito.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "pow_poca",
+   "nome": "Poça",
+   "desc": "As ondas do radar viram anéis vermelhos grossos de sangue.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "pow_esguicho_de_sangue",
+   "nome": "Esguicho de Sangue",
+   "desc": "A barra de mensagem acende em vermelho ao digitar e solta gotas ao enviar.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "pow_risada_da_power",
+   "nome": "Risada da Power",
+   "desc": "Uma risada aguda e debochada de quem se acha demais, ao entrar na call.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "pow_chifres",
+   "nome": "Chifres",
+   "desc": "Suas notas no mapa viram os chifres da Power.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "pow_servidor_de_sangue",
+   "nome": "Servidor de Sangue",
+   "desc": "O ícone do servidor pisca em vermelho e laranja.",
+   "tema": "power",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "aki_cigarro",
+   "nome": "Cigarro",
+   "desc": "Um cigarro aceso preso embaixo da foto, soltando fumaça.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "aki_corte_de_katana",
+   "nome": "Corte de Katana",
+   "desc": "Uma katana entra pelo lado da foto e um corte vermelho passa por cima dela, de tempos em tempos.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "aki_pacto_de_sangue",
+   "nome": "Pacto de Sangue",
+   "desc": "Fumaça vermelha sobe e cortes de katana cruzam o cartão, com a borda pulsando em vermelho.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "aki_cacador_de_gravata",
+   "nome": "Caçador de Gravata",
+   "desc": "Azul-marinho e vermelho com contorno claro, e a fumaça de um cigarro.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "aki_seguranca_publica",
+   "nome": "Segurança Pública",
+   "desc": "Terno azul-marinho com listras finas e uma katana do lado.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "aki_katana_na_noite",
+   "nome": "Katana na Noite",
+   "desc": "Uma noite azul com a katana atravessando e fumaça subindo.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "aki_contrato",
+   "nome": "Contrato",
+   "desc": "Quando você fala na call, o card pisca em vermelho e azul-marinho.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "aki_fumaca",
+   "nome": "Fumaça",
+   "desc": "As ondas do radar viram anéis cinza pontilhados, como fumaça.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "aki_cinzas",
+   "nome": "Cinzas",
+   "desc": "A barra de mensagem acende em vermelho ao digitar e solta cinzas ao enviar.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "aki_katana_e_isqueiro",
+   "nome": "Katana e Isqueiro",
+   "desc": "O estalo de um isqueiro e o corte de uma katana, ao entrar na call.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "aki_katana",
+   "nome": "Katana",
+   "desc": "Suas notas no mapa viram uma katana.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "aki_servidor_do_contrato",
+   "nome": "Servidor do Contrato",
+   "desc": "O ícone do servidor pisca em vermelho e azul-marinho.",
+   "tema": "aki",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "rez_pino_da_granada",
+   "nome": "Pino da Granada",
+   "desc": "O pino de granada pendurado num colar preto na borda da foto, balançando.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "rez_detonacao",
+   "nome": "Detonação",
+   "desc": "O pino cai e a foto explode numa bola de fogo, com fumaça e faíscas, de tempos em tempos.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "rez_festival_de_fogos",
+   "nome": "Festival de Fogos",
+   "desc": "Fogos de artifício estouram no cartão, margaridas caem e a borda pisca em laranja, como na noite do festival.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "rez_garota_da_bomba",
+   "nome": "Garota da Bomba",
+   "desc": "Branco, laranja e vermelho de explosão, com contorno escuro e uma margarida ao lado do nome.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "rez_noite_de_festival",
+   "nome": "Noite de Festival",
+   "desc": "Roxo-noite com faíscas laranja e uma gérbera do lado.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "rez_margarida_e_fogos",
+   "nome": "Margarida e Fogos",
+   "desc": "A gérbera vermelha da Reze sob fogos de artifício numa noite roxa.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "rez_contagem",
+   "nome": "Contagem",
+   "desc": "Quando você fala na call, o card pisca em laranja e dourado, como um estouro.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "rez_onda_de_choque",
+   "nome": "Onda de Choque",
+   "desc": "As ondas do radar viram anéis duplos de laranja, como uma onda de explosão.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "rez_margarida",
+   "nome": "Margarida",
+   "desc": "A barra de mensagem acende em laranja ao digitar e solta margaridas ao enviar.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "rez_explosao",
+   "nome": "Explosão",
+   "desc": "O pino saindo e uma explosão grave que ecoa, ao entrar na call.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "rez_granada",
+   "nome": "Granada",
+   "desc": "Suas notas no mapa viram uma granada, balançando.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "rez_servidor_explosivo",
+   "nome": "Servidor Explosivo",
+   "desc": "O ícone do servidor pisca em laranja e dourado como um estouro de fogos.",
+   "tema": "reze",
+   "raridade": "lendario",
+   "animado": true
+  },
   {
    "tipo": "moldura",
    "id": "chz_chama_azul",
@@ -2258,6 +3198,438 @@
   },
   {
    "tipo": "moldura",
+   "id": "dav_sandevistan",
+   "nome": "Sandevistan",
+   "desc": "A coluna do implante Sandevistan ao lado da foto, com o brilho azul correndo.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "dav_ecos_de_velocidade",
+   "nome": "Ecos de Velocidade",
+   "desc": "O Sandevistan acelera tudo: ecos ciano e rosa da sua foto se espalham pro lado.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "dav_sandevistan_ativado",
+   "nome": "Sandevistan Ativado",
+   "desc": "Riscos de velocidade cruzam o cartão e o aviso SANDEVISTAN pisca.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "dav_edgerunner",
+   "nome": "Edgerunner",
+   "desc": "Amarelo e ciano de neon com contorno preto e um brilho de glitch.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "dav_jaqueta_amarela",
+   "nome": "Jaqueta Amarela",
+   "desc": "Amarelo com listras pretas e a coluna do Sandevistan do lado.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "dav_night_city",
+   "nome": "Night City",
+   "desc": "A cidade em neon amarelo e ciano.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "dav_acelerado",
+   "nome": "Acelerado",
+   "desc": "Quando você fala na call, o card pisca em amarelo e ciano.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "dav_pulso_de_rua",
+   "nome": "Pulso de Rua",
+   "desc": "As ondas do radar viram anéis duplos de ciano.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "dav_dados",
+   "nome": "Dados",
+   "desc": "A barra de mensagem acende em amarelo ao digitar e solta faíscas de neon ao enviar.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "dav_implante_ligando",
+   "nome": "Implante Ligando",
+   "desc": "Um zumbido de implante que sobe de tom e estala, ao entrar na call.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "dav_coluna",
+   "nome": "Coluna",
+   "desc": "Suas notas no mapa viram a coluna do Sandevistan.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "dav_servidor_edgerunner",
+   "nome": "Servidor Edgerunner",
+   "desc": "O ícone do servidor pisca em amarelo e ciano.",
+   "tema": "edg_david",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "luc_lua_crescente",
+   "nome": "Lua Crescente",
+   "desc": "A Lua que a Lucy quer ver, pendurada no alto da foto e flutuando.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "luc_netrunner",
+   "nome": "Netrunner",
+   "desc": "Hexágonos de dados giram em volta da foto e o visor pisca em ciano e rosa.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "luc_chuva_de_dados",
+   "nome": "Chuva de Dados",
+   "desc": "Uma Lua gigante sobe e hexágonos de dados caem como chuva.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "luc_netrunner",
+   "nome": "Netrunner",
+   "desc": "Ciano e rosa de neon com contorno preto.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "luc_interface",
+   "nome": "Interface",
+   "desc": "Preto com hexágonos ciano e a Lua do lado.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "luc_a_lua",
+   "nome": "A Lua",
+   "desc": "Uma noite escura com a Lua crescente e dados de ciano caindo.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "luc_conexao",
+   "nome": "Conexão",
+   "desc": "Quando você fala na call, o card pisca em ciano e rosa.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "luc_ping",
+   "nome": "Ping",
+   "desc": "As ondas do radar viram anéis ciano pontilhados.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "luc_pacote_de_dados",
+   "nome": "Pacote de Dados",
+   "desc": "A barra de mensagem acende em ciano ao digitar e solta pacotes de dados ao enviar.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "luc_login_na_rede",
+   "nome": "Login na Rede",
+   "desc": "Um acorde etéreo e brilhante de conexão, ao entrar na call.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "luc_lua",
+   "nome": "Lua",
+   "desc": "Suas notas no mapa viram a Lua crescente.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "luc_servidor_da_lua",
+   "nome": "Servidor da Lua",
+   "desc": "O ícone do servidor pisca em ciano e rosa.",
+   "tema": "edg_lucy",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "reb_escopeta",
+   "nome": "Escopeta",
+   "desc": "A escopeta turquesa de faixas rosa pendurada embaixo da foto, balançando.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "reb_tiroteio",
+   "nome": "Tiroteio",
+   "desc": "Clarões de tiro rosa e ciano estouram em volta da foto, um depois do outro.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "reb_bala_perdida",
+   "nome": "Bala Perdida",
+   "desc": "Balas rosa e ciano cruzam o cartão deixando rastro e estrelas de tiro estouram.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "reb_pequena_e_perigosa",
+   "nome": "Pequena e Perigosa",
+   "desc": "Rosa e ciano de neon com contorno preto.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "reb_jaqueta_de_neon",
+   "nome": "Jaqueta de Neon",
+   "desc": "Rosa-choque com bolinhas e a escopeta turquesa do lado.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "reb_beco_do_neon",
+   "nome": "Beco do Neon",
+   "desc": "Um beco em rosa e ciano.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "reb_gritaria",
+   "nome": "Gritaria",
+   "desc": "Quando você fala na call, o card pisca em rosa e ciano, aos gritos.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "reb_tiro_no_radar",
+   "nome": "Tiro no Radar",
+   "desc": "As ondas do radar viram anéis rosa grossos.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "reb_cartuchos_de_neon",
+   "nome": "Cartuchos de Neon",
+   "desc": "A barra de mensagem acende em rosa ao digitar e solta estrelas ao enviar.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "reb_dois_tiros",
+   "nome": "Dois Tiros",
+   "desc": "Dois tiros secos de pistola e uma risada curta, ao entrar na call.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "reb_escopeta",
+   "nome": "Escopeta",
+   "desc": "Suas notas no mapa viram a escopeta da Rebecca.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "reb_servidor_barulhento",
+   "nome": "Servidor Barulhento",
+   "desc": "O ícone do servidor pisca em rosa e ciano.",
+   "tema": "edg_rebecca",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "sma_olho_cibernetico",
+   "nome": "Olho Cibernético",
+   "desc": "O olho vermelho de um ciborgue no canto da foto, mirando e pulsando.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "sma_mira_travada",
+   "nome": "Mira Travada",
+   "desc": "Um laser vermelho varre a sua foto de cima a baixo enquanto a mira trava.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "sma_varredura",
+   "nome": "Varredura",
+   "desc": "Linhas de varredura vermelhas descem pelo cartão e faíscas de metal saltam.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "sma_lenda_de_aco",
+   "nome": "Lenda de Aço",
+   "desc": "Aço e vermelho de olho cibernético com contorno preto.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "sma_blindagem",
+   "nome": "Blindagem",
+   "desc": "Aço escuro com rebites vermelhos e o olho cibernético do lado.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "sma_cidade_queimada",
+   "nome": "Cidade Queimada",
+   "desc": "Uma cidade em chamas vermelhas.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "sma_voz_de_ferro",
+   "nome": "Voz de Ferro",
+   "desc": "Quando você fala na call, o card pisca em vermelho e aço.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "sma_mira",
+   "nome": "Mira",
+   "desc": "As ondas do radar viram anéis vermelhos tracejados, como uma mira.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "sma_faiscas_de_metal",
+   "nome": "Faíscas de Metal",
+   "desc": "A barra de mensagem acende em vermelho ao digitar e solta faíscas ao enviar.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "sma_passos_de_ferro",
+   "nome": "Passos de Ferro",
+   "desc": "Um passo pesado de metal e um zumbido grave de servo, ao entrar na call.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "sma_olho_vermelho",
+   "nome": "Olho Vermelho",
+   "desc": "Suas notas no mapa viram o olho cibernético do Adam Smasher.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "sma_servidor_de_aco",
+   "nome": "Servidor de Aço",
+   "desc": "O ícone do servidor pisca em vermelho e aço.",
+   "tema": "edg_smasher",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
    "id": "ego_zona",
    "nome": "Zona",
    "desc": "Chamas azuis e ciano sobem em volta da foto, como a concentração de quem entrou na zona.",
@@ -2361,6 +3733,447 @@
    "nome": "Servidor da Zona",
    "desc": "O ícone do servidor brilha em azul e ciano.",
    "tema": "ego",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "nrv_emblema_nerv",
+   "nome": "Emblema NERV",
+   "desc": "A folha vermelha da NERV presa à borda da foto, pulsando como um alarme.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "nrv_campo_at",
+   "nome": "Campo AT",
+   "desc": "O campo AT em octógonos laranja abre em volta da foto e a Lança de Longinus atravessa tudo, quebrando o campo.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "nrv_alerta_de_anjo",
+   "nome": "Alerta de Anjo",
+   "desc": "Hexágonos pulsam em vermelho, faixas de alerta correm no alto e embaixo e a palavra EMERGENCY pisca, como no centro de comando.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "nrv_piloto_da_nerv",
+   "nome": "Piloto da NERV",
+   "desc": "Vermelho de alerta com contorno preto, no peso de um título de abertura.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "nrv_centro_de_comando",
+   "nome": "Centro de Comando",
+   "desc": "Preto com hexágonos vermelhos e a folha da NERV do lado.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "nrv_sala_de_controle",
+   "nome": "Sala de Controle",
+   "desc": "Hexágonos em vermelho sobre o preto, faixas de alerta correndo na base e a logo da NERV.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "nrv_sincronizacao",
+   "nome": "Sincronização",
+   "desc": "Quando você fala na call, o card pisca em vermelho e laranja, como a taxa de sincronização subindo.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "nrv_campo_at",
+   "nome": "Campo AT",
+   "desc": "As ondas do radar viram anéis duplos de laranja, como um campo AT.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "nrv_hexagonos",
+   "nome": "Hexágonos",
+   "desc": "Ao digitar a barra de mensagem acende em laranja, e ao enviar hexágonos se abrem sobre ela.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "nrv_alerta_vermelho",
+   "nome": "Alerta Vermelho",
+   "desc": "A sirene de emergência soando duas vezes, ao entrar na call.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "nrv_lanca_de_longinus",
+   "nome": "Lança de Longinus",
+   "desc": "Suas notas no mapa viram a Lança de Longinus, em diagonal.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "nrv_servidor_da_nerv",
+   "nome": "Servidor da NERV",
+   "desc": "O ícone do servidor pisca em vermelho e laranja como um alarme.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "nrv_lanca_e_alerta",
+   "nome": "Lança e Alerta",
+   "desc": "Segure o botão esquerdo e o direito juntos e você lança a Lança de Longinus onde mirou, quebrando o campo AT. Fique parado muito tempo e soa o alerta de Anjo, com a contagem do tempo de energia.",
+   "tema": "eva_nerv",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "evz_olho_unico",
+   "nome": "Olho Único",
+   "desc": "O olho amarelo do protótipo no canto da foto, brilhando.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "evz_olho_do_prototipo",
+   "nome": "Olho do Protótipo",
+   "desc": "O olho amarelo do protótipo se acende sobre a sua foto enquanto o campo AT em octógonos laranja abre em volta.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "evz_canhao_de_positrons",
+   "nome": "Canhão de Pósitrons",
+   "desc": "Um feixe branco e laranja varre o cartão na diagonal e hexágonos azuis acendem.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "evz_primeira_crianca",
+   "nome": "Primeira Criança",
+   "desc": "Azul e laranja com contorno escuro, no peso de um título de abertura.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "evz_cabine_de_pilotagem",
+   "nome": "Cabine de Pilotagem",
+   "desc": "Azul de plugsuit com hexágonos e o olho da Unidade-00 do lado.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "evz_hangar",
+   "nome": "Hangar",
+   "desc": "Um hangar azul com hexágonos piscando.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "evz_sincronia",
+   "nome": "Sincronia",
+   "desc": "Quando você fala na call, o card pisca em azul e laranja, como a taxa de sincronização.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "evz_campo_at_azul",
+   "nome": "Campo AT Azul",
+   "desc": "As ondas do radar viram anéis duplos azuis.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "evz_hexagonos_azuis",
+   "nome": "Hexágonos Azuis",
+   "desc": "Ao digitar a barra acende em azul, e ao enviar hexágonos se abrem sobre ela.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "evz_ativacao",
+   "nome": "Ativação",
+   "desc": "Uma partida baixa e firme de máquina, ao entrar na call.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "evz_olho_unico",
+   "nome": "Olho Único",
+   "desc": "Suas notas no mapa viram o olho da Unidade-00.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "evz_servidor_prototipo",
+   "nome": "Servidor Protótipo",
+   "desc": "O ícone do servidor pisca em azul e laranja.",
+   "tema": "eva_zero",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "evu_plug_de_entrada",
+   "nome": "Plug de Entrada",
+   "desc": "O plug de entrada cheio de LCL verde, com bolhas subindo, preso ao lado da foto.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "evu_berserk",
+   "nome": "Berserk",
+   "desc": "O verde pulsa em fúria em volta da sua foto e o campo AT estala.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "evu_sincronizacao",
+   "nome": "Sincronização 400%",
+   "desc": "Anéis verdes pulsam no cartão e hexágonos acendem.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "evu_terceira_crianca",
+   "nome": "Terceira Criança",
+   "desc": "Roxo e verde com contorno escuro, no peso de um título de abertura.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "evu_sala_de_controle",
+   "nome": "Sala de Controle",
+   "desc": "Roxo de plugsuit com hexágonos verdes e o chifre da Unidade-01 do lado.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "evu_gaiola",
+   "nome": "Gaiola",
+   "desc": "A gaiola de lançamento roxa com luz verde.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "evu_berserk",
+   "nome": "Berserk",
+   "desc": "Quando você fala na call, o card pisca em verde e roxo, em fúria.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "evu_campo_at_verde",
+   "nome": "Campo AT Verde",
+   "desc": "As ondas do radar viram anéis duplos verdes.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "evu_hexagonos_verdes",
+   "nome": "Hexágonos Verdes",
+   "desc": "Ao digitar a barra acende em verde, e ao enviar hexágonos se abrem sobre ela.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "evu_rugido",
+   "nome": "Rugido",
+   "desc": "Um rugido grave e rasgado de fera, ao entrar na call.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "evu_chifre",
+   "nome": "Chifre",
+   "desc": "Suas notas no mapa viram o chifre da Unidade-01.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "evu_servidor_berserk",
+   "nome": "Servidor Berserk",
+   "desc": "O ícone do servidor pisca em verde e roxo.",
+   "tema": "eva_um",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "evd_presilhas_de_interfa",
+   "nome": "Presilhas de Interface",
+   "desc": "As duas presilhas laranja da interface de piloto, piscando no alto da foto.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "evd_quatro_olhos",
+   "nome": "Quatro Olhos",
+   "desc": "Os quatro olhos acendem sobre a sua foto e o vermelho pulsa em fogo.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "evd_furia_vermelha",
+   "nome": "Fúria Vermelha",
+   "desc": "Chamas sobem pelo cartão e o vermelho respira, com a borda em fogo.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "evd_segunda_crianca",
+   "nome": "Segunda Criança",
+   "desc": "Vermelho e laranja com contorno escuro, no peso de um título de abertura.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "evd_plugsuit_vermelho",
+   "nome": "Plugsuit Vermelho",
+   "desc": "Vermelho de plugsuit com hexágonos e os quatro olhos da Unidade-02 do lado.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "evd_ceu_em_chamas",
+   "nome": "Céu em Chamas",
+   "desc": "Um céu de fogo com chamas piscando.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "evd_eu_sou_melhor",
+   "nome": "Eu Sou Melhor",
+   "desc": "Quando você fala na call, o card pisca em vermelho e laranja, orgulhoso.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "evd_campo_at_vermelho",
+   "nome": "Campo AT Vermelho",
+   "desc": "As ondas do radar viram anéis duplos vermelhos.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "evd_hexagonos_vermelhos",
+   "nome": "Hexágonos Vermelhos",
+   "desc": "Ao digitar a barra acende em vermelho, e ao enviar hexágonos se abrem sobre ela.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "evd_grito_de_guerra",
+   "nome": "Grito de Guerra",
+   "desc": "Um grito de batalha agudo e orgulhoso, ao entrar na call.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "evd_quatro_olhos",
+   "nome": "Quatro Olhos",
+   "desc": "Suas notas no mapa viram os quatro olhos da Unidade-02.",
+   "tema": "eva_dois",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "evd_servidor_vermelho",
+   "nome": "Servidor Vermelho",
+   "desc": "O ícone do servidor pisca em vermelho e laranja.",
+   "tema": "eva_dois",
    "raridade": "epico",
    "animado": true
   },
@@ -2812,6 +4625,771 @@
    "desc": "Cacos de cristal sobem e pousam no cartão enquanto a luz rosada pulsa.",
    "tema": "diamante_bizarro",
    "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "jab_fita_rebobinando",
+   "nome": "Fita Rebobinando",
+   "desc": "Um carretel de fita girando ao contrário, com a fita saindo até a foto.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "jab_rebobinar",
+   "nome": "Rebobinar",
+   "desc": "Anéis de relógio giram ao contrário em volta da foto e setas de rebobinar piscam.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "jab_replay",
+   "nome": "Replay",
+   "desc": "Linhas de fita VHS correm e setas de rebobinar varrem o cartão de um lado ao outro.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "jab_sem_arrependimento",
+   "nome": "Sem Arrependimento",
+   "desc": "Prata e azul com contorno escuro, o brilho do cabelo do Abbacchio.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "jab_gola_de_cordoes",
+   "nome": "Gola de Cordões",
+   "desc": "Preto com a trama verde da gola e um carretel de fita do lado.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "jab_fita_vhs",
+   "nome": "Fita VHS",
+   "desc": "Ruído de fita VHS em azul.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "jab_replay",
+   "nome": "Replay",
+   "desc": "Quando você fala na call, o card pisca em prata e azul, como um replay.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "jab_voltando",
+   "nome": "Voltando",
+   "desc": "As ondas do radar viram anéis prateados tracejados.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "jab_rebobinar",
+   "nome": "Rebobinar",
+   "desc": "A barra de mensagem acende em azul ao digitar e solta setas de rebobinar ao enviar.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "jab_fita_voltando",
+   "nome": "Fita Voltando",
+   "desc": "O chiado agudo de uma fita rebobinando e o clique do fim, ao entrar na call.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "jab_fita",
+   "nome": "Fita",
+   "desc": "Suas notas no mapa viram um carretel de fita.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "jab_servidor_replay",
+   "nome": "Servidor Replay",
+   "desc": "O ícone do servidor pisca em prata e azul.",
+   "tema": "jj_abba",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "jgi_broche_da_joaninha",
+   "nome": "Broche da Joaninha",
+   "desc": "O broche de joaninha rosa do Giorno preso na borda da foto, pulsando.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "jgi_joaninhas_douradas",
+   "nome": "Joaninhas Douradas",
+   "desc": "Joaninhas voam em volta da sua foto e brilhos dourados piscam.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "jgi_vento_dourado",
+   "nome": "Vento Dourado",
+   "desc": "Os ゴゴゴ tremem ao lado e folhas douradas caem, com a borda pulsando em dourado.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "jgi_gioia",
+   "nome": "Gioia",
+   "desc": "Dourado e rosa com contorno escuro e a joaninha ao lado do nome.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "jgi_passione",
+   "nome": "Passione",
+   "desc": "Azul-marinho e losangos dourados, com uma joaninha do lado.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "jgi_vento_aureo",
+   "nome": "Vento Áureo",
+   "desc": "Um céu de ouro com raios de sol e brilhos.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "jgi_ouro",
+   "nome": "Ouro",
+   "desc": "Quando você fala na call, o card pisca em dourado e rosa.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "jgi_ondas_de_vida",
+   "nome": "Ondas de Vida",
+   "desc": "As ondas do radar viram anéis dourados pontilhados, como sementes.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "jgi_joaninhas",
+   "nome": "Joaninhas",
+   "desc": "A barra de mensagem acende em dourado ao digitar e solta joaninhas ao enviar.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "jgi_broto_de_ouro",
+   "nome": "Broto de Ouro",
+   "desc": "Um brilho dourado que cresce como uma folha nascendo, ao entrar na call.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "jgi_joaninha",
+   "nome": "Joaninha",
+   "desc": "Suas notas no mapa viram a joaninha do Giorno.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "jgi_servidor_aureo",
+   "nome": "Servidor Áureo",
+   "desc": "O ícone do servidor pisca em dourado e rosa.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "jgi_o_tempo_se_apaga",
+   "nome": "O Tempo se Apaga",
+   "desc": "Fique um tempão sem mexer e os ゴゴゴ começam a brotar do nada. Depois uma barra rosa varre a tela e o tempo é apagado. Mexeu o mouse, tudo volta num piscar.",
+   "tema": "jj_giorno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "jbr_ziper",
+   "nome": "Zíper",
+   "desc": "Um zíper dourado que corre pela borda da foto, abrindo e fechando.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "jbr_abertura",
+   "nome": "Abertura",
+   "desc": "Um zíper se abre na sua foto e um anel de dentes dourados gira em volta.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "jbr_ziper_aberto",
+   "nome": "Zíper Aberto",
+   "desc": "Um zíper se abre no cartão entre brilhos de prata.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "jbr_capo",
+   "nome": "Capo",
+   "desc": "Branco e azul-prata com contorno escuro, como o terno do Bruno.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "jbr_terno_de_bolinhas",
+   "nome": "Terno de Bolinhas",
+   "desc": "Branco-prata com as bolinhas pretas do terno e um zíper do lado.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "jbr_a_abertura",
+   "nome": "A Abertura",
+   "desc": "Uma noite azul com um zíper dourado cruzando a faixa.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "jbr_zip",
+   "nome": "Zip",
+   "desc": "Quando você fala na call, o card pisca em azul e prata.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "jbr_costura",
+   "nome": "Costura",
+   "desc": "As ondas do radar viram anéis tracejados prateados, como uma costura de zíper.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "jbr_fechadura",
+   "nome": "Fechadura",
+   "desc": "A barra de mensagem acende em azul ao digitar e solta brilhos prateados ao enviar.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "jbr_ziiip",
+   "nome": "Ziiip",
+   "desc": "O som de um zíper grande abrindo e um estalo seco, ao entrar na call.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "jbr_ziper_aberto",
+   "nome": "Zíper Aberto",
+   "desc": "Suas notas no mapa viram um zíper se abrindo.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "jbr_servidor_capo",
+   "nome": "Servidor Capo",
+   "desc": "O ícone do servidor pisca em azul e prata.",
+   "tema": "jj_bruno",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "jmi_tambor",
+   "nome": "Tambor",
+   "desc": "O tambor de um revólver girando aos pulos, um furo de cada vez.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "jmi_balas",
+   "nome": "Balas",
+   "desc": "Balas douradas voam em volta da foto, soltando clarões de tiro.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "jmi_rajada",
+   "nome": "Rajada",
+   "desc": "Balas cruzam o cartão deixando rastro e clarões de tiro estouram.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "jmi_pistoleiro",
+   "nome": "Pistoleiro",
+   "desc": "Laranja de tigre e azul com contorno escuro.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "jmi_blusa_de_losangos",
+   "nome": "Blusa de Losangos",
+   "desc": "Azul com losangos brancos, como a blusa do Mista, e uma bala no canto.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "jmi_calca_de_tigre",
+   "nome": "Calça de Tigre",
+   "desc": "Listras de tigre laranja e preto.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "jmi_tiroteio",
+   "nome": "Tiroteio",
+   "desc": "Quando você fala na call, o card pisca em azul e laranja, como um tiroteio.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "jmi_eco_do_tiro",
+   "nome": "Eco do Tiro",
+   "desc": "As ondas do radar viram anéis duplos laranja.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "jmi_cartuchos",
+   "nome": "Cartuchos",
+   "desc": "A barra de mensagem acende em laranja ao digitar e solta clarões ao enviar.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "jmi_bang_bang_bang",
+   "nome": "Bang Bang Bang",
+   "desc": "Três tiros secos em sequência e um clique de recarga, ao entrar na call.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "jmi_bala",
+   "nome": "Bala",
+   "desc": "Suas notas no mapa viram uma bala dourada.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "jmi_servidor_pistoleiro",
+   "nome": "Servidor Pistoleiro",
+   "desc": "O ícone do servidor pisca em azul e laranja.",
+   "tema": "jj_mista",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "jna_radar_de_co",
+   "nome": "Radar de CO2",
+   "desc": "Um mini radar verde no canto da foto, varrendo e soltando ondas.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "jna_aerosmith",
+   "nome": "Aerosmith",
+   "desc": "O Aerosmith cruza a sua foto por uns instantes e some, e outra passagem vem depois de uma pausa.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "jna_voo_rasante",
+   "nome": "Voo Rasante",
+   "desc": "O avião do Aerosmith cruza o cartão com um rastro, ondas de radar saem do chão e bolhas de CO2 sobem.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "jna_piloto",
+   "nome": "Piloto",
+   "desc": "Laranja e roxo com contorno escuro, o colete do Narancia.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "jna_colete",
+   "nome": "Colete",
+   "desc": "Roxo e laranja com quadrados dourados e o Aerosmith voando do lado.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "jna_ceu_de_radar",
+   "nome": "Céu de Radar",
+   "desc": "Um céu laranja de fim de tarde com o Aerosmith cruzando.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "jna_detectou",
+   "nome": "Detectou",
+   "desc": "Quando você fala na call, o card pisca em verde e laranja, como um radar.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "jna_pings_de_co",
+   "nome": "Pings de CO2",
+   "desc": "As ondas do radar viram anéis verdes de um detector de gás carbônico.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "jna_helices",
+   "nome": "Hélices",
+   "desc": "A barra de mensagem acende em laranja ao digitar e solta bolhas de CO2 ao enviar.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "jna_motor_de_aviao",
+   "nome": "Motor de Avião",
+   "desc": "Um motorzinho de avião que passa zunindo, ao entrar na call.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "jna_aerosmith",
+   "nome": "Aerosmith",
+   "desc": "Suas notas no mapa viram o avião do Aerosmith.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "jna_servidor_aereo",
+   "nome": "Servidor Aéreo",
+   "desc": "O ícone do servidor pisca em laranja e roxo.",
+   "tema": "jj_narancia",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "jfu_capsula",
+   "nome": "Cápsula",
+   "desc": "A cápsula do vírus do Purple Haze presa à borda da foto, soltando gás roxo.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "jfu_gas_roxo",
+   "nome": "Gás Roxo",
+   "desc": "O gás roxo se espalha em volta da sua foto e as bordas pulsam em roxo.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "jfu_nuvem_de_virus",
+   "nome": "Nuvem de Vírus",
+   "desc": "Gás roxo sobe do chão do cartão em ondas e cápsulas estouram.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "jfu_contaminado",
+   "nome": "Contaminado",
+   "desc": "Framboesa e roxo-vírus com contorno escuro.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "jfu_terno_furado",
+   "nome": "Terno Furado",
+   "desc": "Framboesa com os buracos do terno do Fugo e uma cápsula do lado.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "jfu_laboratorio",
+   "nome": "Laboratório",
+   "desc": "Névoa roxa num fundo escuro de laboratório.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "jfu_surto",
+   "nome": "Surto",
+   "desc": "Quando você fala na call, o card pisca em framboesa e roxo, num surto.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "jfu_gas",
+   "nome": "Gás",
+   "desc": "As ondas do radar viram anéis de gás roxo.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "jfu_esporos",
+   "nome": "Esporos",
+   "desc": "A barra de mensagem acende em roxo ao digitar e solta esporos ao enviar.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "jfu_virus_liberado",
+   "nome": "Vírus Liberado",
+   "desc": "Uma cápsula estalando e um chiado de gás saindo, ao entrar na call.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "jfu_capsula",
+   "nome": "Cápsula",
+   "desc": "Suas notas no mapa viram a cápsula do vírus.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "jfu_servidor_infectado",
+   "nome": "Servidor Infectado",
+   "desc": "O ícone do servidor pisca em framboesa e roxo.",
+   "tema": "jj_fugo",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
+   "id": "jtr_amolecendo",
+   "nome": "Amolecendo",
+   "desc": "Gotas cor-de-rosa se derretendo na borda de baixo da foto, esticando e encolhendo.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "jtr_rosa_mole",
+   "nome": "Rosa Mole",
+   "desc": "O rosa vai escorrendo pela sua foto, amolecendo tudo, enquanto uma aura rosa pulsa.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "jtr_mundo_de_borracha",
+   "nome": "Mundo de Borracha",
+   "desc": "Corações de borracha sobem pelo cartão e gotas rosa escorrem.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "jtr_filha_do_chefe",
+   "nome": "Filha do Chefe",
+   "desc": "Rosa e lavanda com contorno escuro.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "jtr_coracoes_moles",
+   "nome": "Corações Moles",
+   "desc": "Rosa-choque com coraçõezinhos e um coração maior do lado.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "jtr_quarto_rosa",
+   "nome": "Quarto Rosa",
+   "desc": "Um céu rosa e lavanda com coraçõezinhos piscando.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "jtr_elastico",
+   "nome": "Elástico",
+   "desc": "Quando você fala na call, o card pisca em rosa e lavanda.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "jtr_ondas_moles",
+   "nome": "Ondas Moles",
+   "desc": "As ondas do radar viram anéis rosa que parecem de borracha.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "jtr_coracoezinhos",
+   "nome": "Coraçõezinhos",
+   "desc": "A barra de mensagem acende em rosa ao digitar e solta coraçõezinhos ao enviar.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "jtr_boing",
+   "nome": "Boing",
+   "desc": "Um boing de borracha esticando e voltando, ao entrar na call.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "jtr_coracao_mole",
+   "nome": "Coração Mole",
+   "desc": "Suas notas no mapa viram um coração cor-de-rosa.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "jtr_servidor_de_borracha",
+   "nome": "Servidor de Borracha",
+   "desc": "O ícone do servidor pisca em rosa e lavanda.",
+   "tema": "jj_trish",
+   "raridade": "lendario",
    "animado": true
   },
   {
@@ -7757,6 +10335,123 @@
   },
   {
    "tipo": "moldura",
+   "id": "hma_teia_de_canto",
+   "nome": "Teia de Canto",
+   "desc": "Uma teia grudada no canto da foto, balançando de leve.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_avatar",
+   "id": "hma_sentido_de_aranha",
+   "nome": "Sentido de Aranha",
+   "desc": "O sentido de aranha vibra em volta da cabeça e uma teia gruda no canto da foto.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_perfil",
+   "id": "hma_cidade_em_teias",
+   "nome": "Cidade em Teias",
+   "desc": "Teias se desenham nos cantos do cartão e fios de teia caem, com a borda pulsando em vermelho.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "nome",
+   "id": "hma_amigao_da_vizinhanca",
+   "nome": "Amigão da Vizinhança",
+   "desc": "Vermelho e azul de uniforme com contorno branco e uma teia no fim do nome.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "placa",
+   "id": "hma_malha",
+   "nome": "Malha",
+   "desc": "A malha vermelha do traje com teias pretas e o emblema da aranha do lado.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "faixa",
+   "id": "hma_nova_york_ao_entarde",
+   "nome": "Nova York ao Entardecer",
+   "desc": "A cidade em silhueta num pôr do sol laranja.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_fala",
+   "id": "hma_sentido_de_aranha",
+   "nome": "Sentido de Aranha",
+   "desc": "Quando você fala na call, o card pisca em vermelho e azul.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_radar",
+   "id": "hma_fios_de_teia",
+   "nome": "Fios de Teia",
+   "desc": "As ondas do radar viram anéis brancos finos, como fios de teia.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_chat",
+   "id": "hma_thwip",
+   "nome": "Thwip",
+   "desc": "A barra de mensagem acende em vermelho ao digitar e solta teias ao enviar.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "som_call",
+   "id": "hma_thwip",
+   "nome": "Thwip!",
+   "desc": "O estalo seco do lançador de teia e o sopro do balanço, ao entrar na call.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": false
+  },
+  {
+   "tipo": "pin_nota",
+   "id": "hma_aranha",
+   "nome": "Aranha",
+   "desc": "Suas notas no mapa viram o emblema da aranha.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_servidor",
+   "id": "hma_servidor_da_vizinhan",
+   "nome": "Servidor da Vizinhança",
+   "desc": "O ícone do servidor pisca em vermelho e azul.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "hma_sentido_e_teia",
+   "nome": "Sentido e Teia",
+   "desc": "Fique parado um tempo e a tela vibra com o sentido de aranha. Segure o botão esquerdo e o direito do mouse juntos e você solta teia onde estiver mirando.",
+   "tema": "aranha_classico",
+   "raridade": "lendario",
+   "animado": true
+  },
+  {
+   "tipo": "moldura",
    "id": "got_morcegos",
    "nome": "Morcegos",
    "desc": "Morcegos de asas abertas e ovais amarelos girando em volta da foto.",
@@ -11271,6 +13966,51 @@
    "nome": "Olhos",
    "desc": "Suas notas no mapa viram um olho de fenda.",
    "tema": "armario",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "edg_cyberpsicose",
+   "nome": "Cyberpsicose",
+   "desc": "De vez em quando a tela tem um surto: faixas de cor deslocadas, linhas de varredura, blocos de pixel e o aviso CYBERPSYCHOSIS. Sacuda o mouse com força pra provocar um.",
+   "tema": "edgerunners",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "tel_matrix",
+   "nome": "Matrix",
+   "desc": "Fique um tempo sem mexer e a tela escurece enquanto o código verde cai, letra por letra. Mexeu, tudo volta.",
+   "tema": "telas",
+   "raridade": "epico",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "tel_ondinhas",
+   "nome": "Ondinhas",
+   "desc": "Cada clique solta anéis de água que se abrem e somem.",
+   "tema": "telas",
+   "raridade": "raro",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "tel_rastro_de_arco_iris",
+   "nome": "Rastro de Arco-íris",
+   "desc": "O mouse deixa um rastro de arco-íris que vai sumindo.",
+   "tema": "telas",
+   "raridade": "raro",
+   "animado": true
+  },
+  {
+   "tipo": "efeito_pagina",
+   "id": "tel_lagoa_dos_sapos",
+   "nome": "Lagoa dos Sapos",
+   "desc": "Fique parado e começa a chover de leve: vitórias-régias aparecem com sapinhos de pixel. Mexeu, a chuva para, mas os sapos ficam um tempo e pulam pra fora da tela. Clique num sapo e ele pula.",
+   "tema": "telas",
    "raridade": "epico",
    "animado": true
   }

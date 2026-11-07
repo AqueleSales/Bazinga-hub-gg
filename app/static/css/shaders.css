@@ -1,0 +1,10 @@
+/* Shaders da página (Rodada 40): só o que não é canvas. O desenho está em js/shaders.js. */
+html.sh-sem-cursor, html.sh-sem-cursor * { cursor: none !important; }          /* a motosserra desenhada vira o cursor */
+#sh-dica { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 18px); z-index: 2147483001; max-width: min(560px, 90vw); padding: 10px 16px; border-radius: 12px;
+    background: rgba(20, 20, 28, .94); color: #fff; font: 600 13px/1.4 system-ui, sans-serif; text-align: center; border: 1px solid rgba(255, 255, 255, .14);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .5); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+#sh-dica.on { opacity: 1; transform: translate(-50%, 0); }
+/* prévia no inventário e no Armazém */
+.inv-pagina { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 84px; color: var(--c, #7289da); }
+.inv-pagina > i { font-size: 30px; filter: drop-shadow(0 0 6px var(--c, #7289da)); }
+@media (prefers-reduced-motion: reduce) { #sh-canvas { display: none !important; } }

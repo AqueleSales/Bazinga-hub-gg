@@ -37,7 +37,7 @@ GRUPOS = [
     ('nome', 'Nomes', ('nome',)),
     ('placa', 'Placas', ('placa',)),
     ('faixa', 'Faixas', ('faixa',)),
-    ('efeito', 'Efeitos', ('efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'pin_nota', 'efeito_servidor')),
+    ('efeito', 'Efeitos', ('efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'pin_nota', 'efeito_servidor', 'efeito_pagina')),
     ('som', 'Sons', ('som_call',)),
     ('pacote', 'Pacotes', ('pacote',)),
 ]
@@ -231,6 +231,10 @@ def _debitar(pessoa_id, preco):
     return r.rowcount == 1
 
 
+# Insígnia que a compra do PACOTE (e só dele: o item avulso não dá) entrega além dos itens. As unidades 00, 01 e 02 são os temas eva_zero, eva_um e eva_dois.
+BADGE_POR_PACOTE = {'eva_nerv': 'badge:nerv_marca', 'eva_zero': 'badge:nerv_marca', 'eva_um': 'badge:nerv_marca', 'eva_dois': 'badge:nerv_marca'}
+
+
 def comprar(pessoa, item_id, preco_esperado=None):
     """Compra `item_id` com DRC. Devolve {'item_id', 'nome', 'preco', 'entregues', 'saldo'}.
 
@@ -258,6 +262,10 @@ def comprar(pessoa, item_id, preco_esperado=None):
                                         motivo='compra', ref=item_id))
         for i in entregues:
             db.session.add(Posse(person_id=pessoa.id, item_id=i, origem='loja'))
+        insignia = BADGE_POR_PACOTE.get(CATALOGO[item_id].get('tema')) if CATALOGO[item_id]['tipo'] == 'pacote' else None
+        if insignia and insignia in CATALOGO and insignia not in posses and insignia not in entregues:
+            db.session.add(Posse(person_id=pessoa.id, item_id=insignia, origem='loja'))
+            entregues = list(entregues) + [insignia]
         premios = _conceder_premios(pessoa.id, posses | set(entregues))
         resultado.update(item_id=item_id, nome=CATALOGO[item_id]['nome'], preco=preco, entregues=entregues + premios,
                          premios=[{'item_id': x, 'nome': CATALOGO[x]['nome']} for x in premios])

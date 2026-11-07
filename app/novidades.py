@@ -9,6 +9,19 @@ de gente (nada de nome de função). Cada item: `icone` (Font Awesome sem o "fa-
 
 NOVIDADES = [
     {
+        'id': 45, 'data': '07/11/2026', 'titulo': 'Chainsaw Man, JoJo, Homem-Aranha, Evangelion e os primeiros efeitos de tela inteira',
+        'itens': [
+            {'icone': 'fa-gears', 'titulo': 'Chainsaw Man: Denji, Reze, Makima, Power e Aki',
+             'texto': 'Cada um com todos os itens, lendários: o Denji (rabinho do Pochita, motosserra saindo da sua foto, chuva de sangue), a Reze (pino de granada, detonação, fogos e a gérbera), a Makima (coleira, olhos de anéis), a Power (chifres e lua de sangue) e o Aki (cigarro, katana e o contrato vermelho).'},
+            {'icone': 'fa-seedling', 'titulo': 'JoJo: Vento Áureo',
+             'texto': 'Giorno, Bucciarati, Mista, Narancia, Fugo, Trish e Abbacchio, cada um com os símbolos dele: joaninhas douradas, o zíper, o tambor e as balas, o avião do Aerosmith cruzando, o gás roxo, o coração rosa e a fita que rebobina.'},
+            {'icone': 'fa-spider', 'titulo': 'Homem-Aranha clássico, Evangelion e Cyberpunk',
+             'texto': 'O traje vermelho e azul, o sentido de aranha e a cidade; o pacote NERV e as Unidades 00, 01 e 02 do Evangelion (quem compra um desses pacotes leva uma insígnia exclusiva); e o Cyberpunk Edgerunners com David (Sandevistan), Lucy (a Lua), Rebecca (a escopeta turquesa) e Adam Smasher (o olho vermelho).'},
+            {'icone': 'fa-wand-magic-sparkles', 'titulo': 'Shaders: efeitos que tomam a tela inteira',
+             'texto': 'Um tipo novo de cosmético, só no computador: motosserra que corta a página, teia nos dois botões do mouse, lança de Evangelion e alerta de Anjo, o tempo apagado do JoJo, cyberpsicose, chuva de código, ondinhas, rastro de arco-íris e uma lagoa com sapos. Dá pra ver o efeito antes de comprar e desligar tudo em Configurações > Acessibilidade.'},
+        ],
+    },
+    {
         'id': 44, 'data': '06/11/2026', 'titulo': 'Soundboard na hora, dados mais simples e só seus, barras e botões com cara nova',
         'itens': [
             {'icone': 'fa-volume-high', 'titulo': 'Soundboard com botão na barra da call, e sem atraso',

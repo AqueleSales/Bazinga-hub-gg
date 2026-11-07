@@ -56,6 +56,34 @@ function M(nome, desc, o, ex = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// MOLDURA-PEÇA (Rodada 40): em vez de um anel, uma PEÇA presa à foto (o rabinho do Pochita, o pino da Reze, a joaninha do Giorno...)
+// ---------------------------------------------------------------------------
+/** o.svg(animado:boolean) -> SVG num quadro 160x160 (a foto é o círculo de raio 50 em 80,80); a caixa do ::before tem 160% da foto (inset -30%).
+ *  Ou o.imagem = { url, ratio (largura/altura), x, y, w (em % da foto; 50,50 = centro), rot, anim:'balanca'|'pulsa'|'flutua'|'gira'|'nenhuma', dur, bal }.
+ *  Nas mensagens (fotos pequenas) a peça fica parada. */
+function MP(nome, desc, o, ex = {}) {
+    return { tipo: 'moldura', nome, desc, raridade: ex.r || 'lendario', animado: true, id: ex.id, extra: ex.css, gerar(ctx) {
+        const id = ctx.id, sel = molduraSel(id);
+        const zera = '-webkit-mask:none;mask:none;border-radius:0;content:"";';
+        if (o.svg) {
+            const v = nomeVar(id), vs = nomeVar(id, 's');
+            ctx.vars[v] = uri(o.svg(true)); ctx.vars[vs] = uri(o.svg(false));
+            const base = `inset:-30%;${zera}animation:none;filter:${o.filtro || 'drop-shadow(0 1px 1px rgba(0,0,0,.45))'};`;
+            return { css: `${sel}{${base}background:var(${v}) center/100% 100% no-repeat}.message .chat-avatar.moldura-${id}::before{background-image:var(${vs});filter:none}` };
+        }
+        const im = o.imagem, r = im.ratio || 1, rot = im.rot || 0, tr = `translate(-50%,-50%) rotate(${rot}deg)`;
+        const base = `inset:auto;left:${im.x}%;top:${im.y}%;width:${im.w}%;aspect-ratio:${f2(r)};${zera}transform:${tr};background:url('${im.url}') center/contain no-repeat;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));`;
+        const a = im.anim || 'nenhuma', d = im.dur || 3, b = im.bal || 6;
+        let anim = 'animation:none;', kf = '';
+        if (a === 'balanca') { anim = `animation:k-${id}-m ${dur(d)} ease-in-out infinite alternate;`; kf = `@keyframes k-${id}-m{from{transform:translate(-50%,-50%) rotate(${rot - b}deg)}to{transform:translate(-50%,-50%) rotate(${rot + b}deg)}}`; }
+        else if (a === 'pulsa') { anim = `animation:k-${id}-m ${dur(d)} ease-in-out infinite alternate;`; kf = `@keyframes k-${id}-m{from{transform:${tr} scale(.94)}to{transform:${tr} scale(1.08)}}`; }
+        else if (a === 'flutua') { anim = `animation:k-${id}-m ${dur(d)} ease-in-out infinite alternate;`; kf = `@keyframes k-${id}-m{from{transform:translate(-50%,calc(-50% + ${b}%)) rotate(${rot}deg)}to{transform:translate(-50%,calc(-50% - ${b}%)) rotate(${rot}deg)}}`; }
+        else if (a === 'gira') { anim = `animation:k-${id}-m ${dur(d)} linear infinite;`; kf = `@keyframes k-${id}-m{to{transform:translate(-50%,-50%) rotate(${rot + 360}deg)}}`; }
+        return { css: `${sel}{${base}${anim}}.message .chat-avatar.moldura-${id}::before{animation:none;filter:none}${kf}` };
+    } };
+}
+
+// ---------------------------------------------------------------------------
 // NOME
 // ---------------------------------------------------------------------------
 /** o: { cor | grad:[...], mov:'desliza'|'pulsa'|'pisca'|'glitch'|'nenhum', dur, contorno, cw, fonte, espaco, peso, brilho, sombra:[dx,dy,cor], icone:{nome,pos,tam,pal}, maius } */
@@ -109,6 +137,12 @@ function Pl(nome, desc, o, ex = {}) {
             const lado = o.icone.lado === 'esq' ? 'left 12px' : 'right 14px';
             camadas.push({ img: `var(${v})`, size: `auto ${o.icone.tam || 62}%`, pos0: `${lado} center`, pos1: `${lado} center`, repeat: 'no-repeat', bar: o.icone.lado === 'esq' ? 'left 54px center' : 'calc(100% - 132px) center' });
         }
+        // arte em IMAGEM (recorte PNG de tools/cosm/recorte.py): o.img = { url, lado:'esq'|'dir', tam: % da altura, y: posição vertical em %, bar: posição na barra do usuário, barTam }
+        if (o.img) {
+            const lado = o.img.lado === 'esq' ? 'left 10px' : 'right 10px', y = o.img.y === undefined ? 50 : o.img.y;   // posição vertical: 4 valores (`right 10px top 18%`), a forma de 3 valores é inválida
+            camadas.push({ img: `url('${o.img.url}')`, size: `auto ${o.img.tam || 120}%`, pos0: `${lado} top ${y}%`, pos1: `${lado} top ${y}%`, repeat: 'no-repeat',
+                bar: o.img.lado === 'esq' ? `left 54px ${y}%` : `calc(100% - 132px) ${y}%`, barSize: `auto ${o.img.barTam || 96}%`, barOculta: !!o.img.barOculta });
+        }
         if (o.brilho) camadas.push({ img: `linear-gradient(100deg,transparent 38%,${o.brilho} 50%,transparent 62%)`, size: '260% 100%', pos0: '140% 0', pos1: '-40% 0', repeat: 'no-repeat' });
         if (o.pad) {
             const t = P.ladrilho({ ...o.pad, pals: o.pad.pals || [p] });
@@ -126,9 +160,9 @@ function Pl(nome, desc, o, ex = {}) {
         const anima = camadas.some((c) => c.pos0 !== c.pos1 || (c.size1 && c.size1 !== c.size));
         const montar = (barra) => {
             const g = (k) => camadas.map((c) => (barra && k.startsWith('pos') && c.bar ? c.bar : c[k])).join(',');
-            const tam = camadas.map((c) => (barra && c.bar ? 'auto 44%' : c.size)).join(',');
-            const nomeKf = `k-${id}-${barra && o.icone ? 'pb' : 'pl'}`;
-            const tam1 = camadas.map((c) => (barra && c.bar ? 'auto 44%' : (c.size1 || c.size))).join(',');
+            const tam = camadas.map((c) => (barra && c.barOculta ? '0 0' : barra && c.bar ? (c.barSize || 'auto 44%') : c.size)).join(',');
+            const nomeKf = `k-${id}-${barra && (o.icone || o.img) ? 'pb' : 'pl'}`;
+            const tam1 = camadas.map((c) => (barra && c.barOculta ? '0 0' : barra && c.bar ? (c.barSize || 'auto 44%') : (c.size1 || c.size))).join(',');
             const temTam = camadas.some((c) => c.size1 && c.size1 !== c.size);
             const kf = anima ? `@keyframes ${nomeKf}{from{background-position:${g('pos0')}${temTam ? `;background-size:${tam}` : ''}}to{background-position:${g('pos1')}${temTam ? `;background-size:${tam1}` : ''}}}` : '';
             const decl = `background-color:${Array.isArray(o.base) ? o.base[0] : (o.base || '#222')}!important;background-image:${g('img')}!important;background-size:${tam}!important;background-position:${g('pos0')}!important;background-repeat:${g('repeat')}!important;`
@@ -139,7 +173,7 @@ function Pl(nome, desc, o, ex = {}) {
         const a1 = montar(false), a2 = montar(true);
         // texto escuro em placa clara: vale pro nome, pro status e pros ícones (menos o nome estilizado, que tem cor própria)
         const txt = o.texto ? `.placa-${id}:not(.xx),.placa-${id} :not([class*="ne-"]){color:${o.texto}!important;text-shadow:none!important}` : '';
-        return { css: `.placa-${id}{${a1.decl}}.user-profile-bar.placa-${id}{${a2.decl}}${txt}${a1.kf}${o.icone ? a2.kf : ''}` };
+        return { css: `.placa-${id}{${a1.decl}}.user-profile-bar.placa-${id}{${a2.decl}}${txt}${a1.kf}${o.icone || o.img ? a2.kf : ''}` };
     } };
 }
 
@@ -176,4 +210,4 @@ function F(nome, desc, o, ex = {}) {
     } };
 }
 
-module.exports = { M, N, Pl, F, FONTES, palDe, nomeVar, dur, svgCena, CTX_AV, molduraSel, P };
+module.exports = { M, MP, N, Pl, F, FONTES, palDe, nomeVar, dur, svgCena, CTX_AV, molduraSel, P };
