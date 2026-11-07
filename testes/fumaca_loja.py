@@ -56,8 +56,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _arte
 CSS = _arte.css_todo()          # cosmeticos.css + todo cosm_*.css (temas à mão e os gerados por tools/cosm/gerar.js)
 JS_LOJA = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'static', 'js', 'loja.js'), encoding='utf-8').read()
-BASICOS = [t for t in TEMAS_LOJA if cos.TEMAS[t].get('sem_pacote')]
+# temas só de SHADER de página (Rodada 40: Efeitos de Tela, Cyberpunk): sem pacote por ter menos de 4 tipos, mas com animação e raridade própria
+SO_SHADER = [t for t in TEMAS_LOJA if cos.TEMAS[t].get('sem_pacote') and any(d['tema'] == t and d['tipo'] == 'efeito_pagina' for d in vendaveis.values())]
+BASICOS = [t for t in TEMAS_LOJA if cos.TEMAS[t].get('sem_pacote') and t not in SO_SHADER]
 for t in TEMAS_LOJA:
+    if t in SO_SHADER:
+        itens_s = [d for d in vendaveis.values() if d['tema'] == t]
+        ok(itens_s and all(d['tipo'] == 'efeito_pagina' and d['preco'] == cos.PRECOS[d['raridade']]['efeito_pagina'] for d in itens_s), f'Tema {t}: só shaders de página, com preço da tabela')
+        continue
     if t in BASICOS:
         itens_b = [d for d in vendaveis.values() if d['tema'] == t]
         ok(itens_b and all(d['raridade'] == 'comum' and d['animado'] is False and d['preco'] == cos.PRECOS['comum'][d['tipo']] for d in itens_b), f'Tema {t}: só itens comuns, sem animação, com preço da tabela')

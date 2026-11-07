@@ -10,7 +10,7 @@ const ConfigUsuario = (() => {
     let ctx = null;
 
     // Espelho de preferencias.py (o teste confere ids e padrões). Valores fora da lista o servidor descarta.
-    const PADRAO = { texto: 'm', densidade: 'padrao', sublinhar: false, reduz_mov: false, hora12: false,
+    const PADRAO = { texto: 'm', densidade: 'padrao', sublinhar: false, reduz_mov: false, hora12: false, shaders: true,
                      n_dm: true, n_mencao: true, n_amizade: true, n_ligacao: true, n_bazar: true, n_nota: true };
     const TIPOS_AVISO = [
         ['dm', 'Mensagens diretas', 'fa-envelope', 'Quando alguém te escreve numa conversa privada.'],
@@ -85,6 +85,7 @@ const ConfigUsuario = (() => {
         h.toggleAttribute('data-sublinhar', !!prefs.sublinhar);
         h.toggleAttribute('data-reduz-mov', !!prefs.reduz_mov);
         h.toggleAttribute('data-hora12', !!prefs.hora12);
+        h.toggleAttribute('data-sem-shaders', !prefs.shaders);
         refazerHoras();
         pintarPrefs();
     }
@@ -140,6 +141,7 @@ const ConfigUsuario = (() => {
             <p class="cfg-dica" id="ac-dens-dica"></p>
             ${linha('Sublinhar links e menções', 'Links e @menções ficam sempre sublinhados, sem depender de passar o mouse em cima.', interruptor('ac-sublinhar', prefs.sublinhar))}
             ${linha('Reduzir movimento', 'Desliga as animações do app (efeitos de perfil, molduras animadas, brilhos e transições). O app também respeita a opção "reduzir movimento" do seu sistema.', interruptor('ac-reduz', prefs.reduz_mov))}
+            ${linha('Efeitos de tela inteira', 'Os shaders que algumas coleções soltam na página toda (rastro do mouse, chuva, glitch, teias...). Só no computador. Desligue se o PC engasgar.', interruptor('ac-shaders', prefs.shaders))}
             <h3 class="cfg-h">Como fica</h3>
             <div class="ac-previa"><div class="message first"><div class="message-content">
                 <div class="message-header"><span class="message-author">Atena</span><span class="message-timestamp">Hoje às 19:34</span></div>
@@ -155,6 +157,7 @@ const ConfigUsuario = (() => {
         });
         marcarInt($('ac-sublinhar'), prefs.sublinhar);
         marcarInt($('ac-reduz'), prefs.reduz_mov);
+        marcarInt($('ac-shaders'), prefs.shaders);
         const dica = $('ac-dens-dica');
         if (dica) dica.textContent = (DENSIDADES.find((d) => d[0] === prefs.densidade) || DENSIDADES[1])[2];
         document.querySelectorAll('[data-nt]').forEach((el) => marcarInt(el, avisa(el.dataset.nt)));
@@ -450,6 +453,7 @@ const ConfigUsuario = (() => {
         if (fmt) { salvar({ hora12: fmt.dataset.h === '12' }); return; }
         if (alvo.closest('#ac-sublinhar')) { salvar({ sublinhar: !prefs.sublinhar }); return; }
         if (alvo.closest('#ac-reduz')) { salvar({ reduz_mov: !prefs.reduz_mov }); return; }
+        if (alvo.closest('#ac-shaders')) { salvar({ shaders: !prefs.shaders }); return; }
 
         if (alvo.closest('#pv-fantasma')) { ctx.socket.emit('alternar_fantasma', { ativo: !conta.ghost }); return; }
         const pv = alvo.closest('[data-pv]');
@@ -493,7 +497,7 @@ const ConfigUsuario = (() => {
         // a página já nasce com os atributos certos (texto, densidade...); aqui só se lê de volta o que o servidor mandou no HTML
         const h = document.documentElement;
         prefs.texto = h.dataset.texto || prefs.texto; prefs.densidade = h.dataset.densidade || prefs.densidade;
-        prefs.sublinhar = h.hasAttribute('data-sublinhar'); prefs.reduz_mov = h.hasAttribute('data-reduz-mov'); prefs.hora12 = h.hasAttribute('data-hora12');
+        prefs.sublinhar = h.hasAttribute('data-sublinhar'); prefs.reduz_mov = h.hasAttribute('data-reduz-mov'); prefs.hora12 = h.hasAttribute('data-hora12'); prefs.shaders = !h.hasAttribute('data-sem-shaders');
 
         const conteudo = raiz.querySelector('.settings-content');
         if (conteudo && !$('set-busca-res')) { const r = document.createElement('div'); r.className = 'set-section'; r.id = 'set-busca-res'; conteudo.appendChild(r); }

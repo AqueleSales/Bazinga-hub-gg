@@ -30,6 +30,7 @@ CAMPOS = {
     'sublinhar': ((True, False), False),                         # sublinhar links
     'reduz_mov': ((True, False), False),                         # reduzir animações
     'hora12': ((True, False), False),                            # relógio de 12 h (AM/PM)
+    'shaders': ((True, False), True),                            # efeitos de tela inteira (shaders de página, só computador)
 }
 for _id in IDS_AVISO:
     CAMPOS['n_' + _id] = ((True, False), True)

@@ -1,3 +1,3 @@
 /* GERADO por tools/cosm/gerar.js (categoria basico). NÃO edite. */
-/*IDS {"avatar":[],"perfil":[],"som_receita":[]} */
-(function(){if(typeof Cosm==='undefined')return;Cosm.registrarTema({avatar:{},perfil:{},ids:{},sons:{}});})();
+/*IDS {"avatar":[],"perfil":[],"pagina":["tel_matrix","tel_ondinhas","tel_rastro_de_arco_iris","tel_lagoa_dos_sapos"],"som_receita":[]} */
+(function(){if(typeof Cosm==='undefined')return;Cosm.registrarTema({avatar:{},perfil:{},ids:{pagina:['tel_matrix','tel_ondinhas','tel_rastro_de_arco_iris','tel_lagoa_dos_sapos']},sons:{},arqsom:{},shaders:{"tel_matrix":{"preset":"matrix","espera":12,"cor":"#4be07a"},"tel_ondinhas":{"preset":"ondinhas","cor":"#7ad7ff","cor2":"#ffffff"},"tel_rastro_de_arco_iris":{"preset":"arcoiris"},"tel_lagoa_dos_sapos":{"preset":"sapos","espera":15}}});})();

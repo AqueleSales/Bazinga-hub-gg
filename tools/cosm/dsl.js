@@ -1,7 +1,10 @@
 'use strict';
 /* A linguagem dos temas: tudo o que um arquivo de tools/cosm/temas/*.js precisa. */
 const B = require('./base');
-const { M, N, Pl, F, P } = require('./kit');
+const { M, MP, N, Pl, F, P } = require('./kit');
+const R = require('./raster');
+const { IMG, ORBITA } = require('./kit_img');
+const { apoio } = require('./pers');
 const { EA, EP, fase } = require('./efeitos_kit');
 const X = require('./extras_kit');
 const I = require('./icones');
@@ -17,4 +20,4 @@ function tema(s) {
     return s;
 }
 
-module.exports = { tema, CATEGORIAS, B, P, I, M, N, Pl, F, EA, EP, fase, ...X };
+module.exports = { tema, CATEGORIAS, B, P, I, M, MP, N, Pl, F, EA, EP, fase, R, IMG, ORBITA, apoio, ...X };

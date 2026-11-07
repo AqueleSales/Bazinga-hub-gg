@@ -186,13 +186,13 @@ def patente_comeca_em(nivel):
 # Tipos que ocupam uma coluna do Person (ids validados também em utils.py):
 TIPOS_COLUNA = {'moldura': 'moldura', 'placa': 'placa', 'nome': 'nome_estilo', 'faixa': 'banner_color'}
 # Tipos guardados no JSON `Person.equipados` (um slot por tipo):
-TIPOS_JSON = ('efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota')
+TIPOS_JSON = ('efeito_avatar', 'efeito_perfil', 'efeito_fala', 'efeito_radar', 'efeito_chat', 'som_call', 'pin_nota', 'efeito_pagina')
 TIPOS_EQUIPAVEIS = tuple(TIPOS_COLUNA) + TIPOS_JSON
 ROTULO_TIPO = {
     'badge': 'Insígnia', 'moldura': 'Moldura', 'placa': 'Placa', 'nome': 'Estilo de nome', 'faixa': 'Faixa do perfil',
     'efeito_avatar': 'Efeito de avatar', 'efeito_perfil': 'Efeito de perfil', 'efeito_fala': 'Efeito de fala',
     'efeito_radar': 'Efeito do radar', 'efeito_chat': 'Efeito do chat', 'som_call': 'Som de entrada', 'pin_nota': 'Pin de nota',
-    'efeito_servidor': 'Efeito de servidor',
+    'efeito_servidor': 'Efeito de servidor', 'efeito_pagina': 'Shader da página',
     'pacote': 'Pacote de tema',
 }
 
@@ -218,6 +218,9 @@ _item('badge', 'coder', 'Coder', 'Mexeu no código por baixo do capô.', raridad
 _item('badge', 'so_nos', 'Só nós', 'Uma sarça que arde e não se consome. Só quem começou isso tem.', raridade='unico', tema='fusao')
 #   olimpo                    -> quem tem a assinatura Brasa (id interno `olimpo`) ativa (app/olimpo.py concede; posses_da_pessoa tira quando vence)
 _item('badge', 'olimpo', 'Brasa', 'Quem sustenta o Pantheon. Uma letra Ômega de lava: o fim e o começo, com raios correndo por dentro.', raridade='lendario')
+
+#   nerv_marca                -> só quem COMPRA o pacote NERV ou o de uma unidade (00, 01, 02): ver loja.BADGE_POR_PACOTE (Rodada 40)
+_item('badge', 'nerv_marca', 'Marca da NERV', 'A folha vermelha da NERV: quem comprou o pacote NERV ou o de uma das unidades do Evangelion.', raridade='epico', tema='eva_nerv')
 
 # ---- Laboratório: itens do tema Gogeta ----
 _item('moldura', 'gogeta', 'Aura Dourada', 'Anel de ki dourado com chamas subindo.', 'gogeta')
@@ -287,14 +290,14 @@ PRECOS = {
     'raro':  {'nome': 350, 'placa': 350, 'faixa': 450, 'moldura': 550,
               # temas gerados (Rodada 27): efeitos "raros" custam menos que os dos temas premium (épicos)
               'efeito_avatar': 380, 'efeito_perfil': 550, 'efeito_fala': 220, 'efeito_radar': 200,
-              'efeito_chat': 220, 'som_call': 150, 'pin_nota': 200, 'efeito_servidor': 380},
+              'efeito_chat': 220, 'som_call': 150, 'pin_nota': 200, 'efeito_servidor': 380, 'efeito_pagina': 500},
     'epico': {'nome': 600, 'placa': 600, 'faixa': 750, 'moldura': 900,
               # temas "premium" (com efeitos): cada slot de efeito tem o seu preço
               'efeito_avatar': 450, 'efeito_perfil': 700, 'efeito_fala': 300, 'efeito_radar': 250,
-              'efeito_chat': 300, 'som_call': 200, 'pin_nota': 250, 'efeito_servidor': 500},
+              'efeito_chat': 300, 'som_call': 200, 'pin_nota': 250, 'efeito_servidor': 500, 'efeito_pagina': 700},
     'lendario': {'moldura': 1200, 'nome': 800, 'placa': 800, 'faixa': 1000,
                  'efeito_avatar': 700, 'efeito_perfil': 900, 'efeito_fala': 400, 'efeito_radar': 350,
-                 'efeito_chat': 400, 'som_call': 300, 'pin_nota': 350, 'efeito_servidor': 700},
+                 'efeito_chat': 400, 'som_call': 300, 'pin_nota': 350, 'efeito_servidor': 700, 'efeito_pagina': 900},
 }
 DESCONTO_PACOTE = 0.30        # o pacote custa a soma dos 4 itens menos isto (arredondado pra múltiplo de 50)
 
